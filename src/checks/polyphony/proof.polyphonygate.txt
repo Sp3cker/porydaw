@@ -1,0 +1,267 @@
+Assertion correspondence: polyphony/polyphonygate.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/polyphony/polyphonygate.cpp
+Original SHA-256: a774e7d77d8958c264bc662a3e488340f711bee41490f756bc6f56d72134de97
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site in polyphonygate.cpp appears below: 15 sites
+across four MainWindow dock-gating slots. The constructor, destructor,
+prepareGateWindow helper, cleanup and runPolyCheck carry no assertion sites.
+No Swift file covers the polyphony debugger dock: the suite has no counterpart
+in src/checks/polyphony or the swiftcore suite, and the adjacent Swift
+polySnapshot/invert reads (tails.swift, AudioControllerChecks.swift) assert
+transport/audition predicates, never dock visibility or the window's invert
+wiring. Every entry below is therefore GAP: no equivalent Swift assertion is
+established, including for the native-window/device observations, which remain
+open obligations with no converted-window evidence path claimed.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way; GAP means an
+equivalent Swift assertion is not established; NATIVE observes native
+window/rendering/harness state a presenter-level Swift check cannot establish.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter polycheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runPolyCheck executes the PolyphonyGateTest slots under the polycheck lane.
+Each gating slot requires prepareGateWindow: a real MainWindow with an
+initialized audio device, otherwise the slot fails with the device message.
+No Swift entry point executes these gating checks; no Swift counterpart file
+was identified.
+
+Fixture, sequence and row constraints
+prepareGateWindow constructs the MainWindow, fails closed when m_audioOk is
+false, shows the window and processes events. cleanup unchecks the panel
+invert box, hides the dock, processes events, then closes the window. No data
+rows expand these sites: one execution per slot on a fresh window.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:43
+Disposition: GAP
+Mapping/reason: No Swift predicate builds the gate window; the real-device
+precondition below remains an open obligation.
+Source context since previous assertion:
+  #include "checks/polyphony/tst_polyphonycheck.h"
+
+  #include <QCoreApplication>
+  #include <QDockWidget>
+  #include <QtTest>
+
+  #include <utility>
+
+  #include "mainwindow.h"
+  #include "ui/polyphonypanel.h"
+
+  namespace checks {
+
+  PolyphonyGateTest::PolyphonyGateTest(QString screenshotPath)
+      : m_screenshotPath(std::move(screenshotPath))
+  {}
+
+  PolyphonyGateTest::~PolyphonyGateTest() = default;
+
+  bool PolyphonyGateTest::prepareGateWindow()
+  {
+      m_window = std::make_unique<MainWindow>();
+      if (!m_window->m_audioOk)
+          return false;
+      m_window->show();
+      QCoreApplication::processEvents();
+      return m_window->isVisible();
+  }
+
+  void PolyphonyGateTest::cleanup()
+  {
+      if (!m_window)
+          return;
+      m_window->m_polyPanel->setInvertChecked(false);
+      m_window->m_polyDock->hide();
+      QCoreApplication::processEvents();
+      m_window->close();
+      m_window.reset();
+  }
+
+  void PolyphonyGateTest::hiddenDockCheckboxIsInert()
+  {
+Original expression:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+
+A002 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:44
+Disposition: GAP
+Mapping/reason: No Swift predicate observes the poly dock; the hidden-dock
+observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+Original expression:
+  QVERIFY(!m_window->m_polyDock->isVisible());
+
+A003 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:45
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the window audio invert flag; the
+cleared-invert observation below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(!m_window->m_audio.polyDebugInvert());
+
+A004 | PolyphonyGateTest::hiddenDockCheckboxIsInert | src/checks/polyphony/polyphonygate.cpp:47
+Disposition: GAP
+Mapping/reason: No Swift predicate drives the panel checkbox while the dock
+is hidden; the inert-checkbox observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(!m_window->m_audio.polyDebugInvert());
+      m_window->m_polyPanel->setInvertChecked(true);
+Original expression:
+  QVERIFY(!m_window->m_audio.polyDebugInvert());
+
+A005 | PolyphonyGateTest::visibleCheckedDockInverts | src/checks/polyphony/polyphonygate.cpp:52
+Disposition: GAP
+Mapping/reason: No Swift predicate builds the gate window; the real-device
+precondition below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(!m_window->m_audio.polyDebugInvert());
+  }
+
+  void PolyphonyGateTest::visibleCheckedDockInverts()
+  {
+Original expression:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+
+A006 | PolyphonyGateTest::visibleCheckedDockInverts | src/checks/polyphony/polyphonygate.cpp:56
+Disposition: GAP
+Mapping/reason: No Swift predicate observes the poly dock; the shown-dock
+observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+      m_window->m_polyPanel->setInvertChecked(true);
+      m_window->m_polyDock->show();
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY(m_window->m_polyDock->isVisible());
+
+A007 | PolyphonyGateTest::visibleCheckedDockInverts | src/checks/polyphony/polyphonygate.cpp:57
+Disposition: GAP
+Mapping/reason: No Swift predicate wires the checked visible dock to the
+engine invert flag; the engaged-invert observation below remains an open
+obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+
+A008 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:62
+Disposition: GAP
+Mapping/reason: No Swift predicate builds the gate window; the real-device
+precondition below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+  }
+
+  void PolyphonyGateTest::closingDockSuspendsAndReopenResumes()
+  {
+Original expression:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+
+A009 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:66
+Disposition: GAP
+Mapping/reason: No Swift predicate wires the checked visible dock to the
+engine invert flag; the engaged-invert observation below remains an open
+obligation.
+Source context since previous assertion:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+      m_window->m_polyPanel->setInvertChecked(true);
+      m_window->m_polyDock->show();
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+
+A010 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:70
+Disposition: GAP
+Mapping/reason: No Swift predicate closes the poly dock; the suspended-invert
+observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+
+      m_window->m_polyDock->close();
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY(!m_window->m_audio.polyDebugInvert());
+
+A011 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:71
+Disposition: GAP
+Mapping/reason: No Swift predicate observes the panel checkbox; the retained
+checked-state observation below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(m_window->m_polyPanel->invertChecked());
+
+A012 | PolyphonyGateTest::closingDockSuspendsAndReopenResumes | src/checks/polyphony/polyphonygate.cpp:75
+Disposition: GAP
+Mapping/reason: No Swift predicate reopens the poly dock; the resumed-invert
+observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(m_window->m_polyPanel->invertChecked());
+
+      m_window->m_polyDock->show();
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+
+A013 | PolyphonyGateTest::uncheckingDockTurnsInvertOff | src/checks/polyphony/polyphonygate.cpp:80
+Disposition: GAP
+Mapping/reason: No Swift predicate builds the gate window; the real-device
+precondition below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+  }
+
+  void PolyphonyGateTest::uncheckingDockTurnsInvertOff()
+  {
+Original expression:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+
+A014 | PolyphonyGateTest::uncheckingDockTurnsInvertOff | src/checks/polyphony/polyphonygate.cpp:84
+Disposition: GAP
+Mapping/reason: No Swift predicate wires the checked visible dock to the
+engine invert flag; the engaged-invert observation below remains an open
+obligation.
+Source context since previous assertion:
+  QVERIFY2(prepareGateWindow(), "polyphony gate requires a real initialized audio device");
+      m_window->m_polyPanel->setInvertChecked(true);
+      m_window->m_polyDock->show();
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+
+A015 | PolyphonyGateTest::uncheckingDockTurnsInvertOff | src/checks/polyphony/polyphonygate.cpp:86
+Disposition: GAP
+Mapping/reason: No Swift predicate unchecks the panel box; the cleared-invert
+observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(m_window->m_audio.polyDebugInvert());
+      m_window->m_polyPanel->setInvertChecked(false);
+Original expression:
+  QVERIFY(!m_window->m_audio.polyDebugInvert());
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+  } // namespace checks
+
+  int runPolyCheck(const QString &screenshotPath, const QStringList &qtArguments)
+  {
+      checks::PolyphonyGateTest test(screenshotPath);
+      QStringList arguments{QStringLiteral("polycheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }

@@ -1,0 +1,158 @@
+Assertion correspondence: midi/tst_midiengine.cpp
+
+Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
+Original: src/checks/midi/tst_midiengine.cpp
+Original SHA-256: 6260d911943cb93de174b2061578b626bf4c717e05ddf0ac17e038218ffc1648
+Swift counterpart: src/checks/midi/MidiChecks.swift
+Swift SHA-256: 3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute for the same
+logical observation; execution must still be verified.
+PARTIAL identifies a related Swift predicate with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter midienginecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The midienginecheck lane is a native-only Qt check (Invalid MIDI
+programs/keys cannot change a voice or start PCM channels). Its C++ sources
+are reference inventories for the bounds contract below, never Swift execution
+evidence.
+
+Execution ownership
+No Swift entry point executes these bounds checks. runMidiCodecSuite and
+runMusicalSemanticsSuite exercise the MIDI codec, musical semantics, and
+mid2agb equivalence only; neither initializes an M4AEngine, installs a
+keysplit voicegroup, issues out-of-range program changes or note-ons, or
+inspects PCM channel status. The paired observations remain native-only.
+
+Fixture, sequence and row constraints
+EngineFixture initializes the engine at 48000 Hz and installs a keysplit
+voicegroup with program 5 selected. programChangesRejectOutOfRangeValues
+issues programs 5 (accepted), 128 and 255 (rejected). noteOnsRejectOutOfRangeKeys
+issues note-on 128/255 and note-off 255, then A003 expands one QVERIFY site
+over every PCM channel (TOTAL_PCM_CHANNELS). Original setup and helper bodies
+at the reference revision remain authoritative.
+
+Original assertion inventory and source sequence
+
+A001 | checks::MidiEngineBoundsTest::programChangesRejectOutOfRangeValues | src/checks/midi/tst_midiengine.cpp:52
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. Swift m4a_engine call sites use in-range programs and keys only; no Swift predicate observes out-of-range program/key rejection, program retention, or PCM channel silence.
+Source context since previous assertion:
+  #include "checks/midi/tst_midiengine.h"
+  #include "checks/fwd.hpp"
+
+  #include <QtTest>
+
+  #include <array>
+  #include <cstdint>
+
+  extern "C" {
+  #include "m4a_engine.h"
+  }
+
+  namespace {
+
+  class EngineFixture final
+  {
+    public:
+      EngineFixture() { m4a_engine_init(&m_engine, 48000.0F); }
+      ~EngineFixture() { m4a_engine_destroy(&m_engine); }
+
+      M4AEngine &engine() noexcept { return m_engine; }
+
+      EngineFixture(const EngineFixture &) = delete;
+      EngineFixture &operator=(const EngineFixture &) = delete;
+
+    private:
+      M4AEngine m_engine = {};
+  };
+
+  void installKeysplitVoicegroup(M4AEngine &engine, std::array<ToneData, 128> &voices,
+                                 std::array<ToneData, 128> &sub, std::array<uint8_t, 128> &splitTable)
+  {
+      voices[5].type = VOICE_KEYSPLIT;
+      voices[5].subGroup = sub.data();
+      voices[5].keySplitTable = splitTable.data();
+      m4a_engine_set_voicegroup(&engine, voices.data());
+  }
+
+  } // namespace
+
+  namespace checks {
+
+  void MidiEngineBoundsTest::programChangesRejectOutOfRangeValues()
+  {
+      auto voices = std::array<ToneData, 128>{};
+      auto sub = std::array<ToneData, 128>{};
+      auto splitTable = std::array<uint8_t, 128>{};
+      auto fixture = EngineFixture{};
+      installKeysplitVoicegroup(fixture.engine(), voices, sub, splitTable);
+
+      m4a_engine_program_change(&fixture.engine(), 0, 5);
+
+Original expression:
+  QCOMPARE(int(fixture.engine().tracks[0].currentProgram), 5)
+
+A002 | checks::MidiEngineBoundsTest::programChangesRejectOutOfRangeValues | src/checks/midi/tst_midiengine.cpp:55
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. Swift m4a_engine call sites use in-range programs and keys only; no Swift predicate observes out-of-range program/key rejection, program retention, or PCM channel silence.
+Source context since previous assertion:
+  ;
+      m4a_engine_program_change(&fixture.engine(), 0, 128);
+      m4a_engine_program_change(&fixture.engine(), 0, 255);
+
+Original expression:
+  QCOMPARE(int(fixture.engine().tracks[0].currentProgram), 5)
+
+A003 | checks::MidiEngineBoundsTest::noteOnsRejectOutOfRangeKeys | src/checks/midi/tst_midiengine.cpp:71
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. Swift m4a_engine call sites use in-range programs and keys only; no Swift predicate observes out-of-range program/key rejection, program retention, or PCM channel silence.
+Source context since previous assertion:
+  ;
+  }
+
+  void MidiEngineBoundsTest::noteOnsRejectOutOfRangeKeys()
+  {
+      auto voices = std::array<ToneData, 128>{};
+      auto sub = std::array<ToneData, 128>{};
+      auto splitTable = std::array<uint8_t, 128>{};
+      auto fixture = EngineFixture{};
+      installKeysplitVoicegroup(fixture.engine(), voices, sub, splitTable);
+      m4a_engine_program_change(&fixture.engine(), 0, 5);
+
+      m4a_engine_note_on(&fixture.engine(), 0, 128, 100);
+      m4a_engine_note_on(&fixture.engine(), 0, 255, 100);
+      m4a_engine_note_off(&fixture.engine(), 0, 255);
+      for (int channel = 0; channel < TOTAL_PCM_CHANNELS; ++channel)
+
+Original expression:
+  QVERIFY((fixture.engine().pcmChannels[channel].status & CHN_ON) == 0)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace checks
+
+  int runMidiEngineCheck(const QStringList &qtArguments)
+  {
+      checks::MidiEngineBoundsTest test;
+      QStringList arguments{QStringLiteral("midienginecheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+Swift assertion predicates
+
+None identified: no report.expect*/expectEqual call in src/checks/midi/MidiChecks.swift carries a
+midienginecheck cppID or observes M4AEngine program/key bounds. All three
+original sites above are GAP.

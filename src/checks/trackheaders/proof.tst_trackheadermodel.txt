@@ -1,0 +1,1000 @@
+Assertion correspondence: trackheaders/tst_trackheadermodel.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/trackheaders/tst_trackheadermodel.cpp
+Original SHA-256: 98669ae2b0e26428f41ccffaba0ce80ff390253a2b8bd57ebf9abef5493d9640
+Swift counterpart: src/checks/trackheaders/tst_trackheadermodel.swift
+Swift SHA-256: d57d529c7eb738c913a5cf3eaf915c5f2c152945954dc2fbf0fad560fac97354
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
+original Swift suite order. headerfixture.swift constructs a real two-track
+DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
+headerinputfixture.swift owns pointer probes and document/history baselines.
+Their helper expectations execute on every call and are inventoried below.
+
+Original assertion inventory and source sequence
+
+A001 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:48
+Disposition: NATIVE-SETUP
+Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Source context since previous assertion:
+  #include "checks/trackheaders/tst_trackheaders.h"
+
+  #include <QtTest>
+
+  #include <QAbstractItemModel>
+  #include <QCoreApplication>
+  #include <QModelIndex>
+  #include <QPointF>
+  #include <QSize>
+  #include <cstdint>
+  #include <memory>
+  #include <optional>
+  #include <utility>
+
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "checks/support/songfixture.h"
+  #include "checks/support/support.h"
+  #include "checks/trackheaders/trackheaderoracles.h"
+  #include "core/miditimeline.h"
+  #include "core/songdocument.h"
+  #include "ui/activity/trackactivity.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/trackheadermodel.h"
+
+  namespace {
+
+  using checks::events::pointerInput;
+
+  class TrackHeaderModelTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(TrackHeaderModelTest)
+
+    public:
+      TrackHeaderModelTest(QString projectRoot, QString songLabel)
+          : m_projectRoot(std::move(projectRoot))
+          , m_songLabel(std::move(songLabel))
+      {}
+
+    private slots:
+      void unattachedModelPublishesSafeZeroGeometry()
+      {
+          TrackHeadersFixture fixture(m_projectRoot, m_songLabel);
+          QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A002 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:54
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0.0, headers.viewportHeight): unconfigured height. [S003]
+Source context since previous assertion:
+  ;
+
+          TrackActivity activity;
+          songview::TrackHeaderModel model(fixture.view());
+          model.rebuild(activity, false);
+Original expression:
+  QCOMPARE(model.viewportHeight(), 0.0)
+
+A003 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:55
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0.0, headers.maximumScrollY): unconfigured scroll range. [S004]
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.maximumScrollY(), 0.0)
+
+A004 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:56
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(3, headers.rows.count) and [0,1] track rows: two fixture tracks plus one add row. [S005, S006]
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.rowCount(),
+                   int(fixture.tracks().size()) + int(fixture.tab().document().canAddTrack()))
+
+A005 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:62
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0.0, row.activityLeftHeight), for every fixture.trackRows entry. [S007]
+Source context since previous assertion:
+  ;
+          for (int row = 0; row < model.rowCount(); ++row) {
+              const QModelIndex index = model.index(row, 0);
+              if (model.data(index, songview::TrackHeaderModel::IsAddTrackRole).toBool())
+                  continue;
+Original expression:
+  QCOMPARE(model.data(index, songview::TrackHeaderModel::ActivityLeftHeightRole).toReal(),
+                       0.0)
+
+A006 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.cpp:64
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0.0, row.activityRightHeight), for every fixture.trackRows entry. [S008]
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(
+                  model.data(index, songview::TrackHeaderModel::ActivityRightHeightRole).toReal(),
+                  0.0)
+
+A007 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:74
+Disposition: NATIVE-SETUP
+Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Source context since previous assertion:
+  ;
+          }
+      }
+
+      void reorderSlotsResolveInsertionTargetsAndUndoRestores()
+      {
+          TrackHeadersFixture fixture(m_projectRoot, m_songLabel);
+          QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A008 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:85
+Disposition: MATCHED
+Mapping/reason: guard let duplicated = document.duplicateTrack(0), duplicated == 2 else report.fail: third track creation. [S009]
+Source context since previous assertion:
+  ;
+
+          songview::TrackHeaderModel &headers = fixture.headers();
+          SongDocument &doc = fixture.tab().document();
+
+          // Three-row insertion-slot arithmetic on a duplicated third track:
+          // dropping inside a target row's top quarter inserts above it, the
+          // bottom three quarters insert below it, and the adjacent slot leaves
+          // the row in place. Every probe undoes back to the duplicated baseline.
+          const int baselineUndo = doc.undoStack()->index();
+          const int duplicatedTrack = doc.duplicateTrack(fixture.sourceTrack());
+Original expression:
+  QVERIFY2(duplicatedTrack >= 0, "could not create the third track for slot arithmetic")
+
+A009 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:88
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(3, document.engineTracks.usedTrackCount): duplicate creates exactly one extra track. [S010]
+Source context since previous assertion:
+  ;
+          QCoreApplication::processEvents();
+          checks::support::pumpQuick();
+Original expression:
+  QTRY_COMPARE(doc.engineTrackCount(), int(fixture.tracks().size()) + 1)
+
+A010 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:94
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(3, Set(original).count): all three channels are distinct. [S011]
+Source context since previous assertion:
+  ;
+          const int fixtureTracks[] = {fixture.tracks().front(), fixture.tracks()[1],
+                                       duplicatedTrack};
+          const uint8_t identities[] = {doc.channelFor(fixtureTracks[0]),
+                                        doc.channelFor(fixtureTracks[1]),
+                                        doc.channelFor(fixtureTracks[2])};
+Original expression:
+  QVERIFY2(identities[0] != identities[1] && identities[0] != identities[2] &&
+                       identities[1] != identities[2],
+                   "the three-track slot fixture channels are not distinct")
+
+A011 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:106
+Disposition: MATCHED
+Mapping/reason: headerfixture.swift drag: three-channel fixture validation plus beginPointer/updatePointer/endPointer acceptance for from/target rows 0,1,2; concrete indexed Swift rows replace optional QModelIndex lookup. [S010, S011, S051, S052, S053]
+Source context since previous assertion:
+  ;
+          const auto hasTrackOrder = [&](int first, int second, int third) {
+              return doc.channelFor(fixtureTracks[0]) == identities[first] &&
+                     doc.channelFor(fixtureTracks[1]) == identities[second] &&
+                     doc.channelFor(fixtureTracks[2]) == identities[third];
+          };
+          const auto dragToSlot = [&](int fromTrack, int slot) {
+              const int targetTrack = fixtureTracks[slot < 3 ? slot : 2];
+              const std::optional<int> sourceRow = fixture.rowForTrack(fromTrack);
+              const std::optional<int> targetRow = fixture.rowForTrack(targetTrack);
+Original expression:
+  QVERIFY(sourceRow && targetRow)
+
+A012 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:111
+Disposition: MATCHED
+Mapping/reason: headerfixture.swift drag: beginPointer acceptance validates the calculated quarter-row point against the actual production presenter. [S051]
+Source context since previous assertion:
+  ;
+              const qreal scroll = qreal(*sourceRow * fixture.rowHeight());
+              headers.setScrollY(scroll);
+              checks::support::pumpQuick();
+              const std::optional<QPointF> start = fixture.titlePoint(*sourceRow);
+Original expression:
+  QVERIFY(start)
+
+A013 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:115
+Disposition: MATCHED
+Mapping/reason: headerfixture.swift drag: report.expect(headers.beginPointer(...)), same row insertion point and left button. [S051]
+Source context since previous assertion:
+  ;
+              const QPointF drop{headers.voiceLineRect().center().x(),
+                                 qreal(*targetRow) * fixture.rowHeight() +
+                                     fixture.rowHeight() * (slot < 3 ? 0.25 : 0.75) - scroll};
+Original expression:
+  QVERIFY(headers.pointerPress(
+                  pointerInput(fixture.input(), *start, Qt::LeftButton, Qt::LeftButton)))
+
+A014 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:117
+Disposition: MATCHED
+Mapping/reason: headerfixture.swift drag: report.expect(headers.updatePointer(...)), same drag target fractions. [S052]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(headers.pointerMove(
+                  pointerInput(fixture.input(), drop, Qt::NoButton, Qt::LeftButton)))
+
+A015 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:119
+Disposition: MATCHED
+Mapping/reason: headerfixture.swift drag: report.expect(headers.endPointer(...)), release commits the drag. [S053]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(headers.pointerRelease(
+                  pointerInput(fixture.input(), drop, Qt::LeftButton, Qt::NoButton)))
+
+A016 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:129
+Disposition: MATCHED
+Mapping/reason: upward probe: moved != baseline, revision + 1, undoDocument succeeds and history.currentIdentity == baseline; proves exactly one move transaction. [S015, S021, S022, S023]
+Source context since previous assertion:
+  ;
+              QCoreApplication::processEvents();
+          };
+
+          fixture.view().setTrackMute(fixtureTracks[0], false);
+          fixture.view().setTrackMute(fixtureTracks[1], false);
+          fixture.view().setTrackMute(duplicatedTrack, true);
+          const int upwardIndex = doc.undoStack()->index();
+          dragToSlot(duplicatedTrack, 0);
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), upwardIndex + 1)
+
+A017 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:130
+Disposition: MATCHED
+Mapping/reason: upward probe: report.expectEqual(probe.order.map { original[$0] }, fixture.channelOrder), order [2,0,1]. [S012]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(hasTrackOrder(2, 0, 1))
+
+A018 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:131
+Disposition: MATCHED
+Mapping/reason: upward probe: report.expectEqual(Set([0]), fixture.session.mutedTracks), equality asserts both positive and all negative memberships. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view().trackMuted(fixtureTracks[0]))
+
+A019 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:132
+Disposition: MATCHED
+Mapping/reason: upward probe: exact mutedTracks == Set([0]) excludes track1. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[1]))
+
+A020 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:133
+Disposition: MATCHED
+Mapping/reason: upward probe: exact mutedTracks == Set([0]) excludes track2. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[2]))
+
+A021 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:135
+Disposition: MATCHED
+Mapping/reason: upward undo: report.expectEqual(original, fixture.channelOrder). [S024]
+Source context since previous assertion:
+  ;
+          doc.undoStack()->setIndex(upwardIndex);
+Original expression:
+  QVERIFY(hasTrackOrder(0, 1, 2))
+
+A022 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:136
+Disposition: MATCHED
+Mapping/reason: upward undo: exact mutedTracks == Set([2]) excludes track0. [S025]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[0]))
+
+A023 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:137
+Disposition: MATCHED
+Mapping/reason: upward undo: exact mutedTracks == Set([2]) excludes track1. [S025]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[1]))
+
+A024 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:138
+Disposition: MATCHED
+Mapping/reason: upward undo: exact mutedTracks == Set([2]) includes track2. [S025]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view().trackMuted(fixtureTracks[2]))
+
+A025 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:144
+Disposition: MATCHED
+Mapping/reason: downward probe: moved != baseline, revision + 1, undoDocument succeeds and history.currentIdentity == baseline; proves exactly one move transaction. [S015, S021, S022, S023]
+Source context since previous assertion:
+  ;
+          fixture.view().setTrackMute(duplicatedTrack, false);
+
+          fixture.view().setTrackMute(fixtureTracks[0], true);
+          const int downwardIndex = doc.undoStack()->index();
+          dragToSlot(fixtureTracks[0], 3);
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), downwardIndex + 1)
+
+A026 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:145
+Disposition: MATCHED
+Mapping/reason: downward probe: exact committed channel order [1,2,0]. [S012]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(hasTrackOrder(1, 2, 0))
+
+A027 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:146
+Disposition: MATCHED
+Mapping/reason: downward probe: exact mutedTracks == Set([2]) excludes track0. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[0]))
+
+A028 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:147
+Disposition: MATCHED
+Mapping/reason: downward probe: exact mutedTracks == Set([2]) excludes track1. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[1]))
+
+A029 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:148
+Disposition: MATCHED
+Mapping/reason: downward probe: exact mutedTracks == Set([2]) includes track2. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view().trackMuted(fixtureTracks[2]))
+
+A030 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:150
+Disposition: MATCHED
+Mapping/reason: downward undo: report.expectEqual(original, fixture.channelOrder). [S024]
+Source context since previous assertion:
+  ;
+          doc.undoStack()->setIndex(downwardIndex);
+Original expression:
+  QVERIFY(hasTrackOrder(0, 1, 2))
+
+A031 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:151
+Disposition: MATCHED
+Mapping/reason: downward undo: exact mutedTracks == Set([0]) includes track0. [S025]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view().trackMuted(fixtureTracks[0]))
+
+A032 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:152
+Disposition: MATCHED
+Mapping/reason: downward undo: exact mutedTracks == Set([0]) excludes track1. [S025]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[1]))
+
+A033 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:153
+Disposition: MATCHED
+Mapping/reason: downward undo: exact mutedTracks == Set([0]) excludes track2. [S025]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[2]))
+
+A034 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:159
+Disposition: MATCHED
+Mapping/reason: adjacent probe: history.currentIdentity == baseline, canUndo/canRedo unchanged and revision unchanged. [S015, S016, S017, S018]
+Source context since previous assertion:
+  ;
+          fixture.view().setTrackMute(fixtureTracks[0], false);
+
+          fixture.view().setTrackMute(fixtureTracks[1], true);
+          const int adjacentIndex = doc.undoStack()->index();
+          dragToSlot(fixtureTracks[1], 2);
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), adjacentIndex)
+
+A035 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:160
+Disposition: MATCHED
+Mapping/reason: adjacent probe: exact channel order [0,1,2]. [S012]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(hasTrackOrder(0, 1, 2))
+
+A036 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:161
+Disposition: MATCHED
+Mapping/reason: adjacent probe: exact mutedTracks == Set([1]) excludes track0. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[0]))
+
+A037 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:162
+Disposition: MATCHED
+Mapping/reason: adjacent probe: exact mutedTracks == Set([1]) includes track1. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view().trackMuted(fixtureTracks[1]))
+
+A038 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:163
+Disposition: MATCHED
+Mapping/reason: adjacent probe: exact mutedTracks == Set([1]) excludes track2. [S013]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view().trackMuted(fixtureTracks[2]))
+
+A039 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.cpp:170
+Disposition: MATCHED
+Mapping/reason: each probe now undoes the duplicate and report.expectEqual(2, document.engineTracks.usedTrackCount). [S019, S020, S032, S033, S034]
+Source context since previous assertion:
+  ;
+          doc.undoStack()->setIndex(adjacentIndex);
+          fixture.view().setTrackMute(fixtureTracks[1], false);
+
+          // Every probe returned to the duplicated baseline; undoing the
+          // duplicate restores the fixture's original track set.
+          doc.undoStack()->setIndex(baselineUndo);
+Original expression:
+  QTRY_COMPARE(doc.engineTrackCount(), int(fixture.tracks().size()))
+
+A040 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.cpp:179
+Disposition: NATIVE-SETUP
+Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Source context since previous assertion:
+  ;
+          checks::support::pumpQuick();
+      }
+
+      void headerReconciliationUnchanged()
+      {
+          QString error;
+          const std::unique_ptr<checks::LoadedSong> source =
+              checks::LoadedSong::load(m_projectRoot, m_songLabel, error);
+Original expression:
+  QVERIFY2(source, qPrintable(error))
+
+A041 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.cpp:183
+Disposition: NATIVE-SETUP
+Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Source context since previous assertion:
+  ;
+
+          HeaderFixture fixture;
+          if (!fixture.prepare(source->songInfo(), &error)) {
+Original expression:
+  QFAIL(fixture.documentLoaded ? "header reconciliation fixture lacks TrackHeaderModel"
+                                           : "could not load header reconciliation fixture")
+
+A042 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.cpp:187
+Disposition: MATCHED
+Mapping/reason: TrackHeadersFixture plus expectRows: ordered [0,1] tracks, numbered Lead/Bass titles, exactly one final add row; fixture is checked before unchanged reconciliation. [S054, S055, S056, S057]
+Source context since previous assertion:
+  ;
+          }
+          if (!fixture.hasOrderedRecords())
+Original expression:
+  QFAIL("header reconciliation fixture lacks ordered records and a last add record")
+
+A043 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.cpp:198
+Disposition: MATCHED
+Mapping/reason: rowRebuildCount == resets, channelOrder == original, expectRows([Lead,Bass]) including final add row. [S035, S036, S054, S055, S056, S057]
+Source context since previous assertion:
+  ;
+
+          const std::optional<int> addBefore = trackheaders_test::addTrackRow(*fixture.headers);
+          trackheaders_test::ModelChanges changes;
+          QObject::connect(fixture.headers, &QAbstractItemModel::modelReset, &fixture.view,
+                           [&changes] { ++changes.resets; });
+          fixture.view.setSong(fixture.timeline.get(), nullptr);
+          if (changes.resets != 0 ||
+              !trackheaders_test::recordsMatchTimeline(*fixture.headers, *fixture.timeline,
+                                                       fixture.document.canAddTrack()) ||
+              trackheaders_test::addTrackRow(*fixture.headers) != addBefore) {
+Original expression:
+  QFAIL("unchanged song reset or reordered TrackHeaderModel records")
+
+A044 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:207
+Disposition: NATIVE-SETUP
+Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Source context since previous assertion:
+  ;
+          }
+      }
+
+      void headerReconciliationStructural()
+      {
+          QString error;
+          const std::unique_ptr<checks::LoadedSong> source =
+              checks::LoadedSong::load(m_projectRoot, m_songLabel, error);
+Original expression:
+  QVERIFY2(source, qPrintable(error))
+
+A045 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:211
+Disposition: NATIVE-SETUP
+Mapping/reason: Original project loader/native widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Source context since previous assertion:
+  ;
+
+          HeaderFixture fixture;
+          if (!fixture.prepare(source->songInfo(), &error)) {
+Original expression:
+  QFAIL(fixture.documentLoaded ? "header reconciliation fixture lacks TrackHeaderModel"
+                                           : "could not load header reconciliation fixture")
+
+A046 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:215
+Disposition: MATCHED
+Mapping/reason: TrackHeadersFixture plus expectRows: ordered [0,1] tracks, numbered Lead/Bass titles, exactly one final add row; fixture is checked before structural reconciliation. [S054, S055, S056, S057]
+Source context since previous assertion:
+  ;
+          }
+          if (!fixture.hasOrderedRecords())
+Original expression:
+  QFAIL("header reconciliation fixture lacks ordered records and a last add record")
+
+A047 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:224
+Disposition: MATCHED
+Mapping/reason: after deleting track1: exact channelOrder == Array(original.prefix(1)) and expectRows([Lead]) ensure only final track removed. [S038, S054, S055, S056, S057]
+Source context since previous assertion:
+  ;
+
+          trackheaders_test::ModelChanges changes;
+          QObject::connect(fixture.headers, &QAbstractItemModel::modelReset, &fixture.view,
+                           [&changes] { ++changes.resets; });
+          fixture.document.deleteTrack(fixture.lastUsed);
+          std::unique_ptr<MidiTimeline> replacement = fixture.document.buildTimeline(48000.0);
+          if (replacement->tracks[fixture.lastUsed].used ||
+              !replacement->tracks[fixture.firstUsed].used) {
+Original expression:
+  QFAIL("replacement fixture did not drop exactly the last used slot")
+
+A048 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:233
+Disposition: MATCHED
+Mapping/reason: rowRebuildCount == resets+1, expectRows([Lead]) and exact surviving channel order; session publication supplies replacement timeline synchronously. [S037, S038, S054, S055, S056, S057]
+Source context since previous assertion:
+  ;
+          }
+
+          changes.clear();
+          fixture.view.setSong(replacement.get(), nullptr);
+          if (changes.resets != 1 ||
+              !trackheaders_test::recordsMatchTimeline(*fixture.headers, *replacement,
+                                                       fixture.document.canAddTrack()) ||
+              trackheaders_test::rowForTrack(*fixture.headers, fixture.lastUsed)) {
+Original expression:
+  QFAIL("structural header replacement did not reset to the replacement records")
+
+A049 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:246
+Disposition: MATCHED
+Mapping/reason: undo succeeds; rowRebuildCount == resets+2, expectRows([Lead,Bass]) includes final add row, exact original channel order restored. [S039, S040, S041, S042, S054, S055, S056, S057]
+Source context since previous assertion:
+  ;
+          }
+
+          fixture.document.undoStack()->undo();
+          fixture.timeline = fixture.document.buildTimeline(48000.0);
+          changes.clear();
+          fixture.view.setSong(fixture.timeline.get(), nullptr);
+          const std::optional<int> restoredAdd = trackheaders_test::addTrackRow(*fixture.headers);
+          if (changes.resets != 1 ||
+              !trackheaders_test::recordsMatchTimeline(*fixture.headers, *fixture.timeline,
+                                                       fixture.document.canAddTrack()) ||
+              !trackheaders_test::rowForTrack(*fixture.headers, fixture.lastUsed) || !restoredAdd ||
+              *restoredAdd != fixture.headers->rowCount() - 1) {
+Original expression:
+  QFAIL("re-added track did not restore ordered model records and last add row")
+
+A050 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:252
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, headers.renamingTrack) after beginRename(track:0). [S043]
+Source context since previous assertion:
+  ;
+          }
+          // An open rename state does not survive a structural song replacement:
+          // the reset cancels it without committing the draft.
+          fixture.view.renameTrack(fixture.firstUsed);
+          if (fixture.headers->renamingTrack() != fixture.firstUsed)
+Original expression:
+  QFAIL("rename state did not open on a live TrackHeaderModel record")
+
+A051 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:259
+Disposition: MATCHED
+Mapping/reason: after structural document publication, rowRebuildCount == resets+3 and renamingTrack == -1. [S044, S045]
+Source context since previous assertion:
+  ;
+
+          fixture.headers->setRenameDraft(QStringLiteral("zzz"));
+          changes.clear();
+          fixture.view.setSong(replacement.get(), nullptr);
+          QCoreApplication::processEvents();
+          if (changes.resets != 1 || fixture.headers->renamingTrack() != -1)
+Original expression:
+  QFAIL("song replacement did not cancel the open header rename state")
+
+A052 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.cpp:261
+Disposition: MATCHED
+Mapping/reason: trackName(0) == Lead after cancellation and late finishRename; draft zzz never commits. [S046, S048]
+Source context since previous assertion:
+  ;
+          if (fixture.document.trackName(fixture.firstUsed) == QStringLiteral("zzz"))
+Original expression:
+  QFAIL("cancelled rename committed across song replacement")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+      }
+
+    private:
+      struct HeaderFixture {
+          SongDocument document;
+          std::unique_ptr<MidiTimeline> timeline;
+          SongView view{document};
+          songview::TrackHeaderModel *headers = nullptr;
+          int firstUsed = -1;
+          bool documentLoaded = false;
+          int lastUsed = -1;
+
+          bool prepare(const SongInfo &song, QString *error)
+          {
+              if (!document.load(song, error))
+                  return false;
+              documentLoaded = true;
+              timeline = document.buildTimeline(48000.0);
+              if (!checks::support::showQuickViewport(view, QSize(800, 480)))
+                  return false;
+              view.setSong(timeline.get(), nullptr);
+              checks::support::bindEditActionsForTest(view);
+              headers =
+                  view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
+              if (!headers)
+                  return false;
+              for (int track = 0; track < 16; ++track) {
+                  if (!timeline->tracks[track].used)
+                      continue;
+                  if (firstUsed < 0)
+                      firstUsed = track;
+                  lastUsed = track;
+              }
+              return true;
+          }
+
+          bool hasOrderedRecords() const
+          {
+              const std::optional<int> add = trackheaders_test::addTrackRow(*headers);
+              return firstUsed >= 0 && firstUsed != lastUsed &&
+                     trackheaders_test::rowForTrack(*headers, firstUsed) &&
+                     trackheaders_test::rowForTrack(*headers, lastUsed) && add &&
+                     *add == headers->rowCount() - 1;
+          }
+      };
+
+      QString m_projectRoot;
+      QString m_songLabel;
+  };
+
+  } // namespace
+
+  int runTrackHeaderModelCheck(const QString &projectRoot, const QString &songLabel,
+                               const QStringList &qtArguments)
+  {
+      TrackHeaderModelTest test(projectRoot, songLabel);
+      QStringList arguments{QStringLiteral("trackheader-model")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "tst_trackheadermodel.moc"
+
+
+Swift assertion predicates
+
+S001 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:11
+  report.expectEqual(0, headers.rows[headers.rows.count - 1].activityLeftHeight,
+                         cppID: trackHeadersUnattachedID, what: "add row left activity is dark")
+
+S002 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:13
+  report.expectEqual(0, headers.rows[headers.rows.count - 1].activityRightHeight,
+                         cppID: trackHeadersUnattachedID, what: "add row right activity is dark")
+
+S003 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:15
+  report.expectEqual(0.0, headers.viewportHeight, cppID: trackHeadersUnattachedID,
+                         what: "unconfigured viewport has zero height")
+
+S004 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:17
+  report.expectEqual(0.0, headers.maximumScrollY, cppID: trackHeadersUnattachedID,
+                         what: "unconfigured viewport has no scroll range")
+
+S005 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:19
+  report.expectEqual(3, headers.rows.count, cppID: trackHeadersUnattachedID,
+                         what: "unconfigured model has two track rows and the add-track row")
+
+S006 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:21
+  report.expectEqual([0, 1], fixture.trackRows.map(\.track), cppID: trackHeadersUnattachedID,
+                         what: "track rows exist before viewport attachment")
+
+S007 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:24
+  report.expectEqual(0.0, row.activityLeftHeight, cppID: trackHeadersUnattachedID,
+                             what: "track \(row.track): unattached left activity height")
+
+S008 | unattachedModelPublishesSafeZeroGeometry | src/checks/trackheaders/tst_trackheadermodel.swift:26
+  report.expectEqual(0.0, row.activityRightHeight, cppID: trackHeadersUnattachedID,
+                             what: "track \(row.track): unattached right activity height")
+
+S009 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:47
+  report.fail(trackHeadersReorderID, "\(probe.label): cannot create third track")
+
+S010 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:51
+  report.expectEqual(3, document.engineTracks.usedTrackCount,
+                             cppID: trackHeadersReorderID, what: "duplicate adds exactly one track")
+
+S011 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:53
+  report.expectEqual(3, Set(original).count, cppID: trackHeadersReorderID,
+                             what: "\(probe.label): channels distinguish all three track identities")
+
+S012 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:63
+  report.expectEqual(probe.order.map { original[$0] }, fixture.channelOrder,
+                             cppID: trackHeadersReorderID, what: "\(probe.label): committed track order")
+
+S013 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:65
+  report.expectEqual(Set([probe.mutedAfter]), fixture.session.mutedTracks,
+                             cppID: trackHeadersReorderID, what: "\(probe.label): mute follows the moved identity")
+
+S014 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:67
+  report.expectEqual([probe.mutedAfter],
+                             fixture.trackRows.filter(\.muteChecked).map(\.track),
+                             cppID: trackHeadersReorderID, what: "\(probe.label): visible mute follows the track")
+
+S015 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:70
+  report.expectEqual(revision + (probe.changes ? 1 : 0), document.revision,
+                             cppID: trackHeadersReorderID, what: "\(probe.label): one revision only for a real move")
+
+S016 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:73
+  report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersReorderID,
+                                 what: "\(probe.label): no history entry")
+
+S017 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:75
+  report.expectEqual(couldUndo, document.history.canUndo, cppID: trackHeadersReorderID,
+                                 what: "\(probe.label): undo reachability unchanged")
+
+S018 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:77
+  report.expectEqual(couldRedo, document.history.canRedo, cppID: trackHeadersReorderID,
+                                 what: "\(probe.label): redo reachability unchanged")
+
+S019 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:79
+  report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
+                            message: "no-op move leaves duplicate as the next undo")
+
+S020 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:81
+  report.expectEqual(2, document.engineTracks.usedTrackCount,
+                                 cppID: trackHeadersReorderID, what: "undo duplicate restores original track count")
+
+S021 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:86
+  report.expect(moved != baseline, cppID: trackHeadersReorderID,
+                        message: "\(probe.label): move enters document history")
+
+S022 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:88
+  report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
+                        message: "\(probe.label): undo succeeds")
+
+S023 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:90
+  report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersReorderID,
+                             what: "\(probe.label): one undo returns to duplicated baseline")
+
+S024 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:92
+  report.expectEqual(original, fixture.channelOrder, cppID: trackHeadersReorderID,
+                             what: "\(probe.label): undo restores order")
+
+S025 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:94
+  report.expectEqual(Set([probe.muted]), fixture.session.mutedTracks, cppID: trackHeadersReorderID,
+                             what: "\(probe.label): undo restores mute identity")
+
+S026 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:96
+  report.expectEqual([probe.muted], fixture.trackRows.filter(\.muteChecked).map(\.track),
+                             cppID: trackHeadersReorderID, what: "\(probe.label): undo restores visible mute")
+
+S027 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:98
+  report.expect(document.history.redoDocument(), cppID: trackHeadersReorderID,
+                        message: "\(probe.label): redo succeeds")
+
+S028 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:100
+  report.expectEqual(moved, document.history.currentIdentity, cppID: trackHeadersReorderID,
+                             what: "\(probe.label): redo restores the move history entry")
+
+S029 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:102
+  report.expectEqual(probe.order.map { original[$0] }, fixture.channelOrder,
+                             cppID: trackHeadersReorderID, what: "\(probe.label): redo restores order")
+
+S030 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:104
+  report.expectEqual(Set([probe.mutedAfter]), fixture.session.mutedTracks,
+                             cppID: trackHeadersReorderID, what: "\(probe.label): redo restores mute identity")
+
+S031 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:106
+  report.expectEqual([probe.mutedAfter],
+                             fixture.trackRows.filter(\.muteChecked).map(\.track),
+                             cppID: trackHeadersReorderID, what: "\(probe.label): redo restores visible mute")
+
+S032 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:109
+  report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
+                        message: "return to duplicated baseline")
+
+S033 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:111
+  report.expect(document.history.undoDocument(), cppID: trackHeadersReorderID,
+                        message: "undo duplicate")
+
+S034 | reorderSlotsResolveInsertionTargetsAndUndoRestores | src/checks/trackheaders/tst_trackheadermodel.swift:113
+  report.expectEqual(2, document.engineTracks.usedTrackCount,
+                             cppID: trackHeadersReorderID, what: "undo duplicate restores original track count")
+
+S035 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.swift:128
+  report.expectEqual(resets, fixture.headers.rowRebuildCount, cppID: trackHeadersUnchangedID,
+                         what: "unchanged document refresh emits zero row-model resets")
+
+S036 | headerReconciliationUnchanged | src/checks/trackheaders/tst_trackheadermodel.swift:130
+  report.expectEqual(original, fixture.channelOrder, cppID: trackHeadersUnchangedID,
+                         what: "unchanged refresh preserves document track order")
+
+S037 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:149
+  report.expectEqual(resets + 1, headers.rowRebuildCount, cppID: trackHeadersStructuralID,
+                         what: "delete rebuilds rows exactly once")
+
+S038 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:152
+  report.expectEqual(Array(original.prefix(1)), fixture.channelOrder, cppID: trackHeadersStructuralID,
+                         what: "delete removes exactly the last track")
+
+S039 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:154
+  report.expect(document.history.undoDocument(), cppID: trackHeadersStructuralID,
+                    message: "undo restores deleted track")
+
+S040 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:156
+  report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersStructuralID,
+                         what: "restore returns to original history identity")
+
+S041 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:158
+  report.expectEqual(resets + 2, headers.rowRebuildCount, cppID: trackHeadersStructuralID,
+                         what: "restore rebuilds rows exactly once")
+
+S042 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:161
+  report.expectEqual(original, fixture.channelOrder, cppID: trackHeadersStructuralID,
+                         what: "restore recovers original track order")
+
+S043 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:165
+  report.expectEqual(0, headers.renamingTrack, cppID: trackHeadersStructuralID,
+                         what: "rename opens on a live row")
+
+S044 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:170
+  report.expectEqual(resets + 3, headers.rowRebuildCount, cppID: trackHeadersStructuralID,
+                         what: "structural change during rename rebuilds rows exactly once")
+
+S045 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:172
+  report.expectEqual(-1, headers.renamingTrack, cppID: trackHeadersStructuralID,
+                         what: "structural change cancels an open rename")
+
+S046 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:174
+  report.expectEqual("Lead", document.trackName(0), cppID: trackHeadersStructuralID,
+                         what: "structural cancellation does not commit the draft")
+
+S047 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:176
+  report.expectEqual(revision + 1, document.revision, cppID: trackHeadersStructuralID,
+                         what: "only deletion commits during rename cancellation")
+
+S048 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:180
+  report.expectEqual("Lead", document.trackName(0), cppID: trackHeadersStructuralID,
+                         what: "late rename completion cannot commit cancelled text")
+
+S049 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:182
+  report.expect(document.history.undoDocument(), cppID: trackHeadersStructuralID,
+                    message: "single undo after cancellation restores the deleted track")
+
+S050 | headerReconciliationStructural | src/checks/trackheaders/tst_trackheadermodel.swift:184
+  report.expectEqual(baseline, document.history.currentIdentity, cppID: trackHeadersStructuralID,
+                         what: "cancelled rename leaves no extra history entry")
+
+S051 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:64
+  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts press")
+
+S052 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:66
+  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
+
+S053 | TrackHeadersFixture.drag | src/checks/trackheaders/headerfixture.swift:68
+  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts release")
+
+S054 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:73
+  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
+                             what: "\(phase): rows follow engine track order")
+
+S055 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:76
+  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
+                             what: "\(phase): rows display ordered numbered track names")
+
+S056 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:78
+  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
+                             what: "\(phase): one row per track plus add-track row")
+
+S057 | TrackHeadersFixture.expectRows | src/checks/trackheaders/headerfixture.swift:81
+  report.expectEqual([names.count], addRows, cppID: cppID,
+                             what: "\(phase): add-track row remains last")
+
+Shared helper: src/checks/trackheaders/headerfixture.swift
+SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+src/checks/trackheaders/headerfixture.swift:64
+  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts press")
+src/checks/trackheaders/headerfixture.swift:66
+  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
+src/checks/trackheaders/headerfixture.swift:68
+  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts release")
+src/checks/trackheaders/headerfixture.swift:73
+  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
+                             what: "\(phase): rows follow engine track order")
+src/checks/trackheaders/headerfixture.swift:76
+  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
+                             what: "\(phase): rows display ordered numbered track names")
+src/checks/trackheaders/headerfixture.swift:78
+  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
+                             what: "\(phase): one row per track plus add-track row")
+src/checks/trackheaders/headerfixture.swift:81
+  report.expectEqual([names.count], addRows, cppID: cppID,
+                             what: "\(phase): add-track row remains last")
+
+Shared helper: src/checks/trackheaders/headerinputfixture.swift
+SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
+src/checks/trackheaders/headerinputfixture.swift:28
+  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
+                        cppID: cppID, message: "\(probe) row \(row) accepts press")
+src/checks/trackheaders/headerinputfixture.swift:30
+  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
+                        cppID: cppID, message: "\(probe) row \(row) accepts release")
+src/checks/trackheaders/headerinputfixture.swift:36
+  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
+                        cppID: cppID, message: "right press is handled")
+src/checks/trackheaders/headerinputfixture.swift:38
+  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
+src/checks/trackheaders/headerinputfixture.swift:64
+  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
+src/checks/trackheaders/headerinputfixture.swift:65
+  report.expectEqual(revision, document.revision, cppID: cppID,
+                             what: "\(phase): no document write")
+src/checks/trackheaders/headerinputfixture.swift:67
+  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
+                             what: "\(phase): history unchanged")

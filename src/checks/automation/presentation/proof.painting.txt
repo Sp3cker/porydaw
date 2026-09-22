@@ -1,0 +1,1472 @@
+Assertion correspondence: automation/presentation/painting.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/automation/presentation/painting.cpp
+Original SHA-256: 159ac9525ae9956c17b2648674383eccba7e8dc64498ab9fa0c5f02964f78926
+Swift counterpart: src/checks/automation/presentation/painting.swift
+Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+
+Purpose and status
+Each A entry is one original assertion or failure site, including helper and setup sites.
+Repeated rows and loops execute a site more than once. The source SHA pins the entire
+original sequence; the context inventory below records its rows, loops and fixtures.
+MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
+a specific related scenario differs; GAP means exact assertion correspondence is not
+established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+A method name or related Swift case alone never establishes an assertion match.
+This inventory does not authorize removing native checks. Unresolved entries remain work.
+
+Execution and ownership
+The original swiftcore suite entrypoints invoke these paired functions in their original
+order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
+VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
+Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+
+Verification evidence
+Pending: root will record the exact final tree and selected Deno verification run.
+
+Fixture, sequence, data-row and loop inventory
+Each line below is an exact original source anchor. Multiline declarations, helper
+implementations, native event delivery and the complete order remain in the pinned source.
+src/checks/automation/presentation/painting.cpp:55 | for (int row = 0; row < model->rowCount(); ++row) {
+src/checks/automation/presentation/painting.cpp:78 | for (const songview::TimelineQuickRect &rect : layer.rects) {
+src/checks/automation/presentation/painting.cpp:85 | for (const songview::TimelineQuickTriangle &triangle : layer.triangles) {
+src/checks/automation/presentation/painting.cpp:141 | for (int index = 0; index < labels.size(); ++index) {
+src/checks/automation/presentation/painting.cpp:149 | for (const QPointF center : centers) {
+src/checks/automation/presentation/painting.cpp:173 | for (int index = 0; index < labels.size(); ++index) {
+src/checks/automation/presentation/painting.cpp:188 | for (std::size_t pair = 0; pair < pairedLabels; pair += 2) {
+src/checks/automation/presentation/painting.cpp:239 | for (int index = 0; index < labels.size(); ++index) {
+src/checks/automation/presentation/painting.cpp:387 | for (const songview::TimelineQuickRect &rect :
+src/checks/automation/presentation/painting.cpp:419 | for (const songview::TimelineQuickRect &rect :
+src/checks/automation/presentation/painting.cpp:504 | for (int y = pixels.top(); y <= pixels.bottom(); ++y) {
+src/checks/automation/presentation/painting.cpp:505 | for (int x = pixels.left(); x <= pixels.right(); ++x) {
+src/checks/automation/presentation/painting.cpp:551 | mouseMove(*m_plotInput, point);
+src/checks/automation/presentation/painting.cpp:598 | mouseMove(*m_plotInput, hoverPoint);
+src/checks/automation/presentation/painting.cpp:689 | for (const QRectF &rect : {*maxLabel, *minLabel, *neutralLabel}) {
+src/checks/automation/presentation/painting.cpp:721 | for (const songview::TimelineQuickRect &rect :
+src/checks/automation/presentation/painting.cpp:742 | mouseMove(*m_plotInput, lanePoint(panHandle, kHeldTick, 32));
+src/checks/automation/presentation/painting.cpp:771 | for (const QRectF &rect : {*maxLabel, *minLabel, *neutralLabel}) {
+
+Original assertion inventory
+
+A001 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:119
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A002 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:120
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A003 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:123
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(labels.size(), int(controllers.size()) + 1)
+
+A004 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:125
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tempoRow.has_value())
+
+A005 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:126
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY((*tempoRow == EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}))
+
+A006 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:129
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer)
+
+A007 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:131
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(minimumHeight > 0)
+
+A008 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:134
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_COMPARE(automationPage->automationViewportSize().height(), minimumHeight)
+
+A009 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:135
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_gutterInput)
+
+A010 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:136
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_COMPARE(qCeil(m_gutterInput->height()), minimumHeight)
+
+A011 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:143
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY((tab = parameterLabelItem(index)) && tab->isVisible() && tab->width() > 0.0 &&
+                      tab->height() > 0.0)
+
+A012 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:146
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(!bounds.isEmpty() && bounds.left() >= gutter.left() - layout::singlePixel() &&
+                       bounds.right() <= gutter.right() + layout::singlePixel(),
+                   "a label escaped the gutter's width")
+
+A013 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:150
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(std::abs(center.x() - bounds.center().x()) > layout::singlePixel() ||
+                      std::abs(center.y() - bounds.center().y()) > layout::singlePixel())
+
+A014 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:157
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(content, "a catalog label rendered without its content item")
+
+A015 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:160
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(text, "a catalog label rendered without its Text item")
+
+A016 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:161
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(text->property("text").toString(), labels.at(index))
+
+A017 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:164
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(contentWidth > 0.0 && contentHeight > 0.0)
+
+A018 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:165
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(contentWidth <= text->width() + 0.5,
+                   "the rendered fitted Text exceeds its label width")
+
+A019 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:167
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(contentHeight <= text->height() + 0.5,
+                   "the rendered fitted Text exceeds its label height")
+
+A020 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:172
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(counts.size(), labels.size())
+
+A021 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:175
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(row.has_value())
+
+A022 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:180
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(counts.at(index).toULongLong(), written)
+
+A023 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:186
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(labelBounds.size(), static_cast<std::size_t>(labels.size()))
+
+A024 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:189
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(std::abs(labelBounds.at(pair).center().y() -
+                            labelBounds.at(pair + 1).center().y()) <= layout::singlePixel(),
+                   "a related parameter pair no longer shares a selector row")
+
+A025 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:196
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(oddBounds.center().y() > labelBounds.at(controllers.size() - 2).center().y() +
+                                                    layout::singlePixel(),
+                       "the odd trailing controller no longer sits on its own selector row")
+
+A026 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:200
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(oddBounds.center().y() < labelBounds.back().center().y() - layout::singlePixel(),
+                   "the odd trailing controller no longer sits above Tempo")
+
+A027 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:204
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(tempoBounds.center().y() > labelBounds.front().center().y(),
+               "the song-global Tempo label no longer closes the selector grid")
+
+A028 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:206
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(tempoBounds.width() > labelBounds.front().width() * 1.5,
+               "the song-global Tempo label no longer spans the closing selector row")
+
+A029 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:210
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scroller)
+
+A030 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:211
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scroller->property("clip").toBool())
+
+A031 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:213
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height())
+
+A032 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:215
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(checks::support::rectInside(labelBounds.front(), viewport),
+               "the first tab is not visible at the content top")
+
+A033 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:218
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(maximumContentY > 0.0)
+
+A034 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:221
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(lastTab)
+
+A035 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:222
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          checks::support::rectInside(lastTab->mapRectToScene(lastTab->boundingRect()), viewport))
+
+A036 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:233
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A037 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:234
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scene)
+
+A038 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:235
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A039 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:241
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(row.has_value())
+
+A040 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:242
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(activateParameter(*row), qUtf8Printable(labels.at(index)))
+
+A041 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:243
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(canvas->activeParameter(), index)
+
+A042 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:245
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(m_document->smf().write(), before)
+
+A043 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:256
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(volumeHandle.valid())
+
+A044 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:257
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(panHandle.valid())
+
+A045 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:258
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(lfoHandle.valid())
+
+A046 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:269
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(volume))
+
+A047 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:270
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
+                                  volumeNode, QPoint{}, ccColor))
+
+A048 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:272
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes), lfoNode,
+                               QPoint{}, ccColor))
+
+A049 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:275
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(lfo))
+
+A050 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:276
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
+                                  lfoNode, QPoint{}, ccColor))
+
+A051 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:278
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
+                               volumeNode, QPoint{}, ccColor))
+
+A052 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:281
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(pan))
+
+A053 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:282
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes),
+                                  panNode, QPoint{}, ccColor))
+
+A054 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:284
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationNodes), lfoNode,
+                               QPoint{}, ccColor))
+
+A055 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:293
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(tempo))
+
+A056 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:296
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                  QRegion(body), QPoint{}, tempoColor))
+
+A057 | AutomationPresentationTest::parameterLabelClicksSwitchActivePlot | src/checks/automation/presentation/painting.cpp:298
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                               QRegion(body), QPoint{},
+                               themes::trackIdentityColor(kTrack % themes::trackIdentityColorCount)))
+
+A058 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:308
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A059 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:309
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scene)
+
+A060 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:310
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A061 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:314
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(tempo))
+
+A062 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:317
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(volumeHandle.valid())
+
+A063 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:318
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(tempoBody, canvas->laneBody(volumeHandle))
+
+A064 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:319
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(tempoBody, m_plotInput->bounds().toAlignedRect())
+
+A065 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:320
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!tempoBody.isEmpty())
+
+A066 | AutomationPresentationTest::tempoUsesFullSharedPlotBody | src/checks/automation/presentation/painting.cpp:328
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                  QRegion(tempoBody), QPoint{}, tempoColor))
+
+A067 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:337
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A068 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:338
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scene)
+
+A069 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:339
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A070 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:343
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(volume))
+
+A071 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:353
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                               QRegion(body), QPoint{}, ghostInk))
+
+A072 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:355
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                  QRegion(body), QPoint{}, ink))
+
+A073 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:358
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tempoIndex >= 0)
+
+A074 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:360
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                  QRegion(body), QPoint{}, ghostInk))
+
+A075 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:362
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                  QRegion(body), QPoint{}, ink))
+
+A076 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:365
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas->ghostParameters().isEmpty())
+
+A077 | AutomationPresentationTest::ghostTempoPaintsUnderActiveLane | src/checks/automation/presentation/painting.cpp:366
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(!layerHasColorIn(scene->layer(songview::TimelineQuickLayer::AutomationCurves),
+                                   QRegion(body), QPoint{}, ghostInk))
+
+A078 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:375
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A079 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:376
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scene)
+
+A080 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:377
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A081 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:380
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(volume))
+
+A082 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:382
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(volumeHandle.valid())
+
+A083 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:399
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!beforeGrid.empty())
+
+A084 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:404
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(canvas->laneBody(volumeHandle).height() > beforeBody.height())
+
+A085 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:407
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(beforeValueY != afterValueY)
+
+A086 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:415
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(sameGridCenters(beforeGrid, gridCenters(afterBody)))
+
+A087 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:430
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(hasFrame(QRectF(afterBody).top()))
+
+A088 | AutomationPresentationTest::drawerGrowthMovesValueAxisKeepsGridAlignment | src/checks/automation/presentation/painting.cpp:431
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(hasFrame(QRectF(afterBody).bottom()))
+
+A089 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:439
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A090 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:440
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A091 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:448
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(pan))
+
+A092 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:453
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(panIndex >= 0 && lfoIndex >= 0 && tempoIndex >= 0 && modulationIndex >= 0)
+
+A093 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:471
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(canvas->selectedParameters() == expectedSelected)
+
+A094 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:472
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!canvas->selectedParameters().contains(modulationIndex))
+
+A095 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:477
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(panTab)
+
+A096 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:478
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(lfoTab)
+
+A097 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:479
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tempoTab)
+
+A098 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:483
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(panBackground)
+
+A099 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:484
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(lfoBackground)
+
+A100 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:485
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tempoBackground)
+
+A101 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:487
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(panBackground->property("color").value<QColor>(),
+               appearance.value(QStringLiteral("tabSelectedBackground")).value<QColor>())
+
+A102 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:489
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(lfoBackground->property("color").value<QColor>(),
+               appearance.value(QStringLiteral("tabBackground")).value<QColor>())
+
+A103 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:491
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(tempoBackground->property("color").value<QColor>(),
+               appearance.value(QStringLiteral("tabBackground")).value<QColor>())
+
+A104 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:496
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(band)
+
+A105 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:498
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!image.isNull())
+
+A106 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:517
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(containsOutline(localBounds(lfoTab), selectionBar),
+               "the inactive LFO label has no visible shared-selection indicator")
+
+A107 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:519
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
+               "the inactive Tempo label has no visible shared-selection indicator")
+
+A108 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:522
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
+               "the shared selection leaked onto the ghost rule")
+
+A109 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:524
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(!containsOutline(localBounds(tempoTab), ghostRule),
+               "the shared selection leaked onto the ghost rule")
+
+A110 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:532
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A111 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:533
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A112 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:534
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+
+A113 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:548
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(band)
+
+A114 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:550
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!before.isNull())
+
+A115 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:553
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY((label = visibleHoverTextRecord(lane.valueText(bpm))).has_value())
+
+A116 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:554
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(QRectF(QPointF{}, QSizeF(automationPage->automationViewportSize())).contains(*label))
+
+A117 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:556
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!after.isNull())
+
+A118 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:557
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(after != before)
+
+A119 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:565
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A120 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:566
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scene)
+
+A121 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:567
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A122 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:571
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(volume))
+
+A123 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:579
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(ghostModel)
+
+A124 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:582
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tempoIndex >= 0)
+
+A125 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:586
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY((label = findTextRecord(ghostModel, QStringLiteral("Tempo · 1 Event"), viewport))
+                      .has_value())
+
+A126 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:588
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(label->right() <= viewport.right() && label->right() > viewport.right() * 0.5,
+               "the ghost name label no longer hugs the plot's right edge")
+
+A127 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:593
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(std::abs(label->center().y() - curveY) <= label->height(),
+               "the ghost name label no longer tracks its curve's height")
+
+A128 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:595
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Volume"), viewport).has_value())
+
+A129 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:599
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY((label = findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"),
+                                          viewport))
+                      .has_value())
+
+A130 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:602
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(std::abs(label->center().x() - hoverPoint.x()) <= label->width(),
+               "the ghost hover label no longer tracks the pointer horizontally")
+
+A131 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:604
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(label->bottom() <= curveY, "the ghost hover label no longer sits above the nodeline")
+
+A132 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:605
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value())
+
+A133 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:608
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas->ghostParameters().isEmpty())
+
+A134 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:609
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(!findTextRecord(ghostModel, QStringLiteral("Tempo"), viewport).has_value())
+
+A135 | AutomationPresentationTest::ghostLabelNamesCurveAndFollowsHover | src/checks/automation/presentation/painting.cpp:610
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          !findTextRecord(scene->automationHoverTextModel(), QStringLiteral("Tempo"), viewport)
+               .has_value())
+
+A136 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:620
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(pan))
+
+A137 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:623
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tab)
+
+A138 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:625
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(content)
+
+A139 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:630
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(count)
+
+A140 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:631
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(name)
+
+A141 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:632
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(count->isVisible() && count->opacity() > 0.0)
+
+A142 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:633
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(count->property("text").toString().startsWith(QString::number(2)))
+
+A143 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:634
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          content->boundingRect().contains(count->mapRectToItem(content, count->boundingRect())))
+
+A144 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:636
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(name->x() + name->width() <= count->x())
+
+A145 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:643
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(count->property("text").toString().startsWith(QString::number(1)))
+
+A146 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:646
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(volume))
+
+A147 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:647
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_COMPARE(count->opacity(), 0.0)
+
+A148 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:648
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(tab->height(), height)
+
+A149 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:649
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(name->x(), nameX)
+
+A150 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:650
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(pan))
+
+A151 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:651
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(count->opacity() > 0.0)
+
+A152 | AutomationPresentationTest::laneEventCountsFollowActiveGutterRow | src/checks/automation/presentation/painting.cpp:654
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_COMPARE(count->opacity(), 0.0)
+
+A153 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:662
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A154 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:663
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scene)
+
+A155 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:664
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A156 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:667
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(laneTextModel)
+
+A157 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:678
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(pan))
+
+A158 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:683
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value())
+
+A159 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:685
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value())
+
+A160 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:687
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
+                      .has_value())
+
+A161 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:690
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(rect.left() < viewport.left() + viewport.width() / 4.0,
+                   "a scale label no longer hugs the viewport's left edge")
+
+A162 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:693
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(maxLabel->center().y() < viewport.top() + viewport.height() / 3.0,
+               "the maximum scale label left the plot's top third")
+
+A163 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:695
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(neutralLabel->center().y() >= viewport.top() + viewport.height() / 3.0 &&
+                   neutralLabel->center().y() < viewport.top() + viewport.height() * 2.0 / 3.0,
+               "the neutral scale label left the plot's middle third")
+
+A164 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:698
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(minLabel->center().y() >= viewport.top() + viewport.height() * 2.0 / 3.0,
+               "the minimum scale label left the plot's bottom third")
+
+A165 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:700
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!maxLabel->intersects(*minLabel))
+
+A166 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:701
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!maxLabel->intersects(*neutralLabel))
+
+A167 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:702
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!minLabel->intersects(*neutralLabel))
+
+A168 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:708
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(panHandle.valid())
+
+A169 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:710
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!body.isEmpty())
+
+A170 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:716
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(std::abs(minLabel->center().y() - minY) <= minLabel->height() / 2.0,
+               "the minimum scale label moved off its curve height")
+
+A171 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:737
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1 &&
+                  edgeTickYs().size() == 3)
+
+A172 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:743
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(scene->automationHoverTextModel()->rowCount() > 0)
+
+A173 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:744
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport), maxLabel)
+
+A174 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:745
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport), minLabel)
+
+A175 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:746
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport), neutralLabel)
+
+A176 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:747
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1,
+               "a scale tick no longer sits at its label's curve height")
+
+A177 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:749
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(edgeTickYs().size() == 3,
+               "a hover-only pass appended duplicate left-edge scale ticks")
+
+A178 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:759
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(volumeIndex >= 0)
+
+A179 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:762
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          (ghostLabel = findTextRecord(laneTextModel, QStringLiteral("Volume · 2 Events"), viewport))
+              .has_value())
+
+A180 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:765
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value())
+
+A181 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:767
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value())
+
+A182 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:769
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
+                      .has_value())
+
+A183 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:772
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(!ghostLabel->intersects(rect),
+                   "the ghost label overlaps a scale label instead of keeping its side")
+
+A184 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:776
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas->ghostParameters().isEmpty())
+
+A185 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:781
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("127"), viewport).has_value())
+
+A186 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:782
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value())
+
+A187 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:783
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport).has_value())
+
+A188 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:788
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(tempoIndex >= 0)
+
+A189 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:791
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("255"), viewport).has_value())
+
+A190 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:792
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("20"), viewport).has_value())
+
+A191 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:793
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("120"), viewport).has_value())
+
+A192 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:795
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(bendIndex >= 0)
+
+A193 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:798
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("+8191"), viewport).has_value())
+
+A194 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:799
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("-8192"), viewport).has_value())
+
+A195 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:800
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value())
+
+Swift executable assertion index
+The S entries are exact predicates already called by the suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:15
+Swift expression:
+  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum, .neutral],
+                         pan.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
+                         what: "a centered parameter emits maximum, minimum and neutral labels")
+
+S002 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:18
+Swift expression:
+  report.expectEqual(["c_v+63", "c_v-64", "c_v+0"], pan.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
+                         what: "the scale labels use the parameter's own formatting")
+
+S003 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:20
+Swift expression:
+  report.expectEqual(64, pan.scaleLabels[2].value, cppID: drawerAutomationLabelsID,
+                         what: "the neutral label names the neutral value")
+
+S004 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:22
+Swift expression:
+  report.expect(pan.scaleLabels[0].y < pan.scaleLabels[2].y
+                        && pan.scaleLabels[2].y < pan.scaleLabels[1].y,
+                    cppID: drawerAutomationLabelsID,
+                    message: "maximum, neutral and minimum sit at their curve-true heights")
+
+S005 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:28
+Swift expression:
+  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum],
+                         volume.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
+                         what: "a parameter without a neutral emits only its extremes")
+
+S006 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:31
+Swift expression:
+  report.expectEqual(["127", "0"], volume.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
+                         what: "Volume's scale labels are its raw values")
+
+S007 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:33
+Swift expression:
+  report.expectEqual(["255", "20"], fixture.projection(.tempo).scaleLabels.map(\.text),
+                         cppID: drawerAutomationLabelsID,
+                         what: "Tempo's scale labels are its BPM bounds with no neutral")
+
+S008 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:36
+Swift expression:
+  report.expectEqual(["+8191", "-8192", "0"], fixture.projection(fixture.bendLane)
+          .scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
+                         what: "Bend's scale labels take the bend format path")
+
+S009 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+Swift expression:
+  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
+                         what: "the row stack carries one row per catalog parameter")
+
+S010 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:45
+Swift expression:
+  report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
+                         what: "the Tempo row leads the stack")
+
+S011 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:47
+Swift expression:
+  report.expectEqual(2, stack.row(for: fixture.volumeLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
+                         what: "a row counts the lane's written events")
+
+S012 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:49
+Swift expression:
+  report.expectEqual(0, stack.row(for: fixture.modulationLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
+                         what: "a lane the document never wrote counts no event")
+
+S013 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:51
+Swift expression:
+  report.expectEqual(AutomationCatalog.count, stack.visibleRowCount, cppID: drawerAutomationLabelsID,
+                         what: "a ready stack shows every row")
+
+S014 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:53
+Swift expression:
+  report.expectEqual(4, stack.laneCount, cppID: drawerAutomationLabelsID,
+                         what: "the lane count sums the written events, Tempo included")
+
+S015 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:55
+Swift expression:
+  report.expectEqual([1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], stack.eventCounts(track: 0),
+                         cppID: drawerAutomationLabelsID,
+                         what: "the selector's counts follow the catalog order, Tempo first")
+
+S016 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:61
+Swift expression:
+  report.expectEqual(1, hidden.visibleRowCount, cppID: drawerAutomationLabelsID,
+                         what: "without a track only the Tempo row is visible")
+
+S017 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:63
+Swift expression:
+  report.expectEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hidden.eventCounts(track: 0),
+                         cppID: drawerAutomationLabelsID,
+                         what: "without a track the selector counts only Tempo")
+
+S018 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:80
+Swift expression:
+  report.expectEqual(range, stack.activeTickRange, cppID: drawerAutomationRowsID,
+                         what: "an active selection publishes its tick range")
+
+S019 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:83
+Swift expression:
+  report.expect(panRow?.coversNodes == true && panRow?.coversLane == true
+                        && panRow?.selectionHasEvents == true,
+                    cppID: drawerAutomationRowsID,
+                    message: "a covered lane with events inside the range carries both indicators")
+
+S020 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:88
+Swift expression:
+  report.expect(volumeRow?.coversNodes == false && volumeRow?.selectionHasEvents == false,
+                    cppID: drawerAutomationRowsID, message: "an uncovered lane carries no scope indicator")
+
+S021 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:90
+Swift expression:
+  report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
+                         what: "the selected parameters are the covered lanes with events")
+
+S022 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:99
+Swift expression:
+  report.expect(empty.row(for: fixture.panLane)?.coversNodes == true
+                        && empty.row(for: fixture.panLane)?.selectionHasEvents == false,
+                    cppID: drawerAutomationRowsID, message: "scope coverage alone never marks a row selected")
+
+S023 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:102
+Swift expression:
+  report.expectEqual([AutomationParameter](), empty.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
+                         what: "a covered but empty range selects no parameter")
+
+S024 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:108
+Swift expression:
+  report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID,
+                    message: "a track-scoped selection covers the selected track's lanes")
+
+S025 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:110
+Swift expression:
+  report.expect(!trackScoped.covers(.controlChange(track: 1, controller: TimeDefaults.ccPan),
+                                        usedTracks: [0, 1]),
+                    cppID: drawerAutomationRowsID,
+                    message: "a track-scoped selection leaves another track's lanes alone")
+
+S026 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:114
+Swift expression:
+  report.expect(trackScoped.coversTempo(usedTracks: [0]), cppID: drawerAutomationRowsID,
+                    message: "Tempo is covered when the whole used set is selected")
+
+S027 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:116
+Swift expression:
+  report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID,
+                    message: "Tempo is uncovered when part of the used set is selected")
+
+S028 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:118
+Swift expression:
+  report.expect(!AutomationTimeSelection(range: TimeRange(startTick: 20, endTick: 20),
+                                             scope: .lanes).isActive,
+                    cppID: drawerAutomationRowsID, message: "a zero-width range is no selection")
+
+S029 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:126
+Swift expression:
+  report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID,
+                         what: "the page publishes the selected inactive parameters")
+
+S030 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:128
+Swift expression:
+  report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID,
+                         what: "the active parameter is not the selected one")
+
+S031 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:131
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
+                    message: "a covered lane with events pins as a ghost")
+
+S032 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:133
+Swift expression:
+  report.expectEqual(["Pan (PAN) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
+                         what: "the ghost label names the curve and its event count")
+
+S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:135
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
+                    message: "the pin toggles off again")
+
+S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:137
+Swift expression:
+  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
+                         what: "unpinning drops the ghost label")

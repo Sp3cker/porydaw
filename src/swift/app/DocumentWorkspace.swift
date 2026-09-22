@@ -117,6 +117,11 @@ public final class DocumentWorkspace {
         playhead.onPresentation = { [weak self] presentation in
             self?.present(playhead: presentation)
         }
+        playhead.onPoll = { [weak self] elapsed, playing in
+            guard let self else { return }
+            self.trackHeaders.advanceActivity(levels: self.audio.consumeTrackActivityLevels(),
+                                               elapsedSeconds: elapsed, playing: playing)
+        }
         drawer.attachSection(velocityPage)
         drawer.attachSection(voiceChangesPage)
         drawer.attachSection(automationPage)

@@ -1,0 +1,584 @@
+Assertion correspondence: midi/tst_midiroundtrip.cpp
+
+Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
+Original: src/checks/midi/tst_midiroundtrip.cpp
+Original SHA-256: 5569d902b961eac8d872144d27ded4a9fc75c4609d2bcb4a5052f3f8274fa66f
+Swift counterpart: src/checks/midi/MidiChecks.swift
+Swift SHA-256: 3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute for the same
+logical observation; execution must still be verified.
+PARTIAL identifies a related Swift predicate with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter roundtrip --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Swift pairing command: deno task verify --filter swiftcore --verbose
+The swiftcore lane executes runMidiCodecSuite (per-song codec rows) and
+runMidiExportEquivalence (per-song mid2agb assembly comparison plus the XCMD
+traffic predicates) with the same song fixtures and the same mid2agb binary.
+
+Execution ownership
+runMidiCodecSuite iterates the 14 project songs below and calls
+compareFixture per song with cppID
+roundtrip/MidiRoundtripTest::songM2Roundtrip[<label>]; compareCodecCase and
+expectDecodedStructure predicates execute per row. runMidiExportEquivalence
+writes the byte-identical XCMD fixture to <exportRoot>/echo_traffic.mid,
+invokes the native pdc_check_midi_exports helper (which compiles original and
+Swift-encoded bytes with mid2agb and compares assembly), and emits the
+per-song pass/fail rows plus the XCMD count predicates. compileMid, writeBytes,
+firstDiffLine, and QTemporaryDir scratch handling stay C++-only.
+
+Fixture, sequence and row constraints
+songM2Roundtrip_data publishes one row per playable project song (14 rows:
+mus_caught, mus_dummy, mus_gsc_route38, mus_gym, mus_littleroot_test,
+mus_oldale, mus_petalburg, mus_route101, mus_route102, mus_surf,
+mus_victory_wild, se_fanfare_1trk, se_pc_login, se_use_item); every A-site in
+songM2Roundtrip expands over those rows. se_fanfare_1trk is format 0, so its
+Swift row asserts routing/order instead of canonical bytes. The XCMD fixture
+is one sustained note (60/64, ticks 0-24) under latched selector/payload pairs
+0x08/0x40, 0x09/0x33 and unknown selector 0x2A/payload 0x7F. Original setup,
+flags (song.cfg.rawFlags), and helper bodies at the reference revision remain
+authoritative.
+
+Original assertion inventory and source sequence
+
+A001 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:82
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  #include "checks/midi/tst_midiroundtrip.h"
+
+  #include <QDir>
+  #include <QFile>
+  #include <QFileInfo>
+  #include <QProcess>
+  #include <QTemporaryDir>
+  #include <QtTest>
+
+  #include "core/smf.h"
+
+  namespace {
+
+  bool compileMid(const QString &mid2agbPath, const QStringList &flags, const QString &midPath,
+                  QByteArray &assembly, QString &error)
+  {
+      assembly.clear();
+      error.clear();
+      const QString outputPath = midPath.left(midPath.size() - 4) + QStringLiteral(".s");
+      auto process = QProcess{};
+      auto arguments = flags;
+      arguments << midPath << outputPath;
+      process.start(mid2agbPath, arguments);
+      if (!process.waitForFinished(15000)) {
+          error = QStringLiteral("mid2agb timed out");
+          return false;
+      }
+      if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+          error = QStringLiteral("mid2agb failed: %1")
+                      .arg(QString::fromLocal8Bit(process.readAllStandardError()).trimmed());
+          return false;
+      }
+
+      auto output = QFile{outputPath};
+      if (!output.open(QIODevice::ReadOnly)) {
+          error = QStringLiteral("mid2agb produced no output");
+          return false;
+      }
+      assembly = output.readAll();
+      return true;
+  }
+
+  bool writeBytes(const QString &path, const QByteArray &bytes, QString &error)
+  {
+      auto file = QFile{path};
+      if (!file.open(QIODevice::WriteOnly)) {
+          error = QStringLiteral("cannot write %1: %2").arg(path, file.errorString());
+          return false;
+      }
+      if (file.write(bytes) != bytes.size()) {
+          error = QStringLiteral("incomplete write to %1: %2").arg(path, file.errorString());
+          return false;
+      }
+      return true;
+  }
+
+  QString firstDiffLine(const QByteArray &left, const QByteArray &right)
+  {
+      const QList<QByteArray> leftLines = left.split('\n');
+      const QList<QByteArray> rightLines = right.split('\n');
+      const int sharedCount = qMin(leftLines.size(), rightLines.size());
+      for (int index = 0; index < sharedCount; ++index) {
+          if (leftLines[index] != rightLines[index]) {
+              return QStringLiteral("line %1: '%2' vs '%3'")
+                  .arg(index + 1)
+                  .arg(QString::fromLatin1(leftLines[index]).trimmed(),
+                       QString::fromLatin1(rightLines[index]).trimmed());
+          }
+      }
+      return QStringLiteral("line count %1 vs %2").arg(leftLines.size()).arg(rightLines.size());
+  }
+
+  } // namespace
+
+  MidiRoundtripTest::MidiRoundtripTest(QString projectRoot, QString mid2agbPath)
+      : m_projectRoot(std::move(projectRoot))
+      , m_mid2agbPath(std::move(mid2agbPath))
+  {}
+
+  void MidiRoundtripTest::initTestCase()
+  {
+
+Original expression:
+  QVERIFY2(!m_projectRoot.isEmpty(), "roundtrip requires a staged project root")
+
+A002 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:84
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      auto error = QString{};
+
+Original expression:
+  QVERIFY2(m_project.open(m_projectRoot, &error), qPrintable(error))
+
+A003 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:87
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+      const auto compiler = QFileInfo{m_mid2agbPath};
+
+Original expression:
+  QVERIFY2(compiler.isFile(),
+               qPrintable(QStringLiteral("mid2agb binary not found at %1").arg(m_mid2agbPath)))
+
+A004 | MidiRoundtripTest::initTestCase | src/checks/midi/tst_midiroundtrip.cpp:89
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(compiler.isExecutable(),
+               qPrintable(QStringLiteral("mid2agb binary is not executable: %1").arg(m_mid2agbPath)))
+
+A005 | MidiRoundtripTest::songM2Roundtrip_data | src/checks/midi/tst_midiroundtrip.cpp:96
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void MidiRoundtripTest::songM2Roundtrip_data()
+  {
+      QTest::addColumn<int>("songIndex");
+
+Original expression:
+  QVERIFY2(m_project.isOpen(), "roundtrip project did not open in initTestCase")
+
+A006 | MidiRoundtripTest::songM2Roundtrip_data | src/checks/midi/tst_midiroundtrip.cpp:107
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+      int rows = 0;
+      const auto &songs = m_project.songs();
+      for (int index = 0; index < songs.size(); ++index) {
+          const SongInfo &song = songs[index];
+          if (!song.isPlayable())
+              continue;
+          QTest::newRow(qPrintable(song.label)) << index;
+          ++rows;
+      }
+
+Original expression:
+  QVERIFY2(rows > 0, "roundtrip project contains no playable MIDI songs")
+
+A007 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:114
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void MidiRoundtripTest::songM2Roundtrip()
+  {
+      QFETCH(int, songIndex);
+      const auto &songs = m_project.songs();
+
+Original expression:
+  QVERIFY2(songIndex >= 0 && songIndex < songs.size(), "roundtrip song data row is out of range")
+
+A008 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:116
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      const SongInfo &song = songs[songIndex];
+
+Original expression:
+  QVERIFY2(song.isPlayable(), "roundtrip data row is not playable")
+
+A009 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:119
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+      auto originalFile = QFile{song.midPath};
+
+Original expression:
+  QVERIFY2(originalFile.open(QIODevice::ReadOnly),
+               qPrintable(QStringLiteral("cannot read %1").arg(song.midPath)))
+
+A010 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:125
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S003, S005, S006, S007, S009, S010, S011, S013 in src/checks/midi/MidiChecks.swift; compareFixture decodes the same project song bytes under cppID roundtrip/MidiRoundtripTest::songM2Roundtrip[<label>] and asserts independent Swift validity, canonical bytes, order, and decoded structure. Unproved: the C++ SmfFile::read path itself.
+Source context since previous assertion:
+  ;
+      const QByteArray originalBytes = originalFile.readAll();
+
+      auto smf = SmfFile{};
+      auto error = QString{};
+
+Original expression:
+  QVERIFY2(SmfFile::read(originalBytes, &smf, &error), qPrintable(error))
+
+A011 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:129
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray savedBytes = smf.write();
+
+      auto scratch = QTemporaryDir{};
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "could not create per-song roundtrip scratch directory")
+
+A012 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:131
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      const auto scratchDir = QDir{scratch.path()};
+
+Original expression:
+  QVERIFY2(scratchDir.mkpath(QStringLiteral("orig")), "could not create original MIDI directory")
+
+A013 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:132
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(scratchDir.mkpath(QStringLiteral("saved")), "could not create saved MIDI directory")
+
+A014 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:135
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+      const QString name = QFileInfo{song.midPath}.fileName();
+
+Original expression:
+  QVERIFY2(name.endsWith(QStringLiteral(".mid"), Qt::CaseInsensitive),
+               qPrintable(QStringLiteral("playable song has a non-MIDI path: %1").arg(song.midPath)))
+
+A015 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:139
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      const QString originalMidi = scratchDir.filePath(QStringLiteral("orig/") + name);
+      const QString savedMidi = scratchDir.filePath(QStringLiteral("saved/") + name);
+
+Original expression:
+  QVERIFY2(writeBytes(originalMidi, originalBytes, error), qPrintable(error))
+
+A016 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:140
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(writeBytes(savedMidi, savedBytes, error), qPrintable(error))
+
+A017 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:143
+Disposition: PARTIAL
+Mapping/reason: Related predicate S014 in src/checks/midi/MidiChecks.swift; the native export-equivalence helper compiles the same original song bytes with mid2agb per song row, and a compile failure clears that row's pass bit. Unproved: the C++ compileMid invocation with song.cfg.rawFlags itself.
+Source context since previous assertion:
+  ;
+
+      auto originalAssembly = QByteArray{};
+
+Original expression:
+  QVERIFY2(compileMid(m_mid2agbPath, song.cfg.rawFlags, originalMidi, originalAssembly, error),
+               qPrintable(QStringLiteral("%1 original: %2").arg(song.label, error)))
+
+A018 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:146
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. Neither the Swift codec suite nor the native export-equivalence helper compiles the C++ smf.write() output; compilability of the saved bytes below remains an open obligation.
+Source context since previous assertion:
+  ;
+      auto savedAssembly = QByteArray{};
+
+Original expression:
+  QVERIFY2(compileMid(m_mid2agbPath, song.cfg.rawFlags, savedMidi, savedAssembly, error),
+               qPrintable(QStringLiteral("%1 saved: %2").arg(song.label, error)))
+
+A019 | MidiRoundtripTest::songM2Roundtrip | src/checks/midi/tst_midiroundtrip.cpp:148
+Disposition: PARTIAL
+Mapping/reason: Related predicate S014 in src/checks/midi/MidiChecks.swift; per song row it proves original-assembly == Swift-encoded-assembly via the same mid2agb converter. Unproved: equality against the C++ saved (smf.write()) assembly asserted below.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(originalAssembly == savedAssembly,
+               qPrintable(QStringLiteral("%1 assembly differs — %2")
+                              .arg(song.label, firstDiffLine(originalAssembly, savedAssembly))))
+
+A020 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:202
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  // Grounds the import report's XCMD verdicts against the bundled converter
+  // itself: a latched selector 0x08/0x09 turns each payload byte into the game
+  // commands XCMD xIECV / xIECL, while an unknown selector's payload emits no
+  // XCMD op at all (PrintExtendedOp falls back to a bare wait).
+  void MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands()
+  {
+      auto smf = SmfFile{};
+      smf.format = 1;
+      smf.division = 24;
+      smf.tracks.resize(2);
+      auto tempo = SmfEvent{};
+      tempo.tick = 0;
+      tempo.status = 0xFF;
+      tempo.metaType = 0x51;
+      tempo.blob = QByteArray::fromHex("07A120");
+      smf.tracks[0].events.push_back(tempo);
+      auto controller = [](Tick tick, uint8_t cc, uint8_t value) {
+          auto event = SmfEvent{};
+          event.tick = tick;
+          event.status = 0xB0;
+          event.data0 = cc;
+          event.data1 = value;
+          return event;
+      };
+      auto note = [](Tick tick, uint8_t status, uint8_t pitch, uint8_t velocity) {
+          auto event = SmfEvent{};
+          event.tick = tick;
+          event.status = status;
+          event.data0 = pitch;
+          event.data1 = velocity;
+          return event;
+      };
+      auto &channel = smf.tracks[1];
+      // mid2agb only maps a MIDI channel onto an AGB track when the channel
+      // carries at least one ended note (s_minNote must move off 0xFF); a
+      // controller-only channel is scanned and discarded before printing.
+      // One sustained note under the echo traffic keeps the fixture on the
+      // converter's print path without touching the XCMD event ticks.
+      channel.events.push_back(note(0, 0x90, 60, 64));
+      channel.events.push_back(controller(0, 0x1E, 0x08));
+      channel.events.push_back(controller(0, 0x1D, 0x40));
+      channel.events.push_back(controller(10, 0x1E, 0x09));
+      channel.events.push_back(controller(10, 0x1D, 0x33));
+      channel.events.push_back(controller(20, 0x1E, 0x2A));
+      channel.events.push_back(controller(20, 0x1D, 0x7F));
+      channel.events.push_back(note(24, 0x80, 60, 0));
+      channel.endTick = 24;
+
+      auto scratch = QTemporaryDir{};
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "could not create xcmd compile scratch directory")
+
+A021 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:205
+Disposition: GAP
+Mapping/reason: Staged-project/mid2agb harness precondition or QTest row scaffolding with no Swift counterpart. The swiftcore lane receives the fixture root and mid2agb path as environment and reports I/O failure instead of asserting these guards; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      const QString midPath = scratch.filePath(QStringLiteral("echo_traffic.mid"));
+      auto error = QString{};
+
+Original expression:
+  QVERIFY2(writeBytes(midPath, smf.write(), error), qPrintable(error))
+
+A022 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:208
+Disposition: PARTIAL
+Mapping/reason: Related predicate S016 in src/checks/midi/MidiChecks.swift; the Swift side writes byte-identical echo traffic and the native helper proves it compiles (xcmdCompileFailed == 0). Unproved: the C++ compileMid invocation itself.
+Source context since previous assertion:
+  ;
+
+      auto assembly = QByteArray{};
+
+Original expression:
+  QVERIFY2(compileMid(m_mid2agbPath, {}, midPath, assembly, error), qPrintable(error))
+
+A023 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:211
+Disposition: MATCHED
+Mapping/reason: Corresponding Swift predicates S017, S018, S019, S020 in src/checks/midi/MidiChecks.swift; the Swift fixture carries byte-identical echo traffic (tempo 07A120, selector 0x08/payload 0x40, selector 0x09/payload 0x33, unknown selector 0x2A/payload 0x7F under one sustained note) and the same mid2agb converter observes exactly one xIECV and one xIECL with payloads 64/51.
+Source context since previous assertion:
+  ;
+
+      // Each echo selector compiled exactly one game command with its payload.
+
+Original expression:
+  QCOMPARE(assembly.count(QByteArrayLiteral("xIECV")), qsizetype{1})
+
+A024 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:212
+Disposition: MATCHED
+Mapping/reason: Corresponding Swift predicates S017, S018, S019, S020 in src/checks/midi/MidiChecks.swift; the Swift fixture carries byte-identical echo traffic (tempo 07A120, selector 0x08/payload 0x40, selector 0x09/payload 0x33, unknown selector 0x2A/payload 0x7F under one sustained note) and the same mid2agb converter observes exactly one xIECV and one xIECL with payloads 64/51.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(assembly.count(QByteArrayLiteral("xIECL")), qsizetype{1})
+
+A025 | MidiRoundtripTest::xcmdEchoTrafficCompilesToGameCommands | src/checks/midi/tst_midiroundtrip.cpp:215
+Disposition: MATCHED
+Mapping/reason: Corresponding Swift predicate S021 in src/checks/midi/MidiChecks.swift; the same converter on byte-identical traffic proves the unknown selector's payload 0x7F emits no echo command (unknown127Count == 0).
+Source context since previous assertion:
+  ;
+      // The unknown selector's payload byte (0x7F) produced no echo command:
+      // the extended op stream carries only the two completed pairs.
+
+Original expression:
+  QVERIFY2(!assembly.contains(QByteArrayLiteral("xIECV , 127")) &&
+                   !assembly.contains(QByteArrayLiteral("xIECL , 127")),
+               "unknown-selector payload compiled into an XCMD op")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  int runRoundTrip(const QString &projectRoot, const QString &mid2agbPath,
+                   const QStringList &qtArguments)
+  {
+      auto test = MidiRoundtripTest{projectRoot, mid2agbPath};
+      auto arguments = QStringList{QStringLiteral("roundtrip")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+Swift assertion predicates
+
+S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:795
+      report.expectEqual(expectedValid, swift.valid, cppID: cppID,
+                         what: "independent Swift validity (error=\(swift.error))")
+
+S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:798
+          report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
+                        message: "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'")
+
+S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:804
+              report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
+                                 what: "independent canonical byte vector")
+
+S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:807
+          report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
+                             what: "independent format-0 provenance")
+
+S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:819
+                  report.expect(chunk.events[eventIndex - 1].tick <= chunk.events[eventIndex].tick,
+                                cppID: cppID,
+                                message: "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)")
+
+S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:825
+              report.expect(last.tick <= chunk.endTick, cppID: cppID,
+                            message: "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)")
+
+S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:830
+      report.expectEqual(expected.division, file.division, cppID: cppID,
+                         what: "independent decoded division")
+
+S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:832
+      report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
+                         what: "independent decoded format-0 provenance")
+
+S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:834
+      report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
+                         what: "independent decoded chunk count")
+
+S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:837
+          report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
+                             what: "independent decoded chunk=\(index) end tick")
+
+S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:839
+          report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
+                             cppID: cppID, what: "independent decoded chunk=\(index) event count")
+
+S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:846
+              report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
+
+S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:849
+          report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
+                             cppID: cppID,
+                             what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
+
+S014 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:730
+              report.pass(song.cppID, row: "mid2agb assembly matches Swift encoding")
+
+S015 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:732
+              report.fail(
+                  song.cppID,
+                  "mid2agb assembly mismatch or compile failure " +
+                      "(projectOpen=\(native.projectOpenFailed), " +
+                      "missing=\(native.missingSongBits & bit), " +
+                      "originalCompile=\(native.originalCompileFailureBits & bit), " +
+                      "encodedCompile=\(native.encodedCompileFailureBits & bit))")
+
+S016 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:742
+      report.expectEqual(Int32(0), native.xcmdCompileFailed, cppID: xcmdConverterID,
+                         what: "mid2agb compiles Swift XCMD traffic")
+
+S017 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:744
+      report.expectEqual(Int32(1), native.xiecvCount, cppID: xcmdConverterID,
+                         what: "one xIECV command")
+
+S018 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:746
+      report.expectEqual(Int32(1), native.xieclCount, cppID: xcmdConverterID,
+                         what: "one xIECL command")
+
+S019 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:748
+      report.expectEqual(Int32(1), native.xiecv64Count, cppID: xcmdConverterID,
+                         what: "xIECV carries value 64")
+
+S020 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:750
+      report.expectEqual(Int32(1), native.xiecl51Count, cppID: xcmdConverterID,
+                         what: "xIECL carries value 51")
+
+S021 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:752
+      report.expectEqual(Int32(0), native.unknown127Count, cppID: xcmdConverterID,
+                         what: "unknown selector emits no echo command")
+
+S022 | compareFixture | src/checks/midi/MidiChecks.swift:764
+          report.fail(cppID, "missing --swiftcore fixture root")
+
+S023 | compareFixture | src/checks/midi/MidiChecks.swift:782
+          report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
+
+S024 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:699
+          report.fail(xcmdConverterID, "missing --swiftcore fixture root")
+
+S025 | runMidiExportEquivalence | src/checks/midi/MidiChecks.swift:723
+          report.fail(xcmdConverterID, "Swift XCMD fixture write failed: \(error)")

@@ -678,8 +678,9 @@ private func laneMatches(_ event: MidiEvent, lane: Lane, channel: UInt8) -> Bool
 private func makeLaneEvent(lane: Lane, channel: UInt8, tick: Tick, value: Int) -> MidiEvent {
     switch lane {
     case let .controller(controller):
+        let domain = TimeDefaults.laneDomain(for: controller)
         return .channel(tick: tick, status: 0xB0 | channel, data0: controller,
-                        data1: UInt8(min(max(value, 0), 127)))
+                        data1: UInt8(min(max(value, domain.minimum), domain.maximum)))
     case .pitchBend:
         let bend = min(max(value, -8192), 8191) + 8192
         return .channel(tick: tick, status: 0xE0 | channel, data0: UInt8(bend & 0x7F),

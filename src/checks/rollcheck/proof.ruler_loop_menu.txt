@@ -1,0 +1,1511 @@
+Assertion correspondence: rollcheck/ruler_loop_menu.cpp
+
+Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
+Original: src/checks/rollcheck/ruler_loop_menu.cpp
+Original SHA-256: 01fd47f273c20f209a8baa5fee8003f95ea9a66865c75bf7426cab2189ac22f6
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact counterpart predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Ruler context-menu loop editing (set start/end, two-command remove with two-step undo, loop from selection), menu enablement/selection context, Escape/stale/selection-change/outside-press dismissal without writes, and Insert Time with stale no-ops are exercised through real right press/release gestures and rendered typed-row clicks on the legacy ruler input. None of the gated Swift-surface files (gesturechecks, clipboardchecks, notevisuals, chromevisuals) carries a ruler-menu, loop-marker or time-insertion predicate; every entry below is an open obligation.
+
+Verification
+Command: deno task verify --filter swiftrollgated --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No gated entry point executes these ruler-menu scenarios. Original helpers rulerInput, rulerPressPoint, openRulerMenu and rulerRow (all local to this file) plus the quick_popup PromptGuard/menu-frame/row-click harness have no Swift-surface equivalent.
+
+Fixture, sequence and row constraints
+makeResizeSeed stages the snap cell; setAndTwoStepUndo clears seeded loop markers, sets start/end through typed rows, removes with two commands and undoes one marker at a time, then repeats via loop-from-selection; enablement seeds an explicit (5,2) signature chip and walks disabled-row clicks, chip removal, implicit-row disablement, exact-tick chips and Clear selection; staleCancel walks Escape, document-edit, selection-change and outside-press dismissal; insertTime inserts blank time over a selection then probes the half-open end boundary.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+// Ruler context-menu loop editing through the shared Quick canvas menu. These
+// checks drive real right-press/release gestures on the live ruler input and
+// click rendered typed rows (ids from songview::RulerMenuAction), so row
+// enablement, close-before-activate ordering, guarded stale targets, and the
+// two-command loop undo shape stay observable end to end.
+
+#include "checks/rollcheck/tst_pianoroll.h"
+
+#include "checks/quickpopupguard.h"
+#include "checks/rollcheck/rollcheck.h"
+#include "checks/support/eventsynth.h"
+
+#include <QByteArray>
+#include <QCoreApplication>
+#include <QEvent>
+#include <QGuiApplication>
+#include <QPoint>
+#include <QPointF>
+#include <QPointer>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QRectF>
+#include <QString>
+#include <QtTest>
+#include <algorithm>
+#include <cstdint>
+#include <optional>
+
+#include "core/miditimeline.h"
+#include "core/songdocument.h"
+#include "ui/editorviewstate.h"
+#include "ui/songtab.h"
+#include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/timeruler.h"
+
+using namespace checks::rollcheck;
+
+namespace {
+
+// The live ruler Quick input under the tab's canvas root; the roll fixture
+// only exposes the plot and gutter inputs directly.
+songview::TimelineInputItem *rulerInput(SongView &view)
+{
+    auto *const quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    return quick && quick->rootObject()
+               ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                     QStringLiteral("timelineRulerInput"))
+               : nullptr;
+}
+
+// Ruler press point for a tick at a row fraction of the band height. The top
+// half is the marker row, where production's loop-bracket and signature-chip
+// hit-tests guard on the row, so chip-sensitive menus press there while a
+// bottom-half (tick row) press is provably off-chip regardless of zoom.
+QPointF rulerPressPoint(SongView &view, const songview::TimelineInputItem &input, Tick tick,
+                        qreal rowFraction = 0.25)
+{
+    const qreal x = view.camera().displayX(double(tick), 0.0, input.devicePixelRatio());
+    return QPointF(x, std::max<qreal>(1.0, input.height() * rowFraction));
+}
+
+struct SharedRulerMenu {
+    songview::QuickPopupSession *session = nullptr;
+    songview::QuickMenuModel *model = nullptr;
+    QString diagnostic = QStringLiteral("the shared ruler menu did not open");
+};
+
+// Right-presses and releases the ruler at tick and waits for the shared
+// session to render its typed menu. The deferred-open gesture is the
+// production one: the menu anchors at the release, and target
+// establishment consumes the raw/exact press coordinate — a press inside
+// the active interval keeps selection and cursor, a press outside commits
+// the clicked edit cursor.
+SharedRulerMenu openRulerMenu(SongView &view, songview::TimelineInputItem &input, Tick tick,
+                              qreal rowFraction = 0.25)
+{
+    SharedRulerMenu menu;
+    const QPointF local = rulerPressPoint(view, input, tick, rowFraction);
+    if (!input.bounds().contains(local)) {
+        menu.diagnostic = QStringLiteral("the ruler menu point is outside the live ruler input");
+        return menu;
+    }
+    checks::events::sendMouse(input, QEvent::MouseButtonPress, local, Qt::RightButton,
+                              Qt::RightButton, Qt::NoModifier);
+    checks::events::sendMouse(input, QEvent::MouseButtonRelease, local, Qt::RightButton,
+                              Qt::NoButton, Qt::NoModifier);
+    const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(view));
+    if (!QTest::qWaitFor([&live] {
+            return live && live->isOpen() && quick_popup::menuPanel(*live) &&
+                   quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
+        })) {
+        menu.diagnostic =
+            QStringLiteral("the ruler right-click did not open the shared ruler menu");
+        return menu;
+    }
+    menu.session = live;
+    menu.model = quick_popup::menuModel(*quick_popup::menuPanel(*live));
+    menu.diagnostic.clear();
+    return menu;
+}
+
+// Typed row addressing through the model; enablement is read from the row and
+// commands run through the rendered surface only.
+int rulerRow(songview::QuickMenuModel &model, songview::RulerMenuAction action)
+{
+    return model.rowForId(int(action));
+}
+
+} // namespace
+
+void PianoRollTest::rulerLoopMenuSetAndTwoStepUndo()
+{
+    PianoRollFixture &check = *m_fixture;
+    SongView &view = check.view();
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+
+Original expression:
+QVERIFY(seed.has_value())
+
+A002 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    songview::TimelineInputItem *input = rulerInput(view);
+
+Original expression:
+QVERIFY2(input, "could not find the time ruler Quick input")
+
+A003 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:128
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    SongDocument &doc = check.document();
+    const Tick snapCell = seed->snapCell;
+    // Press at the drawn-cell edge: snapCell ticks past the cell start can
+    // land inside the fixture's tick-12 signature chip label.
+    const Tick startTick = seed->cell.tick + seed->cell.dur;
+    const Tick endTick = seed->cell.tick + seed->cell.dur + snapCell;
+
+Original expression:
+QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
+                 view.grid().snapTick(double(endTick)) == endTick,
+             "the ruler loop fixture ticks are not snap-aligned")
+
+A004 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:134
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    // Start from a known empty loop state regardless of song-seeded markers.
+    doc.setLoopTick(false, -1);
+    doc.setLoopTick(true, -1);
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
+                     check.timeline().loopEndTick == CoreTimeDefaults::kNoTick,
+                 "the ruler loop fixture could not clear seeded loop markers")
+
+A005 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:145
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+
+    // A real Set loop start click moves the marker with one command and the
+    // ordinary activation hands focus back to the ruler band.
+    const SharedRulerMenu startMenu = openRulerMenu(view, *input, startTick);
+
+Original expression:
+QVERIFY2(startMenu.session, qUtf8Printable(startMenu.diagnostic))
+
+A006 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:147
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int setStartRow = rulerRow(*startMenu.model, songview::RulerMenuAction::SetLoopStart);
+
+Original expression:
+QVERIFY2(setStartRow >= 0, "the ruler menu has no Set loop start row")
+
+A007 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:148
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*startMenu.session, setStartRow),
+             "the Set loop start row did not receive a real click")
+
+A008 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:151
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(startMenu.session && !startMenu.session->isOpen(),
+             "the Set loop start activation left the ruler menu open")
+
+A009 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopStartTick == startTick,
+                 "the Set loop start row did not move the loop start marker")
+
+A010 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(doc.undoStack()->index(), undo + 1)
+
+A011 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY2(input->hasActiveFocus(),
+                 "the ordinary loop-start command did not refocus the ruler band")
+
+A012 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:160
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const SharedRulerMenu endMenu = openRulerMenu(view, *input, endTick);
+
+Original expression:
+QVERIFY2(endMenu.session, qUtf8Printable(endMenu.diagnostic))
+
+A013 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:162
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int setEndRow = rulerRow(*endMenu.model, songview::RulerMenuAction::SetLoopEnd);
+
+Original expression:
+QVERIFY2(setEndRow >= 0, "the ruler menu has no Set loop end row")
+
+A014 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:163
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*endMenu.session, setEndRow),
+             "the Set loop end row did not receive a real click")
+
+A015 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopEndTick == endTick,
+                 "the Set loop end row did not move the loop end marker")
+
+A016 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:168
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(doc.undoStack()->index(), undo + 2)
+
+A017 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:170
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QByteArray afterSets = doc.smf().write();
+
+Original expression:
+QVERIFY2(afterSets != before, "setting both loop markers did not change the song")
+
+A018 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:175
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // Remove loop markers intentionally pushes two commands; undo restores
+    // them one at a time.
+    const SharedRulerMenu removeMenu = openRulerMenu(view, *input, startTick);
+
+Original expression:
+QVERIFY2(removeMenu.session, qUtf8Printable(removeMenu.diagnostic))
+
+A019 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:177
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int removeRow = rulerRow(*removeMenu.model, songview::RulerMenuAction::RemoveLoop);
+
+Original expression:
+QVERIFY2(removeRow >= 0 && removeMenu.model->itemAt(removeRow)->enabled,
+             "Remove loop markers stayed disabled while both markers existed")
+
+A020 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:179
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*removeMenu.session, removeRow),
+             "the Remove loop markers row did not receive a real click")
+
+A021 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(removeMenu.session && !removeMenu.session->isOpen(),
+             "the Remove loop activation left the ruler menu open")
+
+A022 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopStartTick == CoreTimeDefaults::kNoTick &&
+                     check.timeline().loopEndTick == CoreTimeDefaults::kNoTick,
+                 "the Remove loop row did not clear both loop markers")
+
+A023 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:187
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.undoStack()->index() == undo + 4,
+             "removing both loop markers did not push exactly two commands")
+
+A024 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:190
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopEndTick == endTick &&
+                     check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
+                 "the first undo did not restore only the loop end marker")
+
+A025 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:194
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopStartTick == startTick &&
+                     check.timeline().loopEndTick == endTick,
+                 "the second undo did not restore the start marker and retain the end marker")
+
+A026 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:197
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(doc.smf().write(), afterSets)
+
+A027 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:210
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // Loop from selection runs the same two-command shape over a selection
+    // distinct from the manual markers, so neither write can coalesce into
+    // a no-op.
+    const Tick selectionStart = startTick - snapCell;
+    view.selectionModel().setTimeSelection(
+        {selectionStart, startTick, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+    // The press must land strictly inside the half-open interval: an
+    // outside click — including the boundary, where device-pixel rounding
+    // can drop the raw coordinate below the start — takes the cursor path
+    // and clears the selection before opening.
+    const SharedRulerMenu selectionMenu = openRulerMenu(view, *input, startTick - 1);
+
+Original expression:
+QVERIFY2(selectionMenu.session, qUtf8Printable(selectionMenu.diagnostic))
+
+A028 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int loopSelectionRow =
+        rulerRow(*selectionMenu.model, songview::RulerMenuAction::LoopFromSelection);
+
+Original expression:
+QVERIFY2(loopSelectionRow >= 0,
+             "the ruler menu omitted Set loop to selection while a selection was active")
+
+A029 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:215
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*selectionMenu.session, loopSelectionRow),
+             "the Set loop to selection row did not receive a real click")
+
+A030 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:218
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopStartTick == selectionStart &&
+                     check.timeline().loopEndTick == startTick,
+                 "the Set loop to selection row did not bracket the selection")
+
+A031 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:221
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.undoStack()->index() == undo + 4,
+             "loop from selection did not push exactly two commands")
+
+A032 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:224
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+
+Original expression:
+QTRY_VERIFY2(check.timeline().loopStartTick == selectionStart &&
+                     check.timeline().loopEndTick == endTick,
+                 "the first loop-from-selection undo did not restore only the end marker")
+
+A033 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+
+Original expression:
+QTRY_VERIFY2(doc.smf().write() == afterSets,
+                 "undoing loop from selection did not restore the manual markers")
+
+A034 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:238
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    view.selectionModel().clearTimeSelection();
+}
+
+void PianoRollTest::rulerLoopMenuEnablementSelectionContext()
+{
+    PianoRollFixture &check = *m_fixture;
+    SongView &view = check.view();
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+
+Original expression:
+QVERIFY(seed.has_value())
+
+A035 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:240
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    songview::TimelineInputItem *input = rulerInput(view);
+
+Original expression:
+QVERIFY2(input, "could not find the time ruler Quick input")
+
+A036 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:244
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    SongDocument &doc = check.document();
+    const Tick snapCell = seed->snapCell;
+    const Tick chipTick = seed->cell.tick + snapCell;
+
+Original expression:
+QVERIFY2(view.grid().snapTick(double(chipTick)) == chipTick,
+             "the ruler menu fixture tick is not snap-aligned")
+
+A037 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:250
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.setLoopTick(false, -1);
+    doc.setLoopTick(true, -1);
+    // An explicit (0x58-backed) signature chip the press can hit.
+    doc.setTimeSig(chipTick, 5, 2);
+
+Original expression:
+QTRY_VERIFY2(std::any_of(check.timeline().timeSigs.cbegin(), check.timeline().timeSigs.cend(),
+                             [chipTick](const TimeSigPoint &sig) { return sig.tick == chipTick; }),
+                 "the ruler menu fixture could not seed an explicit signature chip")
+
+A038 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:263
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    view.selectionModel().clearTimeSelection();
+
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    // No markers and no selection: the press takes the cursor path, so
+    // Remove loop renders disabled, the selection-scoped rows are absent,
+    // Insert Time is offered at the cursor, and the explicit chip's exact
+    // tick commits as the edit cursor — enabling Remove time signature.
+    const SharedRulerMenu opened = openRulerMenu(view, *input, chipTick);
+
+Original expression:
+QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A039 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:264
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.editCursorTick() == chipTick,
+             "the chip press did not commit its exact tick as the edit cursor")
+
+A040 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:267
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int removeLoopRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveLoop);
+
+Original expression:
+QVERIFY2(removeLoopRow >= 0 && !opened.model->itemAt(removeLoopRow)->enabled,
+             "Remove loop markers was enabled while both markers were absent")
+
+A041 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:269
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::LoopFromSelection) < 0 &&
+                 rulerRow(*opened.model, songview::RulerMenuAction::Duplicate) < 0 &&
+                 rulerRow(*opened.model, songview::RulerMenuAction::RemoveContents) < 0 &&
+                 rulerRow(*opened.model, songview::RulerMenuAction::ClearSelection) < 0,
+             "the ruler menu exposed selection-scoped rows without an active selection")
+
+A042 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:275
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
+
+Original expression:
+QVERIFY2(insertRow >= 0 && opened.model->itemAt(insertRow)->enabled,
+             "the cursor menu omitted an enabled Insert Time row")
+
+A043 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:278
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int removeSigRow = rulerRow(*opened.model, songview::RulerMenuAction::RemoveTimeSig);
+
+Original expression:
+QVERIFY2(removeSigRow >= 0 && opened.model->itemAt(removeSigRow)->enabled,
+             "Remove time signature was disabled at an explicit signature cursor")
+
+A044 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:280
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(rulerRow(*opened.model, songview::RulerMenuAction::EditTimeSig) >= 0,
+             "the ruler menu has no time-signature edit row")
+
+A045 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:285
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // A real click on the disabled Remove loop row neither dispatches nor
+    // dismisses: the menu stays open for the explicit-chip removal next.
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*opened.session, removeLoopRow),
+             "the disabled Remove loop row did not receive a real click")
+
+A046 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(opened.session && opened.session->isOpen(),
+             "a click on the disabled Remove loop row dismissed the menu")
+
+A047 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:290
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(doc.undoStack()->index(), undo)
+
+A048 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:293
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // Removing the explicit chip is one command.
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*opened.session, removeSigRow),
+             "the Remove time signature row did not receive a real click")
+
+A049 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:296
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(opened.session && !opened.session->isOpen(),
+             "the Remove time signature activation left the ruler menu open")
+
+A050 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:298
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY2(std::none_of(check.timeline().timeSigs.cbegin(), check.timeline().timeSigs.cend(),
+                              [chipTick](const TimeSigPoint &sig) { return sig.tick == chipTick; }),
+                 "the Remove time signature row did not remove the explicit chip")
+
+A051 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:301
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(doc.undoStack()->index(), undo + 1)
+
+A052 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:308
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+    // The tick row sits below production's marker-row chip hit-test, so this
+    // press provably hits no chip; the committed cursor lands on a tick with
+    // no explicit signature, so Remove time signature must render disabled
+    // (and a real click be a no-op).
+    const SharedRulerMenu implicitMenu = openRulerMenu(view, *input, chipTick + 2 * snapCell, 0.75);
+
+Original expression:
+QVERIFY2(implicitMenu.session, qUtf8Printable(implicitMenu.diagnostic))
+
+A053 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:311
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int implicitRemoveRow =
+        rulerRow(*implicitMenu.model, songview::RulerMenuAction::RemoveTimeSig);
+
+Original expression:
+QVERIFY2(implicitRemoveRow >= 0 && !implicitMenu.model->itemAt(implicitRemoveRow)->enabled,
+             "Remove time signature was enabled without an explicit signature at the cursor")
+
+A054 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:313
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*implicitMenu.session, implicitRemoveRow),
+             "the disabled Remove time signature row did not receive a real click")
+
+A055 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:316
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(implicitMenu.session && implicitMenu.session->isOpen(),
+             "a click on the disabled Remove time signature row dismissed the menu")
+
+A056 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:318
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo,
+             "a disabled ruler-menu row mutated the document")
+
+A057 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:322
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QTest::keyClick(implicitMenu.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(implicitMenu.session && !implicitMenu.session->isOpen(),
+             "Escape did not dismiss the ruler menu")
+
+A058 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:329
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    // A chip press commits the chip's exact event tick even off the snap
+    // grid: this signature sits one tick past the snap-aligned chip, and
+    // the press still lands the cursor on that exact tick.
+    doc.setTimeSig(chipTick + 1, 7, 2);
+    const SharedRulerMenu exactChip = openRulerMenu(view, *input, chipTick + 1);
+
+Original expression:
+QVERIFY2(exactChip.session, qUtf8Printable(exactChip.diagnostic))
+
+A059 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:330
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.editCursorTick() == chipTick + 1,
+             "the chip press did not commit the chip's exact event tick")
+
+A060 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:333
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int exactRemoveRow = rulerRow(*exactChip.model, songview::RulerMenuAction::RemoveTimeSig);
+
+Original expression:
+QVERIFY2(exactRemoveRow >= 0 && exactChip.model->itemAt(exactRemoveRow)->enabled,
+             "Remove time signature was disabled at the exact chip tick")
+
+A061 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:337
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QTest::keyClick(exactChip.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(exactChip.session && !exactChip.session->isOpen(),
+             "Escape did not dismiss the exact-chip ruler menu")
+
+A062 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:348
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+
+    // With a selection active the scoped rows appear; Clear selection runs
+    // its command and the rebuilt menu drops the scoped rows again.
+    view.selectionModel().setTimeSelection({chipTick,
+                                            chipTick + 2 * snapCell,
+                                            songview::EditorSelectionModel::TimeSelection::Tracks,
+                                            {}});
+    const SharedRulerMenu scoped = openRulerMenu(view, *input, chipTick);
+
+Original expression:
+QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic))
+
+A063 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:350
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int clearRow = rulerRow(*scoped.model, songview::RulerMenuAction::ClearSelection);
+
+Original expression:
+QVERIFY2(clearRow >= 0 && scoped.model->itemAt(clearRow)->enabled,
+             "the ruler menu omitted an enabled Clear time selection row with a selection")
+
+A064 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:352
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*scoped.session, clearRow),
+             "the Clear time selection row did not receive a real click")
+
+A065 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:355
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(scoped.session && !scoped.session->isOpen(),
+             "the Clear selection activation left the ruler menu open")
+
+A066 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:357
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(!view.selectionModel().timeSelection().active(),
+             "the Clear time selection row did not clear the selection")
+
+A067 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:360
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const SharedRulerMenu rescoped = openRulerMenu(view, *input, chipTick);
+
+Original expression:
+QVERIFY2(rescoped.session, qUtf8Printable(rescoped.diagnostic))
+
+A068 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:361
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(rulerRow(*rescoped.model, songview::RulerMenuAction::LoopFromSelection) < 0,
+             "the rebuilt ruler menu kept selection-scoped rows after the clearing")
+
+A069 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:370
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void PianoRollTest::rulerLoopMenuStaleCancelNoWrite()
+{
+    PianoRollFixture &check = *m_fixture;
+    SongView &view = check.view();
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+
+Original expression:
+QVERIFY(seed.has_value())
+
+A070 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:372
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    songview::TimelineInputItem *input = rulerInput(view);
+
+Original expression:
+QVERIFY2(input, "could not find the time ruler Quick input")
+
+A071 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:376
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    SongDocument &doc = check.document();
+    const Tick snapCell = seed->snapCell;
+    const Tick tick = seed->cell.tick + seed->cell.dur;
+
+Original expression:
+QVERIFY2(view.grid().snapTick(double(tick)) == tick,
+             "the ruler menu fixture tick is not snap-aligned")
+
+A072 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:383
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    // The escape focus contract routes to a visible drawer page first; close
+    // the automations page so dismissal returns focus to the ruler band, then
+    // establish the band focus a real press carries.
+    view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
+    m_tab->raise();
+
+Original expression:
+QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Ruler, Qt::OtherFocusReason),
+             "the ruler band could not take focus for the escape scenario")
+
+A073 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:389
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+    QCoreApplication::sendPostedEvents();
+    QCoreApplication::processEvents();
+
+Original expression:
+QTRY_VERIFY2(QGuiApplication::focusWindow() == input->window() &&
+                     QGuiApplication::focusObject() == input && input->hasActiveFocus(),
+                 "the ruler band could not take focus for the escape scenario")
+
+A074 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:406
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.setLoopTick(false, -1);
+    doc.setLoopTick(true, -1);
+
+    const quick_popup::PromptGuard guard(view);
+    const QByteArray before = doc.smf().write();
+    const int undo = doc.undoStack()->index();
+    const uint64_t revision = doc.revision();
+
+    // Escape cancels without a command and the shared restore-focus contract
+    // returns focus to the ruler band that opened the menu. The outside
+    // press commits the clicked edit cursor before the menu opens; Escape
+    // dismisses without restoring the old cursor.
+    view.commitEditCursor(seed->cell.tick);
+    const SharedRulerMenu opened = openRulerMenu(view, *input, tick);
+
+Original expression:
+QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A075 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:407
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.editCursorTick() == tick,
+             "the outside ruler press did not commit the clicked edit cursor")
+
+A076 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:411
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QTest::keyClick(opened.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(opened.session && !opened.session->isOpen(), "Escape did not dismiss the ruler menu")
+
+A077 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:412
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undo &&
+                 doc.revision() == revision,
+             "dismissing the ruler menu mutated the document")
+
+A078 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:415
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY2(input->hasActiveFocus(),
+                 "dismissing the ruler menu did not return focus to the ruler band")
+
+A079 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:417
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.editCursorTick() == tick,
+             "dismissing the ruler menu restored the old edit cursor")
+
+A080 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:423
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // A document edit after the open retires the menu at the invalidation
+    // seam with the ordinary focus policy, and no loop-start write follows.
+    const SharedRulerMenu stale = openRulerMenu(view, *input, tick);
+
+Original expression:
+QVERIFY2(stale.session, qUtf8Printable(stale.diagnostic))
+
+A081 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:429
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.setTimeSig(tick + 4 * snapCell, 7, 2);
+    const QByteArray afterIntervening = doc.smf().write();
+    const int staleUndo = doc.undoStack()->index();
+    const uint64_t staleRevision = doc.revision();
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(stale.session && !stale.session->isOpen(),
+             "a document edit did not dismiss the open ruler menu")
+
+A082 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:431
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY2(input->hasActiveFocus(),
+                 "the document-edit dismissal did not return focus to the ruler band")
+
+A083 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:433
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo &&
+                 doc.revision() == staleRevision &&
+                 check.timeline().loopStartTick == CoreTimeDefaults::kNoTick,
+             "the document-edit dismissal wrote a loop marker")
+
+A084 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:443
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // A selection change after the open retires the menu the same way, so
+    // the captured scope can never dispatch a stale range command.
+    view.selectionModel().setTimeSelection(
+        {tick, tick + 2 * snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+    const SharedRulerMenu scoped = openRulerMenu(view, *input, tick + snapCell, 0.75);
+
+Original expression:
+QVERIFY2(scoped.session, qUtf8Printable(scoped.diagnostic))
+
+A085 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:446
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    view.selectionModel().clearTimeSelection();
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(scoped.session && !scoped.session->isOpen(),
+             "a selection change did not dismiss the open ruler menu")
+
+A086 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:448
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
+             "the selection-change dismissal wrote markers")
+
+A087 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:454
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // An outside left press dismisses through the menu frame without
+    // retargeting the menu and without any document effect.
+    const SharedRulerMenu outside = openRulerMenu(view, *input, tick);
+
+Original expression:
+QVERIFY2(outside.session, qUtf8Printable(outside.diagnostic))
+
+A088 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:456
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QQuickItem *const frame = quick_popup::menuFrame(*outside.session);
+
+Original expression:
+QVERIFY2(frame, "the ruler menu rendered no outside boundary frame")
+
+A089 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:474
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
+    QPointF outsideLocal;
+    bool found = false;
+    for (int step = 1; step <= 8 && !found; ++step) {
+        for (const int64_t offset : {int64_t(step), -int64_t(step)}) {
+            const int64_t probeTick = int64_t(tick) + offset * int64_t(snapCell);
+            if (probeTick < 0)
+                continue;
+            const QPointF candidate = rulerPressPoint(view, *input, Tick(probeTick));
+            if (!input->bounds().contains(candidate) ||
+                frameScene.contains(input->mapToScene(candidate)))
+                continue;
+            outsideLocal = candidate;
+            found = true;
+            break;
+        }
+    }
+
+Original expression:
+QVERIFY2(found, "no ruler point outside the menu frame stayed inside the live input")
+
+A090 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:478
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QTest::mouseClick(outside.session->window(), Qt::LeftButton, Qt::NoModifier,
+                      input->mapToScene(outsideLocal).toPoint());
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(outside.session && !outside.session->isOpen(),
+             "an outside press did not dismiss the ruler menu")
+
+A091 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:480
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(!quick_popup::popupSession(view)->isOpen(),
+             "the outside dismissal retargeted the ruler menu")
+
+A092 | PianoRollTest::rulerLoopMenuStaleCancelNoWrite | src/checks/rollcheck/ruler_loop_menu.cpp:482
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.smf().write() == afterIntervening && doc.undoStack()->index() == staleUndo,
+             "the outside dismissal mutated the document")
+
+A093 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:491
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp()
+{
+    PianoRollFixture &check = *m_fixture;
+    SongView &view = check.view();
+    const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+
+Original expression:
+QVERIFY(seed.has_value())
+
+A094 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:493
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    songview::TimelineInputItem *input = rulerInput(view);
+
+Original expression:
+QVERIFY2(input, "could not find the time ruler Quick input")
+
+A095 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:498
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    SongDocument &doc = check.document();
+    const Tick snapCell = seed->snapCell;
+    const Tick insertStart = seed->cell.tick + snapCell;
+    const Tick insertEnd = seed->cell.tick + 2 * snapCell;
+
+Original expression:
+QVERIFY2(view.grid().snapTick(double(insertStart)) == insertStart &&
+                 view.grid().snapTick(double(insertEnd)) == insertEnd,
+             "the ruler insert fixture ticks are not snap-aligned")
+
+A096 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:502
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    DocNote movedNote;
+
+Original expression:
+QVERIFY2(doc.findNote(check.track(), seed->cell.tick, uint8_t(seed->cell.key), &movedNote),
+             "the ruler insert seed note was not found")
+
+A097 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:506
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.moveNotes({movedNote}, int64_t(snapCell), 0);
+    DocNote selected;
+
+Original expression:
+QVERIFY2(doc.findNote(check.track(), insertStart, uint8_t(seed->cell.key), &selected),
+             "the ruler insert seed did not reach its expected state")
+
+A098 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:522
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const quick_popup::PromptGuard guard(view);
+
+    // A selection-scoped ruler menu opened at a raw coordinate inside the
+    // interval that would snap to its end: the selection path finishes
+    // before snapping is reachable, so the selection and edit cursor stay
+    // untouched and the rendered Insert Time row inserts over the
+    // selection, not the click position.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+    const Tick cursorBefore = view.editCursorTick();
+    const QByteArray before = doc.smf().write();
+    const int undoIndex = doc.undoStack()->index();
+    const SharedRulerMenu opened = openRulerMenu(view, *input, insertEnd - 1);
+
+Original expression:
+QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A099 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:523
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.selectionModel().timeSelection().active() &&
+                 view.editCursorTick() == cursorBefore,
+             "the inside press snapped or moved the edit cursor")
+
+A100 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:527
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int insertRow = rulerRow(*opened.model, songview::RulerMenuAction::InsertBlank);
+
+Original expression:
+QVERIFY2(insertRow >= 0, "the ruler menu has no Insert Time row")
+
+A101 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:528
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(opened.model->itemAt(insertRow)->enabled,
+             "the ruler menu rendered an enabled Insert Time row as disabled")
+
+A102 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:530
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
+             "the Insert Time row did not receive a real click")
+
+A103 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:533
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY2(opened.session && !opened.session->isOpen(),
+             "the Insert Time activation left the ruler menu open")
+
+A104 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:535
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
+                 doc.findNote(check.track(), insertEnd, selected.key, &selected),
+             "the ruler Insert Time row did not shift the selected note one undo at a time")
+
+A105 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:540
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const songview::EditorSelectionModel::TimeSelection insertedSelection =
+        view.selectionModel().timeSelection();
+
+Original expression:
+QVERIFY2(insertedSelection.active() && insertedSelection.startTick == insertStart &&
+                 insertedSelection.endTick == insertEnd,
+             "the ruler Insert Time row did not retain the selection over the blank span")
+
+A106 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:543
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.editCursorTick() == insertStart,
+             "the ruler Insert Time row did not commit the edit cursor to the seam")
+
+A107 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:545
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
+             "the ruler Insert Time row did not commit exactly one undo transaction")
+
+A108 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:547
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(doc.smf().write() != before,
+             "the ruler Insert Time row did not change the song bytes")
+
+A109 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:550
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    doc.undoStack()->undo();
+
+Original expression:
+QTRY_VERIFY2(doc.smf().write() == before,
+                 "one undo did not restore the bytes after the ruler insertion")
+
+A110 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:559
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // A press exactly at the interval end is outside the half-open
+    // selection: it clears the selection, commits the snapped end tick as
+    // the edit cursor, and opens the cursor menu.
+    view.selectionModel().setTimeSelection(
+        {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+    const SharedRulerMenu atEnd = openRulerMenu(view, *input, insertEnd);
+
+Original expression:
+QVERIFY2(atEnd.session, qUtf8Printable(atEnd.diagnostic))
+
+A111 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:560
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(!view.selectionModel().timeSelection().active(),
+             "the exact-end press did not clear the time selection")
+
+A112 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:562
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(view.editCursorTick() == insertEnd,
+             "the exact-end press did not commit the snapped end tick")
+
+A113 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:564
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(rulerRow(*atEnd.model, songview::RulerMenuAction::LoopFromSelection) < 0 &&
+                 rulerRow(*atEnd.model, songview::RulerMenuAction::SetLoopStart) >= 0,
+             "the exact-end press did not open the cursor menu")
+
+Remaining original source (closing sequence and helper bodies):
+;
+    QTest::keyClick(atEnd.session->window(), Qt::Key_Escape);
+    QCoreApplication::processEvents();
+}
+
+Counterpart executable predicate index
+None: no counterpart file carries predicates for this suite.

@@ -29,7 +29,7 @@ public final class AudioAudition {
     private var heldKey: Int32 = -1
     private var voiceKey: Int32 = -1
     private let samples = AudioSampleAudition()
-    private let timed = TimedAuditions()
+    let timed = TimedAuditions()
 
     public init() {}
 
@@ -138,7 +138,7 @@ public final class AudioAudition {
     }
 }
 
-private final class TimedAuditions {
+final class TimedAuditions {
     private struct Command {
         var track: UInt8 = 0
         var key: UInt8 = 0
@@ -152,9 +152,9 @@ private final class TimedAuditions {
     }
     private let ring = UnsafeMutablePointer<Command>.allocate(capacity: 64)
     private let active = UnsafeMutablePointer<Active>.allocate(capacity: 24)
-    private let write = Atomic<UInt32>(0)
-    private let read = Atomic<UInt32>(0)
-    private var count = 0
+    let write = Atomic<UInt32>(0)
+    let read = Atomic<UInt32>(0)
+    private(set) var count = 0
 
     init() {
         ring.initialize(repeating: Command(), count: 64)

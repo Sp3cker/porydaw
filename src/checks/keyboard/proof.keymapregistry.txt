@@ -1,0 +1,245 @@
+Assertion correspondence: keyboard/keymapregistry.cpp
+
+Reference revision: 8d10130da34cfa9e1912d22fb11cdd427173e0b2
+Original: src/checks/keyboard/keymapregistry.cpp
+Original SHA-256: 2f58e54dca9f1fa9ae9edd47eff3fea35bf2faddff5656412ec77469b828e749
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup, rows,
+loops, and guards between assertions verbatim; `  ;` marks adjacent sites with
+no intervening source. All thirteen sites are GAP: no Swift file pairs with this
+registry check, so no equivalent Swift assertion is established for any of them.
+None of these labels authorizes deletion or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter keymapcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runKeymapCheck (src/checks/keyboard/keymapregistry.cpp:110) owns the
+KeymapCheckTest slots keymapSettingsSeedsAreIgnored, defaultMatching_data,
+defaultMatching, and modifierChords. No Swift entry point executes these checks;
+the keymap::Registry lookup stays C++ and only app-side comments reference it.
+No shared fixture file carries expects for this suite.
+
+Fixture, sequence and row constraints
+keymapSettingsSeedsAreIgnored seeds the real user-scope QSettings store with
+four keymap/ values (an override chord for roll.transpose_up, an empty binding
+for transport.play_pause, a conflicting hold chord for roll.velocity_drag, and
+an empty binding for velocity.detent_unlock) and then asserts the shipped
+bindings still win; there is deliberately no QSettings isolation for that slot.
+defaultMatching_data contributes sixteen rows (semitone-up, shift-not-semitone,
+octave-up, keypad-up, delete, backspace, copy, mute, control-not-mute, solo,
+automation-pencil, pitch-bend, play-pause, control-not-play-pause, insert-time,
+duplicate-time), each expanding the single A009 site into one execution.
+modifierChords asserts the exact-Control binding for the velocity drag and
+detent-unlock hold chords, including Keypad acceptance and Shift rejection.
+
+Original assertion inventory and source sequence
+
+A001 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:24
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+#include "checks/keyboard/tst_keymapcheck.h"
+
+#include <QSettings>
+#include <QStringList>
+#include <QtTest>
+
+// spec.md line 22: "Old `keymap/` settings do not affect behavior". These four
+// seeds are that contract's regression proof: with an override chord, an empty
+// binding, and a conflicting hold chord present in the user-scope QSettings
+// store, the Registry still reports the shipped bindings and rejects the seeds.
+void KeymapCheckTest::keymapSettingsSeedsAreIgnored()
+{
+    const auto &registry = keymap::Registry::instance();
+    const QString dragId = QStringLiteral("roll.velocity_drag");
+    const QString detentId = QStringLiteral("velocity.detent_unlock");
+
+    QSettings settings;
+    settings.setValue(QStringLiteral("keymap/roll.transpose_up"), QStringLiteral("Ctrl+Alt+U"));
+    settings.setValue(QStringLiteral("keymap/transport.play_pause"), QString());
+    settings.setValue(QStringLiteral("keymap/roll.velocity_drag"), QStringLiteral("Shift"));
+    settings.setValue(QStringLiteral("keymap/velocity.detent_unlock"), QString());
+    settings.sync();
+Original expression:
+QCOMPARE(registry.sequences(QStringLiteral("roll.transpose_up")),
+             QList<QKeySequence>{QKeySequence(Qt::Key_Up)});
+
+A002 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:26
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(!matches(QStringLiteral("roll.transpose_up"), int(Qt::Key_U),
+                     Qt::ControlModifier | Qt::AltModifier));
+
+A003 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:28
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(matches(QStringLiteral("roll.transpose_up"), int(Qt::Key_Up), Qt::NoModifier));
+
+A004 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:30
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QCOMPARE(registry.sequences(QStringLiteral("transport.play_pause")),
+             QList<QKeySequence>{QKeySequence(Qt::Key_Space)});
+
+A005 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:32
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(matches(QStringLiteral("transport.play_pause"), int(Qt::Key_Space), Qt::NoModifier));
+
+A006 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:34
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(!registry.matchesModifier(Qt::ShiftModifier, dragId));
+
+A007 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:35
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(registry.matchesModifier(Qt::ControlModifier, dragId));
+
+A008 | KeymapCheckTest::keymapSettingsSeedsAreIgnored | src/checks/keyboard/keymapregistry.cpp:36
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(registry.matchesModifier(Qt::ControlModifier, detentId));
+
+A009 | KeymapCheckTest::defaultMatching | src/checks/keyboard/keymapregistry.cpp:94
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation. This single site executes once per defaultMatching_data row (16 rows: semitone-up through duplicate-time).
+Source context since previous assertion:
+}
+
+bool KeymapCheckTest::matches(const QString &id, int key, Qt::KeyboardModifiers modifiers) const
+{
+    return keymap::Registry::instance().matches(key, modifiers, id);
+}
+
+void KeymapCheckTest::defaultMatching_data()
+{
+    QTest::addColumn<QString>("id");
+    QTest::addColumn<int>("key");
+    QTest::addColumn<Qt::KeyboardModifiers>("modifiers");
+    QTest::addColumn<bool>("expected");
+
+    QTest::newRow("semitone-up") << QStringLiteral("roll.transpose_up") << int(Qt::Key_Up)
+                                 << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("shift-not-semitone") << QStringLiteral("roll.transpose_up") << int(Qt::Key_Up)
+                                        << Qt::KeyboardModifiers(Qt::ShiftModifier) << false;
+    QTest::newRow("octave-up") << QStringLiteral("roll.transpose_up_octave") << int(Qt::Key_Up)
+                               << Qt::KeyboardModifiers(Qt::ShiftModifier) << true;
+    QTest::newRow("keypad-up") << QStringLiteral("roll.transpose_up") << int(Qt::Key_Up)
+                               << Qt::KeyboardModifiers(Qt::KeypadModifier) << true;
+    QTest::newRow("delete") << QStringLiteral("roll.delete") << int(Qt::Key_Delete)
+                            << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("backspace") << QStringLiteral("roll.delete") << int(Qt::Key_Backspace)
+                               << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("copy") << QStringLiteral("roll.copy") << int(Qt::Key_C)
+                          << Qt::KeyboardModifiers(Qt::ControlModifier) << true;
+    QTest::newRow("mute") << QStringLiteral("roll.mute_tracks") << int(Qt::Key_M)
+                          << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("control-not-mute") << QStringLiteral("roll.mute_tracks") << int(Qt::Key_M)
+                                      << Qt::KeyboardModifiers(Qt::ControlModifier) << false;
+    QTest::newRow("solo") << QStringLiteral("roll.solo_tracks") << int(Qt::Key_S)
+                          << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("automation-pencil") << QStringLiteral("automation.pencil_mode") << int(Qt::Key_B)
+                                       << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("pitch-bend") << QStringLiteral("roll.pitch_bend") << int(Qt::Key_G)
+                                << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("play-pause") << QStringLiteral("transport.play_pause") << int(Qt::Key_Space)
+                                << Qt::KeyboardModifiers(Qt::NoModifier) << true;
+    QTest::newRow("control-not-play-pause")
+        << QStringLiteral("transport.play_pause") << int(Qt::Key_Space)
+        << Qt::KeyboardModifiers(Qt::ControlModifier) << false;
+    QTest::newRow("insert-time") << QStringLiteral("edit.insert_time") << int(Qt::Key_I)
+                                 << Qt::KeyboardModifiers(Qt::ControlModifier | Qt::ShiftModifier)
+                                 << true;
+    QTest::newRow("duplicate-time") << QStringLiteral("roll.duplicate_time") << int(Qt::Key_D)
+                                    << Qt::KeyboardModifiers(Qt::ControlModifier) << true;
+}
+
+void KeymapCheckTest::defaultMatching()
+{
+    QFETCH(QString, id);
+    QFETCH(int, key);
+    QFETCH(Qt::KeyboardModifiers, modifiers);
+    QFETCH(bool, expected);
+Original expression:
+QCOMPARE(matches(id, key, modifiers), expected);
+
+A010 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:103
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+}
+
+void KeymapCheckTest::modifierChords()
+{
+    const auto &registry = keymap::Registry::instance();
+    const QString dragId = QStringLiteral("roll.velocity_drag");
+    const QString detentId = QStringLiteral("velocity.detent_unlock");
+Original expression:
+QVERIFY(registry.matchesModifier(Qt::ControlModifier, detentId));
+
+A011 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:105
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(registry.matchesModifier(Qt::ControlModifier, dragId));
+
+A012 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:106
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(registry.matchesModifier(Qt::ControlModifier | Qt::KeypadModifier, dragId));
+
+A013 | KeymapCheckTest::modifierChords | src/checks/keyboard/keymapregistry.cpp:107
+Disposition: GAP
+Mapping/reason: No Swift counterpart covers the keymap registry; no equivalent Swift assertion is established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+QVERIFY(!registry.matchesModifier(Qt::ControlModifier | Qt::ShiftModifier, dragId));
+
+Swift assertion predicates
+None: no Swift counterpart was identified, so no report.expect*/expectEqual
+calls pair with this file.
+
+Remaining original source (closing sequence and helper bodies):
+}
+
+int runKeymapCheck(const QStringList &qtArguments)
+{
+    KeymapCheckTest test;
+    QStringList arguments{QStringLiteral("keymapcheck")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}

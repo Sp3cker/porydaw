@@ -1,109 +1,155 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 
-PromptCard {
-    id: prompt
-
-    required property var bridge
-
-    objectName: "noteVelocityPrompt"
-    appearance: bridge.velocityPromptAppearance
-
-    property int draft: bridge.velocityPromptInitialValue
-    property bool finishing: false
-
-    function acceptDisplayed() {
-        const committed = velocityInput.commitDisplayed()
-        if (committed !== null)
-            acceptCommitted(committed)
+Item {
+    id: promptRoot
+    objectName: "velocityPrompt"
+    required property var model
+    required property var promptPalette
+    property var hintService: null
+    property bool hintScopeAllowed: true
+    signal closed(bool restoreFocus)
+    readonly property bool opened: model.promptOpen
+    visible: opened
+    enabled: opened
+    z: 100
+    onOpenedChanged: {
+        if (opened)
+            Qt.callLater(prompt.activateInitialFocus)
+        else
+            closed(true)
+    }
+    MouseArea {
+        objectName: "velocityPromptUnderlay"
+        anchors.fill: parent
+        acceptedButtons: Qt.LeftButton | Qt.RightButton
+        onPressed: mouse => {
+            if (mouse.x < prompt.x || mouse.x >= prompt.x + prompt.width
+                    || mouse.y < prompt.y || mouse.y >= prompt.y + prompt.height)
+                prompt.cancelDisplayed()
+            mouse.accepted = true
+        }
     }
 
-    function acceptCommitted(committed) {
-        if (finishing)
-            return
-        finishing = true
-        bridge.acceptVelocityPrompt(committed)
-    }
+    PromptCard {
+        id: prompt
 
-    function cancelDisplayed() {
-        if (finishing)
-            return
-        finishing = true
-        bridge.cancelVelocityPrompt()
-    }
-    function activateInitialFocus() {
-        velocityInput.focusInput(Qt.PopupFocusReason)
-        velocityInput.selectAll()
-    }
-    Component.onCompleted: Qt.callLater(activateInitialFocus)
+        objectName: "velocityPromptCard"
+        anchors.centerIn: parent
+        width: implicitWidth
+        height: implicitHeight
+        appearance: Object.assign({}, promptRoot.model.promptAppearance, {
+            font: Qt.font(promptRoot.model.promptFont),
+            background: promptRoot.promptPalette.windowBackground,
+            outline: promptRoot.promptPalette.outline, text: promptRoot.promptPalette.windowText,
+            focus: promptRoot.promptPalette.focusOutline,
+            buttonBackground: promptRoot.promptPalette.buttonBackground,
+            buttonText: promptRoot.promptPalette.buttonText,
+            pressedBackground: promptRoot.promptPalette.buttonPressedBackground,
+            pressedText: promptRoot.promptPalette.buttonPressedText
+        })
 
-    // The focused DragInput receives accepted text-edit keys first. This
-    // terminal sink claims only declined keys so timeline commands never leak
-    // out of the shared popup session.
-    Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape)
-            cancelDisplayed()
-        event.accepted = true
-    }
-    Keys.onReleased: (event) => event.accepted = true
+        readonly property int draft: Number(promptRoot.model.promptDraft)
 
-    Accessible.role: Accessible.Client
-    Accessible.name: bridge.velocityPromptTitle
-
-    Text {
-        color: appearance.text
-        font: appearance.font
-        text: bridge.velocityPromptTitle
-        renderType: Text.NativeRendering
-    }
-
-    Text {
-        color: appearance.text
-        font: appearance.font
-        text: bridge.velocityPromptLabel
-        renderType: Text.NativeRendering
-    }
-
-    DragInput {
-        id: velocityInput
-
-        appearance: prompt.appearance
-        value: prompt.draft
-        minimumValue: bridge.velocityPromptMinimumValue
-        maximumValue: bridge.velocityPromptMaximumValue
-        inputObjectName: "noteVelocityInput"
-        accessibleName: bridge.velocityPromptLabel
-        accessibleDescription: bridge.velocityPromptTitle
-        onValueCommitted: (committed) => prompt.draft = committed
-        onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
-        textInput.KeyNavigation.tab: acceptButton
-        textInput.KeyNavigation.backtab: cancelButton
-    }
-
-    Row {
-        spacing: appearance.spacing
-
-        PromptButton {
-            id: acceptButton
-
-            objectName: "noteVelocityAccept"
-            appearance: prompt.appearance
-            text: qsTr("OK")
-            minimumWidth: velocityInput.implicitWidth
-            onActivated: prompt.acceptDisplayed()
-            KeyNavigation.tab: cancelButton
-            KeyNavigation.backtab: velocityInput.textInput
+        function acceptDisplayed() {
+            const committed = velocityInput.commitDisplayed()
+            if (committed !== null)
+                acceptCommitted(committed)
         }
 
-        PromptButton {
-            id: cancelButton
+        function acceptCommitted(committed) {
+            if (!promptRoot.opened)
+                return
+            promptRoot.model.updatePromptDraft(String(committed))
+            promptRoot.model.acceptPrompt()
+        }
 
-            objectName: "noteVelocityCancel"
+        function cancelDisplayed() {
+            if (!promptRoot.opened)
+                return
+            promptRoot.model.cancelPrompt()
+        }
+        function activateInitialFocus() {
+            velocityInput.focusInput(Qt.PopupFocusReason)
+            velocityInput.selectAll()
+        }
+        Component.onCompleted: if (promptRoot.opened) Qt.callLater(activateInitialFocus)
+        Keys.onShortcutOverride: event => event.accepted = true
+
+        // The focused DragInput receives accepted text-edit keys first. This
+        // terminal sink claims only declined keys so timeline commands never leak
+        // out of the shared popup session.
+        Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_Escape)
+                cancelDisplayed()
+            event.accepted = true
+        }
+        Keys.onReleased: (event) => event.accepted = true
+
+        Accessible.role: Accessible.Client
+        Accessible.name: promptRoot.model.promptTitle
+
+        Text {
+            objectName: "velocityPromptTitle"
+            color: prompt.appearance.text
+            font: prompt.appearance.font
+            text: promptRoot.model.promptTitle
+            renderType: Text.NativeRendering
+        }
+
+        Text {
+            objectName: "velocityPromptLabel"
+            color: prompt.appearance.text
+            font: prompt.appearance.font
+            text: promptRoot.model.promptLabel
+            renderType: Text.NativeRendering
+        }
+
+        DragInput {
+            id: velocityInput
+
+            hintService: promptRoot.hintService
+            hintScopeAllowed: promptRoot.hintScopeAllowed
             appearance: prompt.appearance
-            text: qsTr("Cancel")
-            minimumWidth: velocityInput.implicitWidth
-            KeyNavigation.tab: velocityInput.textInput
-            KeyNavigation.backtab: acceptButton
-            onActivated: prompt.cancelDisplayed()
+            value: prompt.draft
+            minimumValue: promptRoot.model.promptMinimum
+            maximumValue: promptRoot.model.promptMaximum
+            inputObjectName: "noteVelocityInput"
+            accessibleName: promptRoot.model.promptLabel
+            accessibleDescription: promptRoot.model.promptTitle
+            onValueCommitted: committed => promptRoot.model.updatePromptDraft(String(committed))
+            onEditingAccepted: (committed) => prompt.acceptCommitted(committed)
+            textInput.KeyNavigation.tab: acceptButton
+            textInput.KeyNavigation.backtab: cancelButton
+        }
+
+        Row {
+            spacing: prompt.appearance.spacing
+
+            PromptButton {
+                id: acceptButton
+
+                objectName: "noteVelocityAccept"
+                appearance: prompt.appearance
+                text: qsTr("OK")
+                minimumWidth: velocityInput.implicitWidth
+                onActivated: prompt.acceptDisplayed()
+                KeyNavigation.tab: cancelButton
+                KeyNavigation.backtab: velocityInput.textInput
+            }
+
+            PromptButton {
+                id: cancelButton
+
+                objectName: "noteVelocityCancel"
+                appearance: prompt.appearance
+                text: qsTr("Cancel")
+                minimumWidth: velocityInput.implicitWidth
+                KeyNavigation.tab: velocityInput.textInput
+                KeyNavigation.backtab: acceptButton
+                onActivated: prompt.cancelDisplayed()
+            }
         }
     }
 }

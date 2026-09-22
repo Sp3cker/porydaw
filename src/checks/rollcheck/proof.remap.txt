@@ -1,0 +1,1192 @@
+Assertion correspondence: rollcheck/remap.cpp
+
+Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
+Original: src/checks/rollcheck/remap.cpp
+Original SHA-256: f0c18ebf9ff091b783f1892f9ccbb39ea8760142f97a3a740811dffb5f9e0441
+Swift counterpart: none identified
+Swift SHA-256: n/a
+Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
+Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact counterpart predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Track move/insert/duplicate/delete owner remap, metadata-only invariance and raw metadata-to-engine promotion are exercised against SongView mute/solo/selection/cosmetics ordering invariants (remap-before-documentChanged, headers-follow-timeline). The gated counterpart switches track and replaces the session on the Swift grid surface; signal ordering, header follow and per-owner state remap remain open.
+
+Verification
+Command: deno task verify --filter swiftrollgated --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+SwiftRollGatedTest::trackFollowAndSessionReplacement executes the paired track-follow and session-replacement checks on the Swift grid surface (setTrack rerender, reopened song rebuild, deleted-view lifetime). Shared RemapFixture (local to this file: RemapFixture struct, remapCosmetics/hasMovedTrackState/hasOriginalTrackState/hasTimeSelectionLanes/hasNoOwnerCosmetics helpers) has no Swift-surface equivalent.
+
+Fixture, sequence and row constraints
+Each method loads the song fixture, prepares a local RemapFixture, applies remapCosmetics (mute/solo/scopes/lanes), performs the structural edit, then asserts the same triple for the edit, its undo and its redo: remapPrecedesDocument, headersFollowTimeline, and the expected owner state. Delete additionally seeds removable cosmetics on the removed owner; metadata asserts documentOnly invariance; engine promotion builds a raw two-track SMF with a metadata track.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:170
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+#include "checks/rollcheck/tst_pianoroll.h"
+
+#include <QtTest>
+
+#include <QTemporaryDir>
+#include <algorithm>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "checks/rollcheck/headerchecksupport.h"
+#include "checks/support/quickframebuffer.h"
+#include "checks/support/songfixture.h"
+#include "checks/support/support.h"
+#include "checks/trackheaders/trackheaderoracles.h"
+#include "core/smf.h"
+#include "core/songdocument.h"
+#include "ui/songview.h"
+
+namespace {
+using checks::rollcheck::headercheck::model;
+using trackheaders_test::recordsMatchTimeline;
+
+struct RemapFixture {
+    SongDocument document;
+    std::unique_ptr<MidiTimeline> timeline;
+    SongView view{document};
+    std::vector<QString> order;
+
+    bool prepare(const SongInfo &song, QString *error)
+    {
+        if (!document.load(song, error))
+            return false;
+        timeline = document.buildTimeline(48000.0);
+        if (!checks::support::showQuickViewport(view, QSize(800, 480)))
+            return false;
+        view.setSong(timeline.get(), nullptr);
+        checks::support::bindEditActionsForTest(view);
+        QObject::connect(&document, &SongDocument::tracksRemapped, &view,
+                         [this] { order.push_back(QStringLiteral("remap")); });
+        QObject::connect(&document, &SongDocument::documentChanged, &view, [this] {
+            auto rebuilt = document.buildTimeline(48000.0);
+            view.updateSong(rebuilt.get());
+            timeline = std::move(rebuilt);
+            order.push_back(QStringLiteral("document"));
+        });
+        return true;
+    }
+
+    bool remapPrecedesDocument() const
+    {
+        return order.size() == 2 && order[0] == QStringLiteral("remap") &&
+               order[1] == QStringLiteral("document");
+    }
+
+    bool documentOnly() const
+    {
+        return order.size() == 1 && order.front() == QStringLiteral("document");
+    }
+
+    bool headersFollowTimeline()
+    {
+        auto *headers = model(view);
+        return headers && recordsMatchTimeline(*headers, *timeline, document.canAddTrack());
+    }
+
+    void clearOrder() { order.clear(); }
+};
+
+EditorAutomationRowId controllerRow(int owner, uint8_t cc)
+{
+    return {EditorAutomationRowKind::ControlChange, uint8_t(owner), cc};
+}
+
+bool hasEmptyLane(const EditorViewState &state, int owner, uint8_t cc)
+{
+    return state.emptyLanes.find(controllerRow(owner, cc)) != state.emptyLanes.end();
+}
+
+bool hasRowValue(const auto &rows, const EditorAutomationRowId &row, int value)
+{
+    const auto found = rows.find(row);
+    return found != rows.end() && int(found->second) == value;
+}
+
+bool hasNoOwnerCosmetics(const EditorViewState &state, int owner)
+{
+    const auto owns = [owner](const auto &entry) {
+        return entry.first.kind != EditorAutomationRowKind::Tempo && entry.first.track == owner;
+    };
+    return std::none_of(state.laneHeights.cbegin(), state.laneHeights.cend(), owns) &&
+           std::none_of(state.laneRanges.cbegin(), state.laneRanges.cend(), owns) &&
+           !hasEmptyLane(state, owner, 7) && !hasEmptyLane(state, owner, 10) &&
+           !hasEmptyLane(state, owner, 74);
+}
+
+EditorViewState remapCosmetics()
+{
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    EditorViewState cosmetics;
+    cosmetics.laneHeight = 64;
+    cosmetics.laneHeights.emplace(tempo, 94);
+    cosmetics.laneHeights.emplace(controllerRow(0, 7), 67);
+    cosmetics.laneHeights.emplace(controllerRow(1, 10), 77);
+    cosmetics.laneRanges.emplace(tempo, 116);
+    cosmetics.laneRanges.emplace(controllerRow(0, 7), 102);
+    cosmetics.laneRanges.emplace(controllerRow(1, 10), 92);
+    cosmetics.emptyLanes.emplace(controllerRow(0, 7));
+    cosmetics.emptyLanes.emplace(controllerRow(1, 10));
+    return cosmetics;
+}
+
+bool hasRemappedCosmetics(const EditorViewState &state, int zeroOwner, int oneOwner)
+{
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    return state.laneHeight == 64 && state.laneHeights.size() == 3 &&
+           state.laneRanges.size() == 3 && state.emptyLanes.size() == 2 &&
+           hasRowValue(state.laneHeights, tempo, 94) &&
+           hasRowValue(state.laneHeights, controllerRow(zeroOwner, 7), 67) &&
+           hasRowValue(state.laneHeights, controllerRow(oneOwner, 10), 77) &&
+           hasRowValue(state.laneRanges, tempo, 116) &&
+           hasRowValue(state.laneRanges, controllerRow(zeroOwner, 7), 102) &&
+           hasRowValue(state.laneRanges, controllerRow(oneOwner, 10), 92) &&
+           hasEmptyLane(state, zeroOwner, 7) && hasEmptyLane(state, oneOwner, 10);
+}
+
+bool hasRawCosmetics(const EditorViewState &state, int owner)
+{
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    return state.laneHeight == 64 && state.laneHeights.size() == 2 &&
+           state.laneRanges.size() == 2 && state.emptyLanes.size() == 1 &&
+           hasRowValue(state.laneHeights, tempo, 94) &&
+           hasRowValue(state.laneHeights, controllerRow(owner, 7), 67) &&
+           hasRowValue(state.laneRanges, tempo, 116) &&
+           hasRowValue(state.laneRanges, controllerRow(owner, 7), 102) &&
+           hasEmptyLane(state, owner, 7);
+}
+
+bool hasTimeSelectionLanes(const SongView &view,
+                           const std::vector<std::pair<int, uint8_t>> &expected)
+{
+    const songview::EditorSelectionModel::TimeSelection &selection =
+        view.selectionModel().timeSelection();
+    return selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+           selection.startTick == 24 && selection.endTick == 48 && selection.lanes == expected;
+}
+
+bool hasMovedTrackState(const SongView &view)
+{
+    return view.selectionModel().primaryTrack() == 0 &&
+           view.selectionModel().storedTrackScope() == 0x3 && view.trackMuted(1) &&
+           !view.trackMuted(0) && view.trackSoloed(0) && !view.trackSoloed(1) &&
+           hasRemappedCosmetics(view.editorViewState(), 1, 0);
+}
+
+bool hasOriginalTrackState(const SongView &view)
+{
+    return view.selectionModel().primaryTrack() == 1 &&
+           view.selectionModel().storedTrackScope() == 0x3 && view.trackMuted(0) &&
+           !view.trackMuted(1) && view.trackSoloed(1) && !view.trackSoloed(0) &&
+           hasRemappedCosmetics(view.editorViewState(), 0, 1);
+}
+} // namespace
+
+void PianoRollTest::trackRemapMove()
+{
+    QString error;
+    const std::unique_ptr<checks::LoadedSong> source =
+        checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+
+Original expression:
+QVERIFY2(source, qPrintable(error))
+
+A002 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:174
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    RemapFixture fixture;
+    if (!fixture.prepare(source->songInfo(), &error))
+
+Original expression:
+QFAIL("could not load track-remap fixture")
+
+A003 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:176
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    if (fixture.document.engineTrackCount() < 2 || !fixture.document.canAddTrack())
+
+Original expression:
+QFAIL("track-remap fixture lacks two tracks and an insertion slot")
+
+A004 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:198
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+
+    fixture.view.applyEditorViewState(remapCosmetics());
+    fixture.view.selectionModel().clearNoteSelection();
+    fixture.view.selectionModel().clearTimeSelection();
+    fixture.view.setTrackMute(0, false);
+    fixture.view.setTrackMute(1, false);
+    fixture.view.setTrackSolo(0, false);
+    fixture.view.setTrackSolo(1, false);
+    fixture.view.selectTrack(1);
+    fixture.view.trackHeaderClicked(0, Qt::ControlModifier);
+    fixture.view.setTrackMute(0, true);
+    fixture.view.setTrackSolo(1, true);
+    songview::EditorSelectionModel::TimeSelection lanes;
+    lanes.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+    lanes.startTick = 24;
+    lanes.endTick = 48;
+    lanes.lanes = {{0, 7}, {1, 10}};
+    fixture.view.selectionModel().setTimeSelection(lanes);
+
+    fixture.document.moveTrack(0, 1);
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("move did not remap before documentChanged")
+
+A005 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:200
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A006 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:204
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasMovedTrackState(fixture.view) ||
+        !hasTimeSelectionLanes(fixture.view, {{1, 7}, {0, 10}})) {
+
+Original expression:
+QFAIL("move did not re-address complete SongView track state")
+
+A007 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:209
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->undo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("move undo did not remap before documentChanged")
+
+A008 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:211
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A009 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:215
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasOriginalTrackState(fixture.view) ||
+        !hasTimeSelectionLanes(fixture.view, {{0, 7}, {1, 10}})) {
+
+Original expression:
+QFAIL("move undo did not restore remapped owners")
+
+A010 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:220
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->redo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("move redo did not remap before documentChanged")
+
+A011 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:222
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A012 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:226
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasMovedTrackState(fixture.view) ||
+        !hasTimeSelectionLanes(fixture.view, {{1, 7}, {0, 10}})) {
+
+Original expression:
+QFAIL("move redo did not restore remapped owners")
+
+A013 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:235
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+}
+
+void PianoRollTest::trackRemapInsert()
+{
+    QString error;
+    const std::unique_ptr<checks::LoadedSong> source =
+        checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+
+Original expression:
+QVERIFY2(source, qPrintable(error))
+
+A014 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:239
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    RemapFixture fixture;
+    if (!fixture.prepare(source->songInfo(), &error))
+
+Original expression:
+QFAIL("could not load track-remap fixture")
+
+A015 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:241
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    if (fixture.document.engineTrackCount() < 2 || !fixture.document.canAddTrack())
+
+Original expression:
+QFAIL("track-remap fixture lacks two tracks and an insertion slot")
+
+A016 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:252
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    fixture.view.applyEditorViewState(remapCosmetics());
+    fixture.view.selectTrack(1);
+    fixture.view.trackHeaderClicked(0, Qt::ControlModifier);
+    fixture.view.setTrackMute(0, true);
+    fixture.view.setTrackSolo(1, true);
+    fixture.view.selectionModel().clearTimeSelection();
+    fixture.view.selectionModel().clearNoteSelection();
+    const int inserted = fixture.document.addTrack(0);
+    if (inserted < 0)
+
+Original expression:
+QFAIL("track-remap fixture could not insert a track")
+
+A017 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:254
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("insert did not remap before documentChanged")
+
+A018 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:256
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A019 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:262
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.trackMuted(inserted) || fixture.view.trackSoloed(inserted) ||
+        (fixture.view.selectionModel().storedTrackScope() & (1u << inserted)) ||
+        !hasOriginalTrackState(fixture.view) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), inserted)) {
+
+Original expression:
+QFAIL("inserted track inherited existing SongView state")
+
+A020 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:267
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->undo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("insert undo did not remap before documentChanged")
+
+A021 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:269
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A022 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:272
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasOriginalTrackState(fixture.view))
+
+Original expression:
+QFAIL("insert undo did not restore existing SongView state")
+
+A023 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:276
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+
+    fixture.document.undoStack()->redo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("insert redo did not remap before documentChanged")
+
+A024 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:278
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A025 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:281
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasOriginalTrackState(fixture.view))
+
+Original expression:
+QFAIL("insert redo did not preserve existing SongView state")
+
+A026 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:289
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void PianoRollTest::trackRemapDuplicate()
+{
+    QString error;
+    const std::unique_ptr<checks::LoadedSong> source =
+        checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+
+Original expression:
+QVERIFY2(source, qPrintable(error))
+
+A027 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:293
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    RemapFixture fixture;
+    if (!fixture.prepare(source->songInfo(), &error))
+
+Original expression:
+QFAIL("could not load track-remap fixture")
+
+A028 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:295
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    if (fixture.document.engineTrackCount() < 2 || !fixture.document.canAddTrack())
+
+Original expression:
+QFAIL("track-remap fixture lacks two tracks and an insertion slot")
+
+A029 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:306
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    fixture.view.applyEditorViewState(remapCosmetics());
+    fixture.view.selectTrack(1);
+    fixture.view.trackHeaderClicked(0, Qt::ControlModifier);
+    fixture.view.setTrackMute(0, true);
+    fixture.view.setTrackSolo(1, true);
+    fixture.view.selectionModel().clearTimeSelection();
+    fixture.view.selectionModel().clearNoteSelection();
+    const int duplicate = fixture.document.duplicateTrack(0);
+    if (duplicate < 0)
+
+Original expression:
+QFAIL("track-remap fixture could not duplicate a track")
+
+A030 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:308
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("duplicate did not remap before documentChanged")
+
+A031 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:310
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A032 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:316
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.trackMuted(duplicate) || fixture.view.trackSoloed(duplicate) ||
+        (fixture.view.selectionModel().storedTrackScope() & (1u << duplicate)) ||
+        !hasOriginalTrackState(fixture.view) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), duplicate)) {
+
+Original expression:
+QFAIL("duplicated track inherited existing SongView state")
+
+A033 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:321
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->undo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("duplicate undo did not remap before documentChanged")
+
+A034 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:323
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A035 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:326
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasOriginalTrackState(fixture.view))
+
+Original expression:
+QFAIL("duplicate undo did not restore existing SongView state")
+
+A036 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:330
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+
+    fixture.document.undoStack()->redo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("duplicate redo did not remap before documentChanged")
+
+A037 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:332
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A038 | PianoRollTest::trackRemapDuplicate | src/checks/rollcheck/remap.cpp:335
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: duplicate remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!hasOriginalTrackState(fixture.view))
+
+Original expression:
+QFAIL("duplicate redo did not preserve existing SongView state")
+
+A039 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:343
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void PianoRollTest::trackRemapDelete()
+{
+    QString error;
+    const std::unique_ptr<checks::LoadedSong> source =
+        checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+
+Original expression:
+QVERIFY2(source, qPrintable(error))
+
+A040 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:347
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    RemapFixture fixture;
+    if (!fixture.prepare(source->songInfo(), &error))
+
+Original expression:
+QFAIL("could not load track-remap fixture")
+
+A041 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:349
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    if (fixture.document.engineTrackCount() < 2)
+
+Original expression:
+QFAIL("track-remap fixture lacks two tracks and an insertion slot")
+
+A042 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:374
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+
+    constexpr int removed = 1;
+    fixture.view.selectTrack(0);
+    fixture.view.trackHeaderClicked(removed, Qt::ControlModifier);
+    fixture.view.setTrackMute(0, true);
+    fixture.view.setTrackMute(removed, true);
+    fixture.view.setTrackSolo(removed, true);
+    EditorViewState deletedCosmetics = fixture.view.editorViewState();
+    deletedCosmetics.emptyLanes.insert(controllerRow(removed, 74));
+    deletedCosmetics.laneHeights.emplace(controllerRow(removed, 74), 123);
+    deletedCosmetics.laneRanges.emplace(controllerRow(removed, 74), 120);
+    fixture.view.applyEditorViewState(deletedCosmetics);
+    songview::EditorSelectionModel::TimeSelection deletedLanes;
+    deletedLanes.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+    deletedLanes.startTick = 24;
+    deletedLanes.endTick = 48;
+    deletedLanes.lanes = {{removed, 74}};
+    fixture.view.selectionModel().setTimeSelection(deletedLanes);
+    const std::vector<DocNote> duplicateNotes = fixture.document.notesForTrack(removed);
+    if (!duplicateNotes.empty())
+        fixture.view.selectionModel().setNoteSelection({duplicateNotes.front().noteId});
+
+    fixture.document.deleteTrack(removed);
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("delete did not remap before documentChanged")
+
+A043 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:376
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A044 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:383
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.selectionModel().primaryTrack() == removed ||
+        !fixture.view.selectionModel().noteSelection().empty() ||
+        fixture.view.selectionModel().timeSelection().active() ||
+        fixture.view.trackMuted(removed) || fixture.view.trackSoloed(removed) ||
+        hasEmptyLane(fixture.view.editorViewState(), removed, 74)) {
+
+Original expression:
+QFAIL("deleted track left SongView-owned state behind")
+
+A045 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:390
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    }
+    const int fallback = std::min(removed, fixture.document.engineTrackCount() - 1);
+    if (fixture.view.selectionModel().primaryTrack() != fallback ||
+        fixture.view.selectionModel().storedTrackScope() != (1u << fallback) ||
+        !fixture.view.trackMuted(0) || fixture.view.trackSoloed(0) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), removed)) {
+
+Original expression:
+QFAIL("delete did not drop cosmetic state from its removed owner")
+
+A046 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:395
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->undo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("delete undo did not remap before documentChanged")
+
+A047 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:397
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A048 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:403
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (!fixture.view.selectionModel().noteSelection().empty() ||
+        fixture.view.selectionModel().timeSelection().active() ||
+        fixture.view.trackMuted(removed) || fixture.view.trackSoloed(removed) ||
+        hasEmptyLane(fixture.view.editorViewState(), removed, 74)) {
+
+Original expression:
+QFAIL("restored track inherited dropped SongView state")
+
+A049 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:409
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    }
+    if (fixture.view.selectionModel().primaryTrack() != 0 ||
+        fixture.view.selectionModel().storedTrackScope() != 0x1 || !fixture.view.trackMuted(0) ||
+        fixture.view.trackSoloed(0) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), removed)) {
+
+Original expression:
+QFAIL("delete undo did not restore surviving SongView state")
+
+A050 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:414
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->redo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("delete redo did not remap before documentChanged")
+
+A051 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:416
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    if (!fixture.headersFollowTimeline())
+
+Original expression:
+QFAIL("track header list did not follow the rebuilt timeline")
+
+A052 | PianoRollTest::trackRemapDelete | src/checks/rollcheck/remap.cpp:422
+Disposition: PARTIAL
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: delete remap ordering, removed-owner state drop, fallback track/scope selection, undo/redo restoration.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.selectionModel().primaryTrack() != 0 ||
+        fixture.view.selectionModel().storedTrackScope() != 0x1 || !fixture.view.trackMuted(0) ||
+        fixture.view.trackSoloed(0) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), removed)) {
+
+Original expression:
+QFAIL("delete redo did not keep dropped SongView state absent")
+
+A053 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:431
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+}
+
+void PianoRollTest::trackRemapMetadata()
+{
+    QString error;
+    const std::unique_ptr<checks::LoadedSong> source =
+        checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+
+Original expression:
+QVERIFY2(source, qPrintable(error))
+
+A054 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:435
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    RemapFixture fixture;
+    if (!fixture.prepare(source->songInfo(), &error))
+
+Original expression:
+QFAIL("could not load track-remap fixture")
+
+A055 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:437
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    if (fixture.document.engineTrackCount() < 2)
+
+Original expression:
+QFAIL("track-remap fixture lacks two tracks and an insertion slot")
+
+A056 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:464
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    fixture.view.applyEditorViewState(remapCosmetics());
+    fixture.view.selectTrack(1);
+    fixture.view.trackHeaderClicked(0, Qt::ControlModifier);
+    fixture.view.setTrackMute(0, true);
+    fixture.view.setTrackSolo(1, true);
+    const int selected = fixture.view.selectionModel().primaryTrack();
+    const uint32_t headerMask = fixture.view.selectionModel().storedTrackScope();
+    const EditorViewState cosmetics = fixture.view.editorViewState();
+    const bool mute0 = fixture.view.trackMuted(0);
+    const bool mute1 = fixture.view.trackMuted(1);
+    const bool mute2 = fixture.view.trackMuted(2);
+    const bool solo0 = fixture.view.trackSoloed(0);
+    const bool solo1 = fixture.view.trackSoloed(1);
+    const bool solo2 = fixture.view.trackSoloed(2);
+    const auto stateUnchanged = [&] {
+        return fixture.view.selectionModel().primaryTrack() == selected &&
+               fixture.view.selectionModel().storedTrackScope() == headerMask &&
+               fixture.view.editorViewState() == cosmetics && fixture.view.trackMuted(0) == mute0 &&
+               fixture.view.trackMuted(1) == mute1 && fixture.view.trackMuted(2) == mute2 &&
+               fixture.view.trackSoloed(0) == solo0 && fixture.view.trackSoloed(1) == solo1 &&
+               fixture.view.trackSoloed(2) == solo2;
+    };
+
+    fixture.document.renameTrack(0, QStringLiteral("rollcheck remap metadata"));
+    if (!fixture.documentOnly() || !stateUnchanged())
+
+Original expression:
+QFAIL("metadata-only edit changed SongView owner state")
+
+A057 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:468
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    fixture.document.undoStack()->undo();
+    if (!fixture.documentOnly() || !stateUnchanged())
+
+Original expression:
+QFAIL("metadata-only undo changed SongView owner state")
+
+A058 | PianoRollTest::trackRemapMetadata | src/checks/rollcheck/remap.cpp:472
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    fixture.document.undoStack()->redo();
+    if (!fixture.documentOnly() || !stateUnchanged())
+
+Original expression:
+QFAIL("metadata-only redo changed SongView owner state")
+
+A059 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:497
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void PianoRollTest::trackRemapEnginePromotion()
+{
+    QTemporaryDir rawDir;
+    SmfFile rawSmf;
+    rawSmf.tracks.resize(2);
+    rawSmf.tracks[0].endTick = 96;
+    rawSmf.tracks[1].endTick = 96;
+    SmfEvent metadata;
+    metadata.status = 0xFF;
+    metadata.metaType = 0x01;
+    metadata.blob = QByteArrayLiteral("metadata");
+    rawSmf.tracks[0].events.push_back(metadata);
+    SmfEvent originalProgram;
+    originalProgram.status = 0xC1;
+    originalProgram.data0 = 4;
+    rawSmf.tracks[1].events.push_back(originalProgram);
+    SongInfo rawInfo;
+    rawInfo.label = QStringLiteral("rollcheck_raw_remap");
+    rawInfo.midPath = rawDir.filePath(QStringLiteral("raw-remap.mid"));
+    rawInfo.hasMid = true;
+    QString error;
+    if (!rawDir.isValid() || !rawSmf.writeFile(rawInfo.midPath, &error))
+
+Original expression:
+QFAIL("could not write raw metadata-to-engine remap fixture")
+
+A060 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:501
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    RemapFixture fixture;
+    if (!fixture.prepare(rawInfo, &error))
+
+Original expression:
+QFAIL("could not load raw metadata-to-engine remap fixture")
+
+A061 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:503
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    if (fixture.document.engineTrackCount() != 1)
+
+Original expression:
+QFAIL("raw metadata-to-engine fixture did not start with one engine owner")
+
+A062 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:525
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const EditorAutomationRowId tempo{EditorAutomationRowKind::Tempo, 0, 0};
+    EditorViewState cosmetics;
+    cosmetics.laneHeight = 64;
+    cosmetics.laneHeights.emplace(tempo, 94);
+    cosmetics.laneHeights.emplace(controllerRow(0, 7), 67);
+    cosmetics.laneRanges.emplace(tempo, 116);
+    cosmetics.laneRanges.emplace(controllerRow(0, 7), 102);
+    cosmetics.emptyLanes.emplace(controllerRow(0, 7));
+    fixture.view.applyEditorViewState(cosmetics);
+    fixture.view.setTrackSolo(0, true);
+    songview::EditorSelectionModel::TimeSelection tracks;
+    tracks.startTick = 24;
+    tracks.endTick = 48;
+    fixture.view.selectionModel().setTimeSelection(tracks);
+
+    SmfEvent promotedProgram;
+    promotedProgram.status = 0xC0;
+    promotedProgram.data0 = 3;
+    fixture.document.insertRawEvent(0, promotedProgram);
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("metadata-to-engine raw edit did not remap before documentChanged")
+
+A063 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:533
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.selectionModel().primaryTrack() != 1 ||
+        fixture.view.selectionModel().storedTrackScope() != 0x2 || fixture.view.trackMuted(0) ||
+        fixture.view.trackMuted(1) || fixture.view.trackSoloed(0) || !fixture.view.trackSoloed(1) ||
+        !fixture.view.selectionModel().timeSelection().active() ||
+        !hasRawCosmetics(fixture.view.editorViewState(), 1) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), 0)) {
+
+Original expression:
+QFAIL("metadata-to-engine raw edit did not remap SongView owners")
+
+A064 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:541
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+
+    fixture.view.selectTrack(0);
+    fixture.view.setTrackMute(0, true);
+    fixture.view.selectionModel().setTimeSelection(tracks);
+    fixture.document.undoStack()->undo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("engine-to-metadata raw undo did not remap before documentChanged")
+
+A065 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:548
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.selectionModel().primaryTrack() != 0 ||
+        fixture.view.selectionModel().storedTrackScope() != 0x1 || fixture.view.trackMuted(0) ||
+        !fixture.view.trackSoloed(0) || fixture.view.selectionModel().timeSelection().active() ||
+        !hasRawCosmetics(fixture.view.editorViewState(), 0) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), 1)) {
+
+Original expression:
+QFAIL("engine-to-metadata fallback rebound SongView state to the wrong owner")
+
+A066 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:553
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+
+    fixture.document.undoStack()->redo();
+    if (!fixture.remapPrecedesDocument())
+
+Original expression:
+QFAIL("metadata-to-engine raw redo did not remap before documentChanged")
+
+A067 | PianoRollTest::trackRemapEnginePromotion | src/checks/rollcheck/remap.cpp:561
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    fixture.clearOrder();
+    if (fixture.view.selectionModel().primaryTrack() != 1 ||
+        fixture.view.selectionModel().storedTrackScope() != 0x2 || fixture.view.trackMuted(0) ||
+        fixture.view.trackMuted(1) || fixture.view.trackSoloed(0) || !fixture.view.trackSoloed(1) ||
+        fixture.view.selectionModel().timeSelection().active() ||
+        !hasRawCosmetics(fixture.view.editorViewState(), 1) ||
+        !hasNoOwnerCosmetics(fixture.view.editorViewState(), 0)) {
+
+Original expression:
+QFAIL("metadata-to-engine redo did not preserve remapped SongView owners")
+
+Remaining original source (closing sequence and helper bodies):
+;
+    }
+}
+
+Counterpart executable predicate index
+The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:542
+Counterpart expression:
+QSKIP("QML object-return lifetime belongs to swiftqtml")
+
+S002 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:548
+Counterpart expression:
+QVERIFY2(fixture.open(&error), qPrintable(error))
+
+S003 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:549
+Counterpart expression:
+QVERIFY(QMetaObject::invokeMethod(fixture.grid(), "setTrack", Q_ARG(int, 1)))
+
+S004 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:550
+Counterpart expression:
+QVERIFY(QTest::qWaitFor(
+            [&] {
+                if (fixture.grid()->property("trackIndex").toInt() != 1)
+                    return false;
+                const QList<NoteState> notes = fixture.notes(&error);
+                return error.isEmpty() && !notes.isEmpty() &&
+                       fixture.grid()->property("renderedNoteCount").toInt() == notes.size() &&
+                       std::all_of(notes.cbegin(), notes.cend(),
+                                   [](const NoteState &note) { return note.track == 1; });
+            },
+            kSettleTimeoutMs))
+
+S005 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:565
+Counterpart expression:
+QVERIFY(QMetaObject::invokeMethod(fixture.window().sessionObject(), "openSong",
+                                          Q_ARG(QString, fixture.songLabel()), Q_ARG(bool, false)))
+
+S006 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:567
+Counterpart expression:
+QVERIFY(QTest::qWaitFor(
+            [&] {
+                return oldView.isNull() && oldRoot.isNull() && oldGrid.isNull() &&
+                       fixture.window().gridView() && fixture.window().gridView() != oldView &&
+                       fixture.window().gridView()->rootObject();
+            },
+            kOpenTimeoutMs))
+
+S007 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:576
+Counterpart expression:
+QVERIFY(finalGrid && finalGrid->property("renderedNoteCount").toInt() > 0)
+
+S008 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:580
+Counterpart expression:
+QVERIFY(finalView.isNull())
+
+S009 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:581
+Counterpart expression:
+QVERIFY(finalGrid.isNull())

@@ -1,0 +1,448 @@
+Assertion correspondence: nativegraphics/tst_playhead_autohover.cpp
+
+Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
+Original: src/checks/nativegraphics/tst_playhead_autohover.cpp
+Original SHA-256: 4d838f6b058c18312c6f126177dd9b65f04cda390a8b35fd0fa044fc5408ae4b
+Swift counterpart: src/checks/nativegraphics/tst_playhead_quick.swift
+Swift SHA-256: 65999594c79fdf7013a07d04b3bd111cb4a05428b54d9d2eb063b682497604ab
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+
+Status and evidence
+The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired presenter publication check, listed after the inventory. That Swift check covers presenter publication and reprojection only; the deleted case observes native hover decor rendering through real mouse delivery and framebuffer captures, so every entry below is NATIVE. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+
+Execution ownership
+checkPublicationAndReprojection in src/checks/nativegraphics/tst_playhead_quick.swift executes the paired presenter checks; it is called by runSharedPlayheadChecks (swiftcore/SharedPlayheadChecks.swift) between presenter attachment and aggregate suspension, sharing the same presenter and session. It covers publication and reprojection only, not native hover decor.
+
+Fixture, sequence and row constraints
+A single automationHoverDecor case: one hover point inside the lane body and one leave point outside it expand the capture sites into a baseline/hovered/cleared triple, with primeMouseMove delivery guarded by qWaitFor between captures.
+Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:71
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  #include "checks/nativegraphics/tst_renderingplayhead.h"
+
+  #include <QtTest>
+
+  #include <QEnterEvent>
+  #include <QImage>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QScopeGuard>
+
+  #include <algorithm>
+  #include <cstdint>
+  #include <memory>
+  #include <optional>
+
+  #include "checks/nativegraphics/nativegraphics_fixture.h"
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "checks/support/songfixture.h"
+  #include "checks/support/timelinequickcheck.h"
+  #include "core/timedefaults.h"
+  #include "ui/editordrawer/automationcanvas.h"
+  #include "ui/editordrawer/automationpage.h"
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/layout.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickview.h"
+
+  namespace {
+
+  // The catalog position comes from the production mapping only; clicking the
+  // real selector label is the same activation path a user takes.
+  bool activateAutomationParameter(SongView &view, AutomationCanvas &canvas,
+                                   const EditorAutomationRowId &row)
+  {
+      const int index = checks::support::automationParameterIndex(canvas, row);
+      if (index < 0)
+          return false;
+      songview::TimelineQuickView *const quick = view.quickView();
+      QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+      if (!root)
+          return false;
+      QQuickItem *label = nullptr;
+      if (!QTest::qWaitFor([&root, &label, index] {
+              label = checks::support::visualDescendant(
+                  root, QStringLiteral("automationParameterTab%1").arg(index));
+              return label && label->isVisible() && label->isEnabled() && label->width() > 0.0 &&
+                     label->height() > 0.0 && label->window();
+          }))
+          return false;
+      QQuickWindow *const window = label->window();
+      QQuickItem *const content = window ? window->contentItem() : nullptr;
+      if (!content)
+          return false;
+      const QPointF point = content->mapFromScene(
+          label->mapToScene(QPointF(label->width() / 2.0, label->height() / 2.0)));
+      if (!content->boundingRect().contains(point))
+          return false;
+      QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, point.toPoint());
+      return QTest::qWaitFor([&canvas, index] { return canvas.activeParameter() == index; });
+  }
+
+  } // namespace
+
+  void RenderingPlayheadTest::automationHoverDecor()
+  {
+      QString error;
+      std::unique_ptr<checks::nativegraphics::Rig> rig =
+          checks::nativegraphics::makeRig(m_projectRoot, m_songLabel, QSize{1280, 800}, error);
+
+Original expression:
+  QVERIFY2(rig, qPrintable(error))
+
+A002 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:76
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      SongView &view = rig->song->view();
+      auto *page = view.editorDrawer() ? view.editorDrawer()->automationPage() : nullptr;
+      auto *canvas = page ? page->canvas() : nullptr;
+      auto *quick = view.quickView();
+
+Original expression:
+  QVERIFY(page)
+
+A003 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:77
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(canvas)
+
+A004 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:78
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(quick && quick->rootObject() && quick->quickWindow())
+
+A005 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:82
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      auto *window = quick->quickWindow();
+
+      const int track = view.selectionModel().primaryTrack();
+
+Original expression:
+  QVERIFY(track >= 0 && track < 16)
+
+A006 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:87
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      const bool originalPencil = canvas->pencilMode();
+      songview::TimelineInputItem *input =
+          quick->rootObject()->findChild<songview::TimelineInputItem *>(
+              QStringLiteral("timelineAutomationInput"));
+
+Original expression:
+  QVERIFY(input)
+
+A007 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:102
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      QPoint nativeLeavePoint;
+      const auto restore = qScopeGuard([&] {
+          QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
+          if (canvas->pencilMode() != originalPencil)
+              canvas->setPencilMode(originalPencil);
+          checks::support::pumpQuick();
+      });
+
+      // Real activation on the shared plot: the CC1 Modulation selector label
+      // replaces the old add-empty-lane setup, and the active slot's full-height
+      // body replaces the pinned Tempo header. The plot has no vertical
+      // automation scroll, so content and input coordinates already agree.
+      const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange,
+                                       static_cast<uint8_t>(track), CoreTimeDefaults::kCcModulation};
+
+Original expression:
+  QVERIFY2(activateAutomationParameter(view, *canvas, lane),
+               "the modulation parameter label did not activate")
+
+A008 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:112
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      checks::support::pumpQuick();
+
+      LaneHandle handle;
+      const auto &rows = canvas->rows();
+      for (int index = 0; index < int(rows.size()); ++index) {
+          if (rows[std::size_t(index)].id == lane)
+              handle = LaneHandle{index};
+      }
+
+Original expression:
+  QVERIFY(handle.valid())
+
+A009 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:113
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(input->interaction())
+
+A010 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:114
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(input->window())
+
+A011 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:117
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+      const QRect body = canvas->laneBody(handle);
+
+Original expression:
+  QVERIFY(!body.isEmpty())
+
+A012 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:120
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      const std::optional<songview::TimelineBandGeometry> &band =
+          view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+
+Original expression:
+  QVERIFY(band && band->rect.isValid())
+
+A013 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:122
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      const QSize inputSize{qFloor(input->width()), qFloor(input->height())};
+
+Original expression:
+  QVERIFY(inputSize.width() > 0 && inputSize.height() > 0)
+
+A014 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:126
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      const QRect inputBounds{QPoint{}, inputSize};
+      const QRect interior = body.adjusted(0, layout::singlePixel() + 1, 0, -layout::singlePixel())
+                                 .intersected(inputBounds);
+
+Original expression:
+  QVERIFY(!interior.isEmpty())
+
+A015 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:129
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      const int x = (std::clamp)(inputSize.width() * 2 / 3, interior.left(), interior.right());
+      const QPoint point{x, interior.center().y()};
+
+Original expression:
+  QVERIFY(inputBounds.contains(point))
+
+A016 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:130
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(body.contains(point))
+
+A017 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:134
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      const QPoint nativeHoverPoint = input->mapToScene(QPointF(point)).toPoint();
+      nativeLeavePoint = input->mapToScene(QPointF{-1.0, -1.0}).toPoint();
+      const QRect windowBounds{QPoint{}, window->size()};
+
+Original expression:
+  QVERIFY(windowBounds.contains(nativeHoverPoint))
+
+A018 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:135
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(windowBounds.contains(nativeLeavePoint))
+
+A019 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:136
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!input->contains(input->mapFromScene(QPointF(nativeLeavePoint))))
+
+A020 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:149
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+      canvas->cancelInteraction();
+      canvas->setPencilMode(true);
+      // QTest's window mouse delivery does not synthesize the platform Enter
+      // event that enables Quick's hover dispatch.
+      QEnterEvent enter(QPointF(nativeLeavePoint), QPointF(nativeLeavePoint),
+                        window->mapToGlobal(QPointF(nativeLeavePoint)));
+      QCoreApplication::sendEvent(window, &enter);
+      QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
+      checks::support::pumpQuick();
+      QString captureError;
+      const QImage baseline = checks::support::captureQuickBand(view, band->rect, &captureError);
+
+Original expression:
+  QVERIFY2(!baseline.isNull(), qPrintable(captureError))
+
+A021 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:153
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+      // The first move into a fresh surface may deliver only HoverEnter.
+      // Move within the surface before the target so this exercises HoverMove.
+
+Original expression:
+  QVERIFY2(checks::events::primeMouseMove(*window, *input, nativeHoverPoint),
+               "the automation surface has no interior mouse-move staging point")
+
+A022 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:158
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeHoverPoint);
+      checks::support::pumpQuick();
+      const QImage hovered = checks::support::captureQuickBand(view, band->rect, &captureError);
+
+Original expression:
+  QVERIFY2(!hovered.isNull(), qPrintable(captureError))
+
+A023 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:159
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(hovered != baseline)
+
+A024 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:164
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+      QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
+      checks::support::pumpQuick();
+      const QImage cleared = checks::support::captureQuickBand(view, band->rect, &captureError);
+
+Original expression:
+  QVERIFY2(!cleared.isNull(), qPrintable(captureError))
+
+A025 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:165
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(cleared, baseline)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+
+Swift assertion predicates
+
+S001 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:10
+  report.expect(presenter.observe(sample: sample, transport: 0), cppID: sharedPlayheadPublicationID,
+                    message: "a changed observation publishes")
+
+S002 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:14
+  report.expect(gridCameraNear(presenter.tick, 48, tolerance: 0.5) && presenter.timelineAttached
+                        && presenter.playing == false,
+                    cppID: sharedPlayheadPublicationID,
+                    message: "the published tick is the authoritative sample's timeline position")
+
+S003 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:18
+  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: presenter.tick)),
+                    cppID: sharedPlayheadPublicationID,
+                    message: "the published projection is the session camera's contentX")
+
+S004 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:21
+  report.expect(presenter.visible == (presenter.contentX >= 0 && presenter.contentX < width),
+                    cppID: sharedPlayheadPublicationID,
+                    message: "published visibility follows the projected position and viewport")
+
+S005 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:24
+  report.expect(presenter.observe(sample: sample, transport: 0) == false
+                        && presenter.presentationCount == count,
+                    cppID: sharedPlayheadPublicationID,
+                    message: "a repeated identical observation publishes nothing")
+
+S006 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:29
+  report.expect(presenter.presentationCount == count, cppID: sharedPlayheadPublicationID,
+                    message: "reprojecting an unchanged camera publishes nothing")
+
+S007 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:34
+  report.expect(gridCameraNear(presenter.tick, tick), cppID: sharedPlayheadReprojectionID,
+                    message: "a camera publication keeps the authoritative tick")
+
+S008 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:36
+  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)), cppID: sharedPlayheadReprojectionID,
+                    message: "a camera publication reprojects through the new camera")
+
+S009 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:38
+  report.expect(presenter.presentationCount == count + 1, cppID: sharedPlayheadReprojectionID,
+                    message: "one camera publication presents exactly once")
+
+S010 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:41
+  report.expect(!presenter.visible && presenter.contentX < 0, cppID: sharedPlayheadReprojectionID,
+                    message: "a camera scrolled past the position hides the segment")
+
+S011 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:44
+  report.expect(presenter.visible && gridCameraNear(presenter.tick, tick)
+                        && gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)),
+                    cppID: sharedPlayheadReprojectionID,
+                    message: "scrolling back re-renders the same retained position")

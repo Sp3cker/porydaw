@@ -1,0 +1,958 @@
+Assertion correspondence: swiftrollgated/notevisuals.cpp
+
+Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
+Original: src/checks/swiftrollgated/notevisuals.cpp
+Original SHA-256: 4645863a3b68289a910d275140a40f1bcf44c1609df37bc405af27076bed5931
+Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Swift SHA-256: ad6b435c13a3df031787816508ea95f14b5ec8b96a8539df4fb620a3107f08a3
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards and mode gates.
+Source context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED means a corresponding Swift predicate was identified and would execute;
+PARTIAL means a related Swift predicate exists but the stated condition is unproved;
+GAP means no equivalent Swift assertion is established;
+NATIVE means the site observes native window/rendering/harness state that a
+presenter-level Swift check cannot establish. Unsure between PARTIAL and GAP
+is recorded as GAP. Bookkeeping must not overclaim.
+Note raster parity for the swiftrollgated surface: unselected face contract, display-scaled black border, selection ring + inset border, face preservation across selection, and small-font border thinning. Rendered-pixel and live-window sites are NATIVE; noteSummary parsing and camera/viewport programming pair PARTIAL with the Swift projection/viewport predicates.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
+
+Execution and ownership
+runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) via checkOrderedSelection, checkViewport, checkProjection and checkIsolation executes the paired presenter checks. No same-directory Swift file exists for these C++ sources; no shared Swift fixture file carrying expects was identified (CoreCheckSupport.swift carries no report.expect predicates).
+
+Fixture, sequence and row constraints
+Single retained song fixture; the small-font leg guards on smallBorderRequest > 1 (thinned-visible-note path) versus the single-pixel fallback (fully-visible selected note path). Ring/border fitting guards on fittedFrameThickness availability; the selection leg requires the select-all command to publish the probed note id.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:241
+Disposition: NATIVE
+Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Source context since previous assertion:
+#include "tst_swiftrollgated.h"
+
+#include "app/RewriteWindow.h"
+#include "ui/theme/color_math.h"
+#include "ui/theme/themeruntime.h"
+#include "ui/theme/trackidentitycolors.h"
+
+#include <QColor>
+#include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMetaObject>
+#include <QQuickItem>
+#include <QQuickView>
+#include <QRect>
+#include <QVariant>
+#include <QtTest/QTest>
+
+#include <algorithm>
+#include <array>
+#include <optional>
+#include <vector>
+
+namespace {
+
+constexpr int kBlackChannelMax = 16;
+constexpr int kSelectAllCommand = 4;
+constexpr double kSelectionRingFontFraction = 1.0 / 8.0;
+constexpr double kSmallFontForScaledBorder = 4.0;
+constexpr double kSmallFontForSinglePixelBorder = 7.0;
+
+struct PublishedNote {
+    quint64 id = 0;
+    int track = 0;
+    int velocity = 0;
+    bool selected = false;
+};
+
+struct VisibleNote {
+    PublishedNote note;
+    QQuickItem *item = nullptr;
+    QRect deviceRect;
+};
+
+std::optional<std::vector<PublishedNote>> publishedNotes(const QString &summary, QString *error)
+{
+    QJsonParseError parseError;
+    const QJsonDocument document = QJsonDocument::fromJson(summary.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError || !document.isArray()) {
+        *error =
+            QStringLiteral("noteSummary is not a JSON array: %1").arg(parseError.errorString());
+        return std::nullopt;
+    }
+
+    std::vector<PublishedNote> result;
+    result.reserve(std::size_t(document.array().size()));
+    for (const QJsonValue value : document.array()) {
+        if (!value.isObject()) {
+            *error = QStringLiteral("noteSummary contains a non-object entry");
+            return std::nullopt;
+        }
+        const QJsonObject object = value.toObject();
+        const double id = object.value(QStringLiteral("id")).toDouble();
+        if (id <= 0 || !object.value(QStringLiteral("track")).isDouble() ||
+            !object.value(QStringLiteral("velocity")).isDouble()) {
+            *error = QStringLiteral("noteSummary entry lacks a positive id, track, or velocity");
+            return std::nullopt;
+        }
+        result.push_back({quint64(id), object.value(QStringLiteral("track")).toInt(),
+                          object.value(QStringLiteral("velocity")).toInt(),
+                          object.value(QStringLiteral("selected")).toBool()});
+    }
+    return result;
+}
+
+QRect deviceRectFor(QQuickItem *item, const QImage &image)
+{
+    const QRectF scene = item->mapRectToScene(item->boundingRect());
+    const qreal dpr = image.devicePixelRatio();
+    return QRect(qRound(scene.x() * dpr), qRound(scene.y() * dpr),
+                 (std::max)(1, qRound(scene.width() * dpr)),
+                 (std::max)(1, qRound(scene.height() * dpr)))
+        .intersected(image.rect());
+}
+
+std::optional<VisibleNote> visibleNote(QQuickItem *fills, const QRectF &plotScene,
+                                       const QImage &image, const std::vector<PublishedNote> &notes,
+                                       std::optional<bool> selected)
+{
+    std::optional<VisibleNote> best;
+    int bestArea = -1;
+    for (const PublishedNote &note : notes) {
+        if (selected && note.selected != *selected)
+            continue;
+        QQuickItem *const item =
+            gridcheck::visualDescendant(fills, QStringLiteral("gridNote_%1").arg(note.id));
+        if (!item || !item->isVisible())
+            continue;
+        const QRectF scene = item->mapRectToScene(item->boundingRect());
+        if (!plotScene.adjusted(1.0, 1.0, -1.0, -1.0).contains(scene))
+            continue;
+        const QRect deviceRect = deviceRectFor(item, image);
+        const int area = deviceRect.width() * deviceRect.height();
+        if (deviceRect.width() >= 5 && deviceRect.height() >= 5 && area > bestArea) {
+            best = VisibleNote{note, item, deviceRect};
+            bestArea = area;
+        }
+    }
+    return best;
+}
+
+bool publishedSelectionContains(QObject *grid, quint64 id)
+{
+    QString error;
+    const auto notes = publishedNotes(grid->property("noteSummary").toString(), &error);
+    if (!notes)
+        return false;
+    for (const PublishedNote &note : *notes)
+        if (note.id == id)
+            return note.selected;
+    return false;
+}
+
+QColor originalNoteFace(int track, int velocity)
+{
+    const int count = int(themes::trackIdentityColorCount);
+    const std::size_t index = std::size_t(((track % count) + count) % count);
+    const auto identityHex = themes::track_identity_colors::fills[index];
+    const QColor identity(QLatin1String(identityHex.data(), qsizetype(identityHex.size())));
+    const QColor zero = themes::color(themes::Role::song_view_note_velocity_zero);
+    const int clamped = std::clamp(velocity, 0, 127);
+    if (clamped == 0)
+        return zero;
+    if (clamped == 127)
+        return identity;
+    const themes::Oklab from = themes::oklabFromColor(identity);
+    const themes::Oklab to = themes::oklabFromColor(zero);
+    const double amount = 1.0 - double(clamped) / 127.0;
+    return themes::colorFromOklab({from.lightness + (to.lightness - from.lightness) * amount,
+                                   from.a + (to.a - from.a) * amount,
+                                   from.b + (to.b - from.b) * amount});
+}
+
+bool isPhysicalBlack(const QColor &color)
+{
+    return color.isValid() && color.red() <= kBlackChannelMax &&
+           color.green() <= kBlackChannelMax && color.blue() <= kBlackChannelMax;
+}
+
+int fittedFrameThickness(const QRect &rect, int requestedPixels, int insetPixels)
+{
+    return std::clamp(((std::min)(rect.width(), rect.height()) - 1) / 2 - insetPixels, 0,
+                      requestedPixels);
+}
+
+// Every segment of the shared playhead is a vertical line, and the tick-zero
+// note begins exactly at the homed projection, so a note's left column is not a
+// stable oracle: the frame probes sample the vertical edges, as the legacy
+// production raster oracle does. The exact colour and black assertions, insets
+// and thicknesses are unchanged.
+QString frameColorFailure(const QImage &image, const QRect &rect, int inset, int thickness,
+                          const QColor &expected, const QString &label)
+{
+    const int centerX = rect.center().x();
+    for (int pixel = 0; pixel < thickness; ++pixel) {
+        const int offset = inset + pixel;
+        const std::array<QPoint, 2> probes = {
+            QPoint(centerX, rect.top() + offset),
+            QPoint(centerX, rect.bottom() - offset),
+        };
+        for (const QPoint &point : probes) {
+            const QColor actual = image.rect().contains(point) ? image.pixelColor(point) : QColor{};
+            if (!gridcheck::colorsNear(actual, expected)) {
+                return QStringLiteral("%1 at device pixel (%2,%3): expected %4, actual %5")
+                    .arg(label)
+                    .arg(point.x())
+                    .arg(point.y())
+                    .arg(expected.name(QColor::HexArgb))
+                    .arg(actual.name(QColor::HexArgb));
+            }
+        }
+    }
+    return {};
+}
+
+QString blackFrameFailure(const QImage &image, const QRect &rect, int inset, int thickness,
+                          const QString &label)
+{
+    const int centerX = rect.center().x();
+    for (int pixel = 0; pixel < thickness; ++pixel) {
+        const int offset = inset + pixel;
+        const std::array<QPoint, 2> probes = {
+            QPoint(centerX, rect.top() + offset),
+            QPoint(centerX, rect.bottom() - offset),
+        };
+        for (const QPoint &point : probes) {
+            const QColor actual = image.rect().contains(point) ? image.pixelColor(point) : QColor{};
+            if (!isPhysicalBlack(actual)) {
+                return QStringLiteral("%1 at device pixel (%2,%3): expected physical black, "
+                                      "actual %4")
+                    .arg(label)
+                    .arg(point.x())
+                    .arg(point.y())
+                    .arg(actual.name(QColor::HexArgb));
+            }
+        }
+    }
+    return {};
+}
+
+std::optional<VisibleNote> thinnedVisibleNote(QQuickItem *fills, const QRectF &plotScene,
+                                              const QImage &image,
+                                              const std::vector<PublishedNote> &notes,
+                                              int ringRequest, int borderRequest)
+{
+    for (const PublishedNote &note : notes) {
+        if (!note.selected)
+            continue;
+        QQuickItem *const item =
+            gridcheck::visualDescendant(fills, QStringLiteral("gridNote_%1").arg(note.id));
+        if (!item || !item->isVisible())
+            continue;
+        const QRectF scene = item->mapRectToScene(item->boundingRect());
+        if (!plotScene.adjusted(1.0, 1.0, -1.0, -1.0).contains(scene))
+            continue;
+        const QRect rect = deviceRectFor(item, image);
+        const int ring = fittedFrameThickness(rect, ringRequest, 0);
+        const int border = fittedFrameThickness(rect, borderRequest, ring);
+        if (ring > 0 && border > 0 && border < borderRequest)
+            return VisibleNote{note, item, rect};
+    }
+    return std::nullopt;
+}
+
+} // namespace
+
+void SwiftRollGatedTest::noteRasterParity()
+{
+    if (m_mode != QStringLiteral("swiftrollgated"))
+Original expression:
+        QSKIP("note raster parity belongs to the swiftrollgated surface");
+
+A002 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:244
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    RewriteWindow window;
+Original expression:
+    QVERIFY(window.isReady());
+
+A003 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:249
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    window.show();
+    window.openStartup(m_projectRoot, m_songLabel);
+
+    QObject *const session = window.sessionObject();
+Original expression:
+    QVERIFY(session != nullptr);
+
+A004 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:250
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
+
+A005 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:251
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
+
+A006 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:252
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
+
+A007 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:255
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QQuickView *const view = window.gridView();
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
+
+A008 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:257
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
+Original expression:
+    QVERIFY(root != nullptr);
+
+A009 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:259
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    QObject *const grid = root->property("gridModel").value<QObject *>();
+Original expression:
+    QVERIFY(grid != nullptr);
+
+A010 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:260
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
+
+A011 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:266
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QQuickItem *const plot =
+        gridcheck::visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
+    QQuickItem *const fills =
+        gridcheck::visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
+Original expression:
+    QVERIFY(plot != nullptr);
+
+A012 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:267
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QVERIFY(fills != nullptr);
+
+A013 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:269
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, plotScene) > 0, 5'000);
+
+A014 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:272
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QImage unselectedImage = view->grabWindow();
+Original expression:
+    QVERIFY(!unselectedImage.isNull());
+
+A015 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:276
+Disposition: PARTIAL
+Mapping/reason: Related S025 (checkProjection camera movement preserves noteSummary); unproved: exact parse of the native noteSummary string.
+Source context since previous assertion:
+    QString summaryError;
+    const auto initialNotes =
+        publishedNotes(grid->property("noteSummary").toString(), &summaryError);
+Original expression:
+    QVERIFY2(initialNotes.has_value(), qPrintable(summaryError));
+
+A016 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:278
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const auto unselected = visibleNote(fills, plotScene, unselectedImage, *initialNotes, false);
+Original expression:
+    QVERIFY2(unselected.has_value(),
+             "the retained fixture has no fully visible unselected note for a raster probe");
+
+A017 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:291
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QColor expectedFace = originalNoteFace(unselected->note.track, unselected->note.velocity);
+    const QColor unselectedFace = unselectedImage.pixelColor(unselected->deviceRect.center());
+    const QString faceFailure =
+        QStringLiteral("note %1 face violates the original track/velocity OKLab contract: "
+                       "track %2 velocity %3 expected %4, actual %5")
+            .arg(unselected->note.id)
+            .arg(unselected->note.track)
+            .arg(unselected->note.velocity)
+            .arg(expectedFace.name(QColor::HexArgb))
+            .arg(unselectedFace.name(QColor::HexArgb));
+Original expression:
+    QVERIFY2(gridcheck::colorsNear(unselectedFace, expectedFace), qPrintable(faceFailure));
+
+A018 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:296
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const qreal dpr = unselectedImage.devicePixelRatio();
+    const int borderRequest = (std::max)(1, qRound(dpr));
+    const int unselectedBorder = fittedFrameThickness(unselected->deviceRect, borderRequest, 0);
+Original expression:
+    QCOMPARE(unselectedBorder, borderRequest);
+
+A019 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:301
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QString unselectedBorderFailure =
+        blackFrameFailure(unselectedImage, unselected->deviceRect, 0, unselectedBorder,
+                          QStringLiteral("unselected note %1 lost its display-scaled black border")
+                              .arg(unselected->note.id));
+Original expression:
+    QVERIFY2(unselectedBorderFailure.isEmpty(), qPrintable(unselectedBorderFailure));
+
+A020 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:303
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QVERIFY(
+        QMetaObject::invokeMethod(session, "performGridCommand", Q_ARG(int, kSelectAllCommand)));
+
+A021 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:305
+Disposition: PARTIAL
+Mapping/reason: Related S001/S010 (checkOrderedSelection selection order predicates); unproved: native select-all command path.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(publishedSelectionContains(grid, unselected->note.id), 5'000);
+
+A022 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:308
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QImage selectedImage = view->grabWindow();
+Original expression:
+    QVERIFY(!selectedImage.isNull());
+
+A023 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:314
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QRect selectedRect = deviceRectFor(unselected->item, selectedImage);
+    const int ringRequest =
+        (std::max)(1, qRound(grid->property("baseFontPx").toDouble() * kSelectionRingFontFraction *
+                             selectedImage.devicePixelRatio()));
+    const int ring = fittedFrameThickness(selectedRect, ringRequest, 0);
+Original expression:
+    QVERIFY2(ring > 0, "selected note is too small to retain a visible selection ring");
+
+A024 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:321
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QColor expectedRing = themes::color(themes::Role::item_selected_background);
+    const QString ringFailure =
+        frameColorFailure(selectedImage, selectedRect, 0, ring, expectedRing,
+                          QStringLiteral("selected note %1 outer ring must use "
+                                         "themes::Role::item_selected_background")
+                              .arg(unselected->note.id));
+Original expression:
+    QVERIFY2(ringFailure.isEmpty(), qPrintable(ringFailure));
+
+A025 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:324
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const int selectedBorder = fittedFrameThickness(selectedRect, borderRequest, ring);
+Original expression:
+    QVERIFY2(selectedBorder > 0, "selected note has no room for its inset black border");
+
+A026 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:328
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QString selectedBorderFailure = blackFrameFailure(
+        selectedImage, selectedRect, ring, selectedBorder,
+        QStringLiteral("selected note %1 lost its inset black border").arg(unselected->note.id));
+Original expression:
+    QVERIFY2(selectedBorderFailure.isEmpty(), qPrintable(selectedBorderFailure));
+
+A027 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:337
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QColor selectedFace = selectedImage.pixelColor(selectedRect.center());
+    const QString selectedFaceFailure =
+        QStringLiteral("selected note %1 frame changed its face: before %2, after %3, oracle %4")
+            .arg(unselected->note.id)
+            .arg(unselectedFace.name(QColor::HexArgb))
+            .arg(selectedFace.name(QColor::HexArgb))
+            .arg(expectedFace.name(QColor::HexArgb));
+Original expression:
+    QVERIFY2(gridcheck::colorsNear(selectedFace, unselectedFace) &&
+                 gridcheck::colorsNear(selectedFace, expectedFace),
+             qPrintable(selectedFaceFailure));
+
+A028 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:343
+Disposition: PARTIAL
+Mapping/reason: Related S017/S018/S019 (checkViewport font-push scale predicates); unproved: native QML viewport/font path and exact scale.
+Source context since previous assertion:
+
+    const double smallFontPx =
+        borderRequest > 1 ? kSmallFontForScaledBorder : kSmallFontForSinglePixelBorder;
+Original expression:
+    QVERIFY(QMetaObject::invokeMethod(grid, "configureViewport", Q_ARG(double, plot->width()),
+                                      Q_ARG(double, plot->height()), Q_ARG(double, smallFontPx),
+                                      Q_ARG(double, dpr)));
+
+A029 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:346
+Disposition: PARTIAL
+Mapping/reason: Related S017/S018/S019 (checkViewport font-push scale predicates); unproved: native QML viewport/font path and exact scale.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+    QTRY_COMPARE_WITH_TIMEOUT(grid->property("baseFontPx").toDouble(), smallFontPx, 5'000);
+
+A030 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:350
+Disposition: PARTIAL
+Mapping/reason: Related S012/S016 (checkViewport camera bounds and reclamp); unproved: exact 128-row bound on the native grid model.
+Source context since previous assertion:
+
+    // Re-home through the production camera operation after the font/DPR push,
+    // then prove its published vertical bound is the projected row height.
+Original expression:
+    QVERIFY(QMetaObject::invokeMethod(grid, "resetCameraScroll"));
+
+A031 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:353
+Disposition: PARTIAL
+Mapping/reason: Related S012/S016 (checkViewport camera bounds and reclamp); unproved: exact 128-row bound on the native grid model.
+Source context since previous assertion:
+    const double maxSmallScrollY =
+        (std::max)(0.0, 128.0 * grid->property("rowHeight").toDouble() - plot->height());
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(
+        qAbs(grid->property("cameraMaxVScroll").toDouble() - maxSmallScrollY) < 0.01, 5'000);
+
+A032 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:357
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const double smallScrollY = grid->property("cameraScrollY").toDouble();
+    const QRectF smallPlotScene = plot->mapRectToScene(plot->boundingRect());
+Original expression:
+    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, smallPlotScene) > 0, 5'000);
+
+A033 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:360
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QImage smallImage = view->grabWindow();
+Original expression:
+    QVERIFY(!smallImage.isNull());
+
+A034 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:364
+Disposition: PARTIAL
+Mapping/reason: Related S025 (checkProjection camera movement preserves noteSummary); unproved: exact parse of the native noteSummary string.
+Source context since previous assertion:
+    QString smallSummaryError;
+    const auto smallNotes =
+        publishedNotes(grid->property("noteSummary").toString(), &smallSummaryError);
+Original expression:
+    QVERIFY2(smallNotes.has_value(), qPrintable(smallSummaryError));
+
+A035 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:387
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const int smallRingRequest =
+        (std::max)(1, qRound(grid->property("baseFontPx").toDouble() * kSelectionRingFontFraction *
+                             smallImage.devicePixelRatio()));
+    const int smallBorderRequest = (std::max)(1, qRound(smallImage.devicePixelRatio()));
+    std::optional<VisibleNote> small;
+    if (smallBorderRequest > 1) {
+        small = thinnedVisibleNote(fills, smallPlotScene, smallImage, *smallNotes, smallRingRequest,
+                                   smallBorderRequest);
+        const QString smallSetupFailure =
+            QStringLiteral("the public small-font viewport did not expose a selected note whose "
+                           "physical black border should thin without vanishing: font=%1 dpr=%2 "
+                           "rowHeight=%3 cameraScrollY=%4 targetY=%5 plot=(%6,%7 %8x%9) notes=%10")
+                .arg(grid->property("baseFontPx").toDouble())
+                .arg(smallImage.devicePixelRatio())
+                .arg(grid->property("rowHeight").toDouble())
+                .arg(grid->property("cameraScrollY").toDouble())
+                .arg(smallScrollY)
+                .arg(smallPlotScene.x())
+                .arg(smallPlotScene.y())
+                .arg(smallPlotScene.width())
+                .arg(smallPlotScene.height())
+                .arg(smallNotes->size());
+Original expression:
+        QVERIFY2(small.has_value(), qPrintable(smallSetupFailure));
+
+A036 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:390
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    } else {
+        small = visibleNote(fills, smallPlotScene, smallImage, *smallNotes, true);
+Original expression:
+        QVERIFY2(small.has_value(),
+                 "the public small-font viewport has no fully visible selected note");
+
+A037 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:396
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    }
+
+    const int smallRing = fittedFrameThickness(small->deviceRect, smallRingRequest, 0);
+    const int smallBorder = fittedFrameThickness(small->deviceRect, smallBorderRequest, smallRing);
+Original expression:
+    QVERIFY2(smallRing > 0 && smallBorder > 0,
+             "small selected note geometry cannot preserve both ring and inset border");
+
+A038 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:399
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    if (smallBorderRequest > 1)
+Original expression:
+        QVERIFY2(smallBorder < smallBorderRequest,
+                 "small selected note did not exercise physical border thinning");
+
+A039 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:405
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QString smallRingFailure =
+        frameColorFailure(smallImage, small->deviceRect, 0, smallRing, expectedRing,
+                          QStringLiteral("small selected note %1 lost its fitted selection ring")
+                              .arg(small->note.id));
+Original expression:
+    QVERIFY2(smallRingFailure.isEmpty(), qPrintable(smallRingFailure));
+
+A040 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:410
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QString smallBorderFailure = blackFrameFailure(
+        smallImage, small->deviceRect, smallRing, smallBorder,
+        QStringLiteral("small selected note %1 border vanished instead of thinning")
+            .arg(small->note.id));
+Original expression:
+    QVERIFY2(smallBorderFailure.isEmpty(), qPrintable(smallBorderFailure));
+
+A041 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:419
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QColor smallExpectedFace = originalNoteFace(small->note.track, small->note.velocity);
+    const QColor smallFace = smallImage.pixelColor(small->deviceRect.center());
+    const QString smallFaceFailure =
+        QStringLiteral("small selected note %1 frame swallowed its face: expected %2, actual %3")
+            .arg(small->note.id)
+            .arg(smallExpectedFace.name(QColor::HexArgb))
+            .arg(smallFace.name(QColor::HexArgb));
+Original expression:
+    QVERIFY2(gridcheck::colorsNear(smallFace, smallExpectedFace), qPrintable(smallFaceFailure));
+
+Remaining original source (closing sequence and helper bodies):
+}
+
+
+Swift assertion predicates
+
+S001 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:106
+    report.expect(session.selectedNoteOrder == [b, a]
+        && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
+        cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
+
+S002 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:111
+    report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
+                       what: "deselecting and re-adding appends the note")
+
+S003 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:114
+    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+                       what: "replacement preserves first occurrence and removes duplicates")
+
+S004 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:118
+    report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
+        && session.selectedNotes.contains(c),
+        cppID: id, message: "band keeps press order before newly covered notes")
+
+S005 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:122
+    report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+                       what: "band cancellation restores selection order")
+
+S006 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:126
+    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+                       what: "order-only replacement publishes the selection domain")
+
+S007 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:133
+    report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+                       what: "order-only replacement and additive selection coalesce")
+
+S008 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:138
+    report.expect(publications.isEmpty, cppID: id,
+                  message: "unchanged normalized selection publishes nothing")
+
+S009 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:140
+    report.expect(session.document.revision == revision
+        && session.document.history.currentIdentity == history
+        && session.document.isDirty == dirty,
+        cppID: id, message: "selection gestures never mutate document or history")
+
+S010 | click | src/checks/rollcheck/EditorGridCameraChecks.swift:146
+    report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
+                  cppID: id, message: "deletion prunes membership and preserves survivor order")
+
+S011 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:160
+    report.expect(
+        gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
+        cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
+
+S012 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:163
+    report.expect(
+        gridCameraNear(first.minHScroll, expectedMin)
+            && gridCameraNear(first.maxHScroll,
+                    Double(session.timeline.lengthTicks) * first.pixelsPerTick)
+            && gridCameraNear(first.maxVScroll, expectedMaxV),
+        cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
+
+S013 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:169
+    report.expect(
+        first.scrollY >= 0 && first.scrollY <= first.maxVScroll,
+        cppID: viewportID, message: "first viewport push homes vertically within camera bounds")
+
+S014 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:172
+    report.expect(
+        gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
+        cppID: viewportID, message: "published scales equal the session camera snapshot")
+
+S015 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:183
+    report.expect(
+        session.camera.snapshot == fractional && counters.camera == 0,
+        cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
+
+S016 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:191
+    report.expect(
+        tallViewport.maxVScroll < shortHeight.maxVScroll
+            && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
+        cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
+
+S017 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:206
+    report.expect(
+        gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
+        cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
+
+S018 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:209
+    report.expect(
+        gridCameraNear(restored.pixelsPerBeat, 35) && gridCameraNear(restored.keyHeight, 13),
+        cppID: viewportID, message: "font push back restores the exact earlier scale")
+
+S019 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:212
+    report.expect(
+        counters.camera == 2,
+        cppID: viewportID, message: "each effective font push publishes exactly once")
+
+S020 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:227
+    report.expect(
+        gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
+        cppID: viewportID, message: "pushed font defines time and key-height minimums")
+
+S021 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:230
+    report.expect(
+        gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
+        cppID: viewportID, message: "pushed font defines time and key-height maximums")
+
+S022 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:250
+    report.expect(
+        farID != nil && expandedLength > originalLength
+            && session.timeline.lengthTicks < expandedLength
+            && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
+        cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
+
+S023 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:272
+    report.expect(
+        !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
+        cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
+
+S024 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:275
+    report.expect(
+        (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
+        cppID: projectionID, message: "generated time marks cover the visible plot")
+
+S025 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:281
+    report.expect(
+        grid.noteSummary == summaryBeforeCameraMove,
+        cppID: projectionID, message: "camera movement does not alter noteSummary document state")
+
+S026 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:309
+    report.expect(
+        projected,
+        cppID: projectionID, message: "known note rectangle equals the camera projection")
+
+S027 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:317
+    report.expect(
+        maskCount == (zeroX > 0 ? 1 : 0),
+        cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
+
+S028 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:329
+    report.expect(
+        session.selectedNotes.contains(originalNote.id),
+        cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
+
+S029 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:347
+    report.expect(
+        previewRect.map {
+            gridCameraNear($0.x, session.camera.displayX(
+                tick: Double(expectedTick), origin: 0, dpr: grid.devicePixelRatio))
+                && gridCameraNear($0.y, expectedPreviewY + 1 / grid.devicePixelRatio)
+        } ?? false,
+        cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
+
+S030 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:358
+    report.expect(
+        session.document.revision == originalRevision + 1
+            && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
+        cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
+
+S031 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:402
+    report.expect(
+        session.document.revision == drawRevision + 1
+            && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
+        cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
+
+S032 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:416
+    report.expect(
+        session.selectedNotes == visibleIDs,
+        cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
+
+S033 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:425
+    report.expect(
+        session.document.revision == cancelRevision
+            && session.document.notes(in: grid.trackIndex).count == cancelCount,
+        cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
+
+S034 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:432
+    report.expect(
+        session.document.revision == cancelRevision
+            && session.document.notes(in: grid.trackIndex).count == cancelCount,
+        cppID: projectionID, message: "Escape discards an active gesture without document mutation")
+
+S035 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:440
+    report.expect(
+        session.document.revision == cancelRevision,
+        cppID: projectionID, message: "press outside projected pitch rows is rejected")
+
+S036 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:475
+    report.expect(
+        counters.camera == before + 1
+            && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
+        cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
+
+S037 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:488
+    report.expect(
+        counters.camera == before + 1
+            && gridCameraNear(
+                endReveal.scrollX,
+                endReveal.maxHScroll - endReveal.viewportWidth
+                    + 1 / grid.devicePixelRatio),
+        cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
+
+S038 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:504
+    report.expect(
+        counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
+        cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
+
+S039 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:512
+    report.expect(
+        counters.camera == before + 1
+            && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
+        cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
+
+S040 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:516
+    report.expect(
+        gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
+            && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
+        cppID: isolationID, message: "presenter scroll values track the revealed session camera")
+
+S041 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:536
+    report.expect(
+        counters.camera == before,
+        cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
+
+S042 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:542
+    report.expect(
+        session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
+        cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
+
+S043 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:545
+    report.expect(
+        counters.document == 0 && counters.playback == 0 && counters.cursor == 1
+            && session.document.revision == revision && session.document.isDirty == dirty
+            && session.document.history.canUndo == canUndo
+            && session.document.history.canRedo == canRedo,
+        cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
+
+S044 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:563
+    report.expect(
+        inserted?.count == 1 && counters.camera == 0,
+        cppID: isolationID, message: "committed document edit performs no standalone camera publication")
+
+S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:566
+    report.expect(
+        counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
+        cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
+
+Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.

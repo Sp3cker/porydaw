@@ -25,7 +25,7 @@ public final class AudioRenderEngine {
     private let preview: UnsafeMutablePointer<M4AEngine>
     private var player = Sequencer()
     private let handoff = AudioTimelineHandoff()
-    private let transportState: AudioTransport
+    let transportState: AudioTransport
     private let telemetry = AudioTelemetry()
     private let loop = Atomic<Bool>(true)
     private let mute = Atomic<UInt32>(0)

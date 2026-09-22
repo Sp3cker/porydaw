@@ -1,0 +1,600 @@
+Assertion correspondence: samplecheck/soundfont.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/samplecheck/soundfont.cpp
+Original SHA-256: 6e45372c5a0d33c5d55f1a07d883a5ba5c65a9833877a07076ea517ed1fba310
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards, refusal oracles,
+and loop bodies. Source context preserves setup, rows, loops, and guards between
+assertions verbatim. No Swift counterpart file was identified for this suite, so no
+S predicates exist and no Swift execution is claimed.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted window.
+GAP identifies an original predicate without a replacement assertion.
+Methods cover SF2 fixture extraction (grouping labels, stereo pairs, pitch-correction renormalization, loop-end conversion, name sanitizing, pool-exact samples, pipeline render), single-stream/truncated/ROM-only refusals, and the native zone-picker dialog (grouping, search, selection, accept).
+Inventory: 34 sites across 3 test methods (soundFontExtraction, soundFontPicker, soundFontRefusals). Tally: 22 GAP, 12 NATIVE, 0 MATCHED, 0 PARTIAL.
+
+Verification
+Command: deno task verify --filter samplecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry points execute these checks. Retained native execution owns this suite:
+the samplecheck harness via the Verification command above. Shared fixture construction
+lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
+files carry no assertion sites (see Shared helpers).
+
+Fixture, sequence and row constraints
+soundFontRefusals_data expands 3 rows (single-stream front door accepted-then-refused path, truncated container, ROM-only font). The 400-sample pool loop expands one site sample-by-sample. Picker tests drive a shown Sf2ZonePicker with scripted selection and search text.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:157
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/samplecheck/fixtures.h"
+  #include "checks/samplecheck/samplecheck.h"
+
+  #include <QApplication>
+  #include <QDialogButtonBox>
+  #include <QLineEdit>
+  #include <QPushButton>
+  #include <QTreeWidget>
+  #include <QtTest>
+  #include <cmath>
+  #include <cstring>
+  #include <vector>
+
+  #include "audio/sampledoc.h"
+  #include "audio/sampleimport.h"
+  #include "audio/sf2reader.h"
+  #include "ui/sf2zonepicker.h"
+
+  namespace {
+  constexpr double kPi = 3.14159265358979323846;
+  struct SoundFontFixture {
+      std::vector<qint16> pool;
+      QByteArray bytes;
+      QByteArray romOnlyBytes;
+  };
+
+  SoundFontFixture makeSoundFontFixture()
+  {
+      SoundFontFixture fixture;
+      fixture.pool.reserve(600);
+      for (int i = 0; i < 400; ++i)
+          fixture.pool.push_back(
+              qint16(std::lround(16383.0 * std::sin(2.0 * kPi * 441.0 * i / 22050.0))));
+      for (int i = 0; i < 200; ++i)
+          fixture.pool.push_back(qint16(i * 100 - 10000));
+
+      QByteArray poolBytes;
+      for (const qint16 sample : fixture.pool)
+          putU16(&poolBytes, quint16(sample));
+
+      const auto makeChunk = [](const char *id, const QByteArray &body) {
+          QByteArray chunk(id, 4);
+          putU32(&chunk, quint32(body.size()));
+          chunk += body;
+          if (body.size() & 1)
+              chunk += '\0';
+          return chunk;
+      };
+      const auto makeList = [&makeChunk](const char *type, const QByteArray &subchunks) {
+          return makeChunk("LIST", QByteArray(type, 4) + subchunks);
+      };
+      const auto appendName20 = [](QByteArray *out, const char *name) {
+          char buffer[20] = {};
+          std::strncpy(buffer, name, 19);
+          out->append(buffer, 20);
+      };
+      const auto appendSampleHeader = [&appendName20](QByteArray *out, const char *name,
+                                                      quint32 start, quint32 end, quint32 loopStart,
+                                                      quint32 loopEndExclusive, quint32 rate,
+                                                      quint8 pitch, qint8 correction, quint16 type) {
+          appendName20(out, name);
+          putU32(out, start);
+          putU32(out, end);
+          putU32(out, loopStart);
+          putU32(out, loopEndExclusive);
+          putU32(out, rate);
+          out->append(char(pitch)).append(char(correction));
+          putU16(out, 0);
+          putU16(out, type);
+      };
+      const auto buildFont = [&appendName20, &makeChunk, &makeList,
+                              &poolBytes](const QByteArray &sampleHeaders) {
+          QByteArray presetHeaders;
+          appendName20(&presetHeaders, "TestPreset");
+          putU16(&presetHeaders, 0);
+          putU16(&presetHeaders, 0);
+          putU16(&presetHeaders, 0);
+          putU32(&presetHeaders, 0);
+          putU32(&presetHeaders, 0);
+          putU32(&presetHeaders, 0);
+          appendName20(&presetHeaders, "EOP");
+          putU16(&presetHeaders, 0);
+          putU16(&presetHeaders, 0);
+          putU16(&presetHeaders, 1);
+          putU32(&presetHeaders, 0);
+          putU32(&presetHeaders, 0);
+          putU32(&presetHeaders, 0);
+
+          QByteArray presetBags;
+          putU16(&presetBags, 0);
+          putU16(&presetBags, 0);
+          putU16(&presetBags, 1);
+          putU16(&presetBags, 0);
+          QByteArray presetGenerators;
+          putU16(&presetGenerators, 41);
+          putU16(&presetGenerators, 0);
+          putU16(&presetGenerators, 0);
+          putU16(&presetGenerators, 0);
+
+          QByteArray instruments;
+          appendName20(&instruments, "TestInst");
+          putU16(&instruments, 0);
+          appendName20(&instruments, "EOI");
+          putU16(&instruments, 1);
+          QByteArray instrumentBags;
+          putU16(&instrumentBags, 0);
+          putU16(&instrumentBags, 0);
+          putU16(&instrumentBags, 1);
+          putU16(&instrumentBags, 0);
+          QByteArray instrumentGenerators;
+          putU16(&instrumentGenerators, 53);
+          putU16(&instrumentGenerators, 0);
+          putU16(&instrumentGenerators, 0);
+          putU16(&instrumentGenerators, 0);
+
+          QByteArray version;
+          putU16(&version, 2);
+          putU16(&version, 1);
+          QByteArray body("sfbk", 4);
+          body += makeList("INFO", makeChunk("ifil", version) +
+                                       makeChunk("INAM", QByteArray("samplecheck\0", 12)));
+          body += makeList("sdta", makeChunk("smpl", poolBytes));
+          body += makeList(
+              "pdta", makeChunk("phdr", presetHeaders) + makeChunk("pbag", presetBags) +
+                          makeChunk("pmod", QByteArray(10, '\0')) +
+                          makeChunk("pgen", presetGenerators) + makeChunk("inst", instruments) +
+                          makeChunk("ibag", instrumentBags) +
+                          makeChunk("imod", QByteArray(10, '\0')) +
+                          makeChunk("igen", instrumentGenerators) + makeChunk("shdr", sampleHeaders));
+          QByteArray font("RIFF", 4);
+          putU32(&font, quint32(body.size()));
+          return font + body;
+      };
+
+      QByteArray headers;
+      appendSampleHeader(&headers, "Test Tone", 0, 400, 100, 300, 22050, 69, -20, 1);
+      appendSampleHeader(&headers, "PadL", 400, 600, 400, 400, 32000, 60, 50, 4);
+      appendSampleHeader(&headers, "RomTone", 0, 400, 0, 0, 22050, 60, 0, 0x8001);
+      appendSampleHeader(&headers, "Unpitched", 400, 600, 0, 0, 22050, 255, 0, 1);
+      appendSampleHeader(&headers, "EOS", 0, 0, 0, 0, 0, 0, 0, 0);
+      fixture.bytes = buildFont(headers);
+
+      QByteArray romOnlyHeaders;
+      appendSampleHeader(&romOnlyHeaders, "RomTone", 0, 400, 0, 0, 22050, 60, 0, 0x8001);
+      appendSampleHeader(&romOnlyHeaders, "EOS", 0, 0, 0, 0, 0, 0, 0, 0);
+      fixture.romOnlyBytes = buildFont(romOnlyHeaders);
+      return fixture;
+  }
+  } // namespace
+
+  namespace samplecheck {
+
+  void SampleProcessingTest::soundFontExtraction()
+  {
+      const SoundFontFixture fixture = makeSoundFontFixture();
+      QString error;
+
+Original expression:
+  QVERIFY2(sf2Magic(fixture.bytes), "sf2 magic sniffs")
+
+A002 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:159
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      Sf2File font;
+
+Original expression:
+  QVERIFY2(readSf2Bytes(fixture.bytes, QStringLiteral("f/test.sf2"), &font, &error),
+               "sf2 fixture reads")
+
+A003 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:161
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(font.zones.size(), 3)
+
+A004 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:163
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const Sf2Zone &tone = font.zones[0];
+
+Original expression:
+  QVERIFY2(tone.name == QStringLiteral("Test Tone") &&
+                   tone.instrument == QStringLiteral("TestInst") &&
+                   tone.preset == QStringLiteral("TestPreset"),
+               "grouping labels resolve through the pdta index arrays")
+
+A005 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:167
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(font.zones[1].name == QStringLiteral("PadL") && font.zones[1].stereoPair() &&
+                   font.zones[1].instrument.isEmpty(),
+               "left-linked zone flags as a stereo pair, ungrouped")
+
+A006 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:172
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      ImportedSample z0;
+
+Original expression:
+  QVERIFY2(extractSf2Zone(font, 0, &z0, &error), "zone 0 extracts")
+
+A007 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:173
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(z0.sourceKind == ImportedSample::Sf2 && z0.sourceChannels == 1 &&
+                   z0.sourceBits == 16 && !z0.gbaReady && z0.warnings.isEmpty(),
+               "zone 0 structure")
+
+A008 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:176
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(z0.frameCount() == 400 && z0.playLength == 400 && z0.sampleRate == 22050.0,
+               "zone 0 pool segment bounds")
+
+A009 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(z0.hasPitchMetadata && z0.baseKey == 68 && std::abs(z0.fracSemitone - 0.8) < 1e-9,
+               "negative pitchCorrection renormalizes below the unity key")
+
+A010 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(z0.hasLoop && z0.loopStart == 100 && z0.loopEndIncl == 299,
+               "sf2 exclusive loop end converts to inclusive")
+
+A011 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(z0.suggestedName == QStringLiteral("test_tone"),
+               "zone name sanitizes into the suggested name")
+
+A012 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      for (int i = 0; i < 400; ++i)
+
+Original expression:
+  QCOMPARE(z0.buffer[size_t(i)], float(double(fixture.pool[size_t(i)]) / 32768.0))
+
+A013 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:188
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      ImportedSample z1;
+
+Original expression:
+  QVERIFY2(extractSf2Zone(font, 1, &z1, &error), "zone 1 extracts")
+
+A014 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:189
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!z1.warnings.isEmpty(), "stereo-pair extraction reports its one-channel conversion")
+
+A015 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:190
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(z1.frameCount() == 200 && !z1.hasLoop && z1.hasPitchMetadata && z1.baseKey == 60 &&
+                   std::abs(z1.fracSemitone - 0.5) < 1e-9 &&
+                   z1.buffer[0] == float(double(fixture.pool[400]) / 32768.0),
+               "positive pitchCorrection becomes the semitone fraction")
+
+A016 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:196
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      ImportedSample z2;
+
+Original expression:
+  QVERIFY2(extractSf2Zone(font, 2, &z2, &error), "zone 2 extracts")
+
+A017 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:197
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!z2.hasPitchMetadata && z2.baseKey == 60,
+               "unpitched (255) zone defers to pitch detection")
+
+A018 | SampleProcessingTest::soundFontExtraction | src/checks/samplecheck/soundfont.cpp:203
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      SampleDocument doc(z0);
+      doc.setParams(SampleDocument::defaultParams(z0));
+      const ProcessedSample &out = doc.processed();
+
+Original expression:
+  QVERIFY2(!out.s8.isEmpty() && out.size == quint32(out.s8.size()) && out.freq > 0 && out.looped,
+               "sf2 zone renders through the pipeline")
+
+A019 | SampleProcessingTest::soundFontRefusals | src/checks/samplecheck/soundfont.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::soundFontRefusals_data()
+  {
+      QTest::addColumn<QByteArray>("bytes");
+      QTest::addColumn<bool>("singleStream");
+
+      const SoundFontFixture fixture = makeSoundFontFixture();
+      QTest::newRow("single-stream-front-door") << fixture.bytes << true;
+      QTest::newRow("truncated-container") << fixture.bytes.left(200) << false;
+      QTest::newRow("rom-only-font") << fixture.romOnlyBytes << false;
+  }
+
+  void SampleProcessingTest::soundFontRefusals()
+  {
+      QFETCH(QByteArray, bytes);
+      QFETCH(bool, singleStream);
+      QString error;
+      ImportedSample imported;
+      Sf2File font;
+      const bool accepted =
+          singleStream ? importAudioBytes(bytes, QStringLiteral("f/test.sf2"), &imported, &error)
+                       : readSf2Bytes(bytes, QStringLiteral("f/test.sf2"), &font, &error);
+
+Original expression:
+  QVERIFY2(!accepted, "invalid SoundFont input is refused")
+
+A020 | SampleProcessingTest::soundFontRefusals | src/checks/samplecheck/soundfont.cpp:229
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!error.isEmpty(), "rejected input reports a refusal")
+
+A021 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:237
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::soundFontPicker()
+  {
+      const SoundFontFixture fixture = makeSoundFontFixture();
+      QString error;
+      Sf2File font;
+
+Original expression:
+  QVERIFY2(readSf2Bytes(fixture.bytes, QStringLiteral("f/test.sf2"), &font, &error),
+               "sf2 fixture reads")
+
+A022 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:247
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+      Sf2ZonePicker picker(font);
+      picker.resize(720, 480);
+      picker.show();
+      QApplication::processEvents();
+      auto *tree = picker.findChild<QTreeWidget *>(QStringLiteral("sf2ZoneTree"));
+      auto *searchEdit = picker.findChild<QLineEdit *>(QStringLiteral("sf2SearchEdit"));
+      auto *buttons = picker.findChild<QDialogButtonBox *>(QStringLiteral("sf2ButtonBox"));
+
+Original expression:
+  QVERIFY2(tree && searchEdit && buttons, "picker widgets found")
+
+A023 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:249
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QPushButton *ok = buttons->button(QDialogButtonBox::Ok);
+
+Original expression:
+  QVERIFY2(ok, "picker has an accept button")
+
+A024 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:250
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(tree->topLevelItemCount(), 2)
+
+A025 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:253
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      QTreeWidgetItem *firstGroup = tree->topLevelItem(0);
+      QTreeWidgetItem *secondGroup = tree->topLevelItem(1);
+
+Original expression:
+  QVERIFY2(firstGroup && firstGroup->childCount() == 1,
+               "instrument/preset zones form one picker group")
+
+A026 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:255
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(secondGroup && secondGroup->childCount() == 2,
+               "unreferenced zones fall under (no instrument)")
+
+A027 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:257
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!ok->isEnabled() && picker.selectedZone() == -1,
+               "nothing picked until a zone row is chosen")
+
+A028 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:260
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      tree->setCurrentItem(firstGroup->child(0));
+
+Original expression:
+  QVERIFY2(picker.selectedZone() == 0 && ok->isEnabled(), "selecting a zone row arms OK")
+
+A029 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:262
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      tree->setCurrentItem(firstGroup);
+
+Original expression:
+  QVERIFY2(picker.selectedZone() == -1 && !ok->isEnabled(), "group rows are not pickable")
+
+A030 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:264
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      searchEdit->setText(QStringLiteral("pad"));
+
+Original expression:
+  QCOMPARE(tree->topLevelItemCount(), 1)
+
+A031 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:265
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(tree->topLevelItem(0)->childCount(), 1)
+
+A032 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:267
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      tree->setCurrentItem(tree->topLevelItem(0)->child(0));
+
+Original expression:
+  QCOMPARE(picker.selectedZone(), 1)
+
+A033 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:269
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      searchEdit->clear();
+
+Original expression:
+  QCOMPARE(tree->topLevelItemCount(), 2)
+
+A034 | SampleProcessingTest::soundFontPicker | src/checks/samplecheck/soundfont.cpp:272
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      tree->setCurrentItem(tree->topLevelItem(0)->child(0));
+      ok->click();
+
+Original expression:
+  QVERIFY2(picker.result() == QDialog::Accepted && picker.selectedZone() == 0,
+               "OK accepts with the picked zone")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace samplecheck
+
+
+Swift assertion predicates
+No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
+predicates exist. The S-list is empty.
+
+Shared helpers
+The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
+src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
+(verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
+build byte fixtures, generators, and metrics used by the setups above. There are no Swift
+fixture files for this suite.

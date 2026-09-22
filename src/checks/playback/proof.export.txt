@@ -1,0 +1,81 @@
+Assertion correspondence: playback/export.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/playback/export.cpp
+Original SHA-256: 926d0be68ac9010a70f6ca79fe67181a6c6b9c18a2bfc4bfbd550887d4438c07
+Swift counterpart: src/checks/playback/export.swift
+Swift SHA-256: 39da7a86903770516d33b7db1294c1830434875ad5f2d49a69e5ac023b6419c4
+
+Purpose and status
+Each entry is one original assertion/failure site. MATCHED records an exact
+source-level predicate, fixture and action sequence; execution is tracked below.
+No assertion is accepted by cppID name alone. Short-circuit ordering is retained.
+No original has data-driven QTest rows or assertion-bearing shared helper calls.
+All functions use their original literal event index/tick/stream/controller/value/
+channel inputs, write/remove/relocation inputs, and action ordering. Missing
+original scenario predicates were added before advancing to the next file.
+Additional pre-existing Swift fixture variants remain executable and are not
+substitutes for the original cases enumerated here.
+
+Execution and ownership
+runXcmdEditsSuite executes the paired scenarios. The same-stem file contains
+the actual Swift assertions; playback/tst_xcmd.swift constructs event values
+with the original ev helper argument order, including default channel zero.
+The production Xcmd projection/rewrite/reconciliation/export APIs are exercised.
+
+Verification evidence
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
+This records the completed checkpoint before the subsequent shared corpus-loader
+extraction/range additions; updated combined verification is pending.
+The current build does not register the old xcmdcheck native harness; no native
+execution or live differential parity is claimed.
+
+Original assertion inventory
+
+A001 | XcmdTest::sharedSelectorRebuiltAsSameTickPairs | src/checks/playback/export.cpp:33
+Disposition: MATCHED
+Swift: src/checks/playback/export.swift:44 :: xcmdPairSharedSelectorRebuiltAsSameTickPairs; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch.removeEvents == std::vector<uint64_t>({0, 1, 2}) && patch.inserts.size() == 4 &&
+                   isCanonicalPair(patch.inserts[0], patch.inserts[1], 0x08, 34) &&
+                   patch.inserts[0].tick == 4 && patch.inserts[0].channel == 3 &&
+                   isCanonicalPair(patch.inserts[2], patch.inserts[3], 0x08, 35) &&
+                   patch.inserts[2].tick == 9,
+               "shared selector was not rebuilt as same-tick explicit pairs")
+
+A002 | XcmdTest::danglingKnownSelectorRemoved | src/checks/playback/export.cpp:47
+Disposition: MATCHED
+Swift: src/checks/playback/export.swift:58 :: xcmdPairDanglingKnownSelectorRemoved; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch.removeEvents == std::vector<uint64_t>({0}) && patch.inserts.empty(),
+               "payload-less known selector was not removed")
+
+A003 | XcmdTest::unknownEpochAndStrayRunPreservedVerbatim | src/checks/playback/export.cpp:60
+Disposition: MATCHED
+Swift: src/checks/playback/export.swift:66 :: xcmdPairUnknownEpochAndStrayRunPreservedVerbatim; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch.removeEvents.empty() && patch.inserts.empty(),
+               "unknown epoch or stray payload run was not preserved verbatim")
+
+A004 | XcmdTest::explicitPointsRebuiltInTickOrder | src/checks/playback/export.cpp:73
+Disposition: MATCHED
+Swift: src/checks/playback/export.swift:77 :: xcmdPairExplicitPointsRebuiltInTickOrder; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch.removeEvents == std::vector<uint64_t>({0, 1, 2, 3}) &&
+                   patch.inserts.size() == 4 &&
+                   isCanonicalPair(patch.inserts[0], patch.inserts[1], 0x08, 65) &&
+                   patch.inserts[0].tick == 4 && patch.inserts[0].channel == 6 &&
+                   isCanonicalPair(patch.inserts[2], patch.inserts[3], 0x09, 17) &&
+                   patch.inserts[2].tick == 20 && patch.inserts[2].channel == 2,
+               "explicit points were not rebuilt semantically identically in tick order")
+
+
+Predicate helper contract
+isCanonicalPair reproduces original export.cpp:13: selector controller and value,
+payload controller and value, equal tick, equal channel, and both source indices
+fresh (C++ SIZE_MAX, Swift nil). Every call remains in its original conjunction.

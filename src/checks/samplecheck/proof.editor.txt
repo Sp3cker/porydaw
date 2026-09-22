@@ -1,0 +1,1781 @@
+Assertion correspondence: samplecheck/editor.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/samplecheck/editor.cpp
+Original SHA-256: 1ae310e3a37396448c692a91dbd51cac6ed6681ebf0b55e352ee2c488545f99b
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards, refusal oracles,
+and loop bodies. Source context preserves setup, rows, loops, and guards between
+assertions verbatim. No Swift counterpart file was identified for this suite, so no
+S predicates exist and no Swift execution is claimed.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted window.
+GAP identifies an original predicate without a replacement assertion.
+Methods cover the SampleEditorDialog pipeline (prefill collision, prepared defaults, key/loop/rate/crop/normalize commits), native dialog interactions (handle drag, pitch adoption, loop populate/refine, crossfade overlay, audition strip, undo, scroll, splitter, commit-to-project), and Space-key audition through the production null AudioEngine.
+Inventory: 130 sites across 17 test methods (editorAuditionStrip, editorCommit, editorCrossfade, editorDrag, editorLoopPopulate, editorLoopRefine, editorPitchAdoption, editorScroll, editorSplitter, editorUndo, pipelineCropNormalize, pipelineKeyOverride, pipelineLoopToggle, pipelinePrefillCollision, pipelinePreparedDefaults, pipelineRateCommit, spaceAudition). Tally: 80 GAP, 50 NATIVE, 0 MATCHED, 0 PARTIAL.
+
+Verification
+Command: deno task verify --filter samplecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry points execute these checks. Retained native execution owns this suite:
+the samplecheck harness via the Verification command above. Shared fixture construction
+lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
+files carry no assertion sites (see Shared helpers).
+
+Fixture, sequence and row constraints
+pipelineRateCommit_data holds a single fractional-free-entry row. Every dialog test constructs its own SampleEditorDialog over preparedSampleWav or hiResSampleWav with per-test widget lookups; synthetic wav2agb projects isolate registration tests. Space audition parks the production null device and renders fixed frame windows (512 idle/stop frames, 0.25 s starts, 2.0 s release drains).
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:81
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/samplecheck/fixtures.h"
+  #include "checks/samplecheck/samplecheck.h"
+
+  #include <QApplication>
+  #include <QByteArray>
+  #include <QCheckBox>
+  #include <QComboBox>
+  #include <QDoubleSpinBox>
+  #include <QLabel>
+  #include <QLineEdit>
+  #include <QPushButton>
+  #include <QScrollArea>
+  #include <QScrollBar>
+  #include <QSpinBox>
+  #include <QSplitter>
+  #include <QTemporaryDir>
+  #include <QUndoStack>
+  #include <QtTest>
+  #include <algorithm>
+  #include <cmath>
+  #include <cstdlib>
+  #include <cstring>
+  #include <memory>
+  #include <span>
+  #include <vector>
+
+  #include "audio/audioengine.h"
+  #include "audio/sampledoc.h"
+  #include "audio/sampleimport.h"
+  #include "checks/support/audioengineaccess.h"
+  #include "checks/support/eventsynth.h"
+  #include "project/samplereg.h"
+  #include "project/voicegroupsource.h"
+  #include "ui/sampleeditordialog.h"
+  #include "ui/waveformview.h"
+
+  extern "C" {
+  #include "voicegroup_loader.h"
+  }
+
+  namespace {
+
+  void sendSpaceStroke(QObject &target, Qt::KeyboardModifiers modifiers, bool autoRepeat)
+  {
+      checks::events::sendKey(target, QEvent::KeyPress, Qt::Key_Space, modifiers, QStringLiteral(" "),
+                              autoRepeat, 1);
+      checks::events::sendKey(target, QEvent::KeyRelease, Qt::Key_Space, modifiers,
+                              QStringLiteral(" "), autoRepeat, 1);
+  }
+
+  class ScopedNullAudioBackend final
+  {
+    public:
+      ScopedNullAudioBackend()
+          : m_wasSet(qEnvironmentVariableIsSet("PORYDAW_AUDIO_BACKEND"))
+          , m_previous(qgetenv("PORYDAW_AUDIO_BACKEND"))
+      {
+          qputenv("PORYDAW_AUDIO_BACKEND", "null");
+      }
+
+      ~ScopedNullAudioBackend()
+      {
+          if (m_wasSet)
+              qputenv("PORYDAW_AUDIO_BACKEND", m_previous);
+          else
+              qunsetenv("PORYDAW_AUDIO_BACKEND");
+      }
+
+    private:
+      bool m_wasSet;
+      QByteArray m_previous;
+  };
+
+  } // namespace
+
+  namespace samplecheck {
+
+  void SampleProcessingTest::pipelinePrefillCollision()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "pipeline-prefill scratch directory is available")
+
+A002 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:83
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "pipeline-prefill synthetic project is created")
+
+A003 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:87
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString registeredSampleName = QStringLiteral("samplecheck_tone");
+      const QByteArray preparedWav = preparedSampleWav();
+      QString error;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::registerSample(root, registeredSampleName, preparedWav, &error),
+               qPrintable(error))
+
+A004 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:90
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample prepared;
+
+Original expression:
+  QVERIFY2(importAudioFile(root + QStringLiteral("/sound/direct_sound_samples/") +
+                                   registeredSampleName + QStringLiteral(".wav"),
+                               &prepared, &error),
+               "prepared sample re-imports from the project")
+
+A005 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:101
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(prepared, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+      auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
+      auto *status = dialog.findChild<QLabel *>(QStringLiteral("sampleNameStatus"));
+
+Original expression:
+  QVERIFY2(nameEdit && addButton && status, "pipeline prefill widgets found")
+
+A006 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:102
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(nameEdit->text() == registeredSampleName, "name prefilled from the source file")
+
+A007 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:103
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!addButton->isEnabled(), "collision disables the commit")
+
+A008 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:104
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!status->text().isEmpty(), "collision displays validation status")
+
+A009 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:106
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      nameEdit->setText(QStringLiteral("fresh_tone"));
+
+Original expression:
+  QVERIFY2(addButton->isEnabled(), "valid name enables the commit")
+
+A010 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:107
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!status->text().isEmpty(), "valid name displays registration status")
+
+A011 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:108
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(dialog.sampleName() == QStringLiteral("fresh_tone"),
+               "sampleName returns the edited name")
+
+A012 | SampleProcessingTest::pipelinePrefillCollision | src/checks/samplecheck/editor.cpp:111
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      nameEdit->setText(QStringLiteral("Bad Name"));
+
+Original expression:
+  QVERIFY2(!addButton->isEnabled(), "bad grammar disables the commit")
+
+A013 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:118
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::pipelinePreparedDefaults()
+  {
+      ImportedSample prepared;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
+                                &prepared, &error),
+               qPrintable(error))
+
+A014 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:125
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+      auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
+      auto *fineTune = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("sampleFineTune"));
+      SampleDocument *document = dialog.document();
+
+Original expression:
+  QVERIFY2(baseKey && fineTune && document, "prepared pipeline controls found")
+
+A015 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:127
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const ProcessedSample &initial = document->processed();
+
+Original expression:
+  QVERIFY2(initial.freq == 15000000 && initial.size == 64 && initial.looped &&
+                   initial.loopStart == 8,
+               "prepared defaults keep the source header verbatim")
+
+A016 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:130
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(baseKey->value() == 58 && std::abs(fineTune->value() - 25.0) < 1e-9,
+               "key/cents prefilled from smpl")
+
+A017 | SampleProcessingTest::pipelinePreparedDefaults | src/checks/samplecheck/editor.cpp:135
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      bool dataFaithful = true;
+      for (int i = 0; i < 64; ++i)
+          dataFaithful = dataFaithful && initial.s8[i] == char(qint8(i * 2 - 128));
+
+Original expression:
+  QVERIFY2(dataFaithful, "prepared defaults render the data verbatim")
+
+A018 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:142
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::pipelineKeyOverride()
+  {
+      ImportedSample prepared;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
+                                &prepared, &error),
+               qPrintable(error))
+
+A019 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:148
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+      auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
+      SampleDocument *document = dialog.document();
+
+Original expression:
+  QVERIFY2(baseKey && document, "pipeline key controls found")
+
+A020 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      baseKey->setValue(59);
+
+Original expression:
+  QVERIFY2(document->params().baseKey == 59 && document->params().exactPitchOverride == 0 &&
+                   document->processed().freq != 15000000,
+               "key edit flows into the render and drops the override")
+
+A021 | SampleProcessingTest::pipelineKeyOverride | src/checks/samplecheck/editor.cpp:154
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      baseKey->setValue(58);
+
+Original expression:
+  QVERIFY2(document->processed().freq == 15000000,
+               "restoring the source key restores the verbatim agbp")
+
+A022 | SampleProcessingTest::pipelineLoopToggle | src/checks/samplecheck/editor.cpp:162
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::pipelineLoopToggle()
+  {
+      ImportedSample prepared;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
+                                &prepared, &error),
+               qPrintable(error))
+
+A023 | SampleProcessingTest::pipelineLoopToggle | src/checks/samplecheck/editor.cpp:168
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+      auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+      SampleDocument *document = dialog.document();
+
+Original expression:
+  QVERIFY2(loopOn && document, "pipeline loop controls found")
+
+A024 | SampleProcessingTest::pipelineLoopToggle | src/checks/samplecheck/editor.cpp:170
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      loopOn->setChecked(false);
+
+Original expression:
+  QVERIFY2(!document->processed().looped && document->processed().size == 64,
+               "loop toggle renders a one-shot")
+
+A025 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:187
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::pipelineRateCommit_data()
+  {
+      QTest::addColumn<double>("targetRate");
+      QTest::addColumn<int>("declaredRate");
+      QTest::newRow("fractional-free-entry") << 6689.5 << 6690;
+  }
+
+  void SampleProcessingTest::pipelineRateCommit()
+  {
+      QFETCH(double, targetRate);
+      QFETCH(int, declaredRate);
+      ImportedSample prepared;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
+                                &prepared, &error),
+               qPrintable(error))
+
+A026 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:194
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+      auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+      auto *rateCombo = dialog.findChild<QComboBox *>(QStringLiteral("sampleRateCombo"));
+      SampleDocument *document = dialog.document();
+
+Original expression:
+  QVERIFY2(loopOn && rateCombo && rateCombo->lineEdit() && document,
+               "pipeline rate controls found")
+
+A027 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:202
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      // The legacy oracle committed the rate after switching this prepared
+      // loop to one-shot mode. Keep that precondition explicit: loop-preserving
+      // renders are allowed to nudge their exact output rate so the loop length
+      // lands on an integer sample.
+      loopOn->setChecked(false);
+
+Original expression:
+  QVERIFY2(!document->processed().looped, "rate fixture is in one-shot mode")
+
+A028 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:207
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      QLineEdit *rateEdit = rateCombo->lineEdit();
+      rateEdit->selectAll();
+      QTest::keyClicks(rateEdit, QString::number(targetRate));
+
+Original expression:
+  QVERIFY2(document->params().targetRate != targetRate,
+               "typing a rate does not re-render per keystroke")
+
+A029 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:210
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(rateEdit, Qt::Key_Return);
+
+Original expression:
+  QCOMPARE(document->params().targetRate, targetRate)
+
+A030 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:211
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document->processed().declaredRate, quint32(declaredRate))
+
+A031 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:212
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(document->params().exactPitchOverride == 0, "rate edit drops the verbatim agbp")
+
+A032 | SampleProcessingTest::pipelineRateCommit | src/checks/samplecheck/editor.cpp:215
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      rateCombo->setCurrentIndex(1);
+      rateCombo->setCurrentIndex(0);
+
+Original expression:
+  QVERIFY2(document->params().targetRate == document->source().sampleRate,
+               "preset pick applies and restores the source rate")
+
+A033 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::pipelineCropNormalize()
+  {
+      ImportedSample prepared;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(preparedSampleWav(), QStringLiteral("fix/prepared_tone.wav"),
+                                &prepared, &error),
+               qPrintable(error))
+
+A034 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditorDialog dialog(prepared, [](const QString &, QString *) { return true; });
+      auto *loopOn = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+      auto *cropEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleCropEnd"));
+      auto *normalize = dialog.findChild<QComboBox *>(QStringLiteral("sampleNormalizeMode"));
+      SampleDocument *document = dialog.document();
+
+Original expression:
+  QVERIFY2(loopOn && cropEnd && normalize && document, "pipeline crop controls found")
+
+A035 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:234
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      loopOn->setChecked(false);
+      cropEnd->setValue(32);
+
+Original expression:
+  QVERIFY2(document->processed().size == 32, "crop end trims the one-shot render")
+
+A036 | SampleProcessingTest::pipelineCropNormalize | src/checks/samplecheck/editor.cpp:236
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      normalize->setCurrentIndex(2);
+
+Original expression:
+  QVERIFY2(document->params().normalizeMode == SampleEditParams::NormalizeOneShot &&
+                   document->processed().normalizeGain != 1.0,
+               "normalize mode applies gain to the render")
+
+A037 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:244
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorDrag()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-drag scratch directory is available")
+
+A038 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:246
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-drag synthetic project is created")
+
+A039 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:249
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A040 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:262
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      WaveformView *wave = dialog.waveform();
+      SampleDocument *document = dialog.document();
+      QUndoStack *undo = dialog.undoStack();
+
+Original expression:
+  QVERIFY2(wave && document && undo && wave->width() > 200, "waveform view laid out")
+
+A041 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:263
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(document->params().loopOn && document->params().loopStart == 2000,
+               "hi-res fixture opens with its smpl loop")
+
+A042 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:276
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QPoint fromPoint = wave->handlePoint(WaveformView::LoopStartHandle);
+      const QPoint toPoint(wave->xForSample(3000), fromPoint.y());
+      checks::events::sendMouse(*wave, QEvent::MouseButtonPress, QPointF(fromPoint), Qt::LeftButton,
+                                Qt::LeftButton, Qt::NoModifier);
+      const QPoint midpoint = (fromPoint + toPoint) / 2;
+      checks::events::sendMouse(*wave, QEvent::MouseMove, QPointF(midpoint), Qt::NoButton,
+                                Qt::LeftButton, Qt::NoModifier);
+      checks::events::sendMouse(*wave, QEvent::MouseMove, QPointF(toPoint), Qt::NoButton,
+                                Qt::LeftButton, Qt::NoModifier);
+      checks::events::sendMouse(*wave, QEvent::MouseButtonRelease, QPointF(toPoint), Qt::LeftButton,
+                                Qt::NoButton, Qt::NoModifier);
+
+Original expression:
+  QVERIFY2(std::llabs(document->params().loopStart - 3000) <= 40,
+               "loop-start handle drag lands near the target")
+
+A043 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:278
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(undo->count() == 1, "handle drag is one undo entry")
+
+A044 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:279
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(document->processed().looped && document->processed().seam.valid,
+               "drag re-renders with live seam metrics")
+
+A045 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:282
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      undo->undo();
+
+Original expression:
+  QVERIFY2(document->params().loopStart == 2000, "undo restores the pre-drag loop")
+
+A046 | SampleProcessingTest::editorDrag | src/checks/samplecheck/editor.cpp:284
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      undo->redo();
+
+Original expression:
+  QVERIFY2(std::llabs(document->params().loopStart - 3000) <= 40, "redo re-applies the drag")
+
+A047 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:290
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorPitchAdoption()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-pitch scratch directory is available")
+
+A048 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:292
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-pitch synthetic project is created")
+
+A049 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:295
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A050 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:309
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      auto *pitchApply = dialog.findChild<QPushButton *>(QStringLiteral("samplePitchApply"));
+      auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
+      auto *fineTune = dialog.findChild<QDoubleSpinBox *>(QStringLiteral("sampleFineTune"));
+      QUndoStack *undo = dialog.undoStack();
+
+Original expression:
+  QVERIFY2(pitchApply && baseKey && fineTune && undo, "pitch widgets found")
+
+A051 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:310
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(pitchApply->isVisible(), "metadata/detection mismatch exposes an adopt action")
+
+A052 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:312
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      pitchApply->click();
+
+Original expression:
+  QVERIFY2(baseKey->value() == 57 && std::abs(fineTune->value() - 3.93) < 1.5 &&
+                   undo->count() == 1,
+               "the button adopts the detected pitch as one undo entry")
+
+A053 | SampleProcessingTest::editorPitchAdoption | src/checks/samplecheck/editor.cpp:315
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!pitchApply->isVisible(), "agreement hides the detect chrome")
+
+A054 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:321
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorLoopPopulate()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-populate scratch directory is available")
+
+A055 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:323
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-populate synthetic project is created")
+
+A056 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:326
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A057 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:343
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      SampleDocument *document = dialog.document();
+      QUndoStack *undo = dialog.undoStack();
+      auto *group = dialog.findChild<QCheckBox *>(QStringLiteral("sampleLoopOn"));
+      auto *loopBody = dialog.findChild<QWidget *>(QStringLiteral("sampleLoopBody"));
+      auto *loopStart = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopStart"));
+      auto *loopEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopEnd"));
+      auto *badge = dialog.findChild<QLabel *>(QStringLiteral("sampleSeamBadge"));
+
+Original expression:
+  QVERIFY2(document && undo && group && loopBody && loopStart && loopEnd && badge,
+               "loop-populate widgets found")
+
+A058 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:345
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(loopBody->isVisible(), "loop body shows while looped")
+
+A059 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:347
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      group->setChecked(false);
+
+Original expression:
+  QVERIFY2(!document->params().loopOn && !loopBody->isVisible(),
+               "unchecking the group hides the loop chrome")
+
+A060 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:351
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      loopEnd->setValue(0);
+      loopStart->setValue(0);
+
+Original expression:
+  QVERIFY2(undo->count() == 3, "loop reset landed")
+
+A061 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:353
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      group->setChecked(true);
+
+Original expression:
+  QVERIFY2(document->params().loopOn &&
+                   document->params().loopStart != document->params().loopEnd,
+               "re-enabling seeds a loop")
+
+A062 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:356
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(undo->count() == 4, "auto-populate is one undo entry")
+
+A063 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:357
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!document->params().crossfadeOn, "clean tone needs no crossfade bake")
+
+A064 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:359
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const ProcessedSample &out = document->processed();
+
+Original expression:
+  QVERIFY2(out.looped && out.seam.valid && out.seam.ampLsb <= 2 && out.seam.derivLsb <= 3 &&
+                   (!out.seam.nccValid || out.seam.ncc >= 0.95),
+               "auto-populated loop is clean")
+
+A065 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:362
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(badge->isVisible(), "clean loop exposes seam status")
+
+A066 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:363
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(loopBody->isVisible(), "loop chrome is back")
+
+A067 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:365
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      undo->undo();
+
+Original expression:
+  QVERIFY2(!document->params().loopOn, "undo re-disables the auto-populated loop")
+
+A068 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:367
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      undo->redo();
+
+Original expression:
+  QVERIFY2(document->params().loopOn, "redo re-enables it")
+
+A069 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:369
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      auto *tryLoop = dialog.findChild<QPushButton *>(QStringLiteral("sampleTryLoop"));
+
+Original expression:
+  QVERIFY2(tryLoop, "try-another button found")
+
+A070 | SampleProcessingTest::editorLoopPopulate | src/checks/samplecheck/editor.cpp:371
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      tryLoop->click();
+
+Original expression:
+  QVERIFY2(document->params().loopOn && document->processed().looped,
+               "try-another keeps a valid loop")
+
+A071 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:378
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorLoopRefine()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-refine scratch directory is available")
+
+A072 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:380
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-refine synthetic project is created")
+
+A073 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:383
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A074 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:399
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      SampleDocument *document = dialog.document();
+      QUndoStack *undo = dialog.undoStack();
+      auto *loopStart = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopStart"));
+      auto *loopEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopEnd"));
+      auto *badge = dialog.findChild<QLabel *>(QStringLiteral("sampleSeamBadge"));
+      auto *refine = dialog.findChild<QPushButton *>(QStringLiteral("sampleRefineLoop"));
+
+Original expression:
+  QVERIFY2(document && undo && loopStart && loopEnd && badge && refine, "refine widgets found")
+
+A075 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:402
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      loopStart->setValue(2000);
+      loopEnd->setValue(2137);
+
+Original expression:
+  QVERIFY2(document->processed().seam.valid && badge->isVisible() &&
+                   (document->processed().seam.ampLsb > 2 || document->processed().seam.derivLsb > 3),
+               "misaligned loop exposes non-clean seam metrics")
+
+A076 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:408
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const double nccBeforeRefine = document->processed().seam.ncc;
+      const int undoBeforeRefine = undo->count();
+      refine->click();
+
+Original expression:
+  QVERIFY2(document->processed().seam.ncc >= nccBeforeRefine - 0.02,
+               "refine keeps the seam at least as clean")
+
+A077 | SampleProcessingTest::editorLoopRefine | src/checks/samplecheck/editor.cpp:410
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(undo->count() >= undoBeforeRefine && undo->count() <= undoBeforeRefine + 1,
+               "refine contributes at most one undo entry")
+
+A078 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:417
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorCrossfade()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-crossfade scratch directory is available")
+
+A079 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:419
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-crossfade synthetic project is created")
+
+A080 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:422
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A081 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:438
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      WaveformView *wave = dialog.waveform();
+      SampleDocument *document = dialog.document();
+      QUndoStack *undo = dialog.undoStack();
+      auto *loopStart = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopStart"));
+      auto *loopEnd = dialog.findChild<QSpinBox *>(QStringLiteral("sampleLoopEnd"));
+      auto *crossfade = dialog.findChild<QCheckBox *>(QStringLiteral("sampleCrossfade"));
+
+Original expression:
+  QVERIFY2(wave && document && undo && loopStart && loopEnd && crossfade,
+               "crossfade controls found")
+
+A082 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:444
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      loopStart->setValue(2000);
+      loopEnd->setValue(2137);
+      const std::vector<float> endBefore = wave->seamEndWindow();
+      const std::vector<float> startBefore = wave->seamStartWindow();
+
+Original expression:
+  QVERIFY2(!endBefore.empty() && endBefore.size() == startBefore.size(),
+               "looped render feeds the seam overlay")
+
+A083 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:448
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const int undoBeforeCrossfade = undo->count();
+      crossfade->setChecked(true);
+
+Original expression:
+  QVERIFY2(document->params().crossfadeOn && undo->count() == undoBeforeCrossfade + 1,
+               "crossfade toggle is undoable")
+
+A084 | SampleProcessingTest::editorCrossfade | src/checks/samplecheck/editor.cpp:450
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(wave->seamEndWindow() != endBefore || wave->seamStartWindow() != startBefore,
+               "crossfade bake reshapes the seam overlay")
+
+A085 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:458
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      crossfade->setChecked(false);
+  }
+
+  void SampleProcessingTest::editorAuditionStrip()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-strip scratch directory is available")
+
+A086 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:460
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-strip synthetic project is created")
+
+A087 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:463
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A088 | SampleProcessingTest::editorAuditionStrip | src/checks/samplecheck/editor.cpp:471
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
+
+Original expression:
+  QVERIFY2(play && !play->isEnabled(), "audition strip disabled without audio")
+
+A089 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:477
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorUndo()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-undo scratch directory is available")
+
+A090 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:479
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-undo synthetic project is created")
+
+A091 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:482
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A092 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:492
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      SampleDocument *document = dialog.document();
+      QUndoStack *undo = dialog.undoStack();
+      auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
+
+Original expression:
+  QVERIFY2(document && undo && baseKey, "undo controls found")
+
+A093 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:494
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      baseKey->setValue(57);
+
+Original expression:
+  QVERIFY2(undo->count() == 1, "key edit creates an undo entry")
+
+A094 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:497
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      while (undo->canUndo())
+          undo->undo();
+
+Original expression:
+  QVERIFY2(document->params() == SampleDocument::defaultParams(hiRes),
+               "full undo restores the import defaults")
+
+A095 | SampleProcessingTest::editorUndo | src/checks/samplecheck/editor.cpp:501
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      while (undo->canRedo())
+          undo->redo();
+
+Original expression:
+  QVERIFY2(document->params().baseKey == 57, "full redo restores the edited state")
+
+A096 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:507
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::editorScroll()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-scroll scratch directory is available")
+
+A097 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:509
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-scroll synthetic project is created")
+
+A098 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:512
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A099 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:523
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      auto *scroll = dialog.findChild<QScrollArea *>(QStringLiteral("sampleScroll"));
+
+Original expression:
+  QVERIFY2(scroll, "control-column scroll area found")
+
+A100 | SampleProcessingTest::editorScroll | src/checks/samplecheck/editor.cpp:526
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      dialog.resize(900, 280);
+      QApplication::processEvents();
+
+Original expression:
+  QVERIFY2(scroll->verticalScrollBar()->maximum() > 0, "short window scrolls the controls")
+
+A101 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:534
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      dialog.resize(900, 640);
+      QApplication::processEvents();
+  }
+
+  void SampleProcessingTest::editorSplitter()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-splitter scratch directory is available")
+
+A102 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:536
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-splitter synthetic project is created")
+
+A103 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:539
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A104 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:551
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      WaveformView *wave = dialog.waveform();
+      auto *split = dialog.findChild<QSplitter *>(QStringLiteral("sampleSplit"));
+
+Original expression:
+  QVERIFY2(wave && split, "waveform splitter found")
+
+A105 | SampleProcessingTest::editorSplitter | src/checks/samplecheck/editor.cpp:555
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const int tall = wave->height();
+      split->setSizes({wave->minimumSizeHint().height(), 10000});
+      QApplication::processEvents();
+
+Original expression:
+  QVERIFY2(wave->height() < tall, "splitter drag shrinks the waveform")
+
+A106 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:563
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      split->setSizes({10000, split->sizes().value(1)});
+      QApplication::processEvents();
+  }
+
+  void SampleProcessingTest::editorCommit()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "editor-commit scratch directory is available")
+
+A107 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:565
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "editor-commit synthetic project is created")
+
+A108 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:569
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A109 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:579
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList symbols = VoicegroupSource::directSoundSymbols(root);
+      SampleEditorDialog dialog(hiRes, [&](const QString &name, QString *validationError) {
+          return SampleRegistrar::validateSampleName(root, name, symbols, validationError);
+      });
+      auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+      auto *baseKey = dialog.findChild<QSpinBox *>(QStringLiteral("sampleBaseKey"));
+      SampleDocument *document = dialog.document();
+
+Original expression:
+  QVERIFY2(nameEdit && document && baseKey, "commit controls found")
+
+A110 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:581
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      baseKey->setValue(57);
+
+Original expression:
+  QVERIFY2(document->params().baseKey == 57 && document->params().exactPitchOverride == 0,
+               "commit preserves edited render parameters")
+
+A111 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:586
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      nameEdit->setText(QStringLiteral("phase3_tone"));
+      const QByteArray incBefore = readFileBytes(incPath);
+      QString error;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::registerSample(root, dialog.sampleName(), dialog.wavBytes(), &error),
+               qPrintable(error))
+
+A112 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:588
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(readFileBytes(incPath) ==
+                   incBefore +
+                       QByteArray("\n\t.align 2\n"
+                                  "DirectSoundWaveData_phase3_tone::\n"
+                                  "\t.incbin \"sound/direct_sound_samples/phase3_tone.bin\"\n"),
+               "commit appends exactly the registration block")
+
+A113 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:594
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(writeFile(
+          root + QStringLiteral("/sound/voicegroups/voicegroup_phase3.inc"),
+          "voicegroup_phase3::\n"
+          "\tvoice_directsound 60, 0, DirectSoundWaveData_phase3_tone, 255, 0, 255, 165\n"))
+
+A114 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:601
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray rootUtf8 = root.toLocal8Bit();
+      std::unique_ptr<LoadedVoiceGroup, decltype(&voicegroup_free)> voicegroup(
+          voicegroup_load(rootUtf8.constData(), "voicegroup_phase3", nullptr), voicegroup_free);
+
+Original expression:
+  QVERIFY2(voicegroup, "phase-3 voicegroup resolves")
+
+A115 | SampleProcessingTest::editorCommit | src/checks/samplecheck/editor.cpp:604
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const ProcessedSample &out = document->processed();
+      const WaveData *wave = voicegroup->voices[0].wav;
+
+Original expression:
+  QVERIFY2(wave && wave->freq == out.freq && wave->loopStart == out.loopStart &&
+                   wave->size == out.size && wave->status == (out.looped ? 0x4000 : 0) &&
+                   wave->data && std::memcmp(wave->data, out.s8.constData(), out.size) == 0,
+               "committed sample loads back identical (audition == build)")
+
+A116 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:614
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::spaceAudition()
+  {
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A117 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:623
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+      // Use the required production null backend, then park its callback so
+      // the actual AudioEngine process path can be rendered deterministically.
+      ScopedNullAudioBackend nullBackend;
+      AudioEngine engine;
+      QString audioError;
+
+Original expression:
+  QVERIFY2(engine.init(&audioError), qPrintable(audioError))
+
+A118 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:624
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(engine.nullBackendForced() && engine.usingNullBackend(),
+               "Space audition uses the required production null backend")
+
+A119 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:626
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(checks::AudioEngineTestAccess::parkDevice(engine),
+               "Space audition parks the null device for deterministic PCM capture")
+
+A120 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:653
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+      const auto renderFrames = [&](uint32_t frames) {
+          auto pcm = std::vector<float>(static_cast<std::size_t>(frames) * 2);
+          checks::AudioEngineTestAccess::renderParked(engine, std::span<float>(pcm));
+          return pcm;
+      };
+      const auto renderSeconds = [&](double seconds) {
+          const auto frames =
+              std::max(uint32_t{1}, uint32_t(std::ceil(seconds * engine.sampleRate())));
+          return renderFrames(frames);
+      };
+      const auto peak = [](const std::vector<float> &pcm) {
+          auto result = 0.0;
+          for (const float sample : pcm)
+              result = std::max(result, std::abs(double(sample)));
+          return result;
+      };
+
+      SampleEditorDialog dialog(hiRes, [](const QString &, QString *) { return true; }, &engine);
+      dialog.resize(900, 640);
+      dialog.show();
+      QApplication::processEvents();
+      auto *play = dialog.findChild<QPushButton *>(QStringLiteral("sampleAuditionPlay"));
+      auto *auditionNameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+      auto *keySpin = dialog.findChild<QSpinBox *>(QStringLiteral("sampleAuditionKey"));
+
+Original expression:
+  QVERIFY2(play && play->isEnabled() && auditionNameEdit && keySpin,
+               "audition controls are enabled by a live AudioEngine")
+
+A121 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:657
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      const QString idlePresentation = play->text();
+      const auto idlePcm = renderFrames(512);
+
+Original expression:
+  QVERIFY2(peak(idlePcm) <= 1.0e-7, "parked engine is silent before the Space audition")
+
+A122 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:661
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+      sendSpaceStroke(dialog, Qt::NoModifier, false);
+      const auto startedPcm = renderSeconds(0.25);
+
+Original expression:
+  QVERIFY2(peak(startedPcm) >= 0.01 && rmsOf(startedPcm, 0, startedPcm.size()) >= 0.001,
+               "Space produces sustained non-silent PCM through the production audition engine")
+
+A123 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:663
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(play->text() != idlePresentation, "Space starts an engine-backed audition")
+
+A124 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:667
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      sendSpaceStroke(dialog, Qt::NoModifier, false);
+      renderSeconds(2.0); // drain the real release envelope
+      const auto stoppedPcm = renderFrames(512);
+
+Original expression:
+  QVERIFY2(peak(stoppedPcm) <= 1.0e-7, "Space stop leaves digitally silent engine output")
+
+A125 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:668
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(play->text(), idlePresentation)
+
+A126 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:673
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+      const QString nameBefore = auditionNameEdit->text();
+      sendSpaceStroke(*auditionNameEdit, Qt::NoModifier, false);
+      const auto focusedPcm = renderSeconds(0.25);
+
+Original expression:
+  QVERIFY2(peak(focusedPcm) >= 0.01 && rmsOf(focusedPcm, 0, focusedPcm.size()) >= 0.001,
+               "Space in the name field reaches the production audition engine")
+
+A127 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:675
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(auditionNameEdit->text(), nameBefore)
+
+A128 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:679
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      sendSpaceStroke(*keySpin, Qt::NoModifier, false);
+      renderSeconds(2.0); // drain the real release envelope
+      const auto focusedStopPcm = renderFrames(512);
+
+Original expression:
+  QVERIFY2(peak(focusedStopPcm) <= 1.0e-7, "Space on the key spin box stops the audition output")
+
+A129 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:684
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+      sendSpaceStroke(dialog, Qt::ControlModifier, false);
+      sendSpaceStroke(dialog, Qt::NoModifier, true);
+      const auto ignoredPcm = renderFrames(512);
+
+Original expression:
+  QVERIFY2(peak(ignoredPcm) <= 1.0e-7,
+               "modified and auto-repeat Space do not restart audition output")
+
+A130 | SampleProcessingTest::spaceAudition | src/checks/samplecheck/editor.cpp:686
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(play->text(), idlePresentation)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace samplecheck
+
+
+Swift assertion predicates
+No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
+predicates exist. The S-list is empty.
+
+Shared helpers
+The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
+src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
+(verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
+build byte fixtures, generators, and metrics used by the setups above. There are no Swift
+fixture files for this suite.

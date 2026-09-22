@@ -1,0 +1,891 @@
+Assertion correspondence: themelayout/tst_themelayout_settings.cpp
+
+Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
+Original: src/checks/themelayout/tst_themelayout_settings.cpp
+Original SHA-256: 9e92739e88f01754265f606f62b2d5a3b8bbb4bc41053c902576bac95d23cd27
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site in this file appears below. The file header states
+it is intentionally absent from the rewrite check target until the
+corresponding widgets return: DeferredThemeLayoutTest is a plain class in the
+deferred_theme_layout namespace with no registered lane and no QTest slot
+execution. Its cases cover track-identity contrast, startup chrome pins,
+theme-dialog commit/revert, item-view brushes, dialog geometry stability, grid
+refresh targets, and polyphony-panel layout scaling. Source context preserves
+setup, loops, and guards between assertions verbatim.
+MATCHED means a corresponding Swift predicate was identified and would execute;
+PARTIAL means a related Swift predicate exists with a stated unproved condition;
+GAP means no equivalent Swift assertion is established;
+NATIVE means the site observes native window/rendering/harness state a
+presenter-level Swift check cannot establish. Pure theme/color/controller value
+contracts are GAP; every widget, grab, palette, stylesheet, visibility, event,
+and geometry observation is NATIVE. No Swift counterpart file covering this
+suite was identified, so no MATCHED or PARTIAL disposition is claimed anywhere
+in this file.
+
+Verification
+Command: none; no registered lane executes this file (see file header:
+intentionally absent from the rewrite check target until the corresponding
+widgets return; no checkcatalog entry references DeferredThemeLayoutTest).
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+Native ownership only, and currently unexecuted: no run*Check entry point
+invokes DeferredThemeLayoutTest, and no lane owns it. The class holds only a
+QApplication pointer sampled at construction. No Swift entry point executes
+any of this. No shared Swift fixture file exists. The file-local helpers
+dialogControls, controlsPresent, StyleChangeCounter, ThemeRefreshProbe, and
+containsColor are widget/event/grab instruments, inventoried via the
+assertions that use them.
+
+Fixture, sequence and row constraints
+No data rows: each case runs once when eventually registered. A001-A003 loop
+over trackIdentityColorCount identity colors with a 3.0 contrast floor against
+either piano-key surface. dialogCommitAndRevert drives the dialog by clicking
+real radio buttons and the apply/close buttons (A011-A012 read controller
+model state afterwards; A013-A016 read theme role values after further
+clicks). itemViewBrushes samples grabbed viewport pixels through the cellColor
+lambda (A018-A022). themeDialogGeometry records per-button geometry and
+re-asserts it with QTRY_COMPARE after a mode click (A028 loops the buttons).
+gridRefreshTargets double-registers one probe (deduplication by construction),
+then asserts ThemeChange delivery counts and grid colors across slider moves,
+destroyed-target cleanup, and a final no-op reset that must leave tab pixels,
+palette, and stylesheet untouched. polyphonyLayoutScales resizes a
+PolyphonyPanel through narrow, wide, and small geometries asserting layout
+mode flips and full grid visibility.
+Original setup, branch guards, and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | DeferredThemeLayoutTest::trackIdentityContrast | src/checks/themelayout/tst_themelayout_settings.cpp:135
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; every
+track identity color must be valid on each loop iteration.
+Source context since previous assertion:
+  // Deferred UI reference cases. This file is intentionally absent from the
+  // rewrite check target until the corresponding widgets return.
+
+  #include "ui/layout.h"
+  #include "ui/polyphonypanel.h"
+  #include "ui/theme/color_math.h"
+  #include "ui/theme/themecontroller.h"
+  #include "ui/theme/themedialog.h"
+  #include "ui/theme/themeresolver.h"
+  #include "ui/theme/themeruntime.h"
+  #include "ui/theme/trackidentitycolors.h"
+
+  #include <QApplication>
+  #include <QHeaderView>
+  #include <QImage>
+  #include <QList>
+  #include <QPaintEvent>
+  #include <QPointer>
+  #include <QPushButton>
+  #include <QRadioButton>
+  #include <QSettings>
+  #include <QSlider>
+  #include <QTabBar>
+  #include <QTableWidget>
+  #include <QTemporaryDir>
+  #include <QWidget>
+  #include <QWizard>
+  #include <QtTest>
+
+  #include <cstddef>
+  #include <memory>
+
+  namespace deferred_theme_layout {
+  namespace {
+
+  struct DialogControls {
+      QRadioButton *vanilla = nullptr;
+      QRadioButton *darkNeutralHigh = nullptr;
+      QRadioButton *immaterial = nullptr;
+      QSlider *gridLineContrast = nullptr;
+      QPushButton *apply = nullptr;
+      QPushButton *close = nullptr;
+  };
+
+  DialogControls dialogControls(themes::ThemeDialog &dialog)
+  {
+      return {dialog.findChild<QRadioButton *>(QStringLiteral("vanillaModeButton")),
+              dialog.findChild<QRadioButton *>(QStringLiteral("darkNeutralHighModeButton")),
+              dialog.findChild<QRadioButton *>(QStringLiteral("immaterialModeButton")),
+              dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider")),
+              dialog.findChild<QPushButton *>(QStringLiteral("themeApplyButton")),
+              dialog.findChild<QPushButton *>(QStringLiteral("themeCloseButton"))};
+  }
+
+  bool controlsPresent(const DialogControls &controls)
+  {
+      return controls.vanilla && controls.darkNeutralHigh && controls.immaterial &&
+             controls.gridLineContrast && controls.apply && controls.close;
+  }
+
+  class StyleChangeCounter final : public QObject
+  {
+    public:
+      int count = 0;
+
+    protected:
+      bool eventFilter(QObject *watched, QEvent *event) override
+      {
+          Q_UNUSED(watched);
+          if (event && event->type() == QEvent::StyleChange)
+              ++count;
+          return false;
+      }
+  };
+
+  class ThemeRefreshProbe final : public QWidget
+  {
+    public:
+      int themeChangeCount = 0;
+      int paintCount = 0;
+      QColor gridColor;
+
+    protected:
+      bool event(QEvent *event) override
+      {
+          if (event && event->type() == QEvent::ThemeChange) {
+              ++themeChangeCount;
+              gridColor = themes::color(themes::Role::song_view_grid);
+          }
+          return QWidget::event(event);
+      }
+
+      void paintEvent(QPaintEvent *event) override
+      {
+          Q_UNUSED(event);
+          ++paintCount;
+      }
+  };
+
+  bool containsColor(const QImage &image, const QRect &rect, const QColor &color)
+  {
+      for (int y = rect.top(); y <= rect.bottom(); ++y) {
+          for (int x = rect.left(); x <= rect.right(); ++x) {
+              if (image.pixelColor(x, y) == color)
+                  return true;
+          }
+      }
+      return false;
+  }
+
+  } // namespace
+
+  class DeferredThemeLayoutTest final
+  {
+    public:
+      void trackIdentityContrast();
+      void startupChromePins();
+      void dialogCommitAndRevert();
+      void itemViewBrushes();
+      void themeDialogGeometry();
+      void gridRefreshTargets();
+      void polyphonyLayoutScales();
+
+    private:
+      QApplication *m_application = qobject_cast<QApplication *>(QApplication::instance());
+  };
+
+  void DeferredThemeLayoutTest::trackIdentityContrast()
+  {
+      const themes::Theme vanilla = themes::vanilla();
+      const QColor light = vanilla.color(themes::Role::song_view_piano_keyboard_natural_key);
+      const QColor dark = vanilla.color(themes::Role::song_view_piano_keyboard_black_key);
+      for (std::size_t index = 0; index < themes::trackIdentityColorCount; ++index) {
+          const QColor fill = themes::trackIdentityColor(index);
+Original expression:
+  QVERIFY(fill.isValid());
+
+A002 | DeferredThemeLayoutTest::trackIdentityContrast | src/checks/themelayout/tst_themelayout_settings.cpp:136
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; every
+track identity color must be fully opaque on each loop iteration.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(fill.alpha(), 255);
+
+A003 | DeferredThemeLayoutTest::trackIdentityContrast | src/checks/themelayout/tst_themelayout_settings.cpp:137
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; every
+track identity color must reach the 3.0 contrast floor against at least one
+of the light/dark piano-key surfaces on each loop iteration.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(fill, light) >= 3.0 ||
+          themes::contrastRatio(fill, dark) >= 3.0);
+
+A004 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:144
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: the startup
+stylesheet must pin the QHeaderView section border rule. A presenter check
+cannot observe the native stylesheet.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void DeferredThemeLayoutTest::startupChromePins()
+  {
+Original expression:
+  QVERIFY(
+      m_application->styleSheet().contains(QStringLiteral("QHeaderView::section{border:0;}")));
+
+A005 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:148
+Disposition: NATIVE
+Mapping/reason: Original native widget obligation: a fresh QWizard must use
+the ClassicStyle the production chrome assumes.
+Source context since previous assertion:
+  ;
+      QWizard wizard;
+      wizard.ensurePolished();
+Original expression:
+  QCOMPARE(wizard.wizardStyle(), QWizard::ClassicStyle);
+
+A006 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:151
+Disposition: NATIVE
+Mapping/reason: Native harness precondition: the scratch settings directory
+must be valid before the controller restore case writes into it.
+Source context since previous assertion:
+  ;
+
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid());
+
+A007 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:155
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: the header
+pin must survive a ThemeController restore.
+Source context since previous assertion:
+  ;
+      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
+      themes::ThemeController controller(*m_application, settings);
+      controller.restore();
+Original expression:
+  QVERIFY(
+      m_application->styleSheet().contains(QStringLiteral("QHeaderView::section{border:0;}")));
+
+A008 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:162
+Disposition: NATIVE
+Mapping/reason: Native harness precondition: the scratch settings directory
+must be valid before the dialog case writes into it.
+Source context since previous assertion:
+  ;
+  }
+
+  void DeferredThemeLayoutTest::dialogCommitAndRevert()
+  {
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid());
+
+A009 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:168
+Disposition: NATIVE
+Mapping/reason: Original native dialog-structure obligation: all six named
+controls (three mode radios, contrast slider, apply, close) must exist before
+the click sequence.
+Source context since previous assertion:
+  ;
+      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
+      themes::ThemeController controller(*m_application, settings);
+      controller.restore();
+      themes::ThemeDialog dialog(controller);
+      const DialogControls controls = dialogControls(dialog);
+Original expression:
+  QVERIFY(controlsPresent(controls));
+
+A010 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:170
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the theme dialog
+must become visible before the click sequence.
+Source context since previous assertion:
+  ;
+      dialog.show();
+Original expression:
+  QTRY_VERIFY(dialog.isVisible());
+
+A011 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:177
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; after
+clicking dark-neutral-high, setting contrast 80, and applying, the committed
+mode must be DarkNeutralHigh.
+Source context since previous assertion:
+  ;
+
+      controls.darkNeutralHigh->click();
+      controls.gridLineContrast->setValue(80);
+      controls.apply->click();
+
+      const themes::ThemeSelection &committed = controller.committedSelection();
+Original expression:
+  QCOMPARE(committed.mode, themes::ThemeMode::DarkNeutralHigh);
+
+A012 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+committed grid-line contrast must be 80.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(committed.gridLineContrast, 80);
+
+A013 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:181
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established;
+re-clicking dark-neutral-high must preview the dark-neutral-high toolbar
+background.
+Source context since previous assertion:
+  ;
+
+      controls.darkNeutralHigh->click();
+Original expression:
+  QCOMPARE(themes::color(themes::Role::toolbar_background),
+           themes::darkNeutralHigh().color(themes::Role::toolbar_background));
+
+A014 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established;
+clicking immaterial must preview the immaterial toolbar background.
+Source context since previous assertion:
+  ;
+      controls.immaterial->click();
+Original expression:
+  QCOMPARE(themes::color(themes::Role::toolbar_background),
+           themes::immaterial().color(themes::Role::toolbar_background));
+
+A015 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:190
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; after
+closing without re-applying, the link text must equal the committed
+(dark-neutral-high at contrast 80) theme's link text, proving the preview
+reverted.
+Source context since previous assertion:
+  ;
+      controls.gridLineContrast->setValue(10);
+      controls.close->click();
+
+      const auto committedTheme = themes::withGridLineContrast(themes::darkNeutralHigh(), 80);
+Original expression:
+  QCOMPARE(themes::color(themes::Role::link_text), committedTheme.color(themes::Role::link_text));
+
+A016 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:191
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+grid color must likewise revert to the committed theme's grid color.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(themes::color(themes::Role::song_view_grid),
+           committedTheme.color(themes::Role::song_view_grid));
+
+A017 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:208
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the two-row table
+must become visible before viewport grabs sample cell colors.
+Source context since previous assertion:
+  ;
+  }
+
+  void DeferredThemeLayoutTest::itemViewBrushes()
+  {
+      QTableWidget table(2, 1);
+      table.horizontalHeader()->hide();
+      table.verticalHeader()->hide();
+      table.setShowGrid(false);
+      table.setAlternatingRowColors(true);
+      table.setItem(0, 0, new QTableWidgetItem);
+      table.setItem(1, 0, new QTableWidgetItem);
+      table.resize(80, 80);
+      table.setFocusPolicy(Qt::NoFocus);
+      table.show();
+      table.ensurePolished();
+Original expression:
+  QTRY_VERIFY(table.isVisible());
+
+A018 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:215
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the grabbed first-row
+cell color must equal the item_background role.
+Source context since previous assertion:
+  ;
+
+      const auto cellColor = [&table](int row) {
+          const QRect rect = table.visualItemRect(table.item(row, 0));
+          const QImage image = table.viewport()->grab().toImage();
+          return image.pixelColor(rect.center());
+      };
+Original expression:
+  QCOMPARE(cellColor(0), themes::color(themes::Role::item_background));
+
+A019 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:216
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the grabbed second-row
+cell color must equal the item_alternate_background role.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(cellColor(1), themes::color(themes::Role::item_alternate_background));
+
+A020 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:219
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the first cell must not
+already be the flash red before the override is installed.
+Source context since previous assertion:
+  ;
+
+      const QColor flash(255, 0, 0);
+Original expression:
+  QVERIFY(cellColor(0) != flash);
+
+A021 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:221
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: after installing the
+flash background, the grabbed first-row cell must equal it, proving item
+backgrounds override the theme.
+Source context since previous assertion:
+  ;
+      table.item(0, 0)->setBackground(flash);
+Original expression:
+  QCOMPARE(cellColor(0), flash);
+
+A022 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:231
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: after installing
+magenta foreground text, the grabbed viewport must contain the ink color
+somewhere, proving item foregrounds render.
+Source context since previous assertion:
+  ;
+
+      const QColor ink(255, 0, 255);
+      table.item(1, 0)->setText(QStringLiteral("XXXX"));
+      table.item(1, 0)->setForeground(ink);
+      auto inkFont = table.font();
+      inkFont.setPixelSize(24);
+      inkFont.setStyleStrategy(QFont::NoAntialias);
+      table.item(1, 0)->setFont(inkFont);
+      table.viewport()->update();
+Original expression:
+  QTRY_VERIFY(containsColor(table.viewport()->grab().toImage(), table.viewport()->rect(), ink));
+
+A023 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:237
+Disposition: NATIVE
+Mapping/reason: Native harness precondition: the scratch settings directory
+must be valid before the geometry case writes into it.
+Source context since previous assertion:
+  ;
+  }
+
+  void DeferredThemeLayoutTest::themeDialogGeometry()
+  {
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid());
+
+A024 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:244
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the theme dialog
+must become visible before geometry is recorded.
+Source context since previous assertion:
+  ;
+      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
+      themes::ThemeController controller(*m_application, settings);
+      controller.restore();
+      themes::ThemeDialog dialog(controller);
+      dialog.show();
+      dialog.ensurePolished();
+Original expression:
+  QTRY_VERIFY(dialog.isVisible());
+
+A025 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:247
+Disposition: NATIVE
+Mapping/reason: Original native dialog-structure obligation: the dialog must
+expose exactly three mode radio buttons.
+Source context since previous assertion:
+  ;
+
+      const auto modeButtons = dialog.findChildren<QRadioButton *>();
+Original expression:
+  QCOMPARE(modeButtons.size(), 3);
+
+A026 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:256
+Disposition: NATIVE
+Mapping/reason: Original native dialog-structure obligation: the
+dark-neutral-high mode button must exist before the click.
+Source context since previous assertion:
+  ;
+      const QSize initialSize = dialog.size();
+      QList<QRect> initialGeometry;
+      initialGeometry.reserve(modeButtons.size());
+      for (const QRadioButton *button : modeButtons)
+          initialGeometry.append(QRect(button->mapTo(&dialog, QPoint()), button->size()));
+
+      QRadioButton *darkNeutralHigh =
+          dialog.findChild<QRadioButton *>(QStringLiteral("darkNeutralHighModeButton"));
+Original expression:
+  QVERIFY(darkNeutralHigh);
+
+A027 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:258
+Disposition: NATIVE
+Mapping/reason: Original native geometry obligation: clicking a mode button
+must not resize the dialog.
+Source context since previous assertion:
+  ;
+      darkNeutralHigh->click();
+Original expression:
+  QTRY_COMPARE(dialog.size(), initialSize);
+
+A028 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:260
+Disposition: NATIVE
+Mapping/reason: Original native geometry obligation: no mode button may move
+or resize after the click; the site fans out over the three buttons.
+Source context since previous assertion:
+  ;
+      for (qsizetype index = 0; index < modeButtons.size(); ++index)
+Original expression:
+  QTRY_COMPARE(
+      QRect(modeButtons[index]->mapTo(&dialog, QPoint()), modeButtons[index]->size()),
+      initialGeometry.at(index));
+
+A029 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:268
+Disposition: NATIVE
+Mapping/reason: Native harness precondition: the scratch settings directory
+must be valid before the refresh case writes into it.
+Source context since previous assertion:
+  ;
+  }
+
+  void DeferredThemeLayoutTest::gridRefreshTargets()
+  {
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid());
+
+A030 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:275
+Disposition: NATIVE
+Mapping/reason: Original native dialog-structure obligation: the contrast
+slider must exist before the slider-driven refresh sequence.
+Source context since previous assertion:
+  ;
+      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
+      themes::ThemeController controller(*m_application, settings);
+      controller.restore();
+      themes::ThemeDialog dialog(controller);
+      QSlider *gridLineContrast =
+          dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider"));
+Original expression:
+  QVERIFY(gridLineContrast);
+
+A031 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:277
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the dialog must
+become visible before slider moves drive refreshes.
+Source context since previous assertion:
+  ;
+      dialog.show();
+Original expression:
+  QTRY_VERIFY(dialog.isVisible());
+
+A032 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:283
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the tab bar must
+become visible before its grab baselines the no-op reset check.
+Source context since previous assertion:
+  ;
+
+      QTabBar tabBar;
+      tabBar.addTab(QStringLiteral("Open Song"));
+      tabBar.show();
+      tabBar.ensurePolished();
+Original expression:
+  QTRY_VERIFY(tabBar.isVisible());
+
+A033 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:287
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the refresh probe
+widget must become visible before ThemeChange delivery is counted.
+Source context since previous assertion:
+  ;
+      ThemeRefreshProbe gridPaintTarget;
+      gridPaintTarget.resize(10, 10);
+      gridPaintTarget.show();
+Original expression:
+  QTRY_VERIFY(gridPaintTarget.isVisible());
+
+A034 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:295
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: grabbing the tab bar
+must produce a non-null baseline image for the later pixel-identity check.
+Source context since previous assertion:
+  ;
+      themes::registerGridLineRefreshTarget(gridPaintTarget);
+      themes::registerGridLineRefreshTarget(gridPaintTarget);
+      gridPaintTarget.paintCount = 0;
+      gridPaintTarget.themeChangeCount = 0;
+      StyleChangeCounter tabStyleChanges;
+      tabBar.installEventFilter(&tabStyleChanges);
+      const QImage tabBefore = tabBar.grab().toImage();
+Original expression:
+  QVERIFY(!tabBefore.isNull());
+
+A035 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:303
+Disposition: NATIVE
+Mapping/reason: Original native event obligation: moving the slider to 100
+must deliver exactly one ThemeChange to the (double-registered) probe,
+proving registration deduplicates.
+Source context since previous assertion:
+  ;
+      const QPalette paletteBefore = m_application->palette();
+      const QString styleSheetBefore = m_application->styleSheet();
+      const QColor defaultGrid = themes::color(themes::Role::song_view_grid);
+      const QColor background = themes::color(themes::Role::song_view_piano_roll_background);
+
+      gridLineContrast->setValue(100);
+      const QColor strengthened = themes::color(themes::Role::song_view_grid);
+Original expression:
+  QCOMPARE(gridPaintTarget.themeChangeCount, 1);
+
+A036 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:304
+Disposition: NATIVE
+Mapping/reason: Original native event obligation: the probe must have sampled
+the strengthened grid color from the delivered ThemeChange.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(gridPaintTarget.gridColor, strengthened);
+
+A037 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:307
+Disposition: NATIVE
+Mapping/reason: Original native event obligation: moving the slider to 0
+must deliver the second ThemeChange.
+Source context since previous assertion:
+  ;
+      gridLineContrast->setValue(0);
+      const QColor softened = themes::color(themes::Role::song_view_grid);
+Original expression:
+  QCOMPARE(gridPaintTarget.themeChangeCount, 2);
+
+A038 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:308
+Disposition: NATIVE
+Mapping/reason: Original native event obligation: the probe must have sampled
+the softened grid color from the second ThemeChange.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(gridPaintTarget.gridColor, softened);
+
+A039 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:309
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+strengthened grid must gain contrast against the piano-roll background
+relative to the default grid.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(strengthened, background) >
+          themes::contrastRatio(defaultGrid, background));
+
+A040 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:311
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+softened grid must lose contrast against the background relative to the
+default grid.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(softened, background) <
+          themes::contrastRatio(defaultGrid, background));
+
+A041 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:318
+Disposition: NATIVE
+Mapping/reason: Original native object-lifetime obligation: destroying a
+registered refresh target must clear its QPointer guard, proving refresh
+targets hold no dangling references.
+Source context since previous assertion:
+  ;
+
+      auto destroyedTarget = std::make_unique<ThemeRefreshProbe>();
+      QPointer<ThemeRefreshProbe> destroyedGuard(destroyedTarget.get());
+      themes::registerGridLineRefreshTarget(*destroyedTarget);
+      destroyedTarget.reset();
+Original expression:
+  QVERIFY(destroyedGuard.isNull());
+
+A042 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:321
+Disposition: NATIVE
+Mapping/reason: Original native event obligation: after destroying one
+target, the surviving probe must still receive exactly one more ThemeChange
+on the next slider move.
+Source context since previous assertion:
+  ;
+      const int refreshCountBeforeCleanup = gridPaintTarget.themeChangeCount;
+      gridLineContrast->setValue(10);
+Original expression:
+  QCOMPARE(gridPaintTarget.themeChangeCount, refreshCountBeforeCleanup + 1);
+
+A043 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:324
+Disposition: NATIVE
+Mapping/reason: Original native event obligation: resetting the slider to the
+default contrast must deliver no StyleChange to the tab bar.
+Source context since previous assertion:
+  ;
+      gridLineContrast->setValue(themes::defaultGridLineContrast);
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY(tabStyleChanges.count == 0);
+
+A044 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:325
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the tab bar must
+repaint pixel-identical after the no-op reset.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tabBar.grab().toImage() == tabBefore);
+
+A045 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:326
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: the no-op reset
+must leave the application palette untouched.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(m_application->palette(), paletteBefore);
+
+A046 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:327
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: the no-op reset
+must leave the application stylesheet untouched.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(m_application->styleSheet(), styleSheetBefore);
+
+A047 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:328
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the probe must have
+painted at least once during the sequence, proving refresh delivery reaches
+painting.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(gridPaintTarget.paintCount > 0);
+
+A048 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:343
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: at the narrow 48x70
+geometry the panel must use the stacked (non-wide) layout.
+Source context since previous assertion:
+  ;
+  }
+
+  void DeferredThemeLayoutTest::polyphonyLayoutScales()
+  {
+      PolyphonyPanel panel;
+      panel.setInvertChecked(true);
+      AudioEngine::PolySnapshot snapshot;
+      snapshot.maxPcmChannels = 5;
+      snapshot.invert = true;
+      snapshot.pcm[0] = {true, false, 0, 60};
+      snapshot.pcm[MAX_PCM_CHANNELS] = {true, false, 1, 72};
+      panel.updateSnapshot(snapshot);
+      panel.resize(layout::fontPx(48), layout::fontPx(70));
+      panel.show();
+Original expression:
+  QTRY_VERIFY(!panel.wideLayoutActive());
+
+A049 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:344
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: in the stacked layout the
+overflow section must sit below the usage section.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(panel.overflowSectionRect().top() >= panel.usageSectionRect().bottom());
+
+A050 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:345
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: the grid must be fully
+visible in the narrow geometry.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(panel.gridFullyVisible());
+
+A051 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:348
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: at the wide 75x50 geometry
+the panel must switch to the wide layout.
+Source context since previous assertion:
+  ;
+
+      panel.resize(layout::fontPx(75), layout::fontPx(50));
+Original expression:
+  QTRY_VERIFY(panel.wideLayoutActive());
+
+A052 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:349
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: in the wide layout the
+overflow section must sit right of the usage section.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(panel.overflowSectionRect().left() >= panel.usageSectionRect().right());
+
+A053 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:350
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: the grid must stay fully
+visible in the wide geometry.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(panel.gridFullyVisible());
+
+A054 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:353
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: at the small 32x20
+geometry the panel must fall back to the stacked layout.
+Source context since previous assertion:
+  ;
+
+      panel.resize(layout::fontPx(32), layout::fontPx(20));
+Original expression:
+  QTRY_VERIFY(!panel.wideLayoutActive());
+
+A055 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:354
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: the grid must stay fully
+visible in the small geometry.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(panel.gridFullyVisible());
+
+A056 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:355
+Disposition: NATIVE
+Mapping/reason: Original native layout obligation: the small geometry must
+overflow vertically (scroll range positive).
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(panel.vScrollRange() > 0);
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+  } // namespace deferred_theme_layout
+
+Swift assertion predicates
+None identified: no Swift counterpart file establishes predicates for this
+suite.
+
+Shared helper
+None: no Swift fixture file carries expects for this suite.

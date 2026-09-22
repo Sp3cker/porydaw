@@ -1,0 +1,591 @@
+Assertion correspondence: polyphony/polyphonyengine.cpp
+
+Reference revision: 1f9f8a5faa78069bf86c0ed9997c04c07f1f37d7
+Original: src/checks/polyphony/polyphonyengine.cpp
+Original SHA-256: e3d745856aaeefcc1467b357368d9403b0079a1f23f828c51b9d6b5e9217f9e8
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site in polyphonyengine.cpp appears below: 26 sites
+across six slots. QTest::addColumn/newRow registrations and the QFETCH in the
+channelMode _data/driven slot are data plumbing, not assertion sites; the two
+data rows (allNotesOff, allSoundOff) expand the single A026 site into two
+instances. Loop bodies reuse their sites: A008-A012 expand over the three
+ring entries, A023 over the shadow channels. Searched Swift coverage before
+marking GAP: tails.swift and AudioControllerChecks.swift read
+polySnapshot().pcm/invert only for transport/audition observations, never the
+engine poly counters, ring contents, sentinel ticks, or shadow-pool state
+asserted here. No Swift predicate establishes any entry below.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way; GAP means an
+equivalent Swift assertion is not established; NATIVE observes native
+window/rendering/harness state a presenter-level Swift check cannot establish.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter polycheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runPolyCheck executes the PolyphonyGateTest slots under the polycheck lane.
+No Swift entry point executes these engine checks; no Swift counterpart file
+was identified in src/checks/polyphony or the swiftcore suite.
+
+Fixture, sequence and row constraints
+EngineFixture inits the M4A engine at 48 kHz, installs a 128-voice square
+test voicegroup (plus/minus 100, attack 255, sustain 255, release 165) and
+caps maxPcmChannels at 1 so the four-note overflow song (steal tick 96,
+hold 24-216, drop tick 120, tail-cut tick 148; 1000 samples per tick) forces
+one steal, one drop and one tail cut. renderSong renders 220000 samples in
+500-frame chunks, splits peak energy at the steal sample, and probes shadow
+channels once at stealSample + 4000. liveSentinelTick strikes two live notes
+with no sequencer clock. The invert slot sets auditionNote before rendering.
+The audition slot processes 8 chunks directly. The channelMode slot renders
+49 ticks per data row (allNotesOff 0x7B, allSoundOff 0x78).
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:180
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts the overflow-song timeline builds;
+the timeline-build observation below remains an open obligation.
+Source context since previous assertion:
+  #include "checks/polyphony/tst_polyphonycheck.h"
+
+  #include <QByteArray>
+  #include <QtTest>
+
+  #include <algorithm>
+  #include <array>
+  #include <cmath>
+  #include <span>
+
+  #include "core/miditimeline.h"
+  #include "core/smf.h"
+  #include "core/timelineplayer.h"
+
+  extern "C" {
+  #include "m4a_engine.h"
+  }
+
+  namespace {
+
+  constexpr uint32_t kDivision = 24;
+  constexpr double kSampleRate = 48000.0;
+  constexpr uint64_t kSamplesPerTick = 1000;
+  constexpr uint64_t kHoldOnTick = 24;
+  constexpr uint64_t kHoldOffTick = 216;
+  constexpr uint64_t kStealTick = 96;
+  constexpr uint64_t kDropTick = 120;
+  constexpr uint64_t kStealOffTick = 144;
+  constexpr uint64_t kTailCutTick = 148;
+  constexpr uint8_t kHoldKey = 62;
+  constexpr uint8_t kStealKey = 60;
+  constexpr uint8_t kDropKey = 64;
+  constexpr uint8_t kTailKey = 65;
+  constexpr uint32_t kRenderChunk = 500;
+  constexpr uint64_t kRenderSamples = 220000;
+  constexpr uint64_t kGateModeTick = 24;
+  constexpr uint64_t kGateOffTick = 96;
+  constexpr uint64_t kGateRenderTicks = 49;
+  constexpr uint8_t kGateKey = 60;
+
+  SmfEvent channelEvent(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+  {
+      SmfEvent event;
+      event.tick = tick;
+      event.status = status;
+      event.data0 = data0;
+      event.data1 = data1;
+      return event;
+  }
+
+  SmfEvent tempoEvent()
+  {
+      SmfEvent event;
+      event.tick = 0;
+      event.status = 0xFF;
+      event.metaType = 0x51;
+      event.blob = QByteArray("\x07\xA1\x20", 3);
+      return event;
+  }
+
+  SmfFile overflowSong()
+  {
+      SmfFile smf;
+      smf.format = 1;
+      smf.division = kDivision;
+      smf.tracks.resize(5);
+      smf.tracks[0].events.push_back(tempoEvent());
+      smf.tracks[0].endTick = 384;
+
+      struct NoteSpec {
+          uint64_t on;
+          uint64_t off;
+          uint8_t key;
+      };
+      const std::array<NoteSpec, 4> notes = {{{kStealTick, kStealOffTick, kStealKey},
+                                              {kHoldOnTick, kHoldOffTick, kHoldKey},
+                                              {kDropTick, 200, kDropKey},
+                                              {kTailCutTick, kHoldOffTick, kTailKey}}};
+      for (int track = 0; track < 4; ++track) {
+          SmfTrack &target = smf.tracks[track + 1];
+          target.events = {channelEvent(0, 0xC0, 0, 0),
+                           channelEvent(notes[track].on, 0x90, notes[track].key, 100),
+                           channelEvent(notes[track].off, 0x80, notes[track].key, 0)};
+          target.endTick = 384;
+      }
+      return smf;
+  }
+
+  struct TestVoicegroup {
+      std::array<int8_t, 65> sample{};
+      WaveData wave{};
+      std::array<ToneData, 128> voices{};
+
+      TestVoicegroup()
+      {
+          for (int index = 0; index < 64; ++index)
+              sample[index] = index < 32 ? 100 : -100;
+          sample[64] = sample[63];
+          wave.status = 0xC000;
+          wave.freq = 8363u * 1024u;
+          wave.size = 64;
+          wave.data = sample.data();
+          for (ToneData &voice : voices) {
+              voice.type = VOICE_DIRECTSOUND;
+              voice.key = 60;
+              voice.wav = &wave;
+              voice.attack = 255;
+              voice.sustain = 255;
+              voice.release = 165;
+          }
+      }
+  };
+
+  class EngineFixture final
+  {
+    public:
+      EngineFixture()
+      {
+          m4a_engine_init(&engine, float(kSampleRate));
+          m4a_engine_set_voicegroup(&engine, voicegroup.voices.data());
+          engine.maxPcmChannels = 1;
+      }
+
+      ~EngineFixture() { m4a_engine_destroy(&engine); }
+
+      EngineFixture(const EngineFixture &) = delete;
+      EngineFixture &operator=(const EngineFixture &) = delete;
+
+      M4AEngine engine{};
+      TestVoicegroup voicegroup;
+  };
+
+  struct RenderResult {
+      float maxBeforeSteal = 0.0f;
+      float maxAfterSteal = 0.0f;
+      bool shadowOnAfterSteal = false;
+  };
+
+  RenderResult renderSong(M4AEngine &engine, const MidiTimeline &timeline)
+  {
+      TimelinePlayer player;
+      player.reset();
+      RenderResult result;
+      std::array<float, kRenderChunk> left{};
+      std::array<float, kRenderChunk> right{};
+      const uint64_t stealSample = kStealTick * kSamplesPerTick;
+      uint64_t rendered = 0;
+      while (rendered < kRenderSamples) {
+          player.render(&engine, &timeline, std::span(left), std::span(right), false, 0);
+          float peak = 0.0f;
+          for (uint32_t index = 0; index < kRenderChunk; ++index)
+              peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
+          if (rendered + kRenderChunk <= stealSample)
+              result.maxBeforeSteal = std::max(result.maxBeforeSteal, peak);
+          else
+              result.maxAfterSteal = std::max(result.maxAfterSteal, peak);
+          rendered += kRenderChunk;
+          if (rendered == stealSample + 4000) {
+              for (int channel = MAX_PCM_CHANNELS; channel < TOTAL_PCM_CHANNELS; ++channel) {
+                  if ((engine.pcmChannels[channel].status & CHN_ON) != 0)
+                      result.shadowOnAfterSteal = true;
+              }
+          }
+      }
+      return result;
+  }
+
+  std::unique_ptr<MidiTimeline> timeline()
+  {
+      return MidiTimeline::build(overflowSong(), kSampleRate);
+  }
+
+  } // namespace
+
+  namespace checks {
+
+  void PolyphonyGateTest::overflowCountersAndRing()
+  {
+      const std::unique_ptr<MidiTimeline> songTimeline = timeline();
+Original expression:
+  QVERIFY(songTimeline);
+
+A002 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:181
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts the four-track overflow fixture
+layout; the track-count observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(songTimeline);
+Original expression:
+  QCOMPARE(songTimeline->usedTrackCount, 4);
+
+A003 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:185
+Disposition: GAP
+Mapping/reason: No Swift predicate reads polyEventTotal; the three-event ring
+total below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(songTimeline->usedTrackCount, 4);
+      EngineFixture fixture;
+      renderSong(fixture.engine, *songTimeline);
+Original expression:
+  QCOMPARE(fixture.engine.polyEventTotal, uint32_t(3));
+
+A004 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:186
+Disposition: GAP
+Mapping/reason: No Swift predicate reads polyStealCount; the track-1 steal
+counter below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(fixture.engine.polyStealCount[1], uint32_t(1));
+
+A005 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:187
+Disposition: GAP
+Mapping/reason: No Swift predicate reads polyDropCount; the track-2 drop
+counter below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(fixture.engine.polyDropCount[2], uint32_t(1));
+
+A006 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:188
+Disposition: GAP
+Mapping/reason: No Swift predicate reads polyTailCutCount; the track-0
+tail-cut counter below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(fixture.engine.polyTailCutCount[0], uint32_t(1));
+
+A007 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:195
+Disposition: GAP
+Mapping/reason: No Swift predicate sums the per-track poly counters; the
+cross-track total below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(fixture.engine.polyTailCutCount[0], uint32_t(1));
+      uint64_t totalCounters = 0;
+      for (int track = 0; track < MAX_TRACKS; ++track) {
+          totalCounters += fixture.engine.polyDropCount[track] +
+                           fixture.engine.polyStealCount[track] +
+                           fixture.engine.polyTailCutCount[track];
+      }
+Original expression:
+  QCOMPARE(totalCounters, uint64_t(3));
+
+A008 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:210
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the poly ring buffer; the event-type
+field of each ring entry below remains an open obligation (loop expands one
+site over the three entries).
+Source context since previous assertion:
+  QCOMPARE(totalCounters, uint64_t(3));
+      struct ExpectedEvent {
+          uint8_t type;
+          uint8_t track;
+          uint8_t key;
+          uint8_t byTrack;
+          uint32_t tick;
+      };
+      const std::array<ExpectedEvent, 3> expected = {{
+          {M4A_POLY_STOLEN, 1, kHoldKey, 0, uint32_t(kStealTick)},
+          {M4A_POLY_DROPPED, 2, kDropKey, 2, uint32_t(kDropTick)},
+          {M4A_POLY_TAIL_CUT, 0, kStealKey, 3, uint32_t(kTailCutTick)},
+      }};
+      for (std::size_t index = 0; index < expected.size(); ++index) {
+          const M4APolyEvent &event = fixture.engine.polyEvents[index];
+Original expression:
+  QCOMPARE(event.type, expected[index].type);
+
+A009 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:211
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the poly ring buffer; the
+track-index field of each ring entry below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(event.trackIndex, expected[index].track);
+
+A010 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:212
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the poly ring buffer; the MIDI-key
+field of each ring entry below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(event.midiKey, expected[index].key);
+
+A011 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:213
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the poly ring buffer; the by-track
+field of each ring entry below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(event.byTrack, expected[index].byTrack);
+
+A012 | PolyphonyGateTest::overflowCountersAndRing | src/checks/polyphony/polyphonyengine.cpp:214
+Disposition: GAP
+Mapping/reason: No Swift predicate reads the poly ring buffer; the tick field
+of each ring entry below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(event.tick, expected[index].tick);
+
+A013 | PolyphonyGateTest::liveSentinelTick | src/checks/polyphony/polyphonyengine.cpp:226
+Disposition: GAP
+Mapping/reason: No Swift predicate strikes live notes outside the sequencer
+clock; the single live-event total below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(event.tick, expected[index].tick);
+      }
+  }
+
+  void PolyphonyGateTest::liveSentinelTick()
+  {
+      EngineFixture fixture;
+      m4a_engine_program_change(&fixture.engine, 0, 0);
+      m4a_engine_program_change(&fixture.engine, 1, 0);
+      m4a_engine_note_on(&fixture.engine, 1, 60, 100);
+      m4a_engine_note_on(&fixture.engine, 0, 67, 100);
+Original expression:
+  QCOMPARE(fixture.engine.polyEventTotal, uint32_t(1));
+
+A014 | PolyphonyGateTest::liveSentinelTick | src/checks/polyphony/polyphonyengine.cpp:227
+Disposition: GAP
+Mapping/reason: No Swift predicate observes the live sentinel tick; the
+M4A_POLY_TICK_NONE ring stamp below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(fixture.engine.polyEvents[0].tick, uint32_t(M4A_POLY_TICK_NONE));
+
+A015 | PolyphonyGateTest::normalPlaybackKeepsShadowPoolOff | src/checks/polyphony/polyphonyengine.cpp:233
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts the overflow-song timeline builds
+in the shadow-pool slot; the timeline observation below remains an open
+obligation.
+Source context since previous assertion:
+  QCOMPARE(fixture.engine.polyEvents[0].tick, uint32_t(M4A_POLY_TICK_NONE));
+  }
+
+  void PolyphonyGateTest::normalPlaybackKeepsShadowPoolOff()
+  {
+      const std::unique_ptr<MidiTimeline> songTimeline = timeline();
+Original expression:
+  QVERIFY(songTimeline);
+
+A016 | PolyphonyGateTest::normalPlaybackKeepsShadowPoolOff | src/checks/polyphony/polyphonyengine.cpp:237
+Disposition: GAP
+Mapping/reason: No Swift predicate measures pre-steal render energy; the
+audibility floor below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(songTimeline);
+      EngineFixture fixture;
+      const RenderResult result = renderSong(fixture.engine, *songTimeline);
+Original expression:
+  QVERIFY2(result.maxBeforeSteal > 1e-4f,
+           qPrintable(QString::number(double(result.maxBeforeSteal))));
+
+A017 | PolyphonyGateTest::normalPlaybackKeepsShadowPoolOff | src/checks/polyphony/polyphonyengine.cpp:239
+Disposition: GAP
+Mapping/reason: No Swift predicate measures post-steal render energy; the
+audibility floor below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY2(result.maxBeforeSteal > 1e-4f,
+           qPrintable(QString::number(double(result.maxBeforeSteal))));
+Original expression:
+  QVERIFY2(result.maxAfterSteal > 1e-4f,
+           qPrintable(QString::number(double(result.maxAfterSteal))));
+
+A018 | PolyphonyGateTest::normalPlaybackKeepsShadowPoolOff | src/checks/polyphony/polyphonyengine.cpp:241
+Disposition: GAP
+Mapping/reason: No Swift predicate probes the shadow PCM pool; the
+shadow-off observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY2(result.maxAfterSteal > 1e-4f,
+           qPrintable(QString::number(double(result.maxAfterSteal))));
+Original expression:
+  QVERIFY(!result.shadowOnAfterSteal);
+
+A019 | PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow | src/checks/polyphony/polyphonyengine.cpp:247
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts the overflow-song timeline builds
+in the invert slot; the timeline observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(!result.shadowOnAfterSteal);
+  }
+
+  void PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow()
+  {
+      const std::unique_ptr<MidiTimeline> songTimeline = timeline();
+Original expression:
+  QVERIFY(songTimeline);
+
+A020 | PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow | src/checks/polyphony/polyphonyengine.cpp:253
+Disposition: GAP
+Mapping/reason: No Swift predicate renders with the poly debug invert flag;
+the pre-overflow silence below remains an open obligation. (Swift audition
+predicates read polySnapshot().pcm/invert for transport observations, never
+this invert-gated energy split.)
+Source context since previous assertion:
+  QVERIFY(songTimeline);
+      EngineFixture fixture;
+      m4a_engine_set_poly_debug_invert(&fixture.engine, true);
+      // Sequenced dispatch must clear a preview note struck before playback begins.
+      fixture.engine.auditionNote = true;
+      const RenderResult result = renderSong(fixture.engine, *songTimeline);
+Original expression:
+  QVERIFY2(result.maxBeforeSteal < 1e-6f,
+           qPrintable(QString::number(double(result.maxBeforeSteal))));
+
+A021 | PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow | src/checks/polyphony/polyphonyengine.cpp:255
+Disposition: GAP
+Mapping/reason: No Swift predicate renders with the poly debug invert flag;
+the post-overflow audibility below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY2(result.maxBeforeSteal < 1e-6f,
+           qPrintable(QString::number(double(result.maxBeforeSteal))));
+Original expression:
+  QVERIFY2(result.maxAfterSteal > 1e-4f,
+           qPrintable(QString::number(double(result.maxAfterSteal))));
+
+A022 | PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow | src/checks/polyphony/polyphonyengine.cpp:257
+Disposition: GAP
+Mapping/reason: No Swift predicate probes the shadow PCM pool under invert;
+the shadow-on observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY2(result.maxAfterSteal > 1e-4f,
+           qPrintable(QString::number(double(result.maxAfterSteal))));
+Original expression:
+  QVERIFY(result.shadowOnAfterSteal);
+
+A023 | PolyphonyGateTest::invertSilencesUntilOverflowAndClearsShadow | src/checks/polyphony/polyphonyengine.cpp:260
+Disposition: GAP
+Mapping/reason: No Swift predicate clears the invert flag and reaps shadow
+voices; the per-channel silence below remains an open obligation (loop
+expands one site over the shadow channels).
+Source context since previous assertion:
+  QVERIFY(result.shadowOnAfterSteal);
+      m4a_engine_set_poly_debug_invert(&fixture.engine, false);
+      for (int channel = MAX_PCM_CHANNELS; channel < TOTAL_PCM_CHANNELS; ++channel)
+Original expression:
+  QCOMPARE(fixture.engine.pcmChannels[channel].status, uint8_t(0));
+
+A024 | PolyphonyGateTest::auditionRemainsAudibleWithInvert | src/checks/polyphony/polyphonyengine.cpp:279
+Disposition: GAP
+Mapping/reason: No Swift predicate processes an audition note directly
+through the engine under invert; the audibility floor below remains an open
+obligation.
+Source context since previous assertion:
+  QCOMPARE(fixture.engine.pcmChannels[channel].status, uint8_t(0));
+  }
+
+  void PolyphonyGateTest::auditionRemainsAudibleWithInvert()
+  {
+      EngineFixture fixture;
+      m4a_engine_set_poly_debug_invert(&fixture.engine, true);
+      m4a_engine_program_change(&fixture.engine, 0, 0);
+      fixture.engine.polyEventClock = M4A_POLY_TICK_NONE;
+      fixture.engine.auditionNote = true;
+      m4a_engine_note_on(&fixture.engine, 0, 60, 100);
+      std::array<float, kRenderChunk> left{};
+      std::array<float, kRenderChunk> right{};
+      float peak = 0.0f;
+      for (int chunk = 0; chunk < 8; ++chunk) {
+          m4a_engine_process(&fixture.engine, left.data(), right.data(), kRenderChunk);
+          for (uint32_t index = 0; index < kRenderChunk; ++index)
+              peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
+      }
+Original expression:
+  QVERIFY2(peak > 1e-4f, qPrintable(QString::number(double(peak))));
+
+A025 | PolyphonyGateTest::channelModeLeavesCompiledGateIntact | src/checks/polyphony/polyphonyengine.cpp:304
+Disposition: GAP
+Mapping/reason: No Swift predicate builds the channel-mode fixture song; the
+timeline observation below remains an open obligation. The _data method
+registers the allNotesOff/allSoundOff rows (no assertion sites of its own);
+each row reuses the A026 site below.
+Source context since previous assertion:
+  QVERIFY2(peak > 1e-4f, qPrintable(QString::number(double(peak))));
+  }
+
+  void PolyphonyGateTest::channelModeLeavesCompiledGateIntact_data()
+  {
+      QTest::addColumn<int>("controller");
+
+      QTest::newRow("allNotesOff") << 0x7B;
+      QTest::newRow("allSoundOff") << 0x78;
+  }
+
+  void PolyphonyGateTest::channelModeLeavesCompiledGateIntact()
+  {
+      QFETCH(int, controller);
+
+      SmfFile smf;
+      smf.format = 1;
+      smf.division = kDivision;
+      smf.tracks.resize(2);
+      smf.tracks[0].events.push_back(tempoEvent());
+      SmfTrack &track = smf.tracks[1];
+      track.events = {channelEvent(0, 0xC0, 0, 0), channelEvent(0, 0x90, kGateKey, 100),
+                      channelEvent(kGateModeTick, 0xB0, uint8_t(controller), 0),
+                      channelEvent(kGateOffTick, 0x80, kGateKey, 0)};
+      const std::unique_ptr<MidiTimeline> songTimeline = MidiTimeline::build(smf, kSampleRate);
+Original expression:
+  QVERIFY(songTimeline);
+
+A026 | PolyphonyGateTest::channelModeLeavesCompiledGateIntact | src/checks/polyphony/polyphonyengine.cpp:319
+Disposition: GAP
+Mapping/reason: No Swift predicate renders a channel-mode gate through the
+compiled gate; the audibility floor below remains an open obligation for both
+data rows.
+Source context since previous assertion:
+  QVERIFY(songTimeline);
+
+      EngineFixture fixture;
+      TimelinePlayer player;
+      player.reset();
+      std::array<float, kRenderChunk> left{};
+      std::array<float, kRenderChunk> right{};
+      for (uint64_t rendered = 0; rendered < kGateRenderTicks * kSamplesPerTick;
+           rendered += kRenderChunk)
+          player.render(&fixture.engine, songTimeline.get(), std::span(left), std::span(right), false,
+                        0);
+
+      float peak = 0.0f;
+      for (uint32_t index = 0; index < kRenderChunk; ++index)
+          peak = std::max({peak, std::fabs(left[index]), std::fabs(right[index])});
+Original expression:
+  QVERIFY2(peak > 0.01f, qPrintable(QString::number(double(peak))));
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+  } // namespace checks

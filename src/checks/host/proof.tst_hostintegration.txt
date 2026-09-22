@@ -1,0 +1,2310 @@
+Assertion correspondence: host/tst_hostintegration.cpp
+
+Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
+Original: src/checks/host/tst_hostintegration.cpp
+Original SHA-256: 4083b59bbb5e88019ed164c1296e3f8ea36e3a6fe6673d8b0ef74316dbdbae10
+Swift counterpart: none identified
+Swift SHA-256: n/a
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+
+Status and evidence
+The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted host suite. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+
+Execution ownership
+No Swift entry point executes the deleted host checks; no Swift fixture is paired.
+
+Fixture, sequence and row constraints
+A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
+Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:145
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/fwd.hpp"
+
+  #include <memory>
+  #include <optional>
+  #include <utility>
+  #include <vector>
+
+  #include <QCloseEvent>
+  #include <QCryptographicHash>
+  #include <QCursor>
+  #include <QDirIterator>
+  #include <QFile>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QScopeGuard>
+  #include <QSettings>
+  #include <QStringList>
+  #include <QVariant>
+  #include <QtTest>
+  #include <algorithm>
+
+  #include "checks/host/hosttestsupport.h"
+  #include "checks/support/asyncwait.h"
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "checks/support/songfixture.h"
+  #include "core/miditimeline.h"
+  #include "mainwindow.h"
+  #include "ui/editordrawer/automationcanvas.h"
+  #include "ui/editordrawer/automationpage.h"
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/editordrawer/velocityarea/velocityarea.h"
+  #include "ui/editorviewstate.h"
+  #include "ui/layout.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/workspaceui.h"
+  namespace checks::host {
+
+  namespace {
+
+  bool waitForProjectReady(const WorkspaceUi &workspace)
+  {
+      return checks::async_wait::waitUntil(
+                 [] { return true; },
+                 [&workspace] { return workspace.projectState().state == ProjectOpenState::Ready; },
+                 30000, 1) == checks::async_wait::Result::Ready;
+  }
+
+  bool waitForTabReady(const WorkspaceUi &workspace, SongTab *tab)
+  {
+      return tab &&
+             checks::async_wait::waitUntil(
+                 [&workspace, tab] { return workspace.songTabFor(tab->name()) == tab; },
+                 [tab] { return tab->isReady(); }, 30000, 1) == checks::async_wait::Result::Ready;
+  }
+
+  QByteArray fileBytes(const QString &path)
+  {
+      QFile file(path);
+      return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray{};
+  }
+
+  QByteArray directoryFingerprint(const QString &root)
+  {
+      QCryptographicHash hash(QCryptographicHash::Sha256);
+      QDirIterator entries(root, QDir::Files, QDirIterator::Subdirectories);
+      QStringList paths;
+      while (entries.hasNext())
+          paths.append(entries.next());
+      std::sort(paths.begin(), paths.end());
+      for (const QString &path : paths) {
+          QFile file(path);
+          if (!file.open(QIODevice::ReadOnly))
+              return {};
+          hash.addData(path.mid(root.size()).toUtf8());
+          hash.addData(file.readAll());
+      }
+      return hash.result();
+  }
+
+  QPointF velocityNodePosition(const SongView &view, const VelocityArea &area,
+                               const MidiTimeline &timeline, const DocNote &note)
+  {
+      const qreal x = qreal(note.tick) * view.camera().pxPerBeat() / timeline.ticksPerBeat -
+                      view.camera().scrollX();
+      return {x, area.axis().velocityToY(note.velocity)};
+  }
+
+  class SettingsGuard final
+  {
+    public:
+      SettingsGuard()
+      {
+          for (const QString &key : m_settings.allKeys())
+              m_values.emplace_back(key, m_settings.value(key));
+          m_settings.clear();
+      }
+
+      ~SettingsGuard()
+      {
+          m_settings.clear();
+          for (const auto &[key, value] : m_values)
+              m_settings.setValue(key, value);
+          m_settings.sync();
+      }
+
+      SettingsGuard(const SettingsGuard &) = delete;
+      SettingsGuard &operator=(const SettingsGuard &) = delete;
+
+    private:
+      QSettings m_settings;
+      std::vector<std::pair<QString, QVariant>> m_values;
+  };
+
+  struct Session final {
+      std::unique_ptr<SettingsGuard> settings;
+      std::unique_ptr<checks::ProjectFixture> fixture;
+      std::unique_ptr<MainWindow> window;
+      SongTab *first = nullptr;
+      SongTab *active = nullptr;
+  };
+
+  } // namespace
+
+  class HostIntegrationTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(HostIntegrationTest)
+
+    public:
+      HostIntegrationTest(QString projectRoot, QString songA, QString songB, QString screenshotPath)
+          : m_projectRoot(std::move(projectRoot))
+          , m_songA(std::move(songA))
+          , m_songB(std::move(songB))
+          , m_screenshotPath(std::move(screenshotPath))
+      {}
+
+    private slots:
+      void twoTabReadySessionWithTwoNoteSeed()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A002 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:146
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(session->first != session->active)
+
+A003 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:147
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(twoNoteTrack(session->active->document()) >= 0)
+
+A004 | twoTabReadySessionWithTwoNoteSeed | src/checks/host/tst_hostintegration.cpp:148
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->active->view().selectionModel().noteSelection().size(), size_t{2})
+
+A005 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:154
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      void steadyPlaybackIsPresentationOnly()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A006 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:157
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          auto *velocity = view.editorDrawer()->velocityArea();
+
+Original expression:
+  QVERIFY(velocity)
+
+A007 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:178
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          uint64_t first = 0;
+          bool found = false;
+          for (uint64_t candidate = 0; candidate < 4096 && !found; ++candidate) {
+              const DrawerPageVoiceContext context = view.voiceContext(candidate);
+              uint64_t previousSample = 0;
+              found = true;
+              for (uint64_t offset = 0; offset <= 120; ++offset) {
+                  const DrawerPageVoiceContext next = view.voiceContext(candidate + offset);
+                  const uint64_t sample =
+                      session->active->timeline()->sampleForTick(candidate + offset);
+                  if (next.voice != context.voice || next.voiceSlot != context.voiceSlot ||
+                      (offset && sample <= previousSample)) {
+                      found = false;
+                      break;
+                  }
+                  previousSample = sample;
+              }
+              if (found)
+                  first = candidate;
+          }
+
+Original expression:
+  QVERIFY2(found, "required route101 fixture has no steady 120-tick voice context")
+
+A008 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:184
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          view.setFollowPlayhead(false);
+          view.setPlayheadSample(session->active->timeline()->sampleForTick(first), true);
+          settle();
+          const auto automationGeometry =
+              view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+
+Original expression:
+  QVERIFY(automationGeometry.has_value())
+
+A009 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:188
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QString captureError;
+          const QImage automationBefore =
+              checks::support::captureQuickBand(view, automationGeometry->rect, &captureError);
+
+Original expression:
+  QVERIFY2(!automationBefore.isNull(), qPrintable(captureError))
+
+A010 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:193
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const auto before = velocity->diagnostics();
+          for (uint64_t tick = first + 1; tick <= first + 120; ++tick)
+              view.setPlayheadSample(session->active->timeline()->sampleForTick(tick), true);
+          QCoreApplication::processEvents();
+
+Original expression:
+  QCOMPARE(uint64_t(view.playheadTick() + 0.5), first + 120)
+
+A011 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:194
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(velocity->diagnostics().playheadPresentationCount,
+                   before.playheadPresentationCount + 120)
+
+A012 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:196
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(velocity->diagnostics().contentBuildCount, before.contentBuildCount)
+
+A013 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:199
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const QImage automationAfter =
+              checks::support::captureQuickBand(view, automationGeometry->rect, &captureError);
+
+Original expression:
+  QVERIFY2(!automationAfter.isNull(), qPrintable(captureError))
+
+A014 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:200
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(automationAfter, automationBefore)
+
+A015 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:206
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      void velocityEditCommitsOnceInvalidatesAndUndoes()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A016 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:210
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          SongDocument &document = session->active->document();
+          const int track = twoNoteTrack(document);
+
+Original expression:
+  QVERIFY(track >= 0)
+
+A017 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:215
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const std::vector<DocNote> notes = document.notesForTrack(track);
+          view.selectTrack(track);
+          view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
+          auto *velocity = view.editorDrawer()->velocityArea();
+
+Original expression:
+  QVERIFY(velocity)
+
+A018 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:224
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QString captureError;
+          const auto renderVelocity = [&]() {
+              const auto geometry =
+                  view.timelineBandLayout().geometry(songview::TimelineBand::Velocity);
+              return checks::support::captureQuickBand(view, geometry ? geometry->rect : QRect{},
+                                                       &captureError);
+          };
+          const QImage baselineFrame = renderVelocity();
+
+Original expression:
+  QVERIFY2(!baselineFrame.isNull(), qPrintable(captureError))
+
+A019 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:229
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const auto before = velocity->diagnostics();
+          const uint64_t revision = document.revision();
+          const int undo = document.undoStack()->index();
+          const uint8_t changed = notes[0].velocity == 127 ? 1 : uint8_t(notes[0].velocity + 1);
+
+Original expression:
+  QVERIFY(view.beginVelocityGesture(notes))
+
+A020 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:230
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, changed}}))
+
+A021 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:231
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.previewVelocity(notes[0].noteId).has_value())
+
+A022 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:232
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision)
+
+A023 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:233
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo)
+
+A024 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:234
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Committed)
+
+A025 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:235
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision + 1)
+
+A026 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:236
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo + 1)
+
+A027 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:238
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote landed;
+
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &landed))
+
+A028 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:239
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(landed.velocity, changed)
+
+A029 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:240
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!view.previewVelocity(notes[0].noteId))
+
+A030 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:242
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const QImage committedFrame = renderVelocity();
+
+Original expression:
+  QVERIFY2(!committedFrame.isNull(), qPrintable(captureError))
+
+A031 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:243
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(velocity->diagnostics().contentBuildCount > before.contentBuildCount)
+
+A032 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:246
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          document.undoStack()->undo();
+          const QImage undoneFrame = renderVelocity();
+
+Original expression:
+  QVERIFY2(!undoneFrame.isNull(), qPrintable(captureError))
+
+A033 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:250
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const auto selectionBefore = velocity->diagnostics();
+          view.selectionModel().clearNoteSelection();
+          const QImage deselectedFrame = renderVelocity();
+
+Original expression:
+  QVERIFY2(!deselectedFrame.isNull(), qPrintable(captureError))
+
+A034 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:251
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(velocity->diagnostics().contentBuildCount > selectionBefore.contentBuildCount)
+
+A035 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:254
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const auto zoomBefore = velocity->diagnostics();
+          auto *quick = view.quickView();
+
+Original expression:
+  QVERIFY(quick && quick->quickWindow())
+
+A036 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:257
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          view.zoomAroundContentX(1.1, qreal(quick->quickWindow()->width()) / 2.0);
+          const QImage zoomedFrame = renderVelocity();
+
+Original expression:
+  QVERIFY2(!zoomedFrame.isNull(), qPrintable(captureError))
+
+A037 | velocityEditCommitsOnceInvalidatesAndUndoes | src/checks/host/tst_hostintegration.cpp:258
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(velocity->diagnostics().contentBuildCount > zoomBefore.contentBuildCount)
+
+A038 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:263
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      void readySongTabVelocityTransactionRetainsHeldAndCommittedContracts()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A039 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:267
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          SongDocument &document = session->active->document();
+          const int track = twoNoteTrack(document);
+
+Original expression:
+  QVERIFY(track >= 0)
+
+A040 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:269
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          std::vector<DocNote> notes = document.notesForTrack(track);
+
+Original expression:
+  QVERIFY(notes.size() >= 2)
+
+A041 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:275
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          view.selectTrack(track);
+          const std::vector<NoteId> selected{notes[0].noteId, notes[1].noteId};
+          view.selectionModel().setNoteSelection(selected);
+          const uint64_t revision = document.revision();
+          const int undo = document.undoStack()->index();
+
+Original expression:
+  QVERIFY(view.beginVelocityGesture(notes))
+
+A042 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:276
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!view.updateVelocityGesture(
+              {{notes[0].noteId, notes[0].velocity}, {notes[1].noteId, notes[1].velocity}}))
+
+A043 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:278
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Unchanged)
+
+A044 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:279
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision)
+
+A045 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:280
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo)
+
+A046 | readySongTabVelocityTransactionRetainsHeldAndCommittedContracts | src/checks/host/tst_hostintegration.cpp:290
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const uint8_t first =
+              notes[0].velocity == 127 ? uint8_t{1} : uint8_t(notes[0].velocity + 1);
+          auto *quick =
+              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+          auto *velocityInput = quick ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                                            QStringLiteral("timelineVelocityInput"))
+                                      : nullptr;
+          auto *velocity = view.editorDrawer()->velocityArea();
+          const std::shared_ptr<const MidiTimeline> timeline = session->active->timeline();
+
+Original expression:
+  QVERIFY(velocityInput && velocity && timeline)
+
+A047 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:296
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const QPointF node = velocityNodePosition(view, *velocity, *timeline, notes[0]);
+          checks::events::sendMouse(*velocityInput, QEvent::MouseButtonPress, node, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(*velocityInput, QEvent::MouseButtonRelease, node, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+
+Original expression:
+  QCOMPARE(document.revision(), revision)
+
+A048 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:297
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo)
+
+A049 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:298
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.selectionModel().noteSelection().size(), size_t{1})
+
+A050 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:299
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::find(selected.cbegin(), selected.cend(),
+                            view.selectionModel().noteSelection().front()) != selected.cend())
+
+A051 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:304
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          view.selectionModel().setNoteSelection(selected);
+          const uint8_t second =
+              notes[1].velocity == 127 ? uint8_t{1} : uint8_t(notes[1].velocity + 1);
+
+Original expression:
+  QVERIFY(view.beginVelocityGesture(notes))
+
+A052 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:305
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, first}, {notes[1].noteId, second}}))
+
+A053 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:306
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.previewVelocity(notes[0].noteId), std::optional<uint8_t>{first})
+
+A054 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:307
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.previewVelocity(notes[1].noteId), std::optional<uint8_t>{second})
+
+A055 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:309
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote held;
+
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &held))
+
+A056 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:310
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(held.velocity, notes[0].velocity)
+
+A057 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:311
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision)
+
+A058 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:312
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo)
+
+A059 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:313
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Committed)
+
+A060 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:314
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision + 1)
+
+A061 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:315
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo + 1)
+
+A062 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:316
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &held))
+
+A063 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:317
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(held.velocity, first)
+
+A064 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:318
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!view.previewVelocity(notes[0].noteId))
+
+A065 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:319
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.selectionModel().noteSelection(), selected)
+
+A066 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:321
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          document.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(view.selectionModel().noteSelection(), selected)
+
+A067 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:328
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          document.undoStack()->redo();
+          notes = document.notesForTrack(track);
+          const uint8_t staleTarget =
+              notes[0].velocity == 127 ? uint8_t{1} : uint8_t(notes[0].velocity + 1);
+          const uint8_t externalTarget =
+              notes[1].velocity == 127 ? uint8_t{1} : uint8_t(notes[1].velocity + 1);
+
+Original expression:
+  QVERIFY(view.beginVelocityGesture(notes))
+
+A068 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:330
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, staleTarget}}))
+
+A069 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:335
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const uint64_t staleRevision = document.revision();
+          document.blockSignals(true);
+          document.setNotesVelocity({notes[1]}, externalTarget);
+          document.blockSignals(false);
+
+Original expression:
+  QCOMPARE(view.commitVelocityGesture(), SongView::VelocityCommitResult::Rejected)
+
+A070 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:336
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), staleRevision + 1)
+
+A071 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:337
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undo + 2)
+
+A072 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:340
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote staleFirst;
+          DocNote externalSecond;
+
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &staleFirst))
+
+A073 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:341
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(notes[1].noteId, &externalSecond))
+
+A074 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:342
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(staleFirst.velocity, notes[0].velocity)
+
+A075 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:343
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(externalSecond.velocity, externalTarget)
+
+A076 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:344
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!view.previewVelocity(notes[0].noteId))
+
+A077 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:345
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!view.previewVelocity(notes[1].noteId))
+
+A078 | events::sendMouse | src/checks/host/tst_hostintegration.cpp:346
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view.selectionModel().noteSelection(), selected)
+
+A079 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:361
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      void automationPanLifecycle_data()
+      {
+          QTest::addColumn<QString>("route");
+          QTest::newRow("page-switch") << QStringLiteral("page-switch");
+          QTest::newRow("quick-ungrab") << QStringLiteral("quick-ungrab");
+          QTest::newRow("quick-focus-loss") << QStringLiteral("quick-focus-loss");
+          QTest::newRow("quick-deactivate") << QStringLiteral("quick-deactivate");
+      }
+
+      void automationPanLifecycle()
+      {
+          QFETCH(QString, route);
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A080 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:373
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          SongDocument &document = session->active->document();
+          view.setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+          view.setDrawerActivePage(EditorDrawerPage::Automations);
+          QCoreApplication::processEvents();
+          auto *quick =
+              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+          auto *canvas = view.editorDrawer()->automationPage()->canvas();
+          auto *input = quick ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                                    QStringLiteral("timelineAutomationInput"))
+                              : nullptr;
+
+Original expression:
+  QVERIFY(quick && canvas && input)
+
+A081 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:375
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QQuickWindow *const quickWindow = quick->quickWindow();
+
+Original expression:
+  QVERIFY(quickWindow)
+
+A082 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:376
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::OtherFocusReason))
+
+A083 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:377
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Automation)
+
+A084 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:378
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QTRY_VERIFY(input->hasActiveFocus())
+
+A085 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:391
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const QByteArray midi = document.smf().write();
+          const uint64_t revision = document.revision();
+          const int undo = document.undoStack()->count();
+          const QPointF point(input->width() / 2.0, input->height() / 2.0);
+          const QPoint windowPoint = input->mapToScene(point).toPoint();
+          QTest::mouseEvent(QTest::MouseMove, quickWindow, Qt::NoButton, Qt::NoModifier, windowPoint);
+          QTest::mousePress(quickWindow, Qt::MiddleButton, Qt::NoModifier, windowPoint);
+          bool buttonHeld = true;
+          const auto releaseButton = qScopeGuard([quickWindow, windowPoint, &buttonHeld] {
+              if (buttonHeld)
+                  QTest::mouseRelease(quickWindow, Qt::MiddleButton, Qt::NoModifier, windowPoint);
+          });
+
+Original expression:
+  QTRY_COMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(input))
+
+A086 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:392
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(canvas->isPanning())
+
+A087 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:397
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          if (route == QStringLiteral("page-switch")) {
+              view.setDrawerActivePage(EditorDrawerPage::Velocity);
+          } else if (route == QStringLiteral("quick-ungrab")) {
+              input->ungrabMouse();
+
+Original expression:
+  QTRY_VERIFY(!quickWindow->mouseGrabberItem())
+
+A088 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:399
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          } else if (route == QStringLiteral("quick-focus-loss")) {
+
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
+
+A089 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:400
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Velocity)
+
+A090 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:401
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QTRY_VERIFY(!input->hasActiveFocus())
+
+A091 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:407
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          } else {
+              QEvent event(QEvent::WindowDeactivate);
+              QApplication::sendEvent(quickWindow, &event);
+          }
+          if (route == QStringLiteral("quick-focus-loss")) {
+
+Original expression:
+  QCOMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(input))
+
+A092 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:408
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(canvas->isPanning())
+
+A093 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:410
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          } else {
+
+Original expression:
+  QTRY_VERIFY(!canvas->isPanning())
+
+A094 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:414
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          }
+          QTest::mouseRelease(quickWindow, Qt::MiddleButton, Qt::NoModifier, windowPoint);
+          buttonHeld = false;
+
+Original expression:
+  QTRY_VERIFY(!canvas->isPanning())
+
+A095 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:415
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.smf().write(), midi)
+
+A096 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:416
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision)
+
+A097 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:417
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), undo)
+
+A098 | automationPanLifecycle | src/checks/host/tst_hostintegration.cpp:418
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quickWindow->mouseGrabberItem())
+
+A099 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:441
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      void lifecycleTermination_data()
+      {
+          QTest::addColumn<QString>("route");
+          QTest::newRow("page-switch") << QStringLiteral("page-switch");
+          QTest::newRow("drawer-hide") << QStringLiteral("drawer-hide");
+          QTest::newRow("track-replace") << QStringLiteral("track-replace");
+          QTest::newRow("song-null") << QStringLiteral("song-null");
+          QTest::newRow("song-replacement") << QStringLiteral("song-replacement");
+          QTest::newRow("voice-replace") << QStringLiteral("voice-replace");
+          QTest::newRow("voice-null") << QStringLiteral("voice-null");
+          QTest::newRow("quick-ungrab") << QStringLiteral("quick-ungrab");
+          QTest::newRow("quick-focus-loss") << QStringLiteral("quick-focus-loss");
+          QTest::newRow("quick-deactivate") << QStringLiteral("quick-deactivate");
+          QTest::newRow("escape") << QStringLiteral("escape");
+      }
+
+      void lifecycleTermination()
+      {
+          QFETCH(QString, route);
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A100 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:445
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          SongDocument &document = session->active->document();
+          const int track = twoNoteTrack(document);
+
+Original expression:
+  QVERIFY(track >= 0)
+
+A101 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:447
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const std::vector<DocNote> notes = document.notesForTrack(track);
+
+Original expression:
+  QVERIFY(!notes.empty())
+
+A102 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:457
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          view.selectTrack(track);
+          view.selectionModel().setNoteSelection({notes[0].noteId});
+          auto *quick =
+              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+          auto *velocity = view.editorDrawer()->velocityArea();
+          auto *velocityInput = quick ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                                            QStringLiteral("timelineVelocityInput"))
+                                      : nullptr;
+          const std::shared_ptr<const MidiTimeline> timeline = session->active->timeline();
+
+Original expression:
+  QVERIFY(quick && velocity && velocityInput && timeline)
+
+A103 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:459
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QQuickWindow *const quickWindow = quick->quickWindow();
+
+Original expression:
+  QVERIFY(quickWindow)
+
+A104 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:460
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Velocity, Qt::OtherFocusReason))
+
+A105 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:461
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Velocity)
+
+A106 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:465
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const QPointF press = velocityNodePosition(view, *velocity, *timeline, notes[0]);
+          const uint8_t targetVelocity = notes[0].velocity <= 64 ? uint8_t{127} : uint8_t{1};
+          const QPointF drag(press.x(), velocity->axis().velocityToY(targetVelocity));
+
+Original expression:
+  QVERIFY(velocityInput->bounds().contains(press))
+
+A107 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:466
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(velocityInput->bounds().contains(drag))
+
+A108 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:480
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const QPoint pressWindow = velocityInput->mapToScene(press).toPoint();
+          const QPoint dragWindow = velocityInput->mapToScene(drag).toPoint();
+          const QByteArray midi = document.smf().write();
+          const uint64_t revision = document.revision();
+          const int undo = document.undoStack()->count();
+          QTest::mouseEvent(QTest::MouseMove, quickWindow, Qt::NoButton, Qt::NoModifier, pressWindow);
+          QTest::mousePress(quickWindow, Qt::LeftButton, Qt::NoModifier, pressWindow);
+          bool buttonHeld = true;
+          QPoint lastWindowPoint = pressWindow;
+          const auto releaseButton = qScopeGuard([quickWindow, &lastWindowPoint, &buttonHeld] {
+              if (buttonHeld)
+                  QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, lastWindowPoint);
+          });
+
+Original expression:
+  QTRY_COMPARE(quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(velocityInput))
+
+A109 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:483
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          lastWindowPoint = dragWindow;
+          QTest::mouseEvent(QTest::MouseMove, quickWindow, Qt::NoButton, Qt::NoModifier, dragWindow);
+
+Original expression:
+  QTRY_VERIFY(view.previewVelocity(notes[0].noteId).has_value())
+
+A110 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:484
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.userGestureActive())
+
+A111 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:505
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const bool clearsSelection = route == QStringLiteral("track-replace") ||
+                                       route == QStringLiteral("song-null") ||
+                                       route == QStringLiteral("song-replacement");
+          LoadedVoiceGroup replacement = {};
+          if (route == QStringLiteral("page-switch")) {
+              view.setDrawerActivePage(EditorDrawerPage::Automations);
+          } else if (route == QStringLiteral("drawer-hide")) {
+              view.setDrawerSectionVisible(EditorDrawerPage::Velocity, false);
+          } else if (route == QStringLiteral("track-replace")) {
+              view.selectTrack(track == 0 ? 1 : 0);
+          } else if (route == QStringLiteral("song-null")) {
+              view.setSong(nullptr, nullptr);
+          } else if (route == QStringLiteral("song-replacement")) {
+              view.prepareForSongReplacement();
+          } else if (route == QStringLiteral("voice-replace")) {
+              view.setVoicegroup(&replacement);
+          } else if (route == QStringLiteral("voice-null")) {
+              view.setVoicegroup(nullptr);
+          } else if (route == QStringLiteral("quick-ungrab")) {
+              velocityInput->ungrabMouse();
+
+Original expression:
+  QTRY_VERIFY(!quickWindow->mouseGrabberItem())
+
+A112 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:507
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          } else if (route == QStringLiteral("quick-focus-loss")) {
+
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
+
+A113 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:508
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() == songview::TimelineBand::Roll)
+
+A114 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:515
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          } else if (route == QStringLiteral("quick-deactivate")) {
+              QEvent event(QEvent::WindowDeactivate);
+              QApplication::sendEvent(quickWindow, &event);
+          } else {
+              QTest::keyClick(quickWindow, Qt::Key_Escape);
+          }
+
+Original expression:
+  QTRY_VERIFY(!view.userGestureActive())
+
+A115 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:518
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          QTest::mouseRelease(quickWindow, Qt::LeftButton, Qt::NoModifier, dragWindow);
+          buttonHeld = false;
+
+Original expression:
+  QCOMPARE(document.smf().write(), midi)
+
+A116 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:519
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.revision(), revision)
+
+A117 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:520
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), undo)
+
+A118 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:521
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!view.previewVelocity(notes[0].noteId))
+
+A119 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:523
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (clearsSelection)
+
+Original expression:
+  QVERIFY(view.selectionModel().noteSelection().empty())
+
+A120 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:525
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          else
+
+Original expression:
+  QVERIFY(!view.selectionModel().noteSelection().empty())
+
+A121 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:526
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quickWindow->mouseGrabberItem())
+
+A122 | lifecycleTermination | src/checks/host/tst_hostintegration.cpp:528
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const QCursor *cursor = QApplication::overrideCursor();
+
+Original expression:
+  QVERIFY(!cursor || cursor->shape() != Qt::ClosedHandCursor)
+
+A123 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:548
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (route == QStringLiteral("song-replacement"))
+              view.setSong(timeline.get(), view.voicegroup());
+          if (route == QStringLiteral("voice-replace"))
+              view.setVoicegroup(nullptr);
+      }
+
+      void documentMutationUndoRedoAndReloadPreemptPreview_data()
+      {
+          QTest::addColumn<QString>("event");
+          QTest::newRow("mutation") << QStringLiteral("mutation");
+          QTest::newRow("undo") << QStringLiteral("undo");
+          QTest::newRow("redo") << QStringLiteral("redo");
+          QTest::newRow("reload") << QStringLiteral("reload");
+      }
+
+      void documentMutationUndoRedoAndReloadPreemptPreview()
+      {
+          QFETCH(QString, event);
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A124 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:552
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          SongDocument &document = session->active->document();
+          const int track = twoNoteTrack(document);
+
+Original expression:
+  QVERIFY(track >= 0)
+
+A125 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:556
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const std::vector<DocNote> notes = document.notesForTrack(track);
+          view.selectTrack(track);
+          view.selectionModel().setNoteSelection({notes[0].noteId});
+
+Original expression:
+  QVERIFY(view.beginVelocityGesture(notes))
+
+A126 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:557
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.updateVelocityGesture({{notes[0].noteId, 96}}))
+
+A127 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:564
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          uint64_t revision = document.revision();
+          int undoIndex = document.undoStack()->index();
+          int undoCount = document.undoStack()->count();
+          if (event == QStringLiteral("mutation")) {
+              document.setNotesVelocity(
+                  {notes[0]}, notes[0].velocity == 127 ? uint8_t{1} : uint8_t(notes[0].velocity + 1));
+
+Original expression:
+  QCOMPARE(document.revision(), revision + 1)
+
+A128 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:565
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undoIndex + 1)
+
+A129 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:566
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), undoCount + 1)
+
+A130 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:572
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          } else if (event == QStringLiteral("undo")) {
+              document.setNotesVelocity({notes[0]}, 95);
+              revision = document.revision();
+              undoIndex = document.undoStack()->index();
+              document.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(document.revision(), revision + 1)
+
+A131 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:573
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undoIndex - 1)
+
+A132 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:580
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          } else if (event == QStringLiteral("redo")) {
+              document.setNotesVelocity({notes[0]}, 95);
+              document.undoStack()->undo();
+              revision = document.revision();
+              undoIndex = document.undoStack()->index();
+              document.undoStack()->redo();
+
+Original expression:
+  QCOMPARE(document.revision(), revision + 1)
+
+A133 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:581
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), undoIndex + 1)
+
+A134 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:584
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          } else {
+              session->window->m_workspace->requestSongOpen(session->active->name());
+
+Original expression:
+  QVERIFY(waitForTabReady(*session->window->m_workspace, session->active))
+
+A135 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:585
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), 0)
+
+A136 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:586
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.selectionModel().noteSelection().empty())
+
+A137 | documentMutationUndoRedoAndReloadPreemptPreview | src/checks/host/tst_hostintegration.cpp:588
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          }
+
+Original expression:
+  QVERIFY(!view.previewVelocity(notes[0].noteId))
+
+A138 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:594
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      void appearanceNotificationPreservesAutomationRaster()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A139 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:598
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          auto *quick =
+              view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+
+Original expression:
+  QVERIFY(quick)
+
+A140 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:600
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QQuickItem *root = quick->rootObject();
+
+Original expression:
+  QVERIFY(root)
+
+A141 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:603
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          auto *automation = root->findChild<songview::TimelineInputItem *>(
+              QStringLiteral("timelineAutomationInput"));
+
+Original expression:
+  QVERIFY(automation)
+
+A142 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:606
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const auto geometry =
+              view.timelineBandLayout().geometry(songview::TimelineBand::Automation);
+
+Original expression:
+  QVERIFY(geometry.has_value())
+
+A143 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:608
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          auto *page = view.editorDrawer()->automationPage();
+
+Original expression:
+  QVERIFY(page)
+
+A144 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:612
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const auto before = page->canvas()->rows();
+          QString error;
+          const QImage baseline = checks::support::captureQuickBand(view, geometry->rect, &error);
+
+Original expression:
+  QVERIFY2(!baseline.isNull(), qPrintable(error))
+
+A145 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:616
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          automation->notifyHostAppearanceChanged();
+          checks::support::pumpQuick();
+          const QImage after = checks::support::captureQuickBand(view, geometry->rect, &error);
+
+Original expression:
+  QVERIFY2(!after.isNull(), qPrintable(error))
+
+A146 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:617
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(automationRowsEqual(page->canvas()->rows(), before))
+
+A147 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:621
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          // Raster equality is intentionally a negative control after the
+          // page-model assertion: an appearance notification must not alter
+          // Automation content.
+
+Original expression:
+  QCOMPARE(after, baseline)
+
+A148 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:623
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!m_screenshotPath.isEmpty())
+
+Original expression:
+  QVERIFY2(after.save(m_screenshotPath), qPrintable(m_screenshotPath))
+
+A149 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:629
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      void nonSelectedEditorStateFansOutWithoutTouchingSongBytes()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A150 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:651
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &origin = session->first->view();
+          SongView &peer = session->active->view();
+          const QByteArray beforeA = fileBytes(session->first->document().midPath());
+          const QByteArray beforeB = fileBytes(session->active->document().midPath());
+          const uint64_t revisionA = session->first->document().revision();
+          const uint64_t revisionB = session->active->document().revision();
+          const int undoA = session->first->document().undoStack()->count();
+          const int undoB = session->active->document().undoStack()->count();
+          EditorViewState state = origin.editorViewState();
+          state.velocity = {true, 173};
+          state.automation = {false, 44};
+          state.voiceChanges = {true, 149};
+          state.activePage = EditorDrawerPage::VoiceChanges;
+          const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, 0, 74};
+          state.emptyLanes.insert(lane);
+          state.laneRanges[lane] = 96;
+          QSignalSpy publication(session->window->m_workspace.get(),
+                                 &WorkspaceUi::editorViewStateChanged);
+          QSignalSpy persistence(session->window.get(), &MainWindow::editorViewStatePersisted);
+          origin.setEditorViewState(state);
+          QCoreApplication::processEvents();
+
+Original expression:
+  QCOMPARE(publication.count(), 1)
+
+A151 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:652
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(persistence.count(), 1)
+
+A152 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:653
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(origin.editorViewState(), state)
+
+A153 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:654
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(peer.editorViewState(), state)
+
+A154 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:656
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QSettings settings;
+
+Original expression:
+  QCOMPARE(loadEditorViewState(settings), state)
+
+A155 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:657
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(fileBytes(session->first->document().midPath()), beforeA)
+
+A156 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:658
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(fileBytes(session->active->document().midPath()), beforeB)
+
+A157 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:659
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->first->document().revision(), revisionA)
+
+A158 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:660
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->active->document().revision(), revisionB)
+
+A159 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:661
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->first->document().undoStack()->count(), undoA)
+
+A160 | nonSelectedEditorStateFansOutWithoutTouchingSongBytes | src/checks/host/tst_hostintegration.cpp:662
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->active->document().undoStack()->count(), undoB)
+
+A161 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:668
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      void projectSwitchAndClosePreserveProjectBoundaries()
+      {
+          const std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A162 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:670
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const QByteArray projectBefore = directoryFingerprint(session->fixture->root());
+
+Original expression:
+  QVERIFY(!projectBefore.isEmpty())
+
+A163 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:678
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          const QByteArray beforeA = fileBytes(session->first->document().midPath());
+          const QByteArray beforeB = fileBytes(session->active->document().midPath());
+          const QString firstPath = session->first->document().midPath();
+          const int undoA = session->first->document().undoStack()->count();
+          const int undoB = session->active->document().undoStack()->count();
+          const EditorViewState state = session->active->view().editorViewState();
+          session->window->m_workspace->requestProjectOpenAt(session->fixture->root());
+
+Original expression:
+  QVERIFY(waitForProjectReady(*session->window->m_workspace))
+
+A164 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:679
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->window->m_workspace->openTabCount(), qsizetype{0})
+
+A165 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:680
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore)
+
+A166 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:682
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QSettings settings;
+
+Original expression:
+  QCOMPARE(loadEditorViewState(settings), state)
+
+A167 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:685
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          session->window->m_workspace->requestSongOpen(*SongName::create(m_songA));
+          SongTab *reopened = session->window->m_workspace->selectedSongTab();
+
+Original expression:
+  QVERIFY(waitForTabReady(*session->window->m_workspace, reopened))
+
+A168 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:686
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(reopened->view().editorViewState(), state)
+
+A169 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:687
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(fileBytes(reopened->document().midPath()), beforeA)
+
+A170 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:688
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(reopened->document().undoStack()->count(), undoA)
+
+A171 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:691
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          session->window->m_workspace->requestSongOpen(*SongName::create(m_songB), true);
+          SongTab *second = session->window->m_workspace->selectedSongTab();
+
+Original expression:
+  QVERIFY(waitForTabReady(*session->window->m_workspace, second))
+
+A172 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:693
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const QString secondPath = second->document().midPath();
+
+Original expression:
+  QCOMPARE(second->document().undoStack()->count(), undoB)
+
+A173 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:694
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(session->window->m_workspace->openTabCount(), qsizetype{2})
+
+A174 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:697
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          QCloseEvent event;
+          QApplication::sendEvent(session->window.get(), &event);
+
+Original expression:
+  QVERIFY(event.isAccepted())
+
+A175 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:698
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(session->window->m_closeAccepted)
+
+A176 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:699
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(fileBytes(firstPath), beforeA)
+
+A177 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:700
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(fileBytes(secondPath), beforeB)
+
+A178 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:701
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(directoryFingerprint(session->fixture->root()), projectBefore)
+
+A179 | projectSwitchAndClosePreserveProjectBoundaries | src/checks/host/tst_hostintegration.cpp:702
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(loadEditorViewState(settings), state)
+
+A180 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:711
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      // SongTab must tear the quick host (and thus the embedded window) down
+      // explicitly in its destructor body, before the SongView coordinator and
+      // the SongDocument members die.
+      void songTabTeardownDestroysQuickWindowBeforeDocument()
+      {
+          std::optional<Session> session = openSession();
+
+Original expression:
+  QVERIFY(session.has_value())
+
+A181 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:714
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          SongView &view = session->active->view();
+          auto *quick = view.quickView();
+
+Original expression:
+  QVERIFY(quick)
+
+A182 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:716
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QQuickWindow *const window = quick->quickWindow();
+
+Original expression:
+  QVERIFY(window)
+
+A183 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:730
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongDocument *const document = &session->active->document();
+          const auto order = std::make_shared<QStringList>();
+          QObject::connect(window, &QObject::destroyed, session->window.get(),
+                           [order, window](QObject *obj) {
+                               if (obj == window)
+                                   order->append(QStringLiteral("quickWindow"));
+                           });
+          QObject::connect(document, &QObject::destroyed, session->window.get(),
+                           [order, document](QObject *obj) {
+                               if (obj == document)
+                                   order->append(QStringLiteral("document"));
+                           });
+          session.reset();
+
+Original expression:
+  QCOMPARE(order->value(0), QStringLiteral("quickWindow"))
+
+A184 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:731
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(order->value(1), QStringLiteral("document"))
+
+A185 | songTabTeardownDestroysQuickWindowBeforeDocument | src/checks/host/tst_hostintegration.cpp:732
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(order->size(), 2)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+      }
+
+    private:
+      std::optional<Session> openSession() const
+      {
+          QString error;
+          auto settings = std::make_unique<SettingsGuard>();
+          std::unique_ptr<checks::ProjectFixture> fixture =
+              checks::ProjectFixture::copyOf(m_projectRoot, error);
+          if (!fixture)
+              return std::nullopt;
+          auto window = std::make_unique<MainWindow>();
+          if (!window->m_audioOk)
+              return std::nullopt;
+          const std::optional<SongName> firstName = SongName::create(m_songA);
+          const std::optional<SongName> secondName = SongName::create(m_songB);
+          if (!firstName || !secondName)
+              return std::nullopt;
+          window->m_workspace->requestProjectOpenAt(fixture->root());
+          if (!waitForProjectReady(*window->m_workspace))
+              return std::nullopt;
+          window->resize(960, 680);
+          window->show();
+          window->m_workspace->requestSongOpen(*firstName);
+          SongTab *first = window->m_workspace->songTabFor(*firstName);
+          window->m_workspace->requestSongOpen(*secondName, true);
+          SongTab *active = window->m_workspace->selectedSongTab();
+          if (!waitForTabReady(*window->m_workspace, first) ||
+              !waitForTabReady(*window->m_workspace, active))
+              return std::nullopt;
+          SongView &view = active->view();
+          SongDocument &document = active->document();
+          const int track = twoNoteTrack(document);
+          view.setDrawerActivePage(EditorDrawerPage::Velocity);
+          view.setDrawerSectionVisible(EditorDrawerPage::Velocity, true);
+          view.setDrawerSectionHeight(EditorDrawerPage::Velocity, 180);
+          if (track >= 0) {
+              const std::vector<DocNote> notes = document.notesForTrack(track);
+              view.selectTrack(track);
+              view.selectionModel().setNoteSelection({notes[0].noteId, notes[1].noteId});
+          }
+          settle();
+          return Session{std::move(settings), std::move(fixture), std::move(window), first, active};
+      }
+
+      static int twoNoteTrack(const SongDocument &document)
+      {
+          for (int track = 0; track < document.engineTrackCount(); ++track) {
+              if (document.notesForTrack(track).size() >= 2)
+                  return track;
+          }
+          return -1;
+      }
+
+      QString m_projectRoot;
+      QString m_songA;
+      QString m_songB;
+      QString m_screenshotPath;
+  };
+  } // namespace checks::host
+
+  int runHostIntegrationCheck(const QString &projectRoot, const QString &songA, const QString &songB,
+                              const QString &screenshotPath, const QStringList &qtArguments)
+  {
+      checks::host::HostIntegrationTest test(projectRoot, songA, songB, screenshotPath);
+      QStringList arguments{QStringLiteral("host-integration")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "tst_hostintegration.moc"

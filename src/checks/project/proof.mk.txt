@@ -1,0 +1,568 @@
+Assertion correspondence: project/mk.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/project/mk.cpp
+Original SHA-256: cfaa01e3ee61067c10123ce401420d666b86cf0f85dd8aae265a9b90ea35478d
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute;
+PARTIAL identifies a related Swift predicate with an explicit unproved condition;
+GAP identifies an original predicate without an established equivalent;
+NATIVE identifies an observation only a native window/rendering/harness run can establish.
+36 assertion sites across songs.mk recipe parsing, volume-write minimality, STD_REVERB spelling preservation, and append/remove byte-exact round-trips. No Swift counterpart exists; every site below is GAP.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+C++ runner runMkCheck (SongsMkTest) against a ProjectFixture copy of the staged root; no Swift entry point executes these checks.
+
+Fixture, sequence and row constraints
+The mkOnly fixture guard (no midi.cfg, songs.mk present) gates every case; volume writes use 111/99; append/remove round-trips demand byte-exact songs.mk restoration including double-remove.
+
+Original assertion inventory
+
+A001 | SongsMkTest::init | src/checks/project/mk.cpp:101
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <QDir>
+  #include <QFile>
+
+  #include <memory>
+
+  #include "checks/support/songfixture.h"
+  #include "project/decompproject.h"
+  #include "project/songregistry.h"
+  #include "project/songsmk.h"
+
+  namespace {
+
+  QStringList readAllLines(const QString &path)
+  {
+      QFile file(path);
+      if (!file.open(QIODevice::ReadOnly))
+          return {};
+      return QString::fromUtf8(file.readAll()).split(QLatin1Char('\n'));
+  }
+
+  QByteArray readAllBytes(const QString &path)
+  {
+      QFile file(path);
+      if (!file.open(QIODevice::ReadOnly))
+          return {};
+      return file.readAll();
+  }
+
+  const SongInfo *songByLabel(const DecompProject &project, const QString &label)
+  {
+      for (const SongInfo &song : project.songs())
+          if (song.label == label)
+              return &song;
+      return nullptr;
+  }
+
+  class SongsMkTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(SongsMkTest)
+
+    public:
+      SongsMkTest(QString stagedRoot, QString songLabel)
+          : m_stagedRoot(std::move(stagedRoot))
+          , m_songLabel(std::move(songLabel))
+      {}
+
+    private slots:
+      void init();
+      void cleanup();
+      void parsesAndVolumeWriteChangesOnlyRecipe();
+      void preservesStdReverbVariableSpelling();
+      void appendRemoveRuleRoundsTripsByteExactly();
+
+    private:
+      bool mkOnly(QString &error) const;
+      bool open(DecompProject &project, QString &error) const;
+      QString mkPath() const;
+      QString midiDirectory() const;
+
+      QString m_stagedRoot;
+      QString m_songLabel;
+      std::unique_ptr<checks::ProjectFixture> m_project;
+  };
+
+  bool SongsMkTest::mkOnly(QString &error) const
+  {
+      const QString midiCfg = QDir(midiDirectory()).filePath(QStringLiteral("midi.cfg"));
+      if (QFile::exists(midiCfg)) {
+          error = QStringLiteral("fixture must have no midi.cfg");
+          return false;
+      }
+      if (!QFile::exists(mkPath())) {
+          error = QStringLiteral("fixture is missing songs.mk");
+          return false;
+      }
+      return true;
+  }
+
+  bool SongsMkTest::open(DecompProject &project, QString &error) const
+  {
+      return project.open(m_project->root(), &error);
+  }
+
+  QString SongsMkTest::mkPath() const
+  {
+      return SongsMk::path(m_project->root());
+  }
+
+  QString SongsMkTest::midiDirectory() const
+  {
+      return m_project->root() + QStringLiteral("/sound/songs/midi");
+  }
+
+  void SongsMkTest::init()
+  {
+      QString error;
+      m_project = checks::ProjectFixture::copyOf(m_stagedRoot, error);
+
+Original expression:
+  QVERIFY2(m_project, qPrintable(error))
+
+A002 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:112
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SongsMkTest::cleanup()
+  {
+      m_project.reset();
+  }
+
+  void SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(mkOnly(error), qPrintable(error))
+
+A003 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:114
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      DecompProject project;
+
+Original expression:
+  QVERIFY2(open(project, error), qPrintable(error))
+
+A004 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:116
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const SongInfo *const song = songByLabel(project, m_songLabel);
+
+Original expression:
+  QVERIFY2(song, qPrintable(QStringLiteral("fixture song '%1' is missing").arg(m_songLabel)))
+
+A005 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!song)
+          return;
+
+Original expression:
+  QVERIFY(song->hasCfg)
+
+A006 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:120
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!song->cfg.voicegroupArg.isEmpty())
+
+A007 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!song->cfg.rawFlags.join(QLatin1Char(' ')).contains(QLatin1Char('$')))
+
+A008 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:128
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      const QString preservedVoicegroup = song->cfg.voicegroupArg;
+      const int preservedReverb = song->cfg.reverb;
+      const QStringList before = readAllLines(mkPath());
+      SongCfg updated = song->cfg;
+      updated.masterVolume = 111;
+
+Original expression:
+  QVERIFY2(SongRegistry::writeSongFlags(midiDirectory(), m_songLabel,
+                                            SongRegistry::mergeCfgFlags(updated), &error),
+               qPrintable(error))
+
+A009 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:131
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!QFile::exists(QDir(midiDirectory()).filePath(QStringLiteral("midi.cfg"))))
+
+A010 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:134
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      const QStringList after = readAllLines(mkPath());
+
+Original expression:
+  QCOMPARE(after.size(), before.size())
+
+A011 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:142
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (after.size() == before.size()) {
+          const QString target = QStringLiteral("/%1.s").arg(m_songLabel);
+          int changed = 0;
+          for (qsizetype index = 0; index < before.size(); ++index) {
+              if (before[index] == after[index])
+                  continue;
+              ++changed;
+
+Original expression:
+  QVERIFY(index > 0)
+
+A012 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:144
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              if (index > 0) {
+
+Original expression:
+  QVERIFY(before[index - 1].contains(target))
+
+A013 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:145
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(after[index].contains(QStringLiteral("$(MID)")))
+
+A014 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:148
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              }
+          }
+
+Original expression:
+  QCOMPARE(changed, 1)
+
+A015 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:152
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      DecompProject reopened;
+
+Original expression:
+  QVERIFY2(open(reopened, error), qPrintable(error))
+
+A016 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:154
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const SongInfo *const reloaded = songByLabel(reopened, m_songLabel);
+
+Original expression:
+  QVERIFY(reloaded)
+
+A017 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (reloaded) {
+
+Original expression:
+  QCOMPARE(reloaded->cfg.masterVolume, 111)
+
+A018 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:157
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(reloaded->cfg.voicegroupArg, preservedVoicegroup)
+
+A019 | SongsMkTest::parsesAndVolumeWriteChangesOnlyRecipe | src/checks/project/mk.cpp:158
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(reloaded->cfg.reverb, preservedReverb)
+
+A020 | SongsMkTest::preservesStdReverbVariableSpelling | src/checks/project/mk.cpp:165
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void SongsMkTest::preservesStdReverbVariableSpelling()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(mkOnly(error), qPrintable(error))
+
+A021 | SongsMkTest::preservesStdReverbVariableSpelling | src/checks/project/mk.cpp:179
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QStringList before = readAllLines(mkPath());
+      QString variableLabel;
+      for (qsizetype index = 0; index + 1 < before.size(); ++index) {
+          if (!before[index + 1].contains(QStringLiteral("-R$(STD_REVERB)")))
+              continue;
+          const int slash = before[index].indexOf(QStringLiteral(")/"));
+          const int extension = before[index].indexOf(QStringLiteral(".s:"));
+          if (slash >= 0 && extension > slash) {
+              variableLabel = before[index].mid(slash + 2, extension - slash - 2);
+              break;
+          }
+      }
+      if (variableLabel.isEmpty())
+
+Original expression:
+  QSKIP("fixture has no -R$(STD_REVERB) recipe")
+
+A022 | SongsMkTest::preservesStdReverbVariableSpelling | src/checks/project/mk.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      DecompProject project;
+
+Original expression:
+  QVERIFY2(open(project, error), qPrintable(error))
+
+A023 | SongsMkTest::preservesStdReverbVariableSpelling | src/checks/project/mk.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const SongInfo *const variableSong = songByLabel(project, variableLabel);
+
+Original expression:
+  QVERIFY2(variableSong, qPrintable(QStringLiteral("no song for '%1'").arg(variableLabel)))
+
+A024 | SongsMkTest::preservesStdReverbVariableSpelling | src/checks/project/mk.cpp:189
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!variableSong)
+          return;
+      SongCfg updated = variableSong->cfg;
+      updated.masterVolume = 99;
+
+Original expression:
+  QVERIFY2(SongRegistry::writeSongFlags(midiDirectory(), variableLabel,
+                                            SongRegistry::mergeCfgFlags(updated), &error),
+               qPrintable(error))
+
+A025 | SongsMkTest::preservesStdReverbVariableSpelling | src/checks/project/mk.cpp:203
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      bool preserved = false;
+      const QStringList after = readAllLines(mkPath());
+      for (qsizetype index = 0; index + 1 < after.size(); ++index) {
+          if (after[index].contains(QStringLiteral("/%1.s").arg(variableLabel)) &&
+              after[index + 1].contains(QStringLiteral("-R$(STD_REVERB)")) &&
+              after[index + 1].contains(QStringLiteral("-V099"))) {
+              preserved = true;
+              break;
+          }
+      }
+
+Original expression:
+  QVERIFY(preserved)
+
+A026 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:209
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SongsMkTest::appendRemoveRuleRoundsTripsByteExactly()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(mkOnly(error), qPrintable(error))
+
+A027 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:211
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      DecompProject project;
+
+Original expression:
+  QVERIFY2(open(project, error), qPrintable(error))
+
+A028 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const SongInfo *const song = songByLabel(project, m_songLabel);
+
+Original expression:
+  QVERIFY(song)
+
+A029 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:216
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!song)
+          return;
+
+Original expression:
+  QVERIFY(!song->cfg.voicegroupArg.isEmpty())
+
+A030 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      const QByteArray before = readAllBytes(mkPath());
+      const QString newLabel = QStringLiteral("mus_mkcheck_new");
+      const QStringList newFlags{QStringLiteral("-E"), QStringLiteral("-R50"),
+                                 QStringLiteral("-G%1").arg(song->cfg.voicegroupArg),
+                                 QStringLiteral("-V100")};
+
+Original expression:
+  QVERIFY2(SongRegistry::writeSongFlags(midiDirectory(), newLabel, newFlags, &error),
+               qPrintable(error))
+
+A031 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:225
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(SongsMk::parseFlags(mkPath()).value(newLabel), newFlags)
+
+A032 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:227
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY2(SongRegistry::removeSongFlags(midiDirectory(), newLabel, &error), qPrintable(error))
+
+A033 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!SongsMk::parseFlags(mkPath()).contains(newLabel))
+
+A034 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:229
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(readAllBytes(mkPath()), before)
+
+A035 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:230
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(SongRegistry::removeSongFlags(midiDirectory(), newLabel, &error), qPrintable(error))
+
+A036 | SongsMkTest::appendRemoveRuleRoundsTripsByteExactly | src/checks/project/mk.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(readAllBytes(mkPath()), before)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace
+
+  int runMkCheck(const QString &stagedRoot, const QString &songLabel, const QStringList &qtArguments)
+  {
+      SongsMkTest test(stagedRoot, songLabel);
+      QStringList arguments{QStringLiteral("songs-mk")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "mk.moc"
+
+Swift assertion predicates
+
+(none — no Swift counterpart identified)

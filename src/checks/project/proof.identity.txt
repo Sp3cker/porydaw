@@ -1,0 +1,770 @@
+Assertion correspondence: project/identity.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/project/identity.cpp
+Original SHA-256: eb1c1ce402caed41c83397af9c262da13d2589dbe7216512eed5b0a979575399
+Swift counterpart: src/checks/editcheck/NoteChecks.swift
+Swift SHA-256: 9cd49c319b9b161331451f67c3d9a85050aa0180a45226845d9708028792df39
+Additional Swift counterpart: src/checks/workspace/SessionChecks.swift
+Additional Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute;
+PARTIAL identifies a related Swift predicate with an explicit unproved condition;
+GAP identifies an original predicate without an established equivalent;
+NATIVE identifies an observation only a native window/rendering/harness run can establish.
+52 assertion sites across SongName, VoicegroupId, SavedWorkspaceRecipe, and SongHistory (QUndoStack merge) cases. Swift history predicates exercise HistoryGroup merge on SongDocument rather than QUndoStack mergeWith; native identity predicates run through ProjectService open paths. No site is marked MATCHED: every pairing below differs in harness or in the observed conjunctions.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runDocumentHistorySuite (NoteChecks.swift) owns gestureAndIdentityHistory and historyMergeContracts. runProjectSessionSuite (SessionChecks.swift) owns the native identity checks via ProjectService open paths against the staged swiftcore-session-test project built by stageTestProject. No dedicated project-identity Swift suite exists.
+
+Fixture, sequence and row constraints
+voicegroupId_rejections_data expands one site over 7 rows (empty, absolute, parent, parent-file, nested-parent, project-root, normalizes-to-root). Merge cases hinge on kFirstGesture/kSecondGesture ids and HistoryCountCommand deltas (+1/+2, +4, +1/-1); the saved-boundary and cancelling cases depend on markDocumentSaved sequencing.
+
+Original assertion inventory
+
+A001 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:76
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <QUndoCommand>
+  #include <QUndoStack>
+
+  #include <memory>
+  #include <optional>
+
+  #include "core/songhistory.h"
+  #include "project/projectidentity.h"
+
+  namespace {
+
+  class HistoryCountCommand final : public QUndoCommand
+  {
+    public:
+      HistoryCountCommand(int *value, int delta, int gestureId)
+          : QUndoCommand(QStringLiteral("count"))
+          , m_value(value)
+          , m_delta(delta)
+          , m_gestureId(gestureId)
+      {}
+
+      int id() const override { return m_gestureId; }
+      void redo() override { *m_value += m_delta; }
+      void undo() override { *m_value -= m_delta; }
+      bool mergeWith(const QUndoCommand *other) override
+      {
+          const auto *const command = dynamic_cast<const HistoryCountCommand *>(other);
+          if (!command)
+              return false;
+          m_delta += command->m_delta;
+          setObsolete(m_delta == 0);
+          return true;
+      }
+
+    private:
+      int *m_value;
+      int m_delta;
+      int m_gestureId;
+  };
+
+  constexpr int kFirstGesture = 0x6863;  // 'hc'
+  constexpr int kSecondGesture = 0x6864; // 'hd'
+
+  void pushMergedCount(SongHistory &history, int &value)
+  {
+      history.pushDocument(std::make_unique<HistoryCountCommand>(&value, 1, kFirstGesture));
+      history.pushDocument(std::make_unique<HistoryCountCommand>(&value, 2, kFirstGesture));
+  }
+
+  class ProjectIdentityTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(ProjectIdentityTest)
+
+    public:
+      ProjectIdentityTest() = default;
+
+    private slots:
+      void songName_acceptRejectRoundtripHash();
+      void voicegroupId_rejections_data();
+      void voicegroupId_rejections();
+      void voicegroupId_normalizationAndSectionHash();
+      void savedRecipe_dedupOrderSelection();
+      void savedRecipe_selectionFallbacks();
+      void savedRecipe_legacySingleLabelAndEmpty();
+      void songHistory_startsClean();
+      void songHistory_mergePreservesOldestBeforeFreshAfter();
+      void songHistory_savedBoundaryRefusesMerge();
+      void songHistory_cancellingMergeRemovesEntry();
+  };
+
+  void ProjectIdentityTest::songName_acceptRejectRoundtripHash()
+  {
+
+Original expression:
+  QVERIFY(!SongName::create(QString{}).has_value())
+
+A002 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:81
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+
+      const std::optional<SongName> first = SongName::create(QStringLiteral("intro"));
+      const std::optional<SongName> same = SongName::create(QStringLiteral("intro"));
+      const std::optional<SongName> different = SongName::create(QStringLiteral("outro"));
+
+Original expression:
+  QVERIFY(first)
+
+A003 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:82
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(same)
+
+A004 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:83
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(different)
+
+A005 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:87
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+      if (!(first && same && different))
+          return;
+
+
+Original expression:
+  QCOMPARE(first->value(), QStringLiteral("intro"))
+
+A006 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:88
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(*first == *same)
+
+A007 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:89
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(*first != *different)
+
+A008 | ProjectIdentityTest::songName_acceptRejectRoundtripHash | src/checks/project/identity.cpp:90
+Disposition: PARTIAL
+Mapping/reason: Related predicate S009 in SessionChecks.swift; the native service round-trips the accepted label but does not establish the empty-reject, equality/inequality, or qHash conjunctions below.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(qHash(*first) == qHash(*same))
+
+A009 | ProjectIdentityTest::voicegroupId_rejections | src/checks/project/identity.cpp:108
+Disposition: PARTIAL
+Mapping/reason: Related predicate S007 in SessionChecks.swift; native open rejects invalid voicegroup labels, but VoicegroupId::create-level rejection for each of the 7 data rows below (including the ./ normalization-to-root case) is unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::voicegroupId_rejections_data()
+  {
+      QTest::addColumn<QString>("sourcePath");
+      QTest::newRow("empty") << QString{};
+      QTest::newRow("absolute") << QStringLiteral("/abs/perc.vg");
+      QTest::newRow("parent") << QStringLiteral("..");
+      QTest::newRow("parent-file") << QStringLiteral("../escape.vg");
+      QTest::newRow("nested-parent") << QStringLiteral("drums/../../escape.vg");
+      QTest::newRow("project-root") << QStringLiteral(".");
+      QTest::newRow("normalizes-to-root") << QStringLiteral("./");
+  }
+
+  void ProjectIdentityTest::voicegroupId_rejections()
+  {
+      QFETCH(QString, sourcePath);
+
+Original expression:
+  QVERIFY(!VoicegroupId::create(sourcePath, QString{}).has_value())
+
+A010 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:115
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::voicegroupId_normalizationAndSectionHash()
+  {
+      const std::optional<VoicegroupId> normalized =
+          VoicegroupId::create(QStringLiteral("./drums//shared/../perc.vg"), QString{});
+
+Original expression:
+  QVERIFY(normalized)
+
+A011 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:118
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+      if (!normalized)
+          return;
+
+Original expression:
+  QCOMPARE(normalized->sourceRelativePath(), QStringLiteral("drums/perc.vg"))
+
+A012 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:119
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(normalized->sectionLabel().isEmpty())
+
+A013 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:127
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+      const std::optional<VoicegroupId> kick =
+          VoicegroupId::create(QStringLiteral("drums/perc.vg"), QStringLiteral("kick"));
+      const std::optional<VoicegroupId> sameKick =
+          VoicegroupId::create(QStringLiteral("drums/./perc.vg"), QStringLiteral("kick"));
+      const std::optional<VoicegroupId> snare =
+          VoicegroupId::create(QStringLiteral("drums/perc.vg"), QStringLiteral("snare"));
+
+Original expression:
+  QVERIFY(kick)
+
+A014 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:128
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(sameKick)
+
+A015 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:129
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(snare)
+
+A016 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:133
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+      if (!(kick && sameKick && snare))
+          return;
+
+
+Original expression:
+  QCOMPARE(kick->sectionLabel(), QStringLiteral("kick"))
+
+A017 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:134
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(*kick == *sameKick)
+
+A018 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:135
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(*kick != *snare)
+
+A019 | ProjectIdentityTest::voicegroupId_normalizationAndSectionHash | src/checks/project/identity.cpp:136
+Disposition: PARTIAL
+Mapping/reason: Related predicate S008 in SessionChecks.swift; the native service publishes a normalized project-relative bank path, but the section-label, equality, and hash conjunctions below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(qHash(*kick) == qHash(*sameKick))
+
+A020 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:146
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::savedRecipe_dedupOrderSelection()
+  {
+      const SavedWorkspaceRecipe recipe =
+          normalizeSavedRecipe(QStringLiteral("/projects/demo"),
+                               {QStringLiteral("b"), QString{}, QStringLiteral("a"),
+                                QStringLiteral("b"), QStringLiteral("c"), QStringLiteral("a")},
+                               QStringLiteral("a"));
+
+Original expression:
+  QCOMPARE(recipe.projectPath, QStringLiteral("/projects/demo"))
+
+A021 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:147
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(recipe.orderedSongs.size(), 3)
+
+A022 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (recipe.orderedSongs.size() != 3)
+          return;
+
+Original expression:
+  QCOMPARE(recipe.orderedSongs[0].value(), QStringLiteral("b"))
+
+A023 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:151
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(recipe.orderedSongs[1].value(), QStringLiteral("a"))
+
+A024 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:152
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(recipe.orderedSongs[2].value(), QStringLiteral("c"))
+
+A025 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(recipe.selected)
+
+A026 | ProjectIdentityTest::savedRecipe_dedupOrderSelection | src/checks/project/identity.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not normalizeSavedRecipe dedup/order/selection; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (recipe.selected)
+
+Original expression:
+  QCOMPARE(recipe.selected->value(), QStringLiteral("a"))
+
+A027 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:162
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::savedRecipe_selectionFallbacks()
+  {
+      const SavedWorkspaceRecipe missing = normalizeSavedRecipe(
+          QString{}, {QStringLiteral("a"), QStringLiteral("b")}, QStringLiteral("gone"));
+
+Original expression:
+  QVERIFY(missing.selected)
+
+A028 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:164
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (missing.selected)
+
+Original expression:
+  QCOMPARE(missing.selected->value(), QStringLiteral("a"))
+
+A029 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:168
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+      const SavedWorkspaceRecipe empty =
+          normalizeSavedRecipe(QString{}, {QStringLiteral("a"), QStringLiteral("b")}, QString{});
+
+Original expression:
+  QVERIFY(empty.selected)
+
+A030 | ProjectIdentityTest::savedRecipe_selectionFallbacks | src/checks/project/identity.cpp:170
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe undo/redo tempo timing, not selection fallbacks; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (empty.selected)
+
+Original expression:
+  QCOMPARE(empty.selected->value(), QStringLiteral("a"))
+
+A031 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:177
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty()
+  {
+      const SavedWorkspaceRecipe legacy =
+          normalizeSavedRecipe(QString{}, {QString{}, QString{}}, QStringLiteral("solo"));
+
+Original expression:
+  QCOMPARE(legacy.orderedSongs.size(), 1)
+
+A032 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:179
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (legacy.orderedSongs.size() == 1)
+
+Original expression:
+  QCOMPARE(legacy.orderedSongs[0].value(), QStringLiteral("solo"))
+
+A033 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(legacy.selected)
+
+A034 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (legacy.selected)
+
+Original expression:
+  QCOMPARE(legacy.selected->value(), QStringLiteral("solo"))
+
+A035 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+      const SavedWorkspaceRecipe empty = normalizeSavedRecipe(QString{}, {}, QString{});
+
+Original expression:
+  QVERIFY(empty.orderedSongs.isEmpty())
+
+A036 | ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty | src/checks/project/identity.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the Swift predicates reusing this case ID observe redo tempo timing, not legacy single-label or empty recipes; the conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!empty.selected)
+
+A037 | ProjectIdentityTest::songHistory_startsClean | src/checks/project/identity.cpp:193
+Disposition: PARTIAL
+Mapping/reason: Related predicate S004 in SessionChecks.swift; an opened DocumentSession starts clean (isDirty), but SongHistory current==saved identity equality is unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::songHistory_startsClean()
+  {
+      QUndoStack stack;
+      SongHistory history(stack);
+
+Original expression:
+  QVERIFY(history.currentDocumentIdentity() == history.savedDocumentIdentity())
+
+A038 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:205
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter()
+  {
+      QUndoStack stack;
+      SongHistory history(stack);
+      int value = 0;
+      const DocumentStateIdentity base = history.savedDocumentIdentity();
+
+      pushMergedCount(history, value);
+      const DocumentStateIdentity merged = history.currentDocumentIdentity();
+
+Original expression:
+  QCOMPARE(stack.count(), 1)
+
+A039 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:206
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(value, 3)
+
+A040 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:207
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(merged != base)
+
+A041 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:210
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+
+      stack.undo();
+
+Original expression:
+  QCOMPARE(value, 0)
+
+A042 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:211
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(history.currentDocumentIdentity() == base)
+
+A043 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:213
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+      stack.redo();
+
+Original expression:
+  QCOMPARE(value, 3)
+
+A044 | ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter | src/checks/project/identity.cpp:214
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in NoteChecks.swift; HistoryGroup merge/undo/redo on SongDocument is exercised, but QUndoStack count==1, value==3, and oldest-origin/latest-result identity conjunctions are unproved (different merge machinery: HistoryCountCommand.mergeWith vs HistoryGroup).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(history.currentDocumentIdentity() == merged)
+
+A045 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:228
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge()
+  {
+      QUndoStack stack;
+      SongHistory history(stack);
+      int value = 0;
+
+      pushMergedCount(history, value);
+      const DocumentStateIdentity merged = history.currentDocumentIdentity();
+      history.markDocumentSaved(merged);
+      history.pushDocument(std::make_unique<HistoryCountCommand>(&value, 4, kFirstGesture));
+      const DocumentStateIdentity afterRefusal = history.currentDocumentIdentity();
+
+Original expression:
+  QCOMPARE(stack.count(), 2)
+
+A046 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:229
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(value, 7)
+
+A047 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:230
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(afterRefusal != merged)
+
+A048 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:233
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Source context since previous assertion:
+  ;
+
+      stack.undo();
+
+Original expression:
+  QCOMPARE(value, 3)
+
+A049 | ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge | src/checks/project/identity.cpp:234
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in NoteChecks.swift; the saved-boundary refusal is exercised on SongDocument, but count==2, value==7, and saved-identity restoration conjunctions are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(history.currentDocumentIdentity() == merged)
+
+A050 | ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry | src/checks/project/identity.cpp:250
+Disposition: PARTIAL
+Mapping/reason: Related predicate S003 in NoteChecks.swift; the self-cancelling gesture is exercised on SongDocument, but count/value/identity conjunctions are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry()
+  {
+      QUndoStack stack;
+      SongHistory history(stack);
+      int value = 0;
+
+      pushMergedCount(history, value);
+      history.markDocumentSaved(history.currentDocumentIdentity());
+      history.pushDocument(std::make_unique<HistoryCountCommand>(&value, 4, kFirstGesture));
+      const DocumentStateIdentity afterRefusal = history.currentDocumentIdentity();
+      history.pushDocument(std::make_unique<HistoryCountCommand>(&value, 1, kSecondGesture));
+      history.pushDocument(std::make_unique<HistoryCountCommand>(&value, -1, kSecondGesture));
+
+
+Original expression:
+  QCOMPARE(stack.count(), 2)
+
+A051 | ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry | src/checks/project/identity.cpp:251
+Disposition: PARTIAL
+Mapping/reason: Related predicate S003 in NoteChecks.swift; the self-cancelling gesture is exercised on SongDocument, but count/value/identity conjunctions are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(value, 7)
+
+A052 | ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry | src/checks/project/identity.cpp:252
+Disposition: PARTIAL
+Mapping/reason: Related predicate S003 in NoteChecks.swift; the self-cancelling gesture is exercised on SongDocument, but count/value/identity conjunctions are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(history.currentDocumentIdentity() == afterRefusal)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace
+
+  int runProjectIdentityCheck(const QStringList &qtArguments)
+  {
+      ProjectIdentityTest test;
+      QStringList arguments{QStringLiteral("project-identity")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "identity.moc"
+
+Swift assertion predicates
+
+S001 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift:374
+  report.expect(mergedAtLatestResult && restoredOldestOrigin
+          && merged.note(mergedID)?.tick == 3
+          && merged.history.currentIdentity == mergedIdentity,
+          cppID: "project-identity/ProjectIdentityTest::songHistory_mergePreservesOldestBeforeFreshAfter",
+          message: "one merged document gesture undoes to its oldest origin and redoes to its latest result")
+
+S002 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift:393
+  report.expect(postBoundaryValue
+          && postBoundaryIdentity != saved.identity
+          && boundary.note(boundaryID)?.tick == 3
+          && boundary.history.currentIdentity == saved.identity,
+          cppID: "project-identity/ProjectIdentityTest::songHistory_savedBoundaryRefusesMerge",
+          message: "a saved boundary seals the document gesture so one undo restores the saved result")
+
+S003 | historyMergeContracts | src/checks/editcheck/NoteChecks.swift:417
+  report.expect(redundantGestureRemoved
+          && cancelling.note(cancellingID)?.tick == 3
+          && cancelling.history.currentIdentity == cancellingSaved.identity,
+          cppID: "project-identity/ProjectIdentityTest::songHistory_cancellingMergeRemovesEntry",
+          message: "a self-cancelling document gesture disappears so undo crosses the prior post-save edit")
+
+S004 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:509
+  report.expectEqual(false, session.document.isDirty,
+                         cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
+                         what: "opened session starts clean")
+
+S005 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:617
+  report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
+                             cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
+                             what: "undo tempo restores initial 120 BPM timing")
+
+S006 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:624
+  report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                             cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
+                             what: "redo tempo restores 150 BPM timing")
+
+S007 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1029
+  report.expect(
+                  operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
+                  cppID: cppID,
+                  message: "playable label reaches native voicegroup resolution and is rejected")
+
+S008 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1039
+  report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
+                             cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+                             what: "native service publishes a project-relative normalized bank identity")
+
+S009 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1042
+  report.expectEqual("mus_session_test", normalized.source.label,
+                             cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
+                             what: "native service round-trips the accepted playable song label")

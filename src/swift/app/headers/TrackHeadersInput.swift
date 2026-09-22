@@ -88,8 +88,11 @@ extension TrackHeadersPresenter {
             showHeaderMenu(track: track, x: x, y: y)
             return true
         } else if target != .mute && target != .solo {
-            // DocumentSession lacks a track-scope toggle API for Ctrl-click multi-selection.
-            selectTrack(track)
+            let action: DocumentSession.TrackScopeAction = modifiers & 0x0400_0000 != 0
+                ? .toggle : modifiers & 0x0200_0000 != 0 ? .range : .plain
+            session.adjustTrackScope(track: track, action: action)
+            if let primary = session.selectedTrack { onTrackSelected?(primary) }
+            refreshFromDocument()
             guard button == 1, modifiers & (0x0200_0000 | 0x0400_0000) == 0 else { return true }
             pointer.dragArmed = true
         } else if button != 1 { return true }

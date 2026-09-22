@@ -1,0 +1,882 @@
+Assertion correspondence: rollcheck/scale_editing.cpp
+
+Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
+Original: src/checks/rollcheck/scale_editing.cpp
+Original SHA-256: cbe3d727ae2a6731de8863136f0bfc86e412d5ebbe1bf645aa0138153b3f9b2f
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup, rows,
+loops, and guards between assertions verbatim. MATCHED identifies an equivalent
+Swift predicate with execution; PARTIAL a related predicate with an explicit
+unproved condition; NATIVE a retained native-window/rendering/input or harness
+obligation a presenter-level Swift check cannot establish; GAP an original
+predicate without a replacement assertion. No same-dir Swift counterpart exists
+and no Swift file covering this suite was identified, so this file lists no S
+predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
+or claims whole-case equivalence.
+Nine slots cover Fold keyboard nudges (plus a _data table), multi-note and
+repeated-pitch mapping, exception nudge/draw/audition, pointer drag, horizontal
+exception moves, and out-of-range nudges. Document-outcome sites (mapped pitches,
+draw rejection, drag commits, undo-count holds, smf restoration) are GAP; the
+sounding-preview and probe-guard sites are NATIVE.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry point executes these checks. The original slots run under
+PianoRollTest (checks/rollcheck/tst_pianoroll.h): scaleFoldKeyboardNudges
+(plus scaleFoldKeyboardNudges_data), scaleFoldMultiNoteMapping,
+scaleFoldRepeatedPitchMapping, scaleFoldExceptionNudge, scaleFoldExceptionDraw,
+scaleFoldExceptionAudition, scaleFoldPointerDrag, scaleFoldHorizontalException,
+scaleFoldOutOfRange. Each slot builds on the per-slot PianoRollFixture
+(checks/rollcheck/rollcheck.h, m_fixture): production SongTab/document/view,
+roll and gutter Quick inputs, key-stroke/mouse delivery through checks::events
+(checks/support/eventsynth.h), and Quick pumping (checks/support/quickframebuffer.h).
+
+Fixture, sequence and row constraints
+scaleFoldKeyboardNudges_data expands one failure site into three rows
+(fold-degree Up moves C 60 to D 62; fold-octave Shift+Up moves C 60 to 72;
+chromatic Off Up moves C 60 to C# 61). Most slots close with the same two
+guards: the gesture pass must leave the undo index at its entry value and
+doc.smf().write() must equal the entry bytes. The D7/D8/D9+D12/D10/D11 pointer
+and audition sequences apply explicit ViewStates, pump Quick, and observe
+auditionNote spy lambdas, note selection, projection row counts, and document
+lookups in order.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:71
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/rollcheck/tst_pianoroll.h"
+
+  #include "checks/rollcheck/rollcheck.h"
+
+  #include <QByteArray>
+  #include <QCoreApplication>
+  #include <QEvent>
+  #include <QObject>
+  #include <QPoint>
+  #include <QtTest>
+  #include <algorithm>
+  #include <cmath>
+  #include <cstdint>
+
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "core/songdocument.h"
+  #include "porydaw_scale.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+
+  using namespace checks::rollcheck;
+
+  void PianoRollTest::scaleFoldKeyboardNudges_data()
+  {
+      QTest::addColumn<bool>("fold");
+      QTest::addColumn<int>("modifiers");
+      QTest::addColumn<int>("expectedPitch");
+      QTest::addColumn<QString>("failure");
+
+      QTest::newRow("fold-degree") << true << int(Qt::NoModifier) << 62
+                                   << QStringLiteral(
+                                          "Fold Up did not move C up one scale degree to D");
+      QTest::newRow("fold-octave") << true << int(Qt::ShiftModifier) << 72
+                                   << QStringLiteral("Fold Shift+Up did not move C up an octave");
+      QTest::newRow("chromatic") << false << int(Qt::NoModifier) << 61
+                                 << QStringLiteral("Off Up did not move C up a semitone");
+  }
+
+  void PianoRollTest::scaleFoldKeyboardNudges()
+  {
+      QFETCH(bool, fold);
+      QFETCH(int, modifiers);
+      QFETCH(int, expectedPitch);
+      QFETCH(QString, failure);
+
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      const auto noteIdAt = [&](Tick tick, uint8_t key) {
+          DocNote note;
+          return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
+      };
+
+      doc.addNote(scaleTrack, tBase, 60, dur, 100);
+      view.selectionModel().setNoteSelection({noteIdAt(tBase, 60)});
+      view.setScaleHighlight(false);
+      view.setScaleFold(fold);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      sendKeyStroke(*roll, Qt::Key_Up, Qt::KeyboardModifiers(modifiers), false);
+      DocNote moved;
+      if (!doc.findNote(scaleTrack, tBase, uint8_t(expectedPitch), &moved))
+Original expression:
+  QFAIL(qPrintable(failure))
+
+A002 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:80
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+      view.selectionModel().clearNoteSelection();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A003 | PianoRollTest::scaleFoldKeyboardNudges | src/checks/rollcheck/scale_editing.cpp:81
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A004 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:118
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldMultiNoteMapping()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+      const auto noteIdAt = [&](Tick tick, uint8_t key) {
+          DocNote note;
+          return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
+      };
+
+      // D4. Multi-note selection maps to distinct degrees (60,61 -> 62,64).
+      {
+          const int cmd0 = doc.undoStack()->index();
+          doc.addNote(scaleTrack, tBase, 60, dur, 100);
+          doc.addNote(scaleTrack, tBase, 61, dur, 100);
+          view.selectionModel().setNoteSelection({noteIdAt(tBase, 60), noteIdAt(tBase, 61)});
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
+          DocNote moved;
+          const bool okA = doc.findNote(scaleTrack, tBase, 62, &moved);
+          const bool okB = doc.findNote(scaleTrack, tBase, 64, &moved);
+          if (!okA || !okB)
+Original expression:
+  QFAIL("Fold Up did not map selected notes to distinct degrees")
+
+A005 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:128
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A006 | PianoRollTest::scaleFoldMultiNoteMapping | src/checks/rollcheck/scale_editing.cpp:129
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A007 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:167
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldRepeatedPitchMapping()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+      const auto noteIdAt = [&](Tick tick, uint8_t key) {
+          DocNote note;
+          return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
+      };
+
+      // D5. Repeated source pitch: two C60 notes both go to D62.
+      {
+          const int cmd0 = doc.undoStack()->index();
+          const Tick tA = tBase, tB = tBase + doc.ticksPerClock();
+          doc.addNote(scaleTrack, tA, 60, dur, 100);
+          doc.addNote(scaleTrack, tB, 60, dur, 100);
+          view.selectionModel().setNoteSelection({noteIdAt(tA, 60), noteIdAt(tB, 60)});
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
+          DocNote moved;
+          const bool okA = doc.findNote(scaleTrack, tA, 62, &moved);
+          const bool okB = doc.findNote(scaleTrack, tB, 62, &moved);
+          if (!okA || !okB)
+Original expression:
+  QFAIL("Repeated Fold source pitch did not share the destination")
+
+A008 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:177
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A009 | PianoRollTest::scaleFoldRepeatedPitchMapping | src/checks/rollcheck/scale_editing.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A010 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldExceptionNudge()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+      const auto noteIdAt = [&](Tick tick, uint8_t key) {
+          DocNote note;
+          return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
+      };
+
+      // D6. Off-scale source entry (exception) nudges to the first scale
+      // pitch above (61 -> 62).
+      {
+          const int cmd0 = doc.undoStack()->index();
+          doc.addNote(scaleTrack, tBase, 61, dur, 100);
+          view.selectionModel().setNoteSelection({noteIdAt(tBase, 61)});
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false);
+          DocNote moved;
+          if (!doc.findNote(scaleTrack, tBase, 62, &moved))
+Original expression:
+  QFAIL("Fold Up did not move an off-scale exception to the next degree")
+
+A011 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A012 | PianoRollTest::scaleFoldExceptionNudge | src/checks/rollcheck/scale_editing.cpp:224
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A013 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:278
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldExceptionDraw()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
+      const auto &proj = view.pitchProjection();
+      const auto foldCenterY = [&](int pitch) -> int {
+          const int row = view.pitchProjection().rowForPitch(pitch);
+          if (row == songview::PitchProjection::cHiddenRow)
+              return -1;
+          const qreal dpr = roll->devicePixelRatio();
+          const qreal top =
+              std::round((double(row) * view.camera().keyHeight() - view.camera().scrollY()) * dpr) /
+              dpr;
+          const qreal bottom =
+              std::round((double(row + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
+                         dpr) /
+              dpr;
+          return int(std::floor((top + bottom) / 2.0));
+      };
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+
+      // D7. Fold rejects drawing into an off-scale exception row.
+      {
+          const int cmd0 = doc.undoStack()->index();
+          doc.addNote(scaleTrack, tBase, 61, dur, 100);
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          const int r61 = proj.rowForPitch(61);
+          SongView::ViewState d7 = view.viewState();
+          d7.valid = true;
+          d7.keyHeight = pianoRollDefaultKeyHeight;
+          d7.scrollY =
+              double(std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
+          view.applyViewState(d7);
+          checks::support::pumpQuick();
+          const size_t notesBefore = doc.notesForTrack(scaleTrack).size();
+          drawNote(*roll, QPoint(40, foldCenterY(61)));
+          QCoreApplication::processEvents();
+          if (doc.notesForTrack(scaleTrack).size() != notesBefore)
+Original expression:
+  QFAIL("Fold accepted a draw into an off-scale exception row")
+
+A014 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A015 | PianoRollTest::scaleFoldExceptionDraw | src/checks/rollcheck/scale_editing.cpp:289
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A016 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:351
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldExceptionAudition()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *rollGutter = &check.rollGutterInput();
+      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
+      const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
+      const auto &proj = view.pitchProjection();
+      const auto foldCenterY = [&](int pitch) -> int {
+          const int row = view.pitchProjection().rowForPitch(pitch);
+          if (row == songview::PitchProjection::cHiddenRow)
+              return -1;
+          const qreal dpr = rollGutter->devicePixelRatio();
+          const qreal top =
+              std::round((double(row) * view.camera().keyHeight() - view.camera().scrollY()) * dpr) /
+              dpr;
+          const qreal bottom =
+              std::round((double(row + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
+                         dpr) /
+              dpr;
+          return int(std::floor((top + bottom) / 2.0));
+      };
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+
+      // D8. The exception row's piano key still auditions its pitch.
+      {
+          const int cmd0 = doc.undoStack()->index();
+          doc.addNote(scaleTrack, tBase, 61, dur, 100);
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          const int r61 = proj.rowForPitch(61);
+          SongView::ViewState d8 = view.viewState();
+          d8.valid = true;
+          d8.keyHeight = pianoRollDefaultKeyHeight;
+          d8.scrollY =
+              double(std::max(0, r61 * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
+          view.applyViewState(d8);
+          checks::support::pumpQuick();
+          int audKey = -1;
+          auto conn = QObject::connect(&view, &SongView::auditionNote, &view,
+                                       [&](int, int key, int velocity) {
+                                           if (velocity > 0)
+                                               audKey = key;
+                                       });
+          checks::events::sendMouse(*rollGutter, QEvent::MouseButtonPress,
+                                    QPoint(pianoKeyboardWidth / 2, foldCenterY(61)), Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          QObject::disconnect(conn);
+          if (audKey != 61)
+Original expression:
+  QFAIL("Fold exception-row piano key did not audition pitch 61")
+
+A017 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:363
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*rollGutter, QEvent::MouseButtonRelease,
+                                    QPoint(pianoKeyboardWidth / 2, foldCenterY(61)), Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A018 | PianoRollTest::scaleFoldExceptionAudition | src/checks/rollcheck/scale_editing.cpp:364
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A019 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:425
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldPointerDrag()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int pianoRollDefaultKeyHeight = check.pianoRollDefaultKeyHeight();
+      const auto projHidden = songview::PitchProjection::cHiddenRow;
+      const auto &proj = view.pitchProjection();
+      const auto foldCenterY = [&](int pitch) -> int {
+          const int row = view.pitchProjection().rowForPitch(pitch);
+          if (row == songview::PitchProjection::cHiddenRow)
+              return -1;
+          const qreal dpr = roll->devicePixelRatio();
+          const qreal top =
+              std::round((double(row) * view.camera().keyHeight() - view.camera().scrollY()) * dpr) /
+              dpr;
+          const qreal bottom =
+              std::round((double(row + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
+                         dpr) /
+              dpr;
+          return int(std::floor((top + bottom) / 2.0));
+      };
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+
+      // D9+D12. A vertical pointer drag previews and commits the fold
+      // degree; the layout only rebuilds once the gesture commits. The
+      // source pitch is an off-scale exception NOT present anywhere in the
+      // track: adding it adds exactly one fold row, and committing the
+      // drag away collapses it — deterministic regardless of the song.
+      {
+          const int cmd0 = doc.undoStack()->index();
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          view.setScaleRoot(0);
+          view.setScaleId(scaleMajor);
+          checks::support::pumpQuick();
+          bool occ[128] = {};
+          for (const DocNote &dn : doc.notesForTrack(scaleTrack))
+              occ[dn.key] = true;
+          // The lowest off-scale (non-diatonic) pitch the track never uses.
+          int src = -1, dst = -1;
+          for (int k = 48; k < 96; k++) {
+              if (porydaw_scale::isScalePitch(scaleMajor, 0, k) || occ[k])
+                  continue;
+              src = k;
+              dst = porydaw_scale::nextScalePitch(scaleMajor, 0, k, 1);
+              break;
+          }
+          if (src < 0 || dst < 0 || dst == src)
+Original expression:
+  QFAIL("Fold drag could not pick a free off-scale pitch")
+
+A020 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:437
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          // Occupied-only Fold needs a visible scale row for the pointer
+          // target. Add a distant support note when the track does not
+          // already use that destination pitch.
+          if (!occ[dst])
+              doc.addNote(scaleTrack, check.timeline().lengthTicks + doc.ticksPerClock() * 32,
+                          uint8_t(dst), doc.ticksPerClock(), 100);
+          const int rowsBeforeSource = proj.visibleRowCount();
+          doc.addNote(scaleTrack, tBase, uint8_t(src), uint32_t(doc.ticksPerClock()) * 4, 100);
+          QCoreApplication::processEvents();
+          const int rowsWithNote = proj.visibleRowCount();
+          if (rowsWithNote != rowsBeforeSource + 1)
+Original expression:
+  QFAIL("Fold drag did not gain the occupied off-scale row")
+
+A021 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:462
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          view.ensureTickVisible(tBase);
+          const int rSrc = proj.rowForPitch(src);
+          SongView::ViewState d9 = view.viewState();
+          d9.valid = true;
+          d9.keyHeight = pianoRollDefaultKeyHeight;
+          d9.scrollY =
+              double(std::max(0, rSrc * pianoRollDefaultKeyHeight - 4 * pianoRollDefaultKeyHeight));
+          view.applyViewState(d9);
+          checks::support::pumpQuick();
+          // Press the note center for a Move drag: horizontally the center
+          // avoids the 3px edge-grip zones on this 5px-wide, 4-tick note.
+          const int x = int((view.camera().contentX(double(tBase)) +
+                             view.camera().contentX(double(tBase) + doc.ticksPerClock() * 4)) /
+                            2.0);
+          const QPoint press(x, foldCenterY(src));
+          int dragAud = -1;
+          auto dconn = QObject::connect(&view, &SongView::auditionNote, &view,
+                                        [&](int, int key, int velocity) {
+                                            if (velocity > 0)
+                                                dragAud = key;
+                                        });
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, press, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          if (view.selectionModel().noteSelection().size() != 1)
+Original expression:
+  QFAIL("Fold drag press did not grab the off-scale note")
+
+A022 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:464
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (proj.visibleRowCount() != rowsWithNote)
+Original expression:
+  QFAIL("Fold rebuilt its layout during a pointer drag")
+
+A023 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:467
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const int rDst = proj.rowForPitch(dst);
+          if (rDst == projHidden)
+Original expression:
+  QFAIL("Fold drag target row is hidden")
+
+A024 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:472
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const QPoint target(x, foldCenterY(dst));
+          checks::events::sendMouse(*roll, QEvent::MouseMove, target, Qt::NoButton, Qt::LeftButton,
+                                    Qt::NoModifier);
+          if (proj.visibleRowCount() != rowsWithNote)
+Original expression:
+  QFAIL("Fold rebuilt its layout mid-drag")
+
+A025 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:479
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, target, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          QObject::disconnect(dconn);
+          QCoreApplication::processEvents();
+          DocNote moved;
+          if (!doc.findNote(scaleTrack, tBase, uint8_t(dst), &moved))
+Original expression:
+  QFAIL("Fold drag did not commit the note to its scale degree")
+
+A026 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:481
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (proj.visibleRowCount() != rowsBeforeSource)
+Original expression:
+  QFAIL("Fold did not rebuild its occupied rows after the drag commit")
+
+A027 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:491
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A028 | PianoRollTest::scaleFoldPointerDrag | src/checks/rollcheck/scale_editing.cpp:492
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A029 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:523
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldHorizontalException()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+
+      // D10. A horizontal-only move preserves an off-scale exception pitch.
+      {
+          const int cmd0 = doc.undoStack()->index();
+          doc.addNote(scaleTrack, tBase, 61, dur, 100);
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          DocNote n;
+          if (doc.findNote(scaleTrack, tBase, 61, &n)) {
+              const Tick next = tBase + doc.ticksPerClock() * 4;
+              doc.moveNotes({n}, int64_t(next) - int64_t(tBase), 0, /*mergeable=*/true);
+              DocNote moved;
+              if (!doc.findNote(scaleTrack, next, 61, &moved))
+Original expression:
+  QFAIL("Fold horizontal move changed the exception pitch")
+
+A030 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:534
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          }
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A031 | PianoRollTest::scaleFoldHorizontalException | src/checks/rollcheck/scale_editing.cpp:535
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A032 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:569
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::scaleFoldOutOfRange()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const auto scaleMajor = porydaw_scale::ScaleId::major;
+      const int scaleTrack = view.selectionModel().primaryTrack();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const Tick tBase = check.timeline().lengthTicks + doc.ticksPerClock() * 8;
+      const uint32_t dur = uint32_t(doc.ticksPerClock());
+      const auto noteIdAt = [&](Tick tick, uint8_t key) {
+          DocNote note;
+          return doc.findNote(scaleTrack, tick, key, &note) ? note.noteId : NoteId{};
+      };
+
+      // D11. Out-of-range diatonic nudge is atomic: no move, no command.
+      {
+          const int cmd0 = doc.undoStack()->index();
+          doc.addNote(scaleTrack, tBase, 127, dur, 100); // B = top C-major pitch
+          view.selectionModel().setNoteSelection({noteIdAt(tBase, 127)});
+          view.setScaleHighlight(false);
+          view.setScaleFold(true);
+          const int cmdsBefore = doc.undoStack()->count();
+          sendKeyStroke(*roll, Qt::Key_Up, Qt::NoModifier, false); // out of range
+          if (doc.undoStack()->count() != cmdsBefore)
+Original expression:
+  QFAIL("Fold out-of-range nudge pushed an undo command")
+
+A033 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:572
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote still;
+          if (!doc.findNote(scaleTrack, tBase, 127, &still))
+Original expression:
+  QFAIL("Fold out-of-range nudge moved the top pitch")
+
+A034 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:582
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > cmd0)
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+      }
+      view.setScaleHighlight(false);
+      view.setScaleFold(false);
+      view.setScaleRoot(0);
+      view.setScaleId(scaleMajor);
+      if (doc.undoStack()->index() != undo)
+Original expression:
+  QFAIL("gesture pass pushed an unexpected number of undo commands")
+
+A035 | PianoRollTest::scaleFoldOutOfRange | src/checks/rollcheck/scale_editing.cpp:583
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }

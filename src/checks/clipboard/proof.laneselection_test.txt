@@ -1,0 +1,877 @@
+Assertion correspondence: clipboard/laneselection_test.cpp
+
+Reference revision: 17942fef3dff1fce4d45c7b1aac7428f3027f395
+Original: src/checks/clipboard/laneselection_test.cpp
+Original SHA-256: ab2d332f404a73461b3ec5ccd4aca0b1c74d1955c5bf29d4bd552c2ad90a9485
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below (70 sites across seven test methods),
+including fixture guards. Source context preserves setup, rows, loops, and
+guards between assertions verbatim. No Swift counterpart file was identified in
+this checkout (no .swift under src/checks/clipboard/; the Swift check tree (src/checks/**/*.swift, incl.
+src/checks/automation/automationclipboard.swift) was searched with no
+predicate covering AutomationViewModel lane/node coverage, hit-testing, or
+endpoint lane-sets), so there are no Swift predicates to cite; every site
+below is GAP or NATIVE.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-harness obligations (ProjectionRig document
+plus EditorRig window); it does not establish coverage of any converted check.
+GAP identifies an original predicate without a replacement assertion.
+Tally: MATCHED 0, PARTIAL 0, GAP 62, NATIVE 8.
+
+Verification
+Command: deno task verify --filter clipboard --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+No converted-check evidence is available for this suite in this checkout.
+
+Execution ownership
+No Swift entry point executes these checks. Native ownership:
+AutomationCoverageTest methods emptySelectionAndEndpointPayload,
+laneScopeCoverage, trackScopeSeparatesLaneAndNodeCoverage,
+hiddenLanesAreNotCovered, documentFactsFollowIdentity, hitTest (data rows
+base_dpr1, zoomed_out_scrolled, zoomed_in_dpr2, inactive_reversed_selection)
+and endpointSemantics, run by runLaneSelectionCheck. Automation-page Swift
+checks (SessionChecks page-selection paths, automationselection.swift band
+selection over drawer rows) were inspected and assert a different selection
+surface over AutomationTimeSelection, not the AutomationViewModel
+coversLane/coversNodes/visibleLanes/hitTest/laneSet contract inventoried here.
+
+Fixture, sequence and row constraints
+ProjectionRig::create builds a one-track (optionally two-track) SongDocument
+via adoptSmf plus a shown EditorRig at a given zoom and horizontal scroll.
+selectedModel assembles an EditorSelectionModel with an explicit scope, lane
+list, and tempo flag. hitTest_data expands six assertion sites into four rows
+each (two zoom/scroll/dpr geometries plus an inactive reversed-selection row
+that returns early). endpointSemantics exercises laneSet over tempo/CC/invalid
+endpoint pairs. Keep each method's zoom, scroll, selection ticks, lane lists,
+and tempo flags; they are the inputs the paired check must carry.
+
+Original assertion inventory and source sequence
+
+A001 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:150
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup (adoptSmf document plus shown EditorRig window); no Swift counterpart constructs this rig.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <memory>
+  #include <utility>
+  #include <vector>
+
+  #include "checks/support/editorrig.h"
+  #include "core/smf.h"
+  #include "core/songdocument.h"
+  #include "ui/editordrawer/automationprojection.h"
+  #include "ui/editordrawer/automationviewmodel.h"
+  #include "ui/editorviewstate.h"
+  #include "ui/songview.h"
+  #include "ui/songview/editorselectionmodel.h"
+
+  namespace {
+
+  using EditorSelectionModel = songview::EditorSelectionModel;
+
+  EditorAutomationRowId ccId(int track, uint8_t controller)
+  {
+      return {EditorAutomationRowKind::ControlChange, uint8_t(track), controller};
+  }
+
+  EditorAutomationRowId tempoId()
+  {
+      return {EditorAutomationRowKind::Tempo, 0, 0};
+  }
+
+  EditorAutomationRowId invalidId()
+  {
+      return ccId(0, 99);
+  }
+
+  EditorSelectionModel selectedModel(Tick startTick, Tick endTick,
+                                     EditorSelectionModel::TimeSelection::Scope scope,
+                                     std::vector<std::pair<int, uint8_t>> lanes = {},
+                                     bool tempo = false)
+  {
+      EditorSelectionModel model;
+      EditorSelectionModel::TimeSelection selection;
+      selection.startTick = startTick;
+      selection.endTick = endTick;
+      selection.scope = scope;
+      selection.lanes = std::move(lanes);
+      selection.tempo = tempo;
+      model.setTimeSelection(std::move(selection));
+      return model;
+  }
+
+  class ProjectionRig final
+  {
+    public:
+      static std::unique_ptr<ProjectionRig> create(double zoom, double horizontalScroll,
+                                                   QString &error, bool includeSecondary = false)
+      {
+          error.clear();
+          auto rig = std::unique_ptr<ProjectionRig>(new ProjectionRig);
+          SmfFile smf;
+          smf.format = 1;
+          smf.division = 24;
+
+          SmfTrack primary;
+          primary.events.push_back(noteEvent(0x90, 0, 60, 64));
+          primary.endTick = 1;
+          smf.tracks.push_back(std::move(primary));
+          if (includeSecondary) {
+              SmfTrack secondary;
+              secondary.events.push_back(noteEvent(0x91, 0, 67, 64));
+              secondary.endTick = 1;
+              smf.tracks.push_back(std::move(secondary));
+          }
+
+          SongInfo info;
+          info.label = QStringLiteral("automation-coverage-check");
+          if (!rig->m_document.adoptSmf(std::move(smf), info, &error))
+              return nullptr;
+
+          checks::EditorRigConfig config;
+          config.timeZoom = zoom;
+          config.show = true;
+          rig->m_editor = checks::EditorRig::create(rig->m_document, config, error);
+          if (!rig->m_editor)
+              return nullptr;
+          rig->m_editor->view().setEditorHorizontalScroll(horizontalScroll);
+          QCoreApplication::processEvents();
+          return rig;
+      }
+
+      SongDocument &document() noexcept { return m_document; }
+      const SongDocument &document() const noexcept { return m_document; }
+      const MidiTimeline *timeline() const noexcept { return &m_editor->timeline(); }
+
+      AutomationProjection projection() const
+      {
+          return AutomationProjection(AutomationGeometry::resolve(), &m_editor->view());
+      }
+
+    private:
+      static SmfEvent noteEvent(uint8_t status, uint64_t tick, uint8_t key, uint8_t velocity)
+      {
+          SmfEvent event;
+          event.status = status;
+          event.tick = tick;
+          event.data0 = key;
+          event.data1 = velocity;
+          return event;
+      }
+
+      SongDocument m_document;
+      std::unique_ptr<checks::EditorRig> m_editor;
+  };
+
+  AutomationViewModel modelFor(const ProjectionRig &rig, const EditorSelectionModel &selection)
+  {
+      return buildAutomationViewModel(rig.document(), rig.timeline(), selection, true);
+  }
+
+  const AutomationViewModel::Row *rowFor(const AutomationViewModel &model,
+                                         const EditorAutomationRowId &id)
+  {
+      return model.find(id);
+  }
+
+  bool coversLane(const AutomationViewModel &model, const EditorAutomationRowId &id)
+  {
+      const auto *const row = rowFor(model, id);
+      return row && row->coversLane;
+  }
+
+  bool coversNodes(const AutomationViewModel &model, const EditorAutomationRowId &id)
+  {
+      const auto *const row = rowFor(model, id);
+      return row && row->coversNodes;
+  }
+
+  class AutomationCoverageTest final : public QObject
+  {
+      Q_OBJECT
+
+    public:
+      AutomationCoverageTest() = default;
+      Q_DISABLE_COPY_MOVE(AutomationCoverageTest)
+
+    private slots:
+      void emptySelectionAndEndpointPayload()
+      {
+          QString error;
+          const auto rig = ProjectionRig::create(96.0, 0.0, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A002 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:154
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the searched Swift suites assert no AutomationViewModel active-range contract. Open obligation.
+Source context since previous assertion:
+          const EditorSelectionModel selection;
+          const AutomationViewModel model = modelFor(*rig, selection);
+
+Original expression:
+  QVERIFY(!model.activeTickRange);
+
+A003 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, tempoId()));
+
+A004 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, tempoId()));
+
+A005 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:157
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, ccId(0, 7)));
+
+A006 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:158
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, ccId(0, 7)));
+
+A007 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:159
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, invalidId()));
+
+A008 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:160
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, invalidId()));
+
+A009 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:161
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.visibleLanes(selection).empty());
+
+A010 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:165
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for endpoint-driven laneSet tempo membership; see A002.
+Source context since previous assertion:
+          // laneSet is endpoint-driven; it intentionally does not consult activeTickRange.
+          const auto set = model.laneSet(tempoId(), ccId(0, 10));
+Original expression:
+  QVERIFY(set.first);
+
+A011 | AutomationCoverageTest::emptySelectionAndEndpointPayload | src/checks/clipboard/laneselection_test.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for endpoint-driven laneSet contents; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY((set.second == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 10}}));
+
+A012 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:173
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup; see A001.
+Source context since previous assertion:
+  ;
+      }
+
+      void laneScopeCoverage()
+      {
+          QString error;
+          const auto rig = ProjectionRig::create(96.0, 0.0, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A013 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the lane-scoped active tick range; see A002.
+Source context since previous assertion:
+          const EditorSelectionModel selection = selectedModel(
+              24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 21}}, true);
+          const AutomationViewModel model = modelFor(*rig, selection);
+
+Original expression:
+  QVERIFY(model.activeTickRange == (std::optional<std::pair<Tick, Tick>>{{24, 48}}));
+
+A014 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:179
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversLane(model, tempoId()));
+
+A015 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversNodes(model, tempoId()));
+
+A016 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:181
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversLane(model, ccId(0, 7)));
+
+A017 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversNodes(model, ccId(0, 7)));
+
+A018 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:183
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversLane(model, ccId(0, 21)));
+
+A019 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversNodes(model, ccId(0, 21)));
+
+A020 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, ccId(0, 10)));
+
+A021 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, ccId(0, 10)));
+
+A022 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:187
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, ccId(0, 99)));
+
+A023 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:188
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, ccId(0, 99)));
+
+A024 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:189
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for visibleLanes filtering; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY((model.visibleLanes(selection) ==
+           std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 21}}));
+
+A025 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:195
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for tempo exclusion from a lane-scoped model; see A002.
+Source context since previous assertion:
+
+          const EditorSelectionModel noTempoSelection =
+              selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false);
+          const AutomationViewModel noTempo = modelFor(*rig, noTempoSelection);
+Original expression:
+  QVERIFY(!coversLane(noTempo, tempoId()));
+
+A026 | AutomationCoverageTest::laneScopeCoverage | src/checks/clipboard/laneselection_test.cpp:196
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(noTempo, tempoId()));
+
+A027 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:203
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup; see A001.
+Source context since previous assertion:
+  ;
+      }
+
+      void trackScopeSeparatesLaneAndNodeCoverage()
+      {
+          QString error;
+          const auto rig = ProjectionRig::create(96.0, 0.0, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A028 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:208
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for track-scoped tempo coverage; see A002.
+Source context since previous assertion:
+          const EditorSelectionModel selection =
+              selectedModel(24, 48, EditorSelectionModel::TimeSelection::Tracks);
+          const AutomationViewModel full = modelFor(*rig, selection);
+
+Original expression:
+  QVERIFY(coversLane(full, tempoId()));
+
+A029 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:209
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversNodes(full, tempoId()));
+
+A030 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:210
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the track-scope lane/node split; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(full, ccId(0, 7)));
+
+A031 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:211
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversNodes(full, ccId(0, 7)));
+
+A032 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:215
+Disposition: NATIVE
+Mapping/reason: Native secondary ProjectionRig harness setup (two-track document); see A001.
+Source context since previous assertion:
+
+          QString secondaryError;
+          const auto secondaryRig = ProjectionRig::create(96.0, 0.0, secondaryError, true);
+Original expression:
+  QVERIFY2(secondaryRig, qPrintable(secondaryError));
+
+A033 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:217
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for partial track-set tempo exclusion; see A002.
+Source context since previous assertion:
+          const AutomationViewModel partial = modelFor(*secondaryRig, selection);
+Original expression:
+  QVERIFY(!coversLane(partial, tempoId()));
+
+A034 | AutomationCoverageTest::trackScopeSeparatesLaneAndNodeCoverage | src/checks/clipboard/laneselection_test.cpp:218
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(partial, tempoId()));
+
+A035 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:225
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup; see A001.
+Source context since previous assertion:
+  ;
+      }
+
+      void hiddenLanesAreNotCovered()
+      {
+          QString error;
+          const auto rig = ProjectionRig::create(96.0, 0.0, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A036 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for hidden-lane coverage with an unsupported controller in the lane list; see A002.
+Source context since previous assertion:
+          // Supported controllers (including CC21) always have rows; CC99 is absent.
+          const EditorSelectionModel selection = selectedModel(
+              24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}, {0, 99}}, false);
+          const AutomationViewModel model = modelFor(*rig, selection);
+
+Original expression:
+  QVERIFY(coversLane(model, ccId(0, 7)));
+
+A037 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:232
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(coversNodes(model, ccId(0, 7)));
+
+A038 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:233
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, ccId(0, 10)));
+
+A039 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:234
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, ccId(0, 10)));
+
+A040 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:235
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(model, invalidId()));
+
+A041 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:236
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(model, invalidId()));
+
+A042 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:237
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for visibleLanes dropping the unsupported controller; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY((model.visibleLanes(selection) == std::vector<std::pair<int, uint8_t>>{{0, 7}}));
+
+A043 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:242
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for page-readiness row retention without coverage; see A002.
+Source context since previous assertion:
+
+          // Page readiness hides supported rows without removing their document facts.
+          const AutomationViewModel hidden =
+              buildAutomationViewModel(rig->document(), rig->timeline(), selection, false);
+Original expression:
+  QVERIFY(rowFor(hidden, ccId(0, 7)));
+
+A044 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:243
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversLane(hidden, ccId(0, 7)));
+
+A045 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:244
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!coversNodes(hidden, ccId(0, 7)));
+
+A046 | AutomationCoverageTest::hiddenLanesAreNotCovered | src/checks/clipboard/laneselection_test.cpp:245
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(hidden.visibleLanes(selection).empty());
+
+A047 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:252
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup; see A001.
+Source context since previous assertion:
+  ;
+      }
+
+      void documentFactsFollowIdentity()
+      {
+          QString error;
+          const auto rig = ProjectionRig::create(96.0, 0.0, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A048 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:256
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for row event counts following document identity; see A002.
+Source context since previous assertion:
+          const EditorSelectionModel selection =
+              selectedModel(24, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false);
+          AutomationViewModel model = modelFor(*rig, selection);
+Original expression:
+  QCOMPARE(rowFor(model, ccId(0, 7))->eventCount, std::size_t{0});
+
+A049 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:260
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A048.
+Source context since previous assertion:
+          rig->document().addLanePoint(0, 7, 24, 64);
+          model = modelFor(*rig, selection);
+Original expression:
+  QCOMPARE(rowFor(model, ccId(0, 7))->eventCount, std::size_t{1});
+
+A050 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:261
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for implicit rows of supported-but-unlisted controllers; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(rowFor(model, ccId(0, 10)));
+
+A051 | AutomationCoverageTest::documentFactsFollowIdentity | src/checks/clipboard/laneselection_test.cpp:262
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!rowFor(model, invalidId()));
+
+A052 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:285
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup at the data-row zoom/scroll; see A001.
+Source context since previous assertion:
+  ;
+      }
+
+      void hitTest_data()
+      {
+          QTest::addColumn<double>("zoom");
+          QTest::addColumn<double>("scroll");
+          QTest::addColumn<double>("dpr");
+          QTest::addColumn<bool>("active");
+          QTest::newRow("base_dpr1") << 96.0 << 0.0 << 1.0 << true;
+          QTest::newRow("zoomed_out_scrolled") << 64.0 << 96.0 << 1.0 << true;
+          QTest::newRow("zoomed_in_dpr2") << 144.0 << 192.0 << 2.0 << true;
+          QTest::newRow("inactive_reversed_selection") << 96.0 << 48.0 << 2.0 << false;
+      }
+
+      void hitTest()
+      {
+          QFETCH(double, zoom);
+          QFETCH(double, scroll);
+          QFETCH(double, dpr);
+          QFETCH(bool, active);
+          QString error;
+          const auto rig = ProjectionRig::create(zoom, scroll, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A053 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:298
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for hit-testing an inactive reversed selection; see A002. Executes only on the inactive_reversed_selection row.
+Source context since previous assertion:
+          const EditorSelectionModel selection =
+              active
+                  ? selectedModel(48, 96, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}}, false)
+                  : selectedModel(96, 48, EditorSelectionModel::TimeSelection::Lanes, {{0, 7}},
+                                  false);
+          const AutomationViewModel model = modelFor(*rig, selection);
+          const AutomationProjection projection = rig->projection();
+          const qreal startX = projection.displayX(48, dpr);
+          const qreal endX = projection.displayX(96, dpr);
+          const qreal midX = (startX + endX) / 2.0;
+
+          if (!active) {
+Original expression:
+  QVERIFY(!model.hitTest(ccId(0, 7), midX, projection, dpr, selection));
+
+A054 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:302
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for projection hit-testing; see A002. Executes on the three active rows.
+Source context since previous assertion:
+              return;
+          }
+
+Original expression:
+  QVERIFY(model.hitTest(ccId(0, 7), startX, projection, dpr, selection));
+
+A055 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:303
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A054.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.hitTest(ccId(0, 7), midX, projection, dpr, selection));
+
+A056 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:304
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A054.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.hitTest(ccId(0, 7), startX - 1.0, projection, dpr, selection));
+
+A057 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:305
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A054.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.hitTest(ccId(0, 7), endX, projection, dpr, selection));
+
+A058 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:306
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A054.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.hitTest(ccId(0, 10), midX, projection, dpr, selection));
+
+A059 | AutomationCoverageTest::hitTest | src/checks/clipboard/laneselection_test.cpp:307
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A054.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.hitTest(tempoId(), midX, projection, dpr, selection));
+
+A060 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:314
+Disposition: NATIVE
+Mapping/reason: Native ProjectionRig harness setup; see A001.
+Source context since previous assertion:
+  ;
+      }
+
+      void endpointSemantics()
+      {
+          QString error;
+          const auto rig = ProjectionRig::create(96.0, 0.0, error);
+Original expression:
+  QVERIFY2(rig, qPrintable(error));
+
+A061 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:319
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for tempo-only endpoint semantics; see A002.
+Source context since previous assertion:
+          const EditorSelectionModel selection;
+          const AutomationViewModel model = modelFor(*rig, selection);
+
+          const auto tempoOnly = model.laneSet(tempoId(), tempoId());
+Original expression:
+  QVERIFY(tempoOnly.first);
+
+A062 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:320
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tempoOnly.second.empty());
+
+A063 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:322
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for single-CC endpoint semantics; see A002.
+Source context since previous assertion:
+          const auto ccOnly = model.laneSet(ccId(0, 7), ccId(0, 7));
+Original expression:
+  QVERIFY(!ccOnly.first);
+
+A064 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:323
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY((ccOnly.second == std::vector<std::pair<int, uint8_t>>{{0, 7}}));
+
+A065 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:325
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for mixed tempo/CC endpoint semantics; see A002.
+Source context since previous assertion:
+          const auto mixed = model.laneSet(tempoId(), ccId(0, 10));
+Original expression:
+  QVERIFY(mixed.first);
+
+A066 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:326
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY((mixed.second == std::vector<std::pair<int, uint8_t>>{{0, 7}, {0, 10}}));
+
+A067 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:328
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for reversed-endpoint order independence; see A002.
+Source context since previous assertion:
+          const auto reversed = model.laneSet(ccId(0, 10), tempoId());
+Original expression:
+  QVERIFY(reversed.first);
+
+A068 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:329
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(reversed.second == mixed.second);
+
+A069 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:331
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for invalid-endpoint rejection; see A002.
+Source context since previous assertion:
+          const auto invalid = model.laneSet(invalidId(), ccId(0, 7));
+Original expression:
+  QVERIFY(!invalid.first);
+
+A070 | AutomationCoverageTest::endpointSemantics | src/checks/clipboard/laneselection_test.cpp:332
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A002.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(invalid.second.empty());
+
+Remaining original source (closing sequence and helper bodies):
+      }
+  };
+
+  } // namespace
+
+  int runLaneSelectionCheck(const QStringList &qtArguments)
+  {
+      AutomationCoverageTest test;
+      QStringList arguments{QStringLiteral("laneselectioncheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "laneselection_test.moc"
+
+Swift assertion predicates
+None identified: no Swift file in this checkout carries report.expect
+predicates covering this suite (see Execution ownership above).
+
+Shared helpers
+None: no Swift fixture file carries expects for this suite.

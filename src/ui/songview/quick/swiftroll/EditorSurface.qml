@@ -1,4 +1,5 @@
 import QtQuick
+import ".." as Original
 import "../drawer"
 
 Item {
@@ -60,7 +61,7 @@ Item {
         height: Math.max(root.height - editorDrawer.height - hintStatus.height, 0)
         z: 1
 
-        TrackHeaderBand {
+        Original.TrackHeaderBand {
             id: trackHeaders
             x: 0
             width: root.headersModel.trackHeaderWidth
@@ -141,7 +142,7 @@ Item {
                     objectName: "pianoGridSurface"
                     anchors.fill: parent
 
-                    PianoRollCanvas {
+                    Original.PianoRollCanvas {
                         bandSide: rollStack
                         gutterSide: rollGutterSide
                         plotSide: pianoGridSurface

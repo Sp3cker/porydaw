@@ -1,0 +1,99 @@
+Assertion correspondence: audio/tst_audiobackend.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/audio/tst_audiobackend.cpp
+Original SHA-256: 337f6bca8dd8f12a8174a039543ad8a39a769dfd4f7f3a5113ebb1858d8527d9
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Purpose and status
+Each numbered entry records one original assertion/failure site, not one test
+method or one runtime execution. Loops/data rows reuse a site; their instances
+are described below. QFAIL/qFail guards and helper calls are part of the contract.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way;
+GAP means an equivalent Swift assertion is not established;
+NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
+only by the retained native path. None of these labels authorizes deletion or
+claims whole-case equivalence. Native passes do not prove the Swift replacement.
+All six sites in this file are NATIVE-SETUP: forced-null device initialization
+and backend reporting exercised only by the retained native audiocheck-backend
+harness. No Swift predicate replaces them.
+
+Execution and ownership
+The retained native harness owns this file. The check catalog registers
+"audiocheck-backend" with handler runAudioBackendCheck and environment
+PORYDAW_AUDIO_BACKEND=null; initTestCase pins the same variable for a direct
+qExec run and cleanupTestCase restores it. Swift AudioControllerCheckFixture
+constructs AudioRenderEngine directly and never initializes a device backend,
+so no Swift entry point executes these checks. No Swift function is paired
+below; there are no S entries and no shared-helper expects for this file.
+
+Fixture, sequence and row constraints
+initTestCase/cleanupTestCase save, force, and restore PORYDAW_AUDIO_BACKEND.
+forcedNullBackendIsReportable is required, never skipped: a failed forced-null
+init fails the suite. No data rows, loops, or branch guards expand these
+sites; each executes once per run. The qInfo backend/rate/period log line is
+field-aid diagnostics, not an assertion site.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Verification evidence
+Command: deno task verify --filter audiocheck-backend --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Native harness results support only retained native obligations, not Swift parity.
+NATIVE-SETUP remains open for whole-case Swift equivalence. No native check removal
+or full migration sign-off is authorized by this evidence.
+
+Swift sources inspected (SHA-256)
+No same-dir tst_audiobackend.swift exists, and no Swift check references
+backendName, usingNullBackend, nullBackendForced, or PORYDAW_AUDIO_BACKEND.
+Inspected at these revisions:
+src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
+src/checks/audio/tst_audiotelemetry.swift: 951b2a4e544cf71f7c759c95b3b3130480b8f7eeb62ca6b56c149c9ff38aff31
+src/checks/audio/tst_clicktransport.swift: 11ac6d5c61763666d74ff1f9b83e57c112e6642d04c0c191ebfde2c8e5e588d0
+src/checks/audio/tst_resonancelaw.swift: b05654d1714191620beeda4612926d78a723669cb4fa55a5b5f901665dc7c8d3
+src/checks/audio/tst_resonancetiming.swift: 6cc03a763d913818054ae51c73cb4d37c6d79474ac202bdda02f965543e7aa8a
+src/checks/audio/tst_trackactivity.swift: 5d6e3d7a57a12628ad024258d5bfdd6077af440d6db656dee5780f096c85246d
+src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
+src/checks/audio/AudioAuditionChecks.swift: f9cb3bd0733b1f17f0f0df68b3e508cfa0ed9b07ade18f60669b1d3952d36c61
+
+Original assertion inventory
+
+A001 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:31
+Disposition: NATIVE-SETUP
+Mapping/reason: Original forced-null device initialization; required, never skipped. Swift AudioControllerCheckFixture constructs AudioRenderEngine directly; thrown initialization errors reach runAudioControllerChecks. Device initialization is not exercised by this replacement.
+Original expression:
+  QVERIFY2(engine.init(&error),
+           qUtf8Printable(QStringLiteral("forced null audio init failed: %1").arg(error)));
+
+A002 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:35
+Disposition: NATIVE-SETUP
+Mapping/reason: Resolved backend-name reporting on the initialized device. Swift has no device/backend concept and no predicate reporting a backend name. Native device reporting remains separately required.
+Original expression:
+  QVERIFY2(!backend.isEmpty(), "the resolved backend name must be reported");
+
+A003 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:36
+Disposition: NATIVE-SETUP
+Mapping/reason: Null-flag/name consistency on the initialized device. No Swift predicate compares a null-backend flag against a backend name. Native device reporting remains separately required.
+Original expression:
+  QCOMPARE(engine.usingNullBackend(), backend == QStringLiteral("Null"));
+
+A004 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:37
+Disposition: NATIVE-SETUP
+Mapping/reason: Forced-null request visibility on the initialized device. No Swift predicate observes the PORYDAW_AUDIO_BACKEND=null request. Native device reporting remains separately required.
+Original expression:
+  QVERIFY2(engine.nullBackendForced(), "the forced null request must be visible");
+
+A005 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:38
+Disposition: NATIVE-SETUP
+Mapping/reason: Forced-null run must land on the Null backend device. Swift AudioControllerCheckFixture has no device to land on a backend. Native device lifecycle remains separately required.
+Original expression:
+  QVERIFY2(engine.usingNullBackend(), "a forced null run must land on the Null backend");
+
+A006 | AudioBackendTest::forcedNullBackendIsReportable | src/checks/audio/tst_audiobackend.cpp:39
+Disposition: NATIVE-SETUP
+Mapping/reason: Exact resolved backend name on the initialized device. No Swift predicate asserts a "Null" backend name. Native device reporting remains separately required.
+Original expression:
+  QCOMPARE(backend, QStringLiteral("Null"));

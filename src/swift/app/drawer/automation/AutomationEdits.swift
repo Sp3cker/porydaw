@@ -280,7 +280,6 @@ public enum AutomationNodeResolver {
             }
         }
         guard !written.isEmpty else { return true }
-        AutomationSweepTransaction.upsertAll(&written)
         plan.writes.append(AutomationLaneSpanWrite(parameter: parameter, points: written))
         return true
     }

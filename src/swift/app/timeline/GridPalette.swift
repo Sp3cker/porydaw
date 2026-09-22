@@ -128,6 +128,11 @@ public final class GridPalette {
     public var chromeBackground: String = "#BDB5AF"
     public var separator: String = "#5B5652"
     public var outline: String = "#8C857F"
+    public var focusOutline: String = "#8C857F"
+    public var buttonBackground: String = "#E1DBD6"
+    public var buttonText: String = "#302C29"
+    public var buttonPressedBackground: String = "#F5B61C"
+    public var buttonPressedText: String = "#302C29"
 
     public var keyboardNatural: String = "#F4F4F4"
     public var keyboardBlack: String = "#202224"

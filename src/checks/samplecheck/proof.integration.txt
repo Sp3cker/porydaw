@@ -1,0 +1,1038 @@
+Assertion correspondence: samplecheck/integration.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/samplecheck/integration.cpp
+Original SHA-256: 6c9de17973a3ede8a7dd643d494f606a9c1fb0b0fab1742a2b6f7d84abc2bf49
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards, refusal oracles,
+and loop bodies. Source context preserves setup, rows, loops, and guards between
+assertions verbatim. No Swift counterpart file was identified for this suite, so no
+S predicates exist and no Swift execution is claimed.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted window.
+GAP identifies an original predicate without a replacement assertion.
+Methods cover the engine loop-wrap render against the production voicegroup loader, sidecar write/read/round-trip/rerender/touch/fallback/remove, sample update and its refusals, and the sidecar edit dialog.
+Inventory: 71 sites across 9 test methods (engineLoop, sampleUpdate, sampleUpdateRefusals, sidecarEditDialog, sidecarFallback, sidecarRemove, sidecarRerender, sidecarRoundtrip, sidecarTouchedSource). Tally: 68 GAP, 3 NATIVE, 0 MATCHED, 0 PARTIAL.
+
+Verification
+Command: deno task verify --filter samplecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry points execute these checks. Retained native execution owns this suite:
+the samplecheck harness via the Verification command above. Shared fixture construction
+lives in src/checks/samplecheck/fixtures.h and src/checks/samplecheck/fixtures.cpp; those
+files carry no assertion sites (see Shared helpers).
+
+Fixture, sequence and row constraints
+sampleUpdateRefusals_data expands 2 rows (unregistered, bin-only). Sidecar tests share one params shape (cropStart 150, 13379 Hz, key 59, +25 cents) across round-trip, rerender, touch, and fallback. engineLoop renders at most 400000 frames and measures only the final loop wrap after four warm-up wraps.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:46
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/samplecheck/fixtures.h"
+  #include "checks/samplecheck/samplecheck.h"
+
+  #include <QApplication>
+  #include <QFile>
+  #include <QIODevice>
+  #include <QLineEdit>
+  #include <QPushButton>
+  #include <QTemporaryDir>
+  #include <QUndoStack>
+  #include <QtTest>
+  #include <memory>
+
+  #include "audio/sampledoc.h"
+  #include "audio/sampleimport.h"
+  #include "audio/samplewav.h"
+  #include "project/samplereg.h"
+  #include "ui/sampleeditordialog.h"
+
+  extern "C" {
+  #include "voicegroup_loader.h"
+  }
+  namespace {
+
+  class EngineSession final
+  {
+    public:
+      explicit EngineSession(float rate) : initialized(m4a_engine_init(&engine, rate)) {}
+      ~EngineSession()
+      {
+          if (initialized)
+              m4a_engine_destroy(&engine);
+      }
+
+      M4AEngine engine{};
+      bool initialized = false;
+  };
+
+  } // namespace
+
+  namespace samplecheck {
+
+  void SampleProcessingTest::engineLoop()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "engine-loop scratch directory is available")
+
+A002 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:48
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "engine-loop synthetic project is created")
+
+A003 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:51
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString importError;
+
+Original expression:
+  QVERIFY2(importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes,
+                                &importError),
+               qPrintable(importError))
+
+A004 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:60
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      SampleEditParams params = SampleDocument::defaultParams(hiRes);
+      params.targetRate = 13379.0;
+      SampleDocument doc(hiRes);
+      doc.setParams(params);
+      const ProcessedSample &out = doc.processed();
+
+Original expression:
+  QVERIFY2(out.looped && out.size > out.loopStart + 100, "engine-loop fixture renders looped")
+
+A005 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:62
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QString error;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::registerSample(root, QStringLiteral("engineloop_tone"),
+                                               writeSampleWav(out), &error),
+               "engine-loop sample registers")
+
+A006 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:65
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(writeFile(root + QStringLiteral("/sound/voicegroups/voicegroup_engineloop.inc"),
+                        "voicegroup_engineloop::\n"
+                        "\tvoice_directsound 60, 0, "
+                        "DirectSoundWaveData_engineloop_tone, 255, 0, 255, 0\n"))
+
+A007 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:72
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray rootUtf8 = root.toLocal8Bit();
+      auto voicegroup = std::unique_ptr<LoadedVoiceGroup, decltype(&voicegroup_free)>{
+          voicegroup_load(rootUtf8.constData(), "voicegroup_engineloop", nullptr), voicegroup_free};
+
+Original expression:
+  QVERIFY2(voicegroup, "engine-loop voicegroup resolves")
+
+A008 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:77
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      const float hostRate = float(std::round(double(out.freq) / 1024.0));
+      EngineSession session(hostRate);
+      M4AEngine *engine = &session.engine;
+
+Original expression:
+  QVERIFY2(session.initialized, "engine-loop initializes at an integral host rate")
+
+A009 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:87
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      m4a_engine_set_pcm_mix_rate(engine, 0.0f);
+      m4a_engine_set_voicegroup(engine, voicegroup->voices);
+      m4a_engine_program_change(engine, 0, 0);
+      m4a_engine_note_on(engine, 0, 60, 127);
+      const M4APCMChannel *channel = nullptr;
+      for (int i = 0; i < MAX_PCM_CHANNELS; ++i) {
+          if (engine->pcmChannels[i].status & CHN_ON)
+              channel = &engine->pcmChannels[i];
+      }
+
+Original expression:
+  QVERIFY2(channel, "engine-loop note keys a channel")
+
+A010 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:92
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const quint64 loopLength = quint64(out.size) - out.loopStart;
+      const quint64 measurementStart = quint64(out.size) + 4 * loopLength;
+      const quint64 renderFrames = measurementStart + loopLength;
+      constexpr quint64 kMaxRenderFrames = 400000;
+
+Original expression:
+  QVERIFY2(renderFrames <= kMaxRenderFrames, "engine-loop fixture fits render window")
+
+A011 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:107
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      float left = 0.0f;
+      float right = 0.0f;
+      double previous = 0.0;
+      double maxRenderedStep = 0.0;
+      double peak = 0.0;
+      for (quint64 i = 0; i < renderFrames; ++i) {
+          m4a_engine_process(engine, &left, &right, 1);
+          const double value = double(left);
+          if (i >= measurementStart) {
+              maxRenderedStep = qMax(maxRenderedStep, std::abs(value - previous));
+              peak = qMax(peak, std::abs(value));
+          }
+          previous = value;
+      }
+
+Original expression:
+  QVERIFY2((channel->status & CHN_ON) && peak > 0.0, "at least four full loop wraps render")
+
+A012 | SampleProcessingTest::engineLoop | src/checks/samplecheck/integration.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      int maxS8 = 1;
+      int maxSourceStep = 0;
+      for (quint32 i = out.loopStart; i < out.size; ++i) {
+          const int sample = int(qint8(out.s8.at(qsizetype(i))));
+          const quint32 nextIndex = i + 1 < out.size ? i + 1 : out.loopStart;
+          const int next = int(qint8(out.s8.at(qsizetype(nextIndex))));
+          maxS8 = qMax(maxS8, std::abs(sample));
+          maxSourceStep = qMax(maxSourceStep, std::abs(next - sample));
+      }
+      const double lsb = peak / double(maxS8);
+
+Original expression:
+  QVERIFY2(maxRenderedStep <= double(maxSourceStep) * lsb + 2.0 * lsb + 1e-9,
+               "loop-wrap steps stay within source steps plus two LSB")
+
+A013 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:126
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sidecarRoundtrip()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sidecar-roundtrip scratch directory is available")
+
+A014 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:128
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sidecar-roundtrip synthetic project is created")
+
+A015 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:132
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray sourceBytes = hiResSampleWav();
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(sourceBytes, QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+               qPrintable(error))
+
+A016 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:135
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
+
+Original expression:
+  QVERIFY(writeFile(sourcePath, sourceBytes))
+
+A017 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:143
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditParams params = SampleDocument::defaultParams(hiRes);
+      params.cropStart = 150;
+      params.targetRate = 13379.0;
+      params.baseKey = 59;
+      params.fineTuneCents = 25.0;
+      SampleDocument doc(hiRes);
+      doc.setParams(params);
+
+Original expression:
+  QVERIFY2(SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"),
+                                               writeSampleWav(doc.processed()), &error),
+               "provenance sample registers")
+
+A018 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleSidecar sidecar;
+      sidecar.sourcePath = sourcePath;
+      sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+      sidecar.params = params;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::writeSampleSidecar(root, QStringLiteral("provenance_tone"), sidecar,
+                                                   &error),
+               "sidecar writes")
+
+A019 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      SampleSidecar back;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::readSampleSidecar(root, QStringLiteral("provenance_tone"), &back),
+               "sidecar reads back")
+
+A020 | SampleProcessingTest::sidecarRoundtrip | src/checks/samplecheck/integration.cpp:157
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(back.version == 1 && back.sourcePath == sidecar.sourcePath &&
+                   back.sourceSha256 == sidecar.sourceSha256 && back.leftOnly == sidecar.leftOnly &&
+                   back.sf2Zone == sidecar.sf2Zone && back.params == sidecar.params,
+               "sidecar round-trips every field")
+
+A021 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sidecarRerender()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sidecar-rerender scratch directory is available")
+
+A022 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:168
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sidecar-rerender synthetic project is created")
+
+A023 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:172
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray sourceBytes = hiResSampleWav();
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(sourceBytes, QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+               qPrintable(error))
+
+A024 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:175
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
+
+Original expression:
+  QVERIFY(writeFile(sourcePath, sourceBytes))
+
+A025 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditParams params = SampleDocument::defaultParams(hiRes);
+      params.cropStart = 150;
+      params.targetRate = 13379.0;
+      params.baseKey = 59;
+      params.fineTuneCents = 25.0;
+      SampleDocument doc(hiRes);
+      doc.setParams(params);
+      const QByteArray committed = writeSampleWav(doc.processed());
+
+Original expression:
+  QVERIFY2(
+          SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"), committed, &error),
+          "provenance sample registers")
+
+A026 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:191
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleSidecar sidecar;
+      sidecar.sourcePath = sourcePath;
+      sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+      sidecar.params = params;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::writeSampleSidecar(root, QStringLiteral("provenance_tone"), sidecar,
+                                                   &error),
+               "sidecar writes")
+
+A027 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:195
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleSidecar back;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::readSampleSidecar(root, QStringLiteral("provenance_tone"), &back),
+               "sidecar reads back")
+
+A028 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:199
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      const QByteArray reread = readFileBytes(back.sourcePath);
+
+Original expression:
+  QCOMPARE(SampleRegistrar::sourceHashHex(reread), back.sourceSha256)
+
+A029 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:201
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample reopened;
+
+Original expression:
+  QVERIFY2(importAudioBytes(reread, back.sourcePath, &reopened, &error, back.leftOnly),
+               "sidecar source re-imports")
+
+A030 | SampleProcessingTest::sidecarRerender | src/checks/samplecheck/integration.cpp:205
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleDocument redoc(reopened);
+      redoc.setParams(back.params);
+
+Original expression:
+  QCOMPARE(writeSampleWav(redoc.processed()), committed)
+
+A031 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:211
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sidecarTouchedSource()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sidecar-touch scratch directory is available")
+
+A032 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sidecar-touch synthetic project is created")
+
+A033 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:217
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray sourceBytes = hiResSampleWav();
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(sourceBytes, QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+               qPrintable(error))
+
+A034 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:220
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
+
+Original expression:
+  QVERIFY(writeFile(sourcePath, sourceBytes))
+
+A035 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:224
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleSidecar sidecar;
+      SampleDocument doc(hiRes);
+      doc.setParams(SampleDocument::defaultParams(hiRes));
+
+Original expression:
+  QVERIFY2(SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"),
+                                               writeSampleWav(doc.processed()), &error),
+               "provenance sample registers")
+
+A036 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:230
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      sidecar.sourcePath = sourcePath;
+      sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+      sidecar.params = SampleDocument::defaultParams(hiRes);
+
+Original expression:
+  QVERIFY2(SampleRegistrar::writeSampleSidecar(root, QStringLiteral("provenance_tone"), sidecar,
+                                                   &error),
+               "sidecar writes")
+
+A037 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:234
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(writeFile(sourcePath, sourceBytes + QByteArray(4, '\0')))
+
+A038 | SampleProcessingTest::sidecarTouchedSource | src/checks/samplecheck/integration.cpp:235
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::sourceHashHex(readFileBytes(sourcePath)) != sidecar.sourceSha256,
+               "a touched source no longer matches the sidecar hash")
+
+A039 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:242
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sidecarFallback()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sidecar-fallback scratch directory is available")
+
+A040 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:244
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sidecar-fallback synthetic project is created")
+
+A041 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:247
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(
+          importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+          qPrintable(error))
+
+A042 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:258
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditParams params = SampleDocument::defaultParams(hiRes);
+      params.cropStart = 150;
+      params.targetRate = 13379.0;
+      params.baseKey = 59;
+      params.fineTuneCents = 25.0;
+      SampleDocument doc(hiRes);
+      doc.setParams(params);
+      const QByteArray committed = writeSampleWav(doc.processed());
+
+Original expression:
+  QVERIFY2(
+          SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"), committed, &error),
+          "provenance sample registers")
+
+A043 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:263
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      ImportedSample fallback;
+
+Original expression:
+  QVERIFY2(
+          importAudioBytes(committed, QStringLiteral("x/provenance_tone.wav"), &fallback, &error),
+          "committed .wav re-imports")
+
+A044 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:266
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(fallback.gbaReady, "committed .wav re-imports GBA-ready")
+
+A045 | SampleProcessingTest::sidecarFallback | src/checks/samplecheck/integration.cpp:269
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleDocument fallbackDocument(fallback);
+      fallbackDocument.setParams(SampleDocument::defaultParams(fallback));
+
+Original expression:
+  QCOMPARE(writeSampleWav(fallbackDocument.processed()), committed)
+
+A046 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:275
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sampleUpdate()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sample-update scratch directory is available")
+
+A047 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:277
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sample-update synthetic project is created")
+
+A048 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:280
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(
+          importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+          qPrintable(error))
+
+A049 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:291
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleEditParams params = SampleDocument::defaultParams(hiRes);
+      params.cropStart = 150;
+      params.targetRate = 13379.0;
+      params.baseKey = 59;
+      params.fineTuneCents = 25.0;
+      SampleDocument doc(hiRes);
+      doc.setParams(params);
+      const QByteArray committed = writeSampleWav(doc.processed());
+
+Original expression:
+  QVERIFY2(
+          SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"), committed, &error),
+          "provenance sample registers")
+
+A050 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:297
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      params.fineTuneCents = 40.0;
+      doc.setParams(params);
+      const QByteArray updated = writeSampleWav(doc.processed());
+
+Original expression:
+  QVERIFY(updated != committed)
+
+A051 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:300
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
+      const QByteArray incBefore = readFileBytes(incPath);
+
+Original expression:
+  QVERIFY2(
+          SampleRegistrar::updateSample(root, QStringLiteral("provenance_tone"), updated, &error),
+          "updateSample succeeds")
+
+A052 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:303
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(readFileBytes(incPath), incBefore)
+
+A053 | SampleProcessingTest::sampleUpdate | src/checks/samplecheck/integration.cpp:304
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(
+          readFileBytes(root + QStringLiteral("/sound/direct_sound_samples/provenance_tone.wav")),
+          updated)
+
+A054 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:320
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sampleUpdateRefusals_data()
+  {
+      QTest::addColumn<bool>("binOnly");
+      QTest::newRow("unregistered") << false;
+      QTest::newRow("bin-only") << true;
+  }
+
+  void SampleProcessingTest::sampleUpdateRefusals()
+  {
+      QFETCH(bool, binOnly);
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sample-update refusal scratch directory is available")
+
+A055 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:322
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sample-update refusal synthetic project is created")
+
+A056 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:325
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(
+          importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+          qPrintable(error))
+
+A057 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:337
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleDocument doc(hiRes);
+      doc.setParams(SampleDocument::defaultParams(hiRes));
+      const QByteArray updated = writeSampleWav(doc.processed());
+
+      if (binOnly) {
+          constexpr char binOnlyFixture[] = "\n\t.align 2\nDirectSoundWaveData_binonly::\n"
+                                            "\t.incbin \"sound/direct_sound_samples/binonly.bin\"\n";
+          const QString incPath = root + QStringLiteral("/sound/direct_sound_data.inc");
+          QFile inc(incPath);
+
+Original expression:
+  QVERIFY2(inc.open(QIODevice::Append) &&
+                       inc.write(binOnlyFixture) == qint64(sizeof(binOnlyFixture) - 1),
+                   "append .bin-only sample fixture")
+
+A058 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:343
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      const QString sampleName =
+          binOnly ? QStringLiteral("binonly") : QStringLiteral("never_registered");
+
+Original expression:
+  QVERIFY2(!SampleRegistrar::updateSample(root, sampleName, updated, &error),
+               "updating a non-updatable sample refuses")
+
+A059 | SampleProcessingTest::sampleUpdateRefusals | src/checks/samplecheck/integration.cpp:345
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!error.isEmpty(), "rejected input reports a refusal")
+
+A060 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:352
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sidecarEditDialog()
+  {
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(
+          importAudioBytes(hiResSampleWav(), QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+          qPrintable(error))
+
+A061 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:377
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+      SampleEditParams params = SampleDocument::defaultParams(hiRes);
+      params.cropStart = 150;
+      params.targetRate = 13379.0;
+      params.baseKey = 59;
+      params.fineTuneCents = 25.0;
+
+      const auto acceptsRegisteredName = [](const QString &candidate, QString *err) {
+          if (candidate == QStringLiteral("provenance_tone"))
+              return true;
+          if (err)
+              *err = QStringLiteral("the sample keeps its registered name.");
+          return false;
+      };
+      SampleEditorDialog dialog(hiRes, acceptsRegisteredName);
+      dialog.setEditTarget(QStringLiteral("provenance_tone"));
+      dialog.applyParamsExternal(params);
+      dialog.show();
+      QApplication::processEvents();
+      auto *nameEdit = dialog.findChild<QLineEdit *>(QStringLiteral("sampleNameEdit"));
+      auto *addButton = dialog.findChild<QPushButton *>(QStringLiteral("sampleAddButton"));
+      const auto *document = dialog.document();
+      const auto *undoStack = dialog.undoStack();
+
+Original expression:
+  QVERIFY2(nameEdit && nameEdit->isReadOnly() &&
+                   nameEdit->text() == QStringLiteral("provenance_tone"),
+               "edit mode locks the name")
+
+A062 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:380
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(addButton && addButton->isEnabled(), "edit mode exposes an enabled commit action")
+
+A063 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:381
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(document && undoStack, "edit dialog provides its document and undo stack")
+
+A064 | SampleProcessingTest::sidecarEditDialog | src/checks/samplecheck/integration.cpp:382
+Disposition: NATIVE
+Mapping/reason: Original native dialog/window/rendering/device observation. A presenter-level Swift check cannot establish this observation; no Swift counterpart exists and no converted-window evidence is claimed here.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(document->params() == params && undoStack->count() == 0,
+               "sidecar params are the baseline, not an undo entry")
+
+A065 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:389
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SampleProcessingTest::sidecarRemove()
+  {
+      QTemporaryDir scratch;
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "sidecar-remove scratch directory is available")
+
+A066 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:391
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString root = scratch.filePath(QStringLiteral("wavproj"));
+
+Original expression:
+  QVERIFY2(createWav2AgbProject(root), "sidecar-remove synthetic project is created")
+
+A067 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:395
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray sourceBytes = hiResSampleWav();
+      ImportedSample hiRes;
+      QString error;
+
+Original expression:
+  QVERIFY2(importAudioBytes(sourceBytes, QStringLiteral("fix/hires_tone.wav"), &hiRes, &error),
+               qPrintable(error))
+
+A068 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:398
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString sourcePath = scratch.filePath(QStringLiteral("sources/hires_tone.wav"));
+
+Original expression:
+  QVERIFY(writeFile(sourcePath, sourceBytes))
+
+A069 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:405
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SampleSidecar sidecar;
+      sidecar.sourcePath = sourcePath;
+      sidecar.sourceSha256 = SampleRegistrar::sourceHashHex(sourceBytes);
+      sidecar.params = SampleDocument::defaultParams(hiRes);
+      SampleDocument doc(hiRes);
+      doc.setParams(SampleDocument::defaultParams(hiRes));
+
+Original expression:
+  QVERIFY2(SampleRegistrar::registerSample(root, QStringLiteral("provenance_tone"),
+                                               writeSampleWav(doc.processed()), &error),
+               "provenance sample registers")
+
+A070 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:408
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(SampleRegistrar::writeSampleSidecar(root, QStringLiteral("provenance_tone"), sidecar,
+                                                   &error),
+               "sidecar writes")
+
+A071 | SampleProcessingTest::sidecarRemove | src/checks/samplecheck/integration.cpp:414
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; no Swift counterpart file was identified for this suite. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      SampleRegistrar::removeSampleSidecar(root, QStringLiteral("provenance_tone"));
+      SampleSidecar back;
+
+Original expression:
+  QVERIFY2(!SampleRegistrar::readSampleSidecar(root, QStringLiteral("provenance_tone"), &back),
+               "removed sidecar no longer reads")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace samplecheck
+
+
+Swift assertion predicates
+No Swift counterpart file was identified for this suite, so no report.expect*/expectEqual
+predicates exist. The S-list is empty.
+
+Shared helpers
+The shared C++ fixture sources src/checks/samplecheck/fixtures.h and
+src/checks/samplecheck/fixtures.cpp (SHA-256 543265f5d4274c58c8bf5131850cd55da1a625024ee91731f4aaf57ad96b641b) carry no assertion sites
+(verified: no QVERIFY, QCOMPARE, QFAIL, QSKIP, QTRY_*, or QEXPECT_FAIL sites); they only
+build byte fixtures, generators, and metrics used by the setups above. There are no Swift
+fixture files for this suite.

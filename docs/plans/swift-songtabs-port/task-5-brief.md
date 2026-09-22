@@ -9,10 +9,25 @@ gate. Source: `swift-qml-songtabs-integration`'s
 
 ## Exact write set
 
-- `src/checks/swiftrollgated/tst_swiftrollgated.cpp` (new test slots)
+- `src/checks/swiftrollgated/tst_swiftrollgated.cpp` (new test slots + fix
+  `failedOpenPreservesSceneAndSurfacesError` at ~337-359)
 - `src/checks/swiftrollgated/tst_swiftrollgated.h`
 - `src/checks/swiftrollgated/tabchecks.cpp` (new — scenario bodies, matching
   the existing gesturechecks/clipboardchecks/chromevisuals/notevisuals split)
+- `src/checks/swiftrollgated/clipboardchecks.cpp` (fix ~437-450)
+- `src/checks/swiftrollgated/gesturechecks.cpp` (fix ~564-568)
+- `src/checks/swiftrollgated/CMakeLists.txt` (register tabchecks.cpp)
+
+## Broken call sites to re-express (string-based invokeMethod — compile clean,
+fail at run time)
+
+- `clipboardchecks.cpp:437-445` and `gesturechecks.cpp:564-568`: two-arg
+  `openSong(label, bool)` no longer exists; re-opening the selected label is
+  an in-place reload, and the QQuickView persists across tab closes. Assert
+  the presented grid/revision changed, not that the view was recreated.
+- `tst_swiftrollgated.cpp:337-359` (`failedOpenPreservesSceneAndSurfacesError`):
+  under the tab model a failed re-open installs no tab — assert zero tabs,
+  `songOpen` false, `lastSaveError`/`openFailed` surfaced.
 
 ## Prerequisites
 

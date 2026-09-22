@@ -1,0 +1,725 @@
+Assertion correspondence: host/tst_hostseams.cpp
+
+Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
+Original: src/checks/host/tst_hostseams.cpp
+Original SHA-256: 2d0d99c86a6373c9d97b973ef41ea654cbe0bd22e9e6ecb02e454047c6004a50
+Swift counterpart: none identified
+Swift SHA-256: n/a
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+
+Status and evidence
+The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted host suite. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion. Nothing here is marked MATCHED or PARTIAL; unsure between PARTIAL and GAP was resolved to GAP. Native passes do not prove any Swift replacement.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+
+Execution ownership
+No Swift entry point executes the deleted host checks; no Swift fixture is paired.
+
+Fixture, sequence and row constraints
+drawerContextTick boundary rows (-1.0, 0.49, 0.5, 0.51 ticks) expand one conversion site into four edge cases. The embedded-window case runs a two-phase sequence (take for embedding, then detach) with detach-count and identity sites per phase; the unhosted-detach case asserts the same obligations after synchronous window destruction.
+Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:41
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  #include "checks/fwd.hpp"
+  #include "checks/host/hosttestsupport.h"
+  #include "checks/support/support.h"
+  #include "checks/support/timelinequickcheck.h"
+  #include <memory>
+
+  #include <QPointer>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QWidget>
+  #include <QtTest>
+
+  #include "ui/editordrawer/automationcanvas.h"
+  #include "ui/editordrawer/automationpage.h"
+  #include "ui/editordrawer/drawerchrome.h"
+  #include "ui/editordrawer/drawerpage.h"
+  #include "ui/editordrawer/velocityarea/velocityarea.h"
+  #include "ui/editordrawer/voicechangearea/voicechangearea.h"
+  #include "ui/layout.h"
+  #include "ui/songtabquickhost.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelinequickview.h"
+
+  namespace checks::host {
+  namespace {
+
+  class HostSeamsTest final : public QObject
+  {
+      Q_OBJECT
+    public:
+      HostSeamsTest() = default;
+
+      Q_DISABLE_COPY_MOVE(HostSeamsTest)
+
+    private slots:
+
+      void automationPlotFillsHostViewport()
+      {
+          SyntheticHost host;
+          QString error;
+
+Original expression:
+  QVERIFY2(host.prepare(&error), qPrintable(error))
+
+A002 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:43
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          auto *drawer = host.view().editorDrawer();
+
+Original expression:
+  QVERIFY(drawer)
+
+A003 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:48
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          AutomationPage *page = drawer->automationPage();
+          host.view().setDrawerSectionVisible(EditorDrawerPage::Automations, true);
+          host.view().setDrawerSectionHeight(EditorDrawerPage::Automations, 180);
+          settle();
+
+Original expression:
+  QVERIFY(page)
+
+A004 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:50
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          auto *canvas = page->canvas();
+
+Original expression:
+  QVERIFY(canvas)
+
+A005 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:53
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const int tempoIndex = checks::support::automationParameterIndex(
+              *canvas, {EditorAutomationRowKind::Tempo, 0, 0});
+
+Original expression:
+  QVERIFY(tempoIndex >= 0)
+
+A006 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:58
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          canvas->activateParameter(tempoIndex);
+          settle();
+          const auto geometry =
+              host.view().timelineBandLayout().geometry(songview::TimelineBand::Automation);
+
+Original expression:
+  QVERIFY(geometry.has_value())
+
+A007 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:59
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(geometry->plotRect.x(), host.view().timelineSplitX())
+
+A008 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:60
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(page->automationViewportSize(), geometry->plotRect.size())
+
+A009 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:61
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!page->automationViewportSize().isEmpty())
+
+A010 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:62
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(canvas->laneBody(LaneHandle{0}), QRect(QPoint{}, page->automationViewportSize()))
+
+A011 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:69
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      }
+
+      void editorEndpointsUpdateCameraAndResolveGridVoice()
+      {
+          SyntheticHost host(/*includeLongTail=*/true);
+          QString error;
+
+Original expression:
+  QVERIFY2(host.prepare(&error), qPrintable(error))
+
+A012 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:77
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          SongView &view = host.view();
+          view.setEditorHorizontalScroll(96.0);
+          view.setEditorTimeZoom(1.75 * layout::fontPx(8.0 / 3.0));
+          view.setFollowScrollPaused(true);
+          view.focusContent();
+          view.announce(QStringLiteral("host-seams"));
+          const SongView::ViewState runtime = view.viewState();
+
+Original expression:
+  QVERIFY(runtime.valid)
+
+A013 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:78
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(runtime.scrollPx, 96.0)
+
+A014 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:79
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(runtime.pxPerBeat, 1.75 * layout::fontPx(8.0 / 3.0))
+
+A015 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:80
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.grid().gridTicksAt(12) > 0)
+
+A016 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:81
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view.grid().snapTicksAt(12) > 0)
+
+A017 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:83
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const DrawerPageVoiceContext voice = view.voiceContext(12);
+
+Original expression:
+  QCOMPARE(voice.voice, &host.bank().voices[0])
+
+A018 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:84
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(voice.voiceSlot, 0)
+
+A019 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:85
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(drawerContextTick(-1.0), uint64_t{0})
+
+A020 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:86
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(drawerContextTick(0.49), uint64_t{0})
+
+A021 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:87
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(drawerContextTick(0.5), uint64_t{1})
+
+A022 | editorEndpointsUpdateCameraAndResolveGridVoice | src/checks/host/tst_hostseams.cpp:88
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(drawerContextTick(0.51), uint64_t{1})
+
+A023 | editorStateIsCosmeticOnly | src/checks/host/tst_hostseams.cpp:95
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      }
+
+      void editorStateIsCosmeticOnly()
+      {
+          SyntheticHost host;
+          QString error;
+
+Original expression:
+  QVERIFY2(host.prepare(&error), qPrintable(error))
+
+A024 | editorStateIsCosmeticOnly | src/checks/host/tst_hostseams.cpp:107
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const uint64_t revision = host.document().revision();
+          const int undo = host.document().undoStack()->count();
+          EditorViewState state;
+          state.velocity = {true, 180};
+          state.automation.visible = false;
+          state.activePage = EditorDrawerPage::Velocity;
+          state.laneHeight = 42;
+          const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, 0, 74};
+          state.emptyLanes.insert(lane);
+          state.laneRanges.emplace(lane, 96);
+          host.view().applyEditorViewState(state);
+
+Original expression:
+  QCOMPARE(host.view().editorViewState(), state)
+
+A025 | editorStateIsCosmeticOnly | src/checks/host/tst_hostseams.cpp:108
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(host.document().revision(), revision)
+
+A026 | editorStateIsCosmeticOnly | src/checks/host/tst_hostseams.cpp:109
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(host.document().undoStack()->count(), undo)
+
+A027 | documentChangedPreservesCosmetics | src/checks/host/tst_hostseams.cpp:116
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      }
+
+      void documentChangedPreservesCosmetics()
+      {
+          SyntheticHost host;
+          QString error;
+
+Original expression:
+  QVERIFY2(host.prepare(&error), qPrintable(error))
+
+A028 | documentChangedPreservesCosmetics | src/checks/host/tst_hostseams.cpp:125
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          EditorViewState state;
+          state.velocity = {true, 180};
+          state.activePage = EditorDrawerPage::Velocity;
+          host.view().applyEditorViewState(state);
+          auto *drawer = host.view().editorDrawer();
+          drawer->automationPage()->documentChanged();
+          drawer->velocityArea()->documentChanged();
+          drawer->voiceChangeArea()->documentChanged();
+
+Original expression:
+  QCOMPARE(host.view().editorViewState(), state)
+
+A029 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:145
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+      }
+
+      // One-way embedding handoff: the host adapter takes the window exactly
+      // once without detaching; an explicit detach while hosted only unbinds
+      // (the transferred window stays alive under its container); destroying
+      // the host destroys the container and the window while the coordinator
+      // is still alive; the coordinator is destroyed last.
+      void embeddedWindowOwnershipTransfersToTheContainer()
+      {
+          QPointer<QQuickWindow> window;
+          QPointer<QQuickItem> root;
+          QPointer<QWidget> container;
+          int detachCount = 0;
+          bool detachWhileWindowValid = false;
+          {
+              SongDocument document;
+              auto view = std::make_unique<SongView>(document);
+              checks::support::bindEditActionsForTest(*view);
+              songview::TimelineQuickView *const quick = view->quickView();
+
+Original expression:
+  QVERIFY(quick)
+
+A030 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:147
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+              window = quick->quickWindow();
+
+Original expression:
+  QVERIFY(window)
+
+A031 | embeddedWindowOwnershipTransfersToTheContainer | src/checks/host/tst_hostseams.cpp:149
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+              root = quick->rootObject();
+
+Original expression:
+  QVERIFY(root)
+
+A032 | QObject::connect | src/checks/host/tst_hostseams.cpp:165
+Disposition: GAP
+Mapping/reason: No Swift counterpart was identified for this deleted suite, so no equivalent Swift assertion is established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              // Bounded reentry: a listener may detach again while the borrow is
+              // still live; the nested call must be inert, so the signal fires
+              // exactly once. The detachCount == 1 bound also keeps a pre-fix
+              // coordinator to one nested emission, never unbounded recursion.
+              QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, quick,
+                               [&detachCount, &detachWhileWindowValid, quick] {
+                                   ++detachCount;
+                                   detachWhileWindowValid = quick->quickWindow() != nullptr;
+                                   if (detachCount == 1)
+                                       quick->detachWindow();
+                               });
+              {
+                  QWidget owner;
+                  const SongTabQuickHost adapter(*quick, owner);
+                  container = adapter.container();
+
+Original expression:
+  QVERIFY(container)
+
+A033 | QObject::connect | src/checks/host/tst_hostseams.cpp:166
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quick->takeWindowForEmbedding())
+
+A034 | QObject::connect | src/checks/host/tst_hostseams.cpp:167
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ; // exactly-once, one-way
+
+Original expression:
+  QCOMPARE(detachCount, 0)
+
+A035 | QObject::connect | src/checks/host/tst_hostseams.cpp:168
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;                  // the take never detaches
+
+Original expression:
+  QVERIFY(quick->quickWindow() == window)
+
+A036 | QObject::connect | src/checks/host/tst_hostseams.cpp:171
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;   // identity survives the take
+
+                  quick->detachWindow(); // hosted detach: unbind only, transfer stands
+
+Original expression:
+  QCOMPARE(detachCount, 1)
+
+A037 | QObject::connect | src/checks/host/tst_hostseams.cpp:172
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(detachWhileWindowValid)
+
+A038 | QObject::connect | src/checks/host/tst_hostseams.cpp:173
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ; // emitted while the window was usable
+
+Original expression:
+  QVERIFY(window)
+
+A039 | QObject::connect | src/checks/host/tst_hostseams.cpp:174
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;                 // transferred window survives the unbind
+
+Original expression:
+  QVERIFY(!quick->quickWindow())
+
+A040 | QObject::connect | src/checks/host/tst_hostseams.cpp:175
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quick->rootObject())
+
+A041 | QObject::connect | src/checks/host/tst_hostseams.cpp:176
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quick->popupSession())
+
+A042 | QObject::connect | src/checks/host/tst_hostseams.cpp:178
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+              } // host dies: the container (and the window it owns) are destroyed
+
+Original expression:
+  QVERIFY(container.isNull())
+
+A043 | QObject::connect | src/checks/host/tst_hostseams.cpp:179
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(window.isNull())
+
+A044 | QObject::connect | src/checks/host/tst_hostseams.cpp:180
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(root.isNull())
+
+A045 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:195
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+              view.reset(); // coordinator destroyed last, after the adapter
+          }
+      }
+
+      // Unhosted teardown: detach emits exactly once while the original window
+      // is still valid, synchronously destroys the owned window and the QML
+      // scene while domain objects (the voice-change area) stay alive, clears
+      // the getters, and repeating it is inert.
+      void unhostedDetachEmitsOnceDestroysWindowAndClearsGetters()
+      {
+          SongDocument document;
+          auto view = std::make_unique<SongView>(document);
+          checks::support::bindEditActionsForTest(*view);
+          songview::TimelineQuickView *const quick = view->quickView();
+
+Original expression:
+  QVERIFY(quick)
+
+A046 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:196
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(quick->rootObject())
+
+A047 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:197
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(quick->quickWindow())
+
+A048 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:198
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(quick->popupSession())
+
+A049 | unhostedDetachEmitsOnceDestroysWindowAndClearsGetters | src/checks/host/tst_hostseams.cpp:202
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          QPointer<QQuickWindow> window = quick->quickWindow();
+          QPointer<QQuickItem> root = quick->rootObject();
+          QPointer<VoiceChangeArea> voice = view->editorDrawer()->voiceChangeArea();
+
+Original expression:
+  QVERIFY(voice)
+
+A050 | QObject::connect | src/checks/host/tst_hostseams.cpp:211
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+          int detachCount = 0;
+          bool detachWhileWindowValid = false;
+          QObject::connect(quick, &songview::TimelineQuickView::windowAboutToDetach, quick,
+                           [&detachCount, &detachWhileWindowValid, quick] {
+                               ++detachCount;
+                               detachWhileWindowValid = quick->quickWindow() != nullptr;
+                           });
+          quick->detachWindow();
+
+Original expression:
+  QCOMPARE(detachCount, 1)
+
+A051 | QObject::connect | src/checks/host/tst_hostseams.cpp:212
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(detachWhileWindowValid)
+
+A052 | QObject::connect | src/checks/host/tst_hostseams.cpp:213
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ; // emitted while the window was usable
+
+Original expression:
+  QVERIFY(window.isNull())
+
+A053 | QObject::connect | src/checks/host/tst_hostseams.cpp:214
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;        // owned window destroyed synchronously
+
+Original expression:
+  QVERIFY(root.isNull())
+
+A054 | QObject::connect | src/checks/host/tst_hostseams.cpp:215
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;          // QML scene unloaded and destroyed
+
+Original expression:
+  QVERIFY(!quick->quickWindow())
+
+A055 | QObject::connect | src/checks/host/tst_hostseams.cpp:216
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quick->rootObject())
+
+A056 | QObject::connect | src/checks/host/tst_hostseams.cpp:217
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!quick->popupSession())
+
+A057 | QObject::connect | src/checks/host/tst_hostseams.cpp:218
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(voice)
+
+A058 | QObject::connect | src/checks/host/tst_hostseams.cpp:220
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Source context since previous assertion:
+  ; // domain outlives the scene and window
+          quick->detachWindow();
+
+Original expression:
+  QCOMPARE(detachCount, 1)
+
+Remaining original source (closing sequence and helper bodies):
+  ; // idempotent
+      }
+  };
+  } // namespace
+  } // namespace checks::host
+
+  int runHostSeamsCheck(const QStringList &qtArguments)
+  {
+      checks::host::HostSeamsTest test;
+      QStringList arguments{QStringLiteral("host-seams")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "tst_hostseams.moc"

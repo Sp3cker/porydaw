@@ -10,8 +10,8 @@ final class AudioTransport {
     private(set) var applied = AudioTransportState.stopped
     private(set) var cutting = false
     private var rising = false
-    private var target = AudioTransportState.stopped
-    private var cutGain: Float = 1
+    private(set) var target = AudioTransportState.stopped
+    private(set) var cutGain: Float = 1
     private var cutStep: Float = 0
     private var remaining: UInt32 = 0
     private var hold: UInt32 = 0

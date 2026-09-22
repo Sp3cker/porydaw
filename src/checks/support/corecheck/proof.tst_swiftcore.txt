@@ -1,0 +1,181 @@
+Assertion correspondence: support/corecheck/tst_swiftcore.cpp
+
+Reference revision: 59f48ea0e432c14a0da6f93684cc729d8b3c587b
+Original: src/checks/support/corecheck/tst_swiftcore.cpp
+Original SHA-256: 8639e7bc3924df28d6581e0cfa256ed989dfa7b15155bdd42b09c9f4e99e6907
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. The single
+original failure site appears below with its verbatim context.
+This file IS the Swift lane runner: each SwiftCoreTest slot invokes pdc_suite_run
+with reportSwiftCheck, which forwards Swift failures here and logs passes. The
+single qFail site is therefore NATIVE: it relays Swift-side failure through the
+native QTest harness rather than asserting converted behavior itself.
+Disposition tally: 1 sites: 1 NATIVE.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+SwiftCoreTest slots (midiCodec, musicalSemantics, playback, noteEdits,
+documentHistory, eventEdits, xcmdEdits, midiImport, timeEdits, projectSession,
+bankHistory) each run one pdc suite through reportSwiftCheck; runSwiftCoreCheck
+wires the fixture root and Qt arguments. No fixture file carries predicates;
+the Swift suite itself is the coverage surface.
+
+Fixture, sequence and row constraints
+No _data rows expand sites in this file; the relay fires once per failed Swift
+predicate with its cppId and message.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | reportSwiftCheck | src/checks/support/corecheck/tst_swiftcore.cpp:18
+Disposition: NATIVE
+Mapping/reason: Relay obligation: this site forwards a Swift-side failure through the native QTest harness (QTest::qFail). It requires the native check runner itself; no Swift predicate can assert the relay.
+Source context since previous assertion:
+  #include "tst_swiftcore.h"
+
+  #include "core_check.h"
+  #include "native_check.h"
+
+  #include <QDebug>
+  #include <QFile>
+  #include <QtTest/QTest>
+
+  namespace {
+
+  void reportSwiftCheck(void *, int failed, const char *cppId, const char *message)
+  {
+      const QString identity = QString::fromUtf8(cppId ? cppId : "swiftcore/unknown");
+      const QString detail = QString::fromUtf8(message ? message : "");
+      if (failed) {
+          const QString failure = QStringLiteral("cppId=%1: %2").arg(identity, detail);
+Original expression:
+          QTest::qFail(qPrintable(failure), cppId ? cppId : "swiftcore", 0);
+
+Remaining original source (closing sequence and helper bodies):
+          return;
+      }
+      qInfo().noquote() << QStringLiteral("swiftcore PASS cppId=%1: %2").arg(identity, detail);
+  }
+
+  } // namespace
+
+  void SwiftCoreTest::midiCodec()
+  {
+      pdc_suite_run(PDC_SUITE_MIDI_CODEC, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::musicalSemantics()
+  {
+      pdc_suite_run(PDC_SUITE_MUSICAL_SEMANTICS, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::playback()
+  {
+      pdc_suite_run(PDC_SUITE_PLAYBACK, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::noteEdits()
+  {
+      pdc_suite_run(PDC_SUITE_NOTE_EDITS, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::documentHistory()
+  {
+      pdc_suite_run(PDC_SUITE_DOCUMENT_HISTORY, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::eventEdits()
+  {
+      pdc_suite_run(PDC_SUITE_EVENT_EDITS, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::xcmdEdits()
+  {
+      pdc_suite_run(PDC_SUITE_XCMD_EDITS, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::midiImport()
+  {
+      pdc_suite_run(PDC_SUITE_MIDI_IMPORT, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::timeEdits()
+  {
+      pdc_suite_run(PDC_SUITE_TIME_EDITS, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::projectSession()
+  {
+      pdc_suite_run(PDC_SUITE_PROJECT_SESSION, reportSwiftCheck, this);
+  }
+
+  void SwiftCoreTest::bankHistory()
+  {
+      pdc_suite_run(PDC_SUITE_BANK_HISTORY, reportSwiftCheck, this);
+  }
+
+  int runSwiftCoreCheck(const QString &fixtureRoot, const QStringList &qtArguments)
+  {
+      const QByteArray encodedRoot = QFile::encodeName(fixtureRoot);
+      pdc_check_set_fixture_root(encodedRoot.constData());
+
+      QStringList selectedArguments = qtArguments;
+      const QString compilerPrefix = QStringLiteral("--pdc-mid2agb=");
+      if (!selectedArguments.isEmpty() && selectedArguments.front().startsWith(compilerPrefix)) {
+          const QByteArray encodedCompiler =
+              QFile::encodeName(selectedArguments.takeFirst().mid(compilerPrefix.size()));
+          pdc_check_set_mid2agb_path(encodedCompiler.constData());
+      } else {
+          pdc_check_set_mid2agb_path(nullptr);
+      }
+
+      SwiftCoreTest test;
+      // qExec treats arguments[0] as the program name; without it the first
+      // payload token is consumed and function selection silently stops.
+      QStringList arguments{QStringLiteral("swiftcore")};
+      arguments.append(selectedArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+Counterpart executable predicate index
+The S entries are representative Swift predicates executed through this exact relay by the swiftcore lane. Their presence alone does not close the NATIVE relay obligation. Preserve their surrounding setup and order in the paired source.
+
+S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:491
+Counterpart expression:
+          report.expectEqual(expectedBlank, swiftBlank, cppID: blankID,
+                             what: "independent canonical byte vector")
+
+S002 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:568
+Counterpart expression:
+      report.expectEqual("B-2", midiKeyName(-1), cppID: m4aSemanticsID,
+                         what: "row=key-negative floor modulo")
+
+S003 | runDocumentHistorySuite | src/checks/editcheck/NoteChecks.swift:35
+Counterpart expression:
+      report.expectEqual(3, notes.count,
+                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+                         what: "all note-ons projected")
+
+S004 | runMidiImportSuite | src/checks/editcheck/EventChecks.swift:54
+Counterpart expression:
+      report.expectEqual(2, added,
+                         cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                         what: "new track occupies the next engine slot")
+
+S005 | commandMixStatePublishesImmediately | src/checks/trackheaders/TrackHeadersChecks.swift:66
+Counterpart expression:
+      report.expectEqual(Set([0]), session.mutedTracks, cppID: trackHeadersMixPublicationID,
+                         what: "mute command changes session mix state")

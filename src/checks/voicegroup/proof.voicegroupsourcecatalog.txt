@@ -1,0 +1,1259 @@
+Assertion correspondence: voicegroup/voicegroupsourcecatalog.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/voicegroup/voicegroupsourcecatalog.cpp
+Original SHA-256: 19df14b6511fae332d2f8b74222a67f996abf3d2f7d7f3e5dd96c739d6950b53
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup, rows,
+loops, and guards between assertions verbatim. S identifiers would identify exact
+Swift predicates; none exist for this file, so every site below is GAP.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted Swift window. GAP identifies an
+original predicate without a replacement assertion. These VoicegroupSourceTest catalog cases prove ADSR default scans, synth catalog write/gate rules, single-colon symbol scans, and synth-descriptor loads through real and synthetic project trees. No Swift catalog coverage exists, so every site is GAP.
+
+Verification
+Command: deno task verify --filter vgbankcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+C++ entry point runVgCheck (qExec name "voicegroup-source") drives VoicegroupSourceTest; the cases in this file use QTemporaryDir synthetic trees, voicegroup_test::copyProject fixtures, or the staged session (m_session) opened in init(). Shared C++ fixtures: checks/voicegroup/voicegrouptestfixture.h/.cpp (openSession, writeFile/readFile, copyProject) and checks/voicegroup/tst_voicegroupsource.h (class declaration). This file's cases are not on the vgbankcheck lane. No Swift entry point executes any paired check.
+
+Fixture, sequence and row constraints
+typicalAdsrSyntheticScan's local `verify` lambda expands its two sites over four macro families (Square1, Square2Alt, DirectSoundNoResample, Noise). typicalAdsrFixtureSuggestionsAreAudible loops its five in-loop sites over every byFamily entry (CGB vs sample maxima) and four sites over every bySymbol entry. synthCatalogWriteAndGates sequences three trees (wired, bare, unwired) with idempotent-rewrite and conflict-rejection gates. singleColonSymbolsScanAndLoad pins single- vs double-colon symbol resolution and byte-exact loaded sample/wave contents.
+
+Original assertion inventory and source sequence
+
+A001 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:35
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+#include "checks/voicegroup/tst_voicegroupsource.h"
+
+#include <QDir>
+#include <QFile>
+#include <QTemporaryDir>
+#include <QtTest>
+
+#include "checks/support/songfixture.h"
+#include "checks/voicegroup/voicegrouptestfixture.h"
+
+namespace {
+
+bool allLfAreCrLf(const QByteArray &contents)
+{
+    for (qsizetype index = 0; index < contents.size(); ++index) {
+        if (contents[index] == '\n' && (index == 0 || contents[index - 1] != '\r'))
+            return false;
+    }
+    return true;
+}
+
+QByteArray sampleBinary(char sample)
+{
+    QByteArray binary(16, '\0');
+    binary[12] = 4;
+    binary += QByteArray(4, sample);
+    return binary;
+}
+
+} // namespace
+
+void VoicegroupSourceTest::typicalAdsrSyntheticScan()
+{
+    QTemporaryDir temporary;
+
+Original expression:
+    QVERIFY(temporary.isValid());
+
+A002 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:36
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(temporary.filePath(QStringLiteral("sound/voicegroups"))));
+
+A003 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:50
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QString error;
+    const QByteArray source =
+        QByteArrayLiteral("voicegroup_adsrcheck::\n"
+                          "\tvoice_square_1 60, 0, 0, 2, 0, 0, 15, 0\n"
+                          "\tvoice_square_1 60, 0, 0, 2, 1, 2, 10, 3\n"
+                          "\tvoice_square_1 60, 0, 0, 2, 1, 2, 10, 3\n"
+                          "\tvoice_square_1 60, 0, 0, 2, 2, 0, 12, 1\n"
+                          "\tvoice_square_2 60, 0, 2, 9, 2, 20, 11\n"
+                          "\tvoice_directsound 60, 0, AdsrCheckA, 255, 0, 255, 165\n"
+                          "\tvoice_directsound_no_resample 60, 0, AdsrCheckA, 255, 0, 255, 165\n"
+                          "\tvoice_directsound 60, 0, AdsrCheckA, 200, 100, 128, 216\n"
+                          "\tvoice_directsound 60, 0, AdsrCheckB, 0, 0, 255, 165\n"
+                          "\tvoice_noise 60, 0, 0, 1, 0, 13, 2\n");
+
+Original expression:
+    QVERIFY2(
+        voicegroup_test::writeFile(
+            temporary.filePath(QStringLiteral("sound/voicegroups/adsrcheck.inc")), source, error),
+        qPrintable(error));
+
+A004 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:58
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    const VgAdsrDefaults defaults = VoicegroupSource::typicalAdsr(temporary.path());
+    const auto verify = [&defaults](VgMacro macro, const VgAdsr &expected) {
+        const int family = vgAdsrFamily(macro);
+
+Original expression:
+        QVERIFY(defaults.byFamily.contains(family));
+
+A005 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:59
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QCOMPARE(defaults.byFamily.value(family), expected);
+
+A006 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:65
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    };
+    verify(VgMacro::Square1, {1, 2, 10, 3});
+    verify(VgMacro::Square2Alt, {1, 2, 4, 3});
+    verify(VgMacro::DirectSoundNoResample, {255, 0, 255, 165});
+    verify(VgMacro::Noise, {1, 0, 13, 2});
+
+Original expression:
+    QVERIFY(defaults.bySymbol.contains(QStringLiteral("AdsrCheckA")));
+
+A007 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:66
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(defaults.bySymbol.value(QStringLiteral("AdsrCheckA")), (VgAdsr{255, 0, 255, 165}));
+
+A008 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:67
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!defaults.bySymbol.contains(QStringLiteral("AdsrCheckB")));
+
+A009 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:68
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgDefaultAdsr(defaults, VgMacro::DirectSound, QStringLiteral("AdsrCheckA")),
+             (VgAdsr{255, 0, 255, 165}));
+
+A010 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:70
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgDefaultAdsr(defaults, VgMacro::Square1Alt, {}), (VgAdsr{1, 2, 10, 3}));
+
+A011 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:71
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgDefaultAdsr(defaults, VgMacro::ProgWave, QStringLiteral("missing")),
+             (VgAdsr{0, 0, 15, 3}));
+
+A012 | VoicegroupSourceTest::typicalAdsrSyntheticScan | src/checks/voicegroup/voicegroupsourcecatalog.cpp:73
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgDefaultAdsr(VgAdsrDefaults{}, VgMacro::DirectSound, {}), (VgAdsr{255, 0, 255, 165}));
+
+A013 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:78
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+}
+
+void VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible()
+{
+
+Original expression:
+    QVERIFY(m_session);
+
+A014 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:80
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const VgAdsrDefaults defaults = VoicegroupSource::typicalAdsr(m_session->root());
+
+Original expression:
+    QVERIFY2(!defaults.byFamily.isEmpty(),
+             "fixture project must contain audible ADSR family defaults");
+
+A015 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:86
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    for (auto it = defaults.byFamily.cbegin(); it != defaults.byFamily.cend(); ++it) {
+        const bool cgb = it.key() != vgAdsrFamily(VgMacro::DirectSound);
+        const VgAdsr &adsr = it.value();
+        const int maximum = cgb ? 7 : 255;
+
+Original expression:
+        QVERIFY(adsr.release > 0 && adsr.release <= maximum);
+
+A016 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:87
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(adsr.attack >= 0 && adsr.attack <= maximum);
+
+A017 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:88
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(adsr.decay >= 0 && adsr.decay <= maximum);
+
+A018 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:89
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(adsr.sustain >= 0 && adsr.sustain <= (cgb ? 15 : 255));
+
+A019 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:90
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(cgb || adsr.attack > 0);
+
+A020 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:92
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    }
+
+Original expression:
+    QVERIFY2(!defaults.bySymbol.isEmpty(),
+             "fixture project must contain audible per-symbol ADSR defaults");
+
+A021 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:96
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    for (auto it = defaults.bySymbol.cbegin(); it != defaults.bySymbol.cend(); ++it) {
+        const VgAdsr &adsr = it.value();
+
+Original expression:
+        QVERIFY(adsr.release > 0 && adsr.release <= 255);
+
+A022 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:97
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(adsr.attack >= 0 && adsr.attack <= 255);
+
+A023 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:98
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(adsr.decay >= 0 && adsr.decay <= 255);
+
+A024 | VoicegroupSourceTest::typicalAdsrFixtureSuggestionsAreAudible | src/checks/voicegroup/voicegroupsourcecatalog.cpp:99
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+        QVERIFY(adsr.sustain >= 0 && adsr.sustain <= 255);
+
+A025 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:106
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    }
+}
+
+void VoicegroupSourceTest::synthCatalogWriteAndGates()
+{
+    QTemporaryDir temporary;
+
+Original expression:
+    QVERIFY(temporary.isValid());
+
+A026 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:108
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QString root = temporary.path();
+
+Original expression:
+    QVERIFY(QDir().mkpath(root + QStringLiteral("/sound")));
+
+A027 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:109
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(root + QStringLiteral("/asm/macros")));
+
+A028 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:110
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(root + QStringLiteral("/data")));
+
+A029 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:112
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QString error;
+
+Original expression:
+    QVERIFY2(
+        voicegroup_test::writeFile(
+            root + QStringLiteral("/asm/macros/music_voice.inc"),
+            QByteArrayLiteral("\t.macro set_synth_pulse a=0, b=0, c=0, d=0\n\t.endm\n"
+                              "\t.macro set_synth_saw\n\t.endm\n"
+                              "\t.macro set_synth_triangle\n\t.endm\n"
+                              "\t.macro set_synth_custom a:req, b:req, c:req, d:req\n\t.endm\n"),
+            error),
+        qPrintable(error));
+
+A030 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY2(voicegroup_test::writeFile(
+                 root + QStringLiteral("/sound/direct_sound_data.inc"),
+                 QByteArrayLiteral("DirectSoundWaveData_synthcheck_sample::\n"
+                                   "\t.incbin \"sound/direct_sound_samples/sample.bin\"\n\n"
+                                   "SynthCheckInline:: @ Golden Sun pulse\n"
+                                   "\tset_synth_custom 0x10, 0xF0, 0xE0, 0x80\n"),
+                 error),
+             qPrintable(error));
+
+A031 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:130
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QString synthPath = root + QStringLiteral("/sound/direct_sound_synth_data.inc");
+
+Original expression:
+    QVERIFY2(voicegroup_test::writeFile(synthPath,
+                                        QByteArrayLiteral("\t.align 2\r\nSynthCheckSaw::\r\n"
+                                                          "    set_synth_25\r\n"),
+                                        error),
+             qPrintable(error));
+
+A032 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:136
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QString soundData = root + QStringLiteral("/data/sound_data.s");
+
+Original expression:
+    QVERIFY2(voicegroup_test::writeFile(
+                 soundData,
+                 QByteArrayLiteral("\t.include \"sound/direct_sound_data.inc\"\n"
+                                   "\t.include \"sound/music_player_table.inc\"\n"),
+                 error),
+             qPrintable(error));
+
+A033 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:143
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const auto fixture = voicegroup_test::copyProject(root, error);
+
+Original expression:
+    QVERIFY2(fixture, qPrintable(error));
+
+A034 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:149
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    root = fixture->root();
+    synthPath = root + QStringLiteral("/sound/direct_sound_synth_data.inc");
+    soundData = root + QStringLiteral("/data/sound_data.s");
+
+    const VgSynthCatalog catalog = VoicegroupSource::synthInstruments(root);
+
+Original expression:
+    QCOMPARE(catalog.defs.size(), 2);
+
+A035 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(*catalog.find(QStringLiteral("SynthCheckInline")),
+             (VgSynthDesc{0, 0x10, 0xF0, 0xE0, 0x80}));
+
+A036 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:152
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(catalog.find(QStringLiteral("SynthCheckSaw")));
+
+A037 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(catalog.find(QStringLiteral("SynthCheckSaw"))->waveform, 1);
+
+A038 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:154
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(catalog.macroWords.size(), 4);
+
+A039 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(catalog.creatable());
+
+A040 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:157
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QStringList samples = VoicegroupSource::directSoundSymbols(root);
+
+Original expression:
+    QVERIFY(samples.contains(QStringLiteral("DirectSoundWaveData_synthcheck_sample")));
+
+A041 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:158
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!samples.contains(QStringLiteral("SynthCheckInline")));
+
+A042 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:159
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgSynthSymbolName({0, 0x40, 2, 3, 4}),
+             QStringLiteral("DirectSoundSynth_GoldenSun_40020304"));
+
+A043 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:161
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgSynthSymbolName({1, 0, 0, 0, 0}), QStringLiteral("DirectSoundSynth_GoldenSun_Saw"));
+
+A044 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:162
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(vgSynthSymbolName({2, 0, 0, 0, 0}),
+             QStringLiteral("DirectSoundSynth_GoldenSun_Triangle"));
+
+A045 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:164
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(catalog.symbolFor({0, 0x10, 0xF0, 0xE0, 0x80}), QStringLiteral("SynthCheckInline"));
+
+A046 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:165
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(catalog.symbolFor({1, 0, 0, 0, 0}), QStringLiteral("SynthCheckSaw"));
+
+A047 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:172
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    const VgSynthDesc pulse{0, 0x40, 2, 3, 4};
+    const QList<QPair<QString, VgSynthDesc>> newDefs = {
+        {vgSynthSymbolName(pulse), pulse},
+        {vgSynthSymbolName({2, 0, 0, 0, 0}), {2, 0, 0, 0, 0}},
+    };
+
+Original expression:
+    QVERIFY2(VoicegroupSource::writeSynthDefinitions(root, newDefs, &error), qPrintable(error));
+
+A048 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:175
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QByteArray grown = voicegroup_test::readFile(synthPath);
+    const QByteArray wired = voicegroup_test::readFile(soundData);
+
+Original expression:
+    QCOMPARE(wired, QByteArrayLiteral("\t.include \"sound/direct_sound_data.inc\"\n"
+                                      "\t.include \"sound/direct_sound_synth_data.inc\"\n"
+                                      "\t.include \"sound/music_player_table.inc\"\n"));
+
+A049 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(allLfAreCrLf(grown));
+
+A050 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const VgSynthCatalog saved = VoicegroupSource::synthInstruments(root);
+
+Original expression:
+    QCOMPARE(*saved.find(vgSynthSymbolName(pulse)), pulse);
+
+A051 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:181
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(saved.find(QStringLiteral("DirectSoundSynth_GoldenSun_Triangle")));
+
+A052 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY2(VoicegroupSource::writeSynthDefinitions(root, newDefs, &error), qPrintable(error));
+
+A053 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:183
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(voicegroup_test::readFile(synthPath), grown);
+
+A054 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(voicegroup_test::readFile(soundData), wired);
+
+A055 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(wired.count("direct_sound_synth_data.inc"), 1);
+
+A056 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:187
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    error.clear();
+
+Original expression:
+    QVERIFY(!VoicegroupSource::writeSynthDefinitions(
+        root, {{QStringLiteral("SynthCheckSaw"), {0, 9, 9, 9, 9}}}, &error));
+
+A057 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:189
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!error.isEmpty());
+
+A058 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:190
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(voicegroup_test::readFile(synthPath), grown);
+
+A059 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:193
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    QTemporaryDir bare;
+
+Original expression:
+    QVERIFY(bare.isValid());
+
+A060 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:194
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(bare.filePath(QStringLiteral("sound"))));
+
+A061 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:195
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY2(voicegroup_test::writeFile(
+                 bare.filePath(QStringLiteral("sound/direct_sound_synth_data.inc")),
+                 QByteArrayLiteral("SynthCheckSaw::\n\tset_synth_saw\n"), error),
+             qPrintable(error));
+
+A062 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:200
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const auto bareFixture = voicegroup_test::copyProject(bare.path(), error);
+
+Original expression:
+    QVERIFY2(bareFixture, qPrintable(error));
+
+A063 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:203
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QString bareRoot = bareFixture->root();
+    const VgSynthCatalog bareCatalog = VoicegroupSource::synthInstruments(bareRoot);
+
+Original expression:
+    QVERIFY(!bareCatalog.creatable());
+
+A064 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:204
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(bareCatalog.symbolFor({1, 0, 0, 0, 0}), QStringLiteral("SynthCheckSaw"));
+
+A065 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:206
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    error.clear();
+
+Original expression:
+    QVERIFY(!VoicegroupSource::writeSynthDefinitions(
+        bareRoot, {{QStringLiteral("DirectSoundSynth_GoldenSun_09090909"), {0, 9, 9, 9, 9}}},
+        &error));
+
+A066 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:209
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!error.isEmpty());
+
+A067 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:212
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    QTemporaryDir unwired;
+
+Original expression:
+    QVERIFY(unwired.isValid());
+
+A068 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(unwired.filePath(QStringLiteral("sound"))));
+
+A069 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:214
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(unwired.filePath(QStringLiteral("asm/macros"))));
+
+A070 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:215
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY2(voicegroup_test::writeFile(
+                 unwired.filePath(QStringLiteral("asm/macros/music_voice.inc")),
+                 QByteArrayLiteral("\t.macro set_synth_pulse a=0, b=0, c=0, d=0\n\t.endm\n"),
+                 error),
+             qPrintable(error));
+
+A071 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:221
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const auto unwiredFixture = voicegroup_test::copyProject(unwired.path(), error);
+
+Original expression:
+    QVERIFY2(unwiredFixture, qPrintable(error));
+
+A072 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:224
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QString unwiredRoot = unwiredFixture->root();
+    error.clear();
+
+Original expression:
+    QVERIFY(!VoicegroupSource::writeSynthDefinitions(
+        unwiredRoot, {{QStringLiteral("DirectSoundSynth_GoldenSun_09090909"), {0, 9, 9, 9, 9}}},
+        &error));
+
+A073 | VoicegroupSourceTest::synthCatalogWriteAndGates | src/checks/voicegroup/voicegroupsourcecatalog.cpp:227
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(error.contains(QStringLiteral("direct_sound_synth_data.inc")));
+
+A074 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:233
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+}
+
+void VoicegroupSourceTest::singleColonSymbolsScanAndLoad()
+{
+    QTemporaryDir temporary;
+
+Original expression:
+    QVERIFY(temporary.isValid());
+
+A075 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:235
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QString root = temporary.path();
+
+Original expression:
+    QVERIFY(QDir().mkpath(root + QStringLiteral("/sound/direct_sound_samples")));
+
+A076 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:236
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(root + QStringLiteral("/sound/programmable_wave_samples")));
+
+A077 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:237
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(QDir().mkpath(root + QStringLiteral("/sound/voicegroups")));
+
+A078 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:239
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QString error;
+
+Original expression:
+    QVERIFY(voicegroup_test::writeFile(
+        root + QStringLiteral("/sound/direct_sound_samples/colon_single.bin"), sampleBinary('\x11'),
+        error));
+
+A079 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:242
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(voicegroup_test::writeFile(
+        root + QStringLiteral("/sound/direct_sound_samples/colon_double.bin"), sampleBinary('\x22'),
+        error));
+
+A080 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:245
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(voicegroup_test::writeFile(
+        root + QStringLiteral("/sound/programmable_wave_samples/colon_wave.pcm"),
+        QByteArray(16, '\x33'), error));
+
+A081 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:248
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(voicegroup_test::writeFile(
+        root + QStringLiteral("/sound/direct_sound_data.inc"),
+        QByteArrayLiteral(
+            "DirectSoundWaveData_colon_double::\n\t.incbin "
+            "\"sound/direct_sound_samples/"
+            "colon_double.bin\"\nDirectSoundWaveData_colon_single:\n\t.incbin "
+            "\"sound/direct_sound_samples/colon_single.bin\"\nColonCheckSynth:\n\tset_synth_25\n"),
+        error));
+
+A082 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:256
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(voicegroup_test::writeFile(
+        root + QStringLiteral("/sound/programmable_wave_data.inc"),
+        QByteArrayLiteral("ProgrammableWaveData_colon_wave:\n\t.incbin "
+                          "\"sound/programmable_wave_samples/colon_wave.pcm\"\n"),
+        error));
+
+A083 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:261
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(voicegroup_test::writeFile(
+        root + QStringLiteral("/sound/voicegroups/coloncheck.inc"),
+        QByteArrayLiteral(
+            "voicegroup_coloncheck::\n\tvoice_directsound 60, 0, DirectSoundWaveData_colon_single, "
+            "255, 0, 255, 165\n\tvoice_directsound 60, 0, DirectSoundWaveData_colon_double, 255, "
+            "0, 255, 165\n\tvoice_programmable_wave 60, 0, ProgrammableWaveData_colon_wave, 0, 0, "
+            "15, 3\n"),
+        error));
+
+A084 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:271
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    const VgDirectSoundScan scan = VoicegroupSource::directSoundCatalog(root);
+
+Original expression:
+    QVERIFY(scan.directSound.contains(QStringLiteral("DirectSoundWaveData_colon_single")));
+
+A085 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:272
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(scan.directSound.contains(QStringLiteral("DirectSoundWaveData_colon_double")));
+
+A086 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:273
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!scan.directSound.contains(QStringLiteral("ColonCheckSynth")));
+
+A087 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:274
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(scan.synths.find(QStringLiteral("ColonCheckSynth")));
+
+A088 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:275
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(VoicegroupSource::progWaveSymbols(root).contains(
+        QStringLiteral("ProgrammableWaveData_colon_wave")));
+
+A089 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:279
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QByteArray rootUtf8 = root.toUtf8();
+    LoadedVoiceGroup *const loaded = voicegroup_load(rootUtf8.constData(), "coloncheck", nullptr);
+
+Original expression:
+    QVERIFY(loaded);
+
+A090 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:280
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(loaded->voices[0].wav);
+
+A091 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:281
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(loaded->voices[0].wav->size, size_t(4));
+
+A092 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:282
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(loaded->voices[0].wav->data[0], uint8_t(0x11));
+
+A093 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:283
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(loaded->voices[1].wav);
+
+A094 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:284
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(loaded->voices[1].wav->data[0], uint8_t(0x22));
+
+A095 | VoicegroupSourceTest::singleColonSymbolsScanAndLoad | src/checks/voicegroup/voicegroupsourcecatalog.cpp:285
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(loaded->voices[2].wavePointer);
+
+A096 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:291
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    voicegroup_free(loaded);
+}
+
+void VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup()
+{
+
+Original expression:
+    QVERIFY(m_session);
+
+A097 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:301
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    VoicegroupSource &source = m_session->source;
+    int slot = -1;
+    for (int index = 0; index < VOICEGROUP_SIZE; ++index) {
+        const VgVoice *const voice = source.voiceAt(index);
+        if (voice && voicegroup_test::isDirectSound(voice->macro)) {
+            slot = index;
+            break;
+        }
+    }
+
+Original expression:
+    QVERIFY2(slot >= 0, "fixture_rich must retain a DirectSound slot");
+
+A098 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:306
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QString synthData =
+        m_session->root() + QStringLiteral("/sound/direct_sound_synth_data.inc");
+    const QByteArray original = voicegroup_test::readFile(synthData);
+    QString error;
+
+Original expression:
+    QVERIFY2(voicegroup_test::writeFile(
+                 synthData,
+                 original + QByteArrayLiteral("\nVgcheckSynthPulse::\n"
+                                              "\tset_synth_pulse 0x21, 0x43, 0x65, 0x87\n"),
+                 error),
+             qPrintable(error));
+
+A099 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:314
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    VgVoice voice = *source.voiceAt(slot);
+    voice.symbol = QStringLiteral("VgcheckSynthPulse");
+
+Original expression:
+    QVERIFY(source.setVoice(slot, voice));
+
+A100 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:315
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY2(source.save(&error), qPrintable(error));
+
+A101 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:319
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const QByteArray root = m_session->rootUtf8();
+    const QByteArray name = m_session->loadNameUtf8();
+    LoadedVoiceGroup *const loaded = voicegroup_load(root.constData(), name.constData(), nullptr);
+
+Original expression:
+    QVERIFY(loaded);
+
+A102 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:322
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const ToneData &tone = loaded->voices[slot];
+    const auto *descriptor = tone.wav ? reinterpret_cast<const uint8_t *>(tone.wav->data) : nullptr;
+
+Original expression:
+    QVERIFY((tone.type & ~uint8_t(0x18)) == 0);
+
+A103 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:323
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(tone.wav);
+
+A104 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:324
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(tone.wav->size, size_t(0));
+
+A105 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:325
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(descriptor);
+
+A106 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:326
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(descriptor[1], uint8_t(0));
+
+A107 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:327
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(descriptor[2], uint8_t(0x21));
+
+A108 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:328
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(descriptor[3], uint8_t(0x43));
+
+A109 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:329
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(descriptor[4], uint8_t(0x65));
+
+A110 | VoicegroupSourceTest::synthDescriptorLoadsThroughVoicegroup | src/checks/voicegroup/voicegroupsourcecatalog.cpp:330
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(descriptor[5], uint8_t(0x87));
+
+Remaining original source (closing sequence and helper bodies):
+
+    voicegroup_free(loaded);
+}
+
+int runVgCheck(const QString &projectRoot, const QString &songLabel, const QStringList &qtArguments)
+{
+    VoicegroupSourceTest test(projectRoot, songLabel);
+    QStringList arguments{QStringLiteral("voicegroup-source")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+
+Swift assertion predicates
+none: no Swift counterpart file exists, so there are no S entries.
+
+Shared helpers
+none: no Swift fixture files carry expects for this suite.

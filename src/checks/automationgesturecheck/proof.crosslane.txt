@@ -1,0 +1,958 @@
+Assertion correspondence: automationgesturecheck/crosslane.cpp
+
+Reference revision: 7430fb426d466be20dd3a5e816cb2081c0e9135f
+Deleted in: c7cf74255c70f3b78d81067d116bbb45147d3f6a Complete offscreen automation Qt Test migration
+Original: src/checks/automationgesturecheck/crosslane.cpp
+Original SHA-256: d64dd8505c67f3f32f8c513e8f18ecf7ed6a2d3aef4db374b71e0ab98bc1da03
+Swift counterpart: src/checks/automation/automationselection.swift
+Swift SHA-256: 8e64128082de42746ae5e7b3be47ee3304c9f4eadd341261939bef030ee367c4
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original require() predicate site appears below, including snapshot guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact counterpart predicates, listed after the inventory.
+Seven cross-lane scenarios (band-isolation, tempo-pan-lfo, stale-batch, pan-lfo
+range edit, xcmd-remove-only, xcmd-range-moves, xcmd-expansion-paste) exercise
+mixed Tempo/pan/LFO selections, stale-batch commits, and XCMD byte traffic.
+Twenty sites are partial toward converted model predicates, nine stay open,
+and two require the retired native lane bodies.
+Disposition tally: 31 sites: 9 GAP, 2 NATIVE, 20 PARTIAL.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter automation-gestures --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-suite note: the retired automation-gestures C++ harness never runs again;
+candidate model predicates live in the automation lane Swift suite.
+
+Execution and ownership
+runNodeLaneCrossLaneParity seeds a mixed Tempo/pan/LFO document, then runs
+runBandIsolation, runTempoPanLfo, runStaleBatch, runPanLfoRangeEdit,
+runXcmdRemoveOnly, runXcmdRangeMoves, and runXcmdExpansionPaste in sequence.
+Shared fixture: AutomationGestureCheckRig from rig.h (mixed-lane document, canvas
+stack, mouse rig, document snapshots); cross-lane domain labelling comes from
+Check in support.h.
+
+Fixture, sequence and row constraints
+Scenarios share one mixed-selection document (Tempo points plus pan and LFO lanes,
+kFixtureTick middle node); DocSnapshot (SMF bytes, revision, undo index)
+comparisons pin one-committed-edit and unchanged obligations, and restoreLfo
+repairs the LFO lane between scenarios. No _data rows expand sites in this file.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | expectUnchanged | src/checks/automationgesturecheck/crosslane.cpp:147
+Disposition: PARTIAL
+Mapping/reason: Snapshot-unchanged helper guard; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+  #include "domains.h"
+  #include "support.h"
+
+  #include <array>
+  #include <cstdint>
+  #include <limits>
+  #include <utility>
+  #include <vector>
+
+  #include <QEvent>
+  #include <QPointF>
+  #include <QString>
+  #include <QUndoStack>
+
+  #include "core/songdocument.h"
+  #include "core/timedefaults.h"
+  #include "rig.h"
+  #include "ui/editordrawer/automationcanvas.h"
+  #include "ui/editordrawer/nodelane/nodelane.h"
+  #include "ui/songview.h"
+  #include "ui/songview/editorselectionmodel.h"
+
+  namespace {
+
+  struct Context {
+      AutomationGestureCheckRig &rig;
+      Check check;
+      const char *scenario = "";
+
+      Context(AutomationGestureCheckRig &rig, const AutomationGestureCheck &fn, const char *scenario)
+          : rig(rig)
+          , check(fn, QStringLiteral("cross-lane %1").arg(QLatin1String(scenario)))
+          , scenario(scenario)
+      {}
+  };
+
+  struct Scenario {
+      const char *name;
+      void (*run)(Context &);
+  };
+
+  constexpr uint32_t kPreservedTempoUs = 499999;
+  constexpr uint64_t kMovedTick = 144;
+  constexpr uint64_t kUnrelatedLate = 384;
+
+  std::vector<SongDocument::LanePointValue> laneValues(const std::vector<DocLanePoint> &points)
+  {
+      std::vector<SongDocument::LanePointValue> values;
+      values.reserve(points.size());
+      for (const auto &point : points)
+          values.push_back({point.tick, point.value});
+      return values;
+  }
+
+  std::vector<NodePoint> effectiveTempo(const SongDocument &document)
+  {
+      std::vector<NodePoint> out;
+      for (const auto &point : document.tempoPoints())
+          out.push_back({point.tick, tempoBpm(point.microsecondsPerQuarterNote)});
+      return out;
+  }
+
+  std::vector<NodePoint> effectiveLane(const SongDocument &document, int track, uint8_t controller)
+  {
+      std::vector<NodePoint> out;
+      for (const auto &point : document.lanePoints(track, controller)) {
+          if (!out.empty() && out.back().tick == point.tick)
+              out.back().value = point.value;
+          else
+              out.push_back({point.tick, point.value});
+      }
+      return out;
+  }
+
+  uint32_t tempoUsAt(const SongDocument &document, uint64_t tick)
+  {
+      for (const auto &point : document.tempoPoints()) {
+          if (point.tick == tick)
+              return point.microsecondsPerQuarterNote;
+      }
+      return 0;
+  }
+
+  void writeLane(SongDocument &document, const AutomationGestureCheckRig::Lane &lane,
+                 const std::vector<SongDocument::LanePointValue> &points)
+  {
+      document.writeLanePoints(lane.track, lane.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               points);
+  }
+
+  void seedMixed(AutomationGestureCheckRig &rig, bool occupyMovedPan = false)
+  {
+      TempoEdit edit;
+      edit.remove = rig.document().tempoPoints();
+      edit.add = {{0, tempoUsForBpm(80)},
+                  {kFixtureTick, kPreservedTempoUs},
+                  {kUnrelatedLate, tempoUsForBpm(64)}};
+      if (rig.document().tempoPoints() != edit.add)
+          rig.document().applyTempoEdit(edit);
+      if (occupyMovedPan)
+          writeLane(rig.document(), rig.pan,
+                    {{0, 80},
+                     {kFixtureTick, 10},
+                     {kFixtureTick, 20},
+                     {kMovedTick, 70},
+                     {kMovedTick, 80},
+                     {kUnrelatedLate, 110}});
+      else
+          writeLane(rig.document(), rig.pan,
+                    {{0, 80}, {kFixtureTick, 10}, {kFixtureTick, 20}, {kUnrelatedLate, 110}});
+      writeLane(rig.document(), rig.lfo, {{0, 32}, {kFixtureTick, 96}, {kUnrelatedLate, 64}});
+      rig.documentChanged();
+  }
+
+  void publishMixedSelection(AutomationGestureCheckRig &rig, uint64_t first, uint64_t last,
+                             bool includeTempo = true)
+  {
+      songview::EditorSelectionModel::TimeSelection selection;
+      selection.startTick = first;
+      selection.endTick = last;
+      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+      selection.tempo = includeTempo;
+      selection.lanes = {{rig.pan.track, rig.pan.controller}, {rig.lfo.track, rig.lfo.controller}};
+      rig.view().selectionModel().setTimeSelection(std::move(selection));
+      rig.pump();
+  }
+
+  bool mixedSelection(const songview::EditorSelectionModel::TimeSelection &selection, uint64_t first,
+                      uint64_t last, const AutomationGestureCheckRig &rig, bool includeTempo = true)
+  {
+      const auto hasLane = [&selection](int track, uint8_t controller) {
+          for (const auto &lane : selection.lanes) {
+              if (lane.first == track && lane.second == controller)
+                  return true;
+          }
+          return false;
+      };
+      return selection.active() &&
+             selection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+             selection.tempo == includeTempo && selection.startTick == first &&
+             selection.endTick == last && hasLane(rig.pan.track, rig.pan.controller) &&
+             hasLane(rig.lfo.track, rig.lfo.controller);
+  }
+
+  void expectUnchanged(const Context &ctx, const DocSnapshot &before, const char *label)
+  {
+Original expression:
+      ctx.check.require(
+          isUnchanged(before, snapshot(ctx.rig.document())),
+          QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
+
+A002 | requirePanLfo | src/checks/automationgesturecheck/crosslane.cpp:156
+Disposition: NATIVE
+Mapping/reason: Fixture guard: requires native pan or LFO lane bodies on the retired canvas stack.
+Source context since previous assertion:
+  }
+
+  bool requirePanLfo(Context &ctx)
+  {
+      if (ctx.rig.handleFor(ctx.rig.pan).valid() && ctx.rig.handleFor(ctx.rig.lfo).valid())
+          return true;
+Original expression:
+      ctx.check.require(false, QStringLiteral("pan or LFO lane body is missing"));
+
+A003 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:177
+Disposition: NATIVE
+Mapping/reason: Fixture guard: requires native Tempo, pan, and LFO lane bodies on the retired canvas stack.
+Source context since previous assertion:
+      return false;
+  }
+
+  QPointF shiftDragPreview(AutomationGestureCheckRig &rig, LaneHandle handle, uint64_t fromTick,
+                           uint64_t toTick, int value)
+  {
+      const auto start = rig.pointAt(handle, fromTick, value).position;
+      const auto target = rig.pointAt(handle, toTick, value).position;
+      const QPointF activation = start + QPointF(rig.geometry().nodeDragActivationDistance + 2, 0.0);
+      const QPointF end = activation + target - start;
+      rig.mousePress(start, Qt::ShiftModifier);
+      rig.mouseMove(activation, Qt::LeftButton, Qt::ShiftModifier);
+      rig.mouseMove(end, Qt::LeftButton, Qt::ShiftModifier);
+      rig.pump();
+      return end;
+  }
+  void runBandIsolation(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      if (!requirePanLfo(ctx) || !rig.expandTempo()) {
+Original expression:
+          ctx.check.require(false, QStringLiteral("Tempo, pan, or LFO lane body is missing"));
+
+A004 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:194
+Disposition: PARTIAL
+Mapping/reason: Band-isolation outcome; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+          return;
+      }
+      seedMixed(rig);
+      auto &selectionModel = rig.view().selectionModel();
+      selectionModel.clearTimeSelection();
+      rig.pump();
+
+      const int selectedBpm = tempoBpm(kPreservedTempoUs);
+      const QPointF tempoStart = rig.tempoBodyPoint(kFixtureTick - 24, selectedBpm);
+      const QPointF panEnd = rig.pointAt(rig.pan, kMovedTick, 64).position;
+      rig.mousePress(tempoStart, Qt::NoModifier, Qt::RightButton);
+      rig.mouseMove(panEnd, Qt::RightButton);
+      rig.mouseRelease(panEnd, Qt::NoModifier, Qt::RightButton);
+      rig.pump();
+
+      const auto &tempoSelection = selectionModel.timeSelection();
+Original expression:
+      ctx.check.require(
+          tempoSelection.active() &&
+              tempoSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+              tempoSelection.tempo && tempoSelection.lanes.empty() &&
+              selectionModel.timeSelectionCoversTempo(1u) &&
+              !selectionModel.timeSelectionCoversLane(rig.pan.track, rig.pan.controller, 1u) &&
+              !selectionModel.timeSelectionCoversLane(rig.lfo.track, rig.lfo.controller, 1u),
+          QStringLiteral("Tempo band selection leaked into CC rows"));
+
+A005 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:210
+Disposition: PARTIAL
+Mapping/reason: Band-isolation outcome; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+
+      const auto beforeTempoDrag = snapshot(rig.document());
+      const auto panBefore = laneValues(rig.document().lanePoints(rig.pan.track, rig.pan.controller));
+      const auto lfoBefore = laneValues(rig.document().lanePoints(rig.lfo.track, rig.lfo.controller));
+      const QPointF tempoDragEnd =
+          shiftDragPreview(rig, LaneHandle{0}, kFixtureTick, kMovedTick, selectedBpm);
+      rig.mouseRelease(tempoDragEnd, Qt::ShiftModifier);
+      rig.pump();
+Original expression:
+      ctx.check.require(
+          isOneEdit(beforeTempoDrag, snapshot(rig.document())) &&
+              sameRawPoints(rig.document().lanePoints(rig.pan.track, rig.pan.controller),
+                            panBefore) &&
+              sameRawPoints(rig.document().lanePoints(rig.lfo.track, rig.lfo.controller), lfoBefore),
+          QStringLiteral("dragging a Tempo band selection moved a CC row"));
+
+A006 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:230
+Disposition: PARTIAL
+Mapping/reason: Band-isolation outcome; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+
+      rig.document().undoStack()->undo();
+      rig.documentChanged();
+      selectionModel.clearTimeSelection();
+      rig.pump();
+
+      const QPointF ccStart = rig.pointAt(rig.volume, kFixtureTick - 24, 64).position;
+      const QPointF ccEnd = rig.pointAt(rig.volume, kMovedTick, 64).position;
+      rig.mousePress(ccStart, Qt::NoModifier, Qt::RightButton);
+      rig.mouseMove(ccEnd, Qt::RightButton);
+      rig.mouseRelease(ccEnd, Qt::NoModifier, Qt::RightButton);
+      rig.pump();
+
+      const auto &ccSelection = selectionModel.timeSelection();
+Original expression:
+      ctx.check.require(
+          ccSelection.active() &&
+              ccSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+              !ccSelection.tempo &&
+              ccSelection.lanes ==
+                  std::vector<std::pair<int, uint8_t>>{{rig.volume.track, rig.volume.controller}} &&
+              !selectionModel.timeSelectionCoversTempo(1u),
+          QStringLiteral("CC band selection leaked into Tempo"));
+
+A007 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:244
+Disposition: PARTIAL
+Mapping/reason: Committed-edit revision guard; S001 covers revision increment at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+  }
+
+  void expectOneCommittedEdit(const Context &ctx, const DocSnapshot &before, const char *label)
+  {
+      auto &document = ctx.rig.document();
+      const auto after = snapshot(document);
+Original expression:
+      ctx.check.require(isOneEdit(before, after),
+                        QStringLiteral("%1 did not commit exactly one revision and one undo")
+                            .arg(QLatin1String(label)));
+
+A008 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:249
+Disposition: PARTIAL
+Mapping/reason: Committed-edit outcome; S009..S010 cover move and held-span outcomes at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+      document.undoStack()->undo();
+      const auto undone = snapshot(document);
+Original expression:
+      ctx.check.require(
+          undone.undoIndex == before.undoIndex && undone.smf == before.smf,
+          QStringLiteral("%1 undo did not restore SMF and undo index").arg(QLatin1String(label)));
+
+A009 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:254
+Disposition: PARTIAL
+Mapping/reason: Committed-edit undo guard; S002 covers one-undo restore at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+      document.undoStack()->redo();
+      const auto redone = snapshot(document);
+Original expression:
+      ctx.check.require(
+          redone.undoIndex == after.undoIndex && redone.smf == after.smf,
+          QStringLiteral("%1 redo did not restore the committed SMF").arg(QLatin1String(label)));
+
+A010 | expectMovedPanGroup | src/checks/automationgesturecheck/crosslane.cpp:263
+Disposition: PARTIAL
+Mapping/reason: Moved-pan-group outcome; S009 covers move outcomes at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+  }
+
+  void expectMovedPanGroup(const Context &ctx)
+  {
+      auto &document = ctx.rig.document();
+      const auto &pan = ctx.rig.pan;
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveLane(document, pan.track, pan.controller),
+                         {{0, 80}, {kMovedTick, 20}, {kUnrelatedLate, 110}}) &&
+              rawValuesAt(document, pan.track, pan.controller, kFixtureTick).empty() &&
+              rawValuesAt(document, pan.track, pan.controller, kMovedTick) ==
+                  std::vector<int>{10, 20},
+          QStringLiteral("pan dest occupant survived, source was not emptied, or same-tick group "
+                         "order/effective value changed"));
+
+A011 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:301
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+  }
+
+  void restoreLfo(AutomationGestureCheckRig &rig, const std::vector<DocLanePoint> &initialLfo)
+  {
+      writeLane(rig.document(), rig.lfo, laneValues(initialLfo));
+      rig.documentChanged();
+  }
+
+  void runTempoPanLfo(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      if (!requirePanLfo(ctx))
+          return;
+      const auto initialLfo = rig.document().lanePoints(rig.lfo.track, rig.lfo.controller);
+      const auto volume =
+          laneValues(rig.document().lanePoints(rig.volume.track, rig.volume.controller));
+      seedMixed(rig, true);
+      publishMixedSelection(rig, kFixtureTick, kMovedTick);
+      const auto preservedBpm = tempoBpm(kPreservedTempoUs);
+      const auto hoverBefore = snapshot(rig.document());
+      rig.mouseMove(rig.pointAt(LaneHandle{0}, kFixtureTick, preservedBpm).position, Qt::NoButton);
+      rig.pump();
+      expectUnchanged(ctx, hoverBefore, "mixed-selection hover");
+      // Horizontal Shift-drag of the selected Tempo node; pan and LFO must follow in one edit.
+      // Selection is [96, 144) so the hidden pan occupant at 144 is not selected.
+      const auto dragBefore = snapshot(rig.document());
+      const auto end = shiftDragPreview(rig, LaneHandle{0}, kFixtureTick, kMovedTick, preservedBpm);
+      expectUnchanged(ctx, dragBefore, "mixed selection-drag preview");
+      rig.mouseRelease(end, Qt::ShiftModifier);
+      expectOneCommittedEdit(ctx, dragBefore, "selection-drag");
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveTempo(rig.document()),
+                         {{0, 80}, {kMovedTick, preservedBpm}, {kUnrelatedLate, 64}}) &&
+              tempoUsAt(rig.document(), kMovedTick) == kPreservedTempoUs,
+          QStringLiteral("Tempo did not keep the shared tick delta and exact microseconds"));
+
+A012 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:307
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+      expectMovedPanGroup(ctx);
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
+                         {{0, 32}, {kMovedTick, 96}, {kUnrelatedLate, 64}}),
+          QStringLiteral("LFO normalized points did not follow the shared tick delta"));
+
+A013 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:311
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameRawPoints(rig.document().lanePoints(rig.volume.track, rig.volume.controller), volume),
+          QStringLiteral("unrelated volume points did not survive the selection-drag"));
+
+A014 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:314
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          mixedSelection(rig.view().selectionModel().timeSelection(), kMovedTick,
+                         kMovedTick + (kMovedTick - kFixtureTick), rig) &&
+              rig.isIdle(),
+          QStringLiteral("selection-drag did not keep the mixed range or left a live gesture"));
+
+A015 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:328
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+      // Restore the seeded points, then Delete through the leftover empty mixed range (no-op).
+      seedMixed(rig);
+      const auto emptyDeleteBefore = snapshot(rig.document());
+      rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
+      expectUnchanged(ctx, emptyDeleteBefore, "Delete over the empty leftover mixed range");
+      publishMixedSelection(rig, kFixtureTick, kMovedTick);
+      const auto deleteBefore = snapshot(rig.document());
+      rig.keyToArea(QEvent::KeyPress, Qt::Key_Delete);
+      expectOneCommittedEdit(ctx, deleteBefore, "mixed Delete");
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveTempo(rig.document()), {{0, 80}, {kUnrelatedLate, 64}}) &&
+              tempoUsAt(rig.document(), kFixtureTick) == 0,
+          QStringLiteral("mixed Delete did not remove the selected Tempo point"));
+
+A016 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:332
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameRawPoints(rig.document().lanePoints(rig.pan.track, rig.pan.controller),
+                        {{0, 80}, {kUnrelatedLate, 110}}) &&
+              rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, kFixtureTick).empty(),
+          QStringLiteral("mixed Delete left pan group events or removed unrelated pan points"));
+
+A017 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:337
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
+                         {{0, 32}, {kUnrelatedLate, 64}}),
+          QStringLiteral("mixed Delete left the selected LFO point or removed unrelated LFO points"));
+
+A018 | runTempoPanLfo | src/checks/automationgesturecheck/crosslane.cpp:341
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts mixed tempo/pan/LFO lane outcomes or microsecond tempo preservation; the Swift tempo values in S003 belong to a selection-restore case, not a cross-lane edit.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameRawPoints(rig.document().lanePoints(rig.volume.track, rig.volume.controller), volume) &&
+              rig.isIdle(),
+          QStringLiteral("mixed Delete mutated unrelated volume points or left a live gesture"));
+
+A019 | runStaleBatch | src/checks/automationgesturecheck/crosslane.cpp:364
+Disposition: PARTIAL
+Mapping/reason: Stale-release snapshot guard; S011 covers the stale snapshot at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+      restoreLfo(rig, initialLfo);
+  }
+
+  void runStaleBatch(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      if (!requirePanLfo(ctx))
+          return;
+      const auto initialLfo = rig.document().lanePoints(rig.lfo.track, rig.lfo.controller);
+      seedMixed(rig);
+      publishMixedSelection(rig, kFixtureTick, kMovedTick);
+      const auto preservedBpm = tempoBpm(kPreservedTempoUs);
+      const auto before = snapshot(rig.document());
+      const auto end = shiftDragPreview(rig, LaneHandle{0}, kFixtureTick, kMovedTick, preservedBpm);
+      expectUnchanged(ctx, before, "stale-batch preview");
+      // Public documentChanged rebuilds the stack and cancels; release must not commit.
+      rig.documentChanged();
+      rig.mouseRelease(end, Qt::ShiftModifier);
+      rig.pump();
+Original expression:
+      ctx.check.require(isUnchanged(before, snapshot(rig.document())),
+                        QStringLiteral("stale rebuild release committed a revision or undo"));
+
+A020 | runStaleBatch | src/checks/automationgesturecheck/crosslane.cpp:366
+Disposition: GAP
+Mapping/reason: No Swift predicate asserts stale-rebuild mixed-lane outcomes or microsecond tempo preservation across a documentChanged rebuild.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveTempo(rig.document()),
+                         {{0, 80}, {kFixtureTick, preservedBpm}, {kUnrelatedLate, 64}}) &&
+              tempoUsAt(rig.document(), kFixtureTick) == kPreservedTempoUs &&
+              sameNodePoints(effectiveLane(rig.document(), rig.pan.track, rig.pan.controller),
+                             {{0, 80}, {kFixtureTick, 20}, {kUnrelatedLate, 110}}) &&
+              rawValuesAt(rig.document(), rig.pan.track, rig.pan.controller, kFixtureTick) ==
+                  std::vector<int>{10, 20} &&
+              sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
+                             {{0, 32}, {kFixtureTick, 96}, {kUnrelatedLate, 64}}),
+          QStringLiteral("stale rebuild release moved a mixed-selection lane"));
+
+A021 | runStaleBatch | src/checks/automationgesturecheck/crosslane.cpp:377
+Disposition: PARTIAL
+Mapping/reason: Stale-release selection and idle outcome; S004..S005 cover band and selection at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          mixedSelection(rig.view().selectionModel().timeSelection(), kFixtureTick, kMovedTick,
+                         rig) &&
+              rig.isIdle(),
+          QStringLiteral("stale rebuild release moved the mixed selection or left a live gesture"));
+
+A022 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:402
+Disposition: PARTIAL
+Mapping/reason: Pan/LFO range-edit outcome; S008 covers expansion range edits at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+      restoreLfo(rig, initialLfo);
+  }
+
+  void runPanLfoRangeEdit(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      if (!requirePanLfo(ctx))
+          return;
+      const auto panHandle = rig.handleFor(rig.pan);
+      const auto initialLfo = rig.document().lanePoints(rig.lfo.track, rig.lfo.controller);
+      const auto volume =
+          laneValues(rig.document().lanePoints(rig.volume.track, rig.volume.controller));
+      seedMixed(rig, true);
+      publishMixedSelection(rig, kFixtureTick, kMovedTick, false);
+      const auto preservedBpm = tempoBpm(kPreservedTempoUs);
+      const auto before = snapshot(rig.document());
+      const auto end = shiftDragPreview(rig, panHandle, kFixtureTick, kMovedTick, 20);
+      expectUnchanged(ctx, before, "pan+LFO selection-drag preview");
+      rig.mouseRelease(end, Qt::ShiftModifier);
+      expectOneCommittedEdit(ctx, before, "pan+LFO selection-drag");
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveTempo(rig.document()),
+                         {{0, 80}, {kFixtureTick, preservedBpm}, {kUnrelatedLate, 64}}) &&
+              tempoUsAt(rig.document(), kFixtureTick) == kPreservedTempoUs,
+          QStringLiteral("pan+LFO RangeEdit moved Tempo"));
+
+A023 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:408
+Disposition: PARTIAL
+Mapping/reason: Pan/LFO range-edit outcome; S008 covers expansion range edits at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+      expectMovedPanGroup(ctx);
+Original expression:
+      ctx.check.require(
+          sameNodePoints(effectiveLane(rig.document(), rig.lfo.track, rig.lfo.controller),
+                         {{0, 32}, {kMovedTick, 96}, {kUnrelatedLate, 64}}),
+          QStringLiteral("LFO did not follow the pan+LFO shared tick delta"));
+
+A024 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:412
+Disposition: PARTIAL
+Mapping/reason: Pan/LFO range-edit outcome; S008 covers expansion range edits at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameRawPoints(rig.document().lanePoints(rig.volume.track, rig.volume.controller), volume) &&
+              mixedSelection(rig.view().selectionModel().timeSelection(), kMovedTick,
+                             kMovedTick + (kMovedTick - kFixtureTick), rig, false) &&
+              rig.isIdle(),
+          QStringLiteral("pan+LFO RangeEdit mutated volume, dropped the range, or left a gesture"));
+
+A025 | runXcmdRemoveOnly | src/checks/automationgesturecheck/crosslane.cpp:517
+Disposition: PARTIAL
+Mapping/reason: XCMD remove-only outcome; Related xcmd predicates are indexed below (duplicate time S006, lane points S007, expansion range edit S008); unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+      restoreLfo(rig, initialLfo);
+  }
+
+  // One raw 0xB channel byte of the stream, for exact byte-level assertions.
+  struct CcByte {
+      uint64_t tick = 0;
+      uint8_t data0 = 0;
+      uint8_t data1 = 0;
+  };
+
+  bool sameCcBytes(const std::vector<CcByte> &left, const std::vector<CcByte> &right)
+  {
+      if (left.size() != right.size())
+          return false;
+      for (auto i = std::size_t{0}; i < left.size(); ++i) {
+          if (left[i].tick != right[i].tick || left[i].data0 != right[i].data0 ||
+              left[i].data1 != right[i].data1)
+              return false;
+      }
+      return true;
+  }
+
+  QString formatCcBytes(const std::vector<CcByte> &bytes)
+  {
+      QString formatted;
+      for (const CcByte &byte : bytes)
+          formatted += QStringLiteral(" {%1,%2,%3}").arg(byte.tick).arg(byte.data0).arg(byte.data1);
+      return formatted;
+  }
+
+  std::vector<CcByte> ccChain(const SongDocument &document, int engineTrack)
+  {
+      std::vector<CcByte> bytes;
+      const int smfTrack = document.smfTrackFor(engineTrack);
+      if (smfTrack < 0 || smfTrack >= int(document.smf().tracks.size()))
+          return bytes;
+      for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+          if (!event.isChannel() || event.typeNibble() != 0xB)
+              continue;
+          if (event.data0 == 7 || event.data0 == 10 || event.data0 == xcmd::kSelectorController ||
+              event.data0 == xcmd::kPayloadController ||
+              event.data0 == xcmd::kAlternatePayloadController)
+              bytes.push_back({event.tick, event.data0, event.data1});
+      }
+      return bytes;
+  }
+
+  void clearXcmd(SongDocument &document, int track)
+  {
+      document.writeLanePoints(track, DOC_CC_ECHO_VOLUME, 0, std::numeric_limits<uint64_t>::max(),
+                               {});
+      document.writeLanePoints(track, DOC_CC_ECHO_LENGTH, 0, std::numeric_limits<uint64_t>::max(),
+                               {});
+  }
+
+  // Deterministic baseline around the XCMD traffic: an untouched raw CC pair on
+  // the same track (pan/volume), so byte-level comparisons prove unrelated
+  // events survive edits byte-for-byte.
+  void seedXcmdBaseline(AutomationGestureCheckRig &rig)
+  {
+      auto &document = rig.document();
+      const int track = rig.pan.track;
+      document.writeLanePoints(track, rig.pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               {{0, 80}, {384, 110}});
+      document.writeLanePoints(track, rig.volume.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               {{0, 64}, {288, 48}});
+      rig.documentChanged();
+  }
+
+  std::vector<SongDocument::LanePointValue> laneFor(SongDocument &document, int track,
+                                                    uint8_t controller)
+  {
+      std::vector<SongDocument::LanePointValue> values;
+      for (const DocLanePoint &point : document.lanePoints(track, controller))
+          values.push_back({point.tick, point.value});
+      return values;
+  }
+
+  void runXcmdRemoveOnly(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      auto &document = rig.document();
+      const int track = rig.pan.track;
+      const auto initialPan = laneFor(document, track, rig.pan.controller);
+      const auto initialVolume = laneFor(document, track, rig.volume.controller);
+      clearXcmd(document, track);
+      document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+      document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 192, 35);
+      document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+      seedXcmdBaseline(rig);
+      const auto before = snapshot(document);
+      // The batch-delete gesture builds exactly this shape: removePoints only,
+      // no XCMD lane write anywhere in the edit.
+      SongDocument::RangeEdit edit;
+      edit.removePoints.push_back(document.lanePoints(track, DOC_CC_ECHO_VOLUME).front());
+      edit.removePoints.push_back(document.lanePoints(track, DOC_CC_ECHO_LENGTH).front());
+      document.applyRangeEdit(QStringLiteral("xcmd remove-only"), edit);
+      expectOneCommittedEdit(ctx, before, "remove-only XCMD batch");
+      const auto volume = document.lanePoints(track, DOC_CC_ECHO_VOLUME);
+Original expression:
+      ctx.check.require(
+          volume.size() == 1 && volume.front().tick == 192 && volume.front().value == 35 &&
+              document.lanePoints(track, DOC_CC_ECHO_LENGTH).empty(),
+          QStringLiteral("remove-only batch kept a deleted point or lost the survivor"));
+
+A026 | runXcmdRemoveOnly | src/checks/automationgesturecheck/crosslane.cpp:521
+Disposition: PARTIAL
+Mapping/reason: XCMD remove-only outcome; Related xcmd predicates are indexed below (duplicate time S006, lane points S007, expansion range edit S008); unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameCcBytes(ccChain(document, track), {{0, 0x0A, 80},
+                                                 {0, 0x07, 64},
+                                                 {192, xcmd::kSelectorController, 0x08},
+                                                 {192, xcmd::kPayloadController, 35},
+                                                 {288, 0x07, 48},
+                                                 {384, 0x0A, 110}}),
+          QStringLiteral("remove-only batch left dead protocol bytes behind or touched unrelated "
+                         "events"));
+
+A027 | runXcmdRangeMoves | src/checks/automationgesturecheck/crosslane.cpp:557
+Disposition: PARTIAL
+Mapping/reason: XCMD range-move outcome; Related xcmd predicates are indexed below (duplicate time S006, lane points S007, expansion range edit S008); unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+      clearXcmd(document, track);
+      document.writeLanePoints(track, rig.pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               initialPan);
+      document.writeLanePoints(track, rig.volume.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               initialVolume);
+      rig.documentChanged();
+  }
+
+  void runXcmdRangeMoves(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      auto &document = rig.document();
+      const int track = rig.pan.track;
+      const auto initialPan = laneFor(document, track, rig.pan.controller);
+      const auto initialVolume = laneFor(document, track, rig.volume.controller);
+
+      // Left move into the span of the disjoint length epoch: both epochs are
+      // rebuilt as explicit pairs — the moved volume point at 144, length
+      // survivors at 96 and 192 — with no restoration bytes.
+      clearXcmd(document, track);
+      document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+      document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 192, 18);
+      document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 192, 34);
+      seedXcmdBaseline(rig);
+      auto before = snapshot(document);
+      document.moveRange({}, document.lanePoints(track, DOC_CC_ECHO_VOLUME), -48);
+      expectOneCommittedEdit(ctx, before, "XCMD left range move");
+Original expression:
+      ctx.check.require(
+          sameCcBytes(ccChain(document, track), {{0, 0x0A, 80},
+                                                 {0, 0x07, 64},
+                                                 {96, xcmd::kSelectorController, 0x09},
+                                                 {96, xcmd::kPayloadController, 17},
+                                                 {144, xcmd::kSelectorController, 0x08},
+                                                 {144, xcmd::kPayloadController, 34},
+                                                 {192, xcmd::kSelectorController, 0x09},
+                                                 {192, xcmd::kPayloadController, 18},
+                                                 {288, 0x07, 48},
+                                                 {384, 0x0A, 110}}),
+          QStringLiteral("left move did not rebuild both epochs as explicit pairs; got%1")
+              .arg(formatCcBytes(ccChain(document, track))));
+
+A028 | runXcmdRangeMoves | src/checks/automationgesturecheck/crosslane.cpp:582
+Disposition: PARTIAL
+Mapping/reason: XCMD range-move outcome; Related xcmd predicates are indexed below (duplicate time S006, lane points S007, expansion range edit S008); unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+
+      // Right move onto an unrelated length payload's tick: the destination
+      // epoch and the moved point each rebuild as explicit pairs, in stream
+      // order, with no duplicate selectors.
+      clearXcmd(document, track);
+      document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 96, 17);
+      document.addLanePoint(track, DOC_CC_ECHO_LENGTH, 192, 18);
+      document.addLanePoint(track, DOC_CC_ECHO_VOLUME, 96, 34);
+      seedXcmdBaseline(rig);
+      before = snapshot(document);
+      document.moveRange({}, document.lanePoints(track, DOC_CC_ECHO_VOLUME), 96);
+      expectOneCommittedEdit(ctx, before, "XCMD right range move");
+Original expression:
+      ctx.check.require(
+          sameCcBytes(ccChain(document, track), {{0, 0x0A, 80},
+                                                 {0, 0x07, 64},
+                                                 {96, xcmd::kSelectorController, 0x09},
+                                                 {96, xcmd::kPayloadController, 17},
+                                                 {192, xcmd::kSelectorController, 0x09},
+                                                 {192, xcmd::kPayloadController, 18},
+                                                 {192, xcmd::kSelectorController, 0x08},
+                                                 {192, xcmd::kPayloadController, 34},
+                                                 {288, 0x07, 48},
+                                                 {384, 0x0A, 110}}),
+          QStringLiteral("right move did not rebuild the destination epoch and the moved point as "
+                         "explicit pairs; got%1")
+              .arg(formatCcBytes(ccChain(document, track))));
+
+A029 | runXcmdExpansionPaste | src/checks/automationgesturecheck/crosslane.cpp:620
+Disposition: PARTIAL
+Mapping/reason: XCMD expansion-paste outcome; S008 covers expansion range edits at model level; unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+      clearXcmd(document, track);
+      document.writeLanePoints(track, rig.pan.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               initialPan);
+      document.writeLanePoints(track, rig.volume.controller, 0, std::numeric_limits<uint64_t>::max(),
+                               initialVolume);
+      rig.documentChanged();
+  }
+
+  // Regression: a range paste that expands the engine-track count must carry
+  // descriptor-lane writes onto the freshly created track through the same
+  // canonical plan — the new stream is empty, so its epoch is built from
+  // nothing instead of being silently dropped.
+  void runXcmdExpansionPaste(Context &ctx)
+  {
+      auto &rig = ctx.rig;
+      auto &document = rig.document();
+      const int newEngineTrack = document.engineTrackCount();
+      const auto before = snapshot(document);
+      SongDocument::RangeEdit edit;
+      edit.minimumEngineTrackCount = newEngineTrack + 1;
+      edit.addNotes.push_back({newEngineTrack, {{0, 60, 96, 100}}});
+      edit.addPoints.push_back({newEngineTrack, DOC_CC_ECHO_VOLUME, {{96, 34}}});
+      document.applyRangeEdit(QStringLiteral("xcmd expansion paste"), edit);
+      expectOneCommittedEdit(ctx, before, "expansion paste with XCMD lane");
+Original expression:
+      ctx.check.require(document.engineTrackCount() == newEngineTrack + 1,
+                        QStringLiteral("paste did not create the requested track"));
+
+A030 | runXcmdExpansionPaste | src/checks/automationgesturecheck/crosslane.cpp:623
+Disposition: PARTIAL
+Mapping/reason: XCMD expansion-paste outcome; Related xcmd predicates are indexed below (duplicate time S006, lane points S007, expansion range edit S008); unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+      const auto volume = document.lanePoints(newEngineTrack, DOC_CC_ECHO_VOLUME);
+Original expression:
+      ctx.check.require(volume.size() == 1 && volume.front().tick == 96 && volume.front().value == 34,
+                        QStringLiteral("expansion paste lost the echo volume point"));
+
+A031 | runXcmdExpansionPaste | src/checks/automationgesturecheck/crosslane.cpp:625
+Disposition: PARTIAL
+Mapping/reason: XCMD expansion-paste outcome; Related xcmd predicates are indexed below (duplicate time S006, lane points S007, expansion range edit S008); unproved: native lane stack, SMF byte chain, and the retired rig fixture.
+Source context since previous assertion:
+Original expression:
+      ctx.check.require(
+          sameCcBytes(ccChain(document, newEngineTrack),
+                      {{96, xcmd::kSelectorController, 0x08}, {96, xcmd::kPayloadController, 34}}),
+          QStringLiteral("new-track echo point did not become a canonical epoch; got%1")
+              .arg(formatCcBytes(ccChain(document, newEngineTrack))));
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+  constexpr std::array kCrossLaneScenarios{
+      Scenario{"band-isolation", runBandIsolation},
+      Scenario{"tempo-pan-lfo", runTempoPanLfo},
+      Scenario{"stale-batch", runStaleBatch},
+      Scenario{"pan-lfo", runPanLfoRangeEdit},
+      Scenario{"xcmd-remove-only", runXcmdRemoveOnly},
+      Scenario{"xcmd-range-moves", runXcmdRangeMoves},
+      Scenario{"xcmd-expansion-paste", runXcmdExpansionPaste},
+  };
+
+  } // namespace
+
+  void runNodeLaneCrossLaneParity(AutomationGestureCheckRig &rig, const AutomationGestureCheck &check)
+  {
+      for (const auto &scenario : kCrossLaneScenarios) {
+          Context ctx{rig, check, scenario.name};
+          scenario.run(ctx);
+      }
+  }
+
+Counterpart executable predicate index
+The S entries are exact predicates already executed by the converted automation Swift suite. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:27
+Counterpart expression:
+      report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                         what: "heterogeneous selected drag is one revision")
+
+S002 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:29
+Counterpart expression:
+      report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
+
+S003 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:25
+Counterpart expression:
+      report.expectEqual(["0:120", "36:160"], fixture.tempoValues, cppID: id,
+                         what: "selected drag resolves Tempo through its own stream")
+
+S004 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:58
+Counterpart expression:
+      report.expect(page.bandVisible, cppID: id,
+                    message: "diagonal travel activates at Manhattan ten before Euclidean ten")
+
+S005 | drawerAutomationRestoredInteractionContracts | src/checks/automation/automationselection.swift:48
+Counterpart expression:
+      report.expect(page.selection == nil, cppID: id,
+                    message: "outside right press clears selection before opening a menu")
+
+S006 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:54
+Counterpart expression:
+      report.expect(document.duplicateTime(TimeRange(startTick: 10, endTick: 20), scope: scope),
+                    cppID: "automation-domain/AutomationDomainTest::xcmdRangeMoves",
+                    message: "XCMD lane duplicate reconciles through epoch planner")
+
+S007 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:57
+Counterpart expression:
+      report.expectEqual(["12:40", "22:40"], document.lanePoints(
+          track: 0, lane: .controller(Xcmd.echoVolumeLane)).map(coreTimePointShape),
+          cppID: "automation-domain/AutomationDomainTest::xcmdCanonicalEdits",
+          what: "known copied points rebuild canonically")
+
+S008 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:86
+Counterpart expression:
+      report.expect(expansion.applyRangeEdit(xcmdEdit) &&
+          expansion.lanePoints(track: 1, lane: .controller(Xcmd.echoLengthLane)).count == 1,
+          cppID: "automation-domain/AutomationDomainTest::xcmdExpansionPaste",
+          message: "track expansion builds descriptor traffic through the canonical planner")
+
+S009 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:762
+Counterpart expression:
+      report.expect(moved != beforeMove, cppID: id, message: "the move actually changes document state")
+
+S010 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift:703
+Counterpart expression:
+      report.expectEqual(
+          ["0:20", "24:80", "48:60", "72:90"],
+          replacement.lanePoints(track: 0, lane: .controller(7))
+              .map { "\($0.tick):\($0.value)" },
+          cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
+          what: "core held-span replacement including the trailing held-value seam")
+
+S011 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:72
+Counterpart expression:
+      report.expectEqual(afterStale, fixture.snapshot, cppID: drawerAutomationCancelID,
+                         what: "a cancelled stale gesture never writes on release")
+
+S012 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:63
+Counterpart expression:
+      report.expectEqual(pressRevision, fixture.page.frozenRevision ?? 0, cppID: drawerAutomationCancelID,
+                         what: "the frozen facts carry the revision")

@@ -81,6 +81,8 @@ public final class TrackHeadersPresenter {
     @QtIgnored var structuralRevision: UInt64?
     @QtIgnored var playing = false
     @QtIgnored var playheadTick: Tick = 0
+    @QtIgnored var activity = TrackActivity()
+    @QtIgnored var activityPlaying = false
 
     public init(baseFontPx: Double = 13) {
         self.baseFontPx = max(1, baseFontPx)
@@ -108,6 +110,8 @@ public final class TrackHeadersPresenter {
         structuralRevision = nil
         pendingVoice = nil
         playing = false
+        activity.reset()
+        activityPlaying = false
         if !snapshots.isEmpty {
             snapshots.removeAll()
             rows.reset(to: [])
@@ -138,7 +142,10 @@ public final class TrackHeadersPresenter {
         let expectedCount = trackCount + (hasAdd ? 1 : 0)
         let structural = snapshots.count != expectedCount
             || (structuralRevision == document.revision && appliedRevision != document.revision)
-        if structural { cancelTransientState() }
+        if structural {
+            cancelTransientState()
+            activity.resetPaused()
+        }
         if let target = pendingMenu, !target.matches(document) { dismissHeaderMenu() }
         if let target = pendingVoice, !target.matches(document) { pendingVoice = nil }
         var next: [TrackHeaderSnapshot] = []
@@ -402,8 +409,6 @@ public final class TrackHeaderRowHandle {
     public var addPressed: Bool = false
     public var activityDimColor: String = "#00000000"
     public var activityActiveColor: String = "#00000000"
-    // NativeAudio currently publishes no per-track activity. The live-activity
-    // integration seam is these heights; a stopped/missing stream stays zero.
     public var activityLeftHeight: Double = 0
     public var activityRightHeight: Double = 0
 
@@ -420,6 +425,7 @@ public final class TrackHeaderRowHandle {
         soloHovered = row.soloHovered; soloPressed = row.soloPressed
         addHovered = row.addHovered; addPressed = row.addPressed
         activityDimColor = row.activityDimColor; activityActiveColor = row.activityActiveColor
+        activityLeftHeight = row.activityLeftHeight; activityRightHeight = row.activityRightHeight
     }
 }
 

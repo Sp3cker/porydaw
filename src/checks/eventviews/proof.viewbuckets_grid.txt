@@ -1,0 +1,761 @@
+Assertion correspondence: eventviews/viewbuckets_grid.cpp
+
+Reference revision: 60ff8b12d2515cbebc56aa87e171f74f9a6565dd
+Original: src/checks/eventviews/viewbuckets_grid.cpp
+Original SHA-256: d3ad829216699fa3927ce6e77368ef530c2472a66f89163fee74290a1823fe91
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards and the per-line loop predicate. All but two sites are GAP: no Swift suite projects SongViewModel buckets or asserts the grid snap lattice, clock-lattice seam behavior, fixed-grid paint density, or grid-lines-snappable invariants. EditorGridCameraChecks was considered and rejected as a counterpart: it reads grid.snapTicks only as drag-distance input, never as an asserted value. The two NATIVE sites observe the live Quick window and its grabbed frame. None of these labels authorizes deletion or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter eventviews --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry point executes these checks. Native ownership: runViewBucketsGridCheck in this file drives ViewBucketsGridTest (bucketSum, quirkProjection, snapLadder, gridLinesSnappable, clockLatticeCrossesSignatureSeam, fixedGridPaintDensityGuard, paintSmoke). The Basic/Signatures rig/tab fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp.
+
+Fixture, sequence and row constraints
+Data rows expand single sites into many cases: bucketSum_data emits 3 ledger rows (ordinary events, unterminated note, orphan note off); snapLadder_data emits 7 zoom/selection/feel rows (straight below/threshold, triplet, triplet-eighth fixed, straight sixteenth/quarter fixed, clock fixed); gridLinesSnappable_data emits 3 shapes (flat quarter grid, mid-song signature restart, denominator rescale). The bucketSum accounting loop sums lane points across model.lanes; the clockLattice per-line loop re-verifies each painted sub-grid tick; fixedGridPaintDensityGuard sequences eighth-note and clock selections across three zoom levels while asserting the editing snap lattice stays put.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:82
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+#include "checks/eventviews/eventview_fixture.h"
+#include "checks/eventviews/tst_eventviews.h"
+
+#include <QImage>
+#include <QQuickWindow>
+#include <QtTest>
+
+#include <algorithm>
+#include <memory>
+#include <vector>
+
+#include "core/miditimeline.h"
+#include "ui/layout.h"
+#include "ui/songview.h"
+#include "ui/songview/detail.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songviewmodel.h"
+
+using checks::eventviews::FixtureShape;
+
+namespace {
+
+SmfEvent channelEvent(Tick tick, uint8_t status, uint8_t data0, uint8_t data1)
+{
+    SmfEvent event;
+    event.tick = tick;
+    event.status = status;
+    event.data0 = data0;
+    event.data1 = data1;
+    return event;
+}
+
+void sortTrack(SmfTrack &track)
+{
+    std::stable_sort(
+        track.events.begin(), track.events.end(),
+        [](const SmfEvent &left, const SmfEvent &right) { return left.tick < right.tick; });
+}
+
+} // namespace
+
+void ViewBucketsGridTest::bucketSum_data()
+{
+    QTest::addColumn<bool>("addUnpaired");
+    QTest::addColumn<bool>("addOrphan");
+    QTest::addColumn<size_t>("expectedNotes");
+    QTest::addColumn<size_t>("expectedPairedOffs");
+    QTest::addColumn<size_t>("expectedLanePoints");
+    QTest::addColumn<size_t>("expectedVoices");
+    QTest::addColumn<size_t>("expectedStripFromEvents");
+    QTest::addColumn<size_t>("expectedUnpaired");
+    QTest::addColumn<size_t>("expectedOrphans");
+    QTest::addColumn<size_t>("expectedTempoEvents");
+    // This ledger describes only the deliberately authored Basic fixture:
+    // four note messages closed by two offs, three audible CCs, and one
+    // program change. Its tempo column includes the timeline's documented
+    // synthetic tick-zero default; it does not reconstruct model filtering.
+    QTest::newRow("ordinary events")
+        << false << false << size_t(2) << size_t(2) << size_t(3) << size_t(1) << size_t(0)
+        << size_t(0) << size_t(0) << size_t(1);
+    QTest::newRow("unterminated note")
+        << true << false << size_t(3) << size_t(2) << size_t(3) << size_t(1) << size_t(0)
+        << size_t(1) << size_t(0) << size_t(1);
+    QTest::newRow("orphan note off")
+        << false << true << size_t(2) << size_t(2) << size_t(3) << size_t(1) << size_t(1)
+        << size_t(0) << size_t(1) << size_t(1);
+}
+
+void ViewBucketsGridTest::bucketSum()
+{
+    QFETCH(bool, addUnpaired);
+    QFETCH(bool, addOrphan);
+    QFETCH(size_t, expectedNotes);
+    QFETCH(size_t, expectedPairedOffs);
+    QFETCH(size_t, expectedLanePoints);
+    QFETCH(size_t, expectedVoices);
+    QFETCH(size_t, expectedStripFromEvents);
+    QFETCH(size_t, expectedUnpaired);
+    QFETCH(size_t, expectedOrphans);
+    QFETCH(size_t, expectedTempoEvents);
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A002 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:87
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    SmfFile smf = opened.fixture->document().smf();
+    // Basic also carries an auxiliary engine track for remap/list tests.
+    // Bucket accounting uses the explicitly described primary track so those
+    // unrelated events cannot silently change this classification oracle.
+
+Original expression:
+QVERIFY(!smf.tracks.empty())
+
+A003 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:96
+Disposition: GAP
+Mapping/reason: Timeline-build guard; no Swift predicate builds this fixture timeline.
+Source context since previous assertion:
+;
+    smf.tracks.resize(1);
+    if (addUnpaired)
+        smf.tracks[0].events.push_back(channelEvent(100, 0x90, 72, 100));
+    if (addOrphan)
+        smf.tracks[0].events.push_back(channelEvent(110, 0x80, 73, 0));
+    sortTrack(smf.tracks[0]);
+    const std::unique_ptr<MidiTimeline> timeline =
+        MidiTimeline::build(smf, opened.fixture->document().tempoPoints(), 48000.0);
+
+Original expression:
+QVERIFY(timeline)
+
+A004 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:105
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    const SongViewModel model = buildSongViewModel(*timeline);
+
+    size_t lanePoints = 0;
+    for (const CcLane &lane : model.lanes)
+        lanePoints += lane.points.size();
+    // The subtraction stays in its native unsigned domain after the explicit
+    // guard: a smaller strip would be a model contract failure, not a reason
+    // to introduce signed diagnostic-only arithmetic.
+
+Original expression:
+QVERIFY(model.strip.size() >= timeline->otherEvents.size())
+
+A005 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:107
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    const size_t stripFromEvents = model.strip.size() - timeline->otherEvents.size();
+
+Original expression:
+QCOMPARE(model.notes.size(), expectedNotes)
+
+A006 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:108
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(lanePoints, expectedLanePoints)
+
+A007 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:109
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(model.voices.size(), expectedVoices)
+
+A008 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:110
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(model.unpairedNoteOns, expectedUnpaired)
+
+A009 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:111
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(model.orphanNoteOffs, expectedOrphans)
+
+A010 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:112
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(stripFromEvents, expectedStripFromEvents)
+
+A011 | ViewBucketsGridTest::bucketSum | src/checks/eventviews/viewbuckets_grid.cpp:113
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(model.notes.size() + expectedPairedOffs + lanePoints + model.voices.size() +
+                 stripFromEvents + expectedTempoEvents,
+             timeline->events.size())
+
+A012 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:121
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+;
+}
+
+void ViewBucketsGridTest::quirkProjection()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A013 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:128
+Disposition: GAP
+Mapping/reason: Timeline-build guard; no Swift predicate builds this fixture timeline.
+Source context since previous assertion:
+;
+    SmfFile smf = opened.fixture->document().smf();
+    smf.tracks[0].events.push_back(channelEvent(100, 0x90, 72, 100));
+    smf.tracks[0].events.push_back(channelEvent(110, 0x80, 73, 0));
+    sortTrack(smf.tracks[0]);
+    const std::unique_ptr<MidiTimeline> timeline =
+        MidiTimeline::build(smf, opened.fixture->document().tempoPoints(), 48000.0);
+
+Original expression:
+QVERIFY(timeline)
+
+A014 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:130
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    const SongViewModel model = buildSongViewModel(*timeline);
+
+Original expression:
+QCOMPARE(model.unpairedNoteOns, size_t(1))
+
+A015 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:131
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(model.orphanNoteOffs, size_t(1))
+
+A016 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:132
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(std::any_of(model.notes.begin(), model.notes.end(), [](const ViewNote &note) {
+        return note.key == 72 && note.startTick == 100 && note.duration == 0 &&
+               note.endTick() == 100;
+    }))
+
+A017 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:144
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+    SmfFile overfull;
+    overfull.format = 1;
+    overfull.division = 24;
+    for (int track = 0; track < 17; ++track)
+        overfull.tracks.push_back(
+            SmfTrack{{channelEvent(0, uint8_t(0xc0 | (track & 0x0f)), 1, 0)}, 1});
+    const std::unique_ptr<MidiTimeline> dropped = MidiTimeline::build(overfull, 48000.0);
+
+Original expression:
+QVERIFY(dropped)
+
+A018 | ViewBucketsGridTest::quirkProjection | src/checks/eventviews/viewbuckets_grid.cpp:145
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(dropped->droppedTracks, 1)
+
+A019 | ViewBucketsGridTest::snapLadder | src/checks/eventviews/viewbuckets_grid.cpp:182
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+;
+}
+
+void ViewBucketsGridTest::snapLadder_data()
+{
+    QTest::addColumn<double>("pixelsPerBeat");
+    QTest::addColumn<int>("selectionDenom"); // 0 = Auto, -1 = Clock
+    QTest::addColumn<int>("feel");
+    QTest::addColumn<Tick>("grid");
+    QTest::addColumn<Tick>("snap");
+    const double cell = layout::fontPx(4.0 / 3.0);
+    QTest::newRow("straight below")
+        << 4.0 * cell - 1.0 << 0 << int(songview::GridFeel::Straight) << Tick{12} << Tick{6};
+    QTest::newRow("straight threshold")
+        << 4.0 * cell << 0 << int(songview::GridFeel::Straight) << Tick{6} << Tick{3};
+    QTest::newRow("triplet") << 6.0 * cell << 0 << int(songview::GridFeel::Triplet) << Tick{4}
+                             << Tick{2};
+    // Fixed selections pin both the snap spacing and the drawn grid to the
+    // selection — painted cells and snap stride coincide.
+    QTest::newRow("triplet eighth fixed")
+        << 6.0 * cell << 8 << int(songview::GridFeel::Triplet) << Tick{8} << Tick{8};
+    QTest::newRow("straight sixteenth fixed")
+        << 4.0 * cell << 16 << int(songview::GridFeel::Straight) << Tick{6} << Tick{6};
+    QTest::newRow("straight quarter fixed")
+        << 4.0 * cell << 4 << int(songview::GridFeel::Straight) << Tick{24} << Tick{24};
+    QTest::newRow("clock fixed") << 4.0 * cell << -1 << int(songview::GridFeel::Straight) << Tick{1}
+                                 << Tick{1};
+}
+
+void ViewBucketsGridTest::snapLadder()
+{
+    QFETCH(double, pixelsPerBeat);
+    QFETCH(int, selectionDenom);
+    QFETCH(int, feel);
+    QFETCH(Tick, grid);
+    QFETCH(Tick, snap);
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A020 | ViewBucketsGridTest::snapLadder | src/checks/eventviews/viewbuckets_grid.cpp:192
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    SongView::ViewState state = opened.fixture->view().viewState();
+    state.valid = true;
+    state.pxPerBeat = pixelsPerBeat;
+    opened.fixture->view().applyViewState(state);
+    opened.fixture->view().setGridFeel(songview::GridFeel(feel));
+    opened.fixture->view().setGridSelection(
+        selectionDenom < 0    ? songview::GridSelection::clock()
+        : selectionDenom == 0 ? songview::GridSelection::automatic()
+                              : songview::GridSelection::musical(uint32_t(selectionDenom)));
+
+Original expression:
+QCOMPARE(opened.fixture->view().grid().gridTicksAt(0), grid)
+
+A021 | ViewBucketsGridTest::snapLadder | src/checks/eventviews/viewbuckets_grid.cpp:193
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(opened.fixture->view().grid().snapTicksAt(0), snap)
+
+A022 | ViewBucketsGridTest::gridLinesSnappable | src/checks/eventviews/viewbuckets_grid.cpp:208
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+;
+}
+
+void ViewBucketsGridTest::gridLinesSnappable_data()
+{
+    QTest::addColumn<int>("shape");
+    QTest::newRow("flat quarter grid") << int(FixtureShape::Basic);
+    QTest::newRow("mid-song signature restart") << int(FixtureShape::Signatures);
+    QTest::newRow("denominator rescale") << int(FixtureShape::Signatures);
+}
+
+void ViewBucketsGridTest::gridLinesSnappable()
+{
+    QFETCH(int, shape);
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape(shape));
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A023 | ViewBucketsGridTest::gridLinesSnappable | src/checks/eventviews/viewbuckets_grid.cpp:214
+Disposition: GAP
+Mapping/reason: Timeline-build guard; no Swift predicate builds this fixture timeline.
+Source context since previous assertion:
+;
+    // The drawn-lines-snappable invariant holds under the Auto selection:
+    // the adaptive snap grid is a divisor of the drawn grid. Fixed
+    // selections pin snap spacing to the same stride as painted cells.
+    opened.fixture->view().setGridSelection(songview::GridSelection::automatic());
+    const MidiTimeline *timeline = opened.fixture->view().timeline();
+
+Original expression:
+QVERIFY(timeline)
+
+A024 | ViewBucketsGridTest::gridLinesSnappable | src/checks/eventviews/viewbuckets_grid.cpp:223
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    int lines = 0;
+    std::vector<Tick> unsnappable;
+    opened.fixture->view().forEachGridLine(
+        0, timeline->lengthTicks, [&](Tick tick, bool, int, int) {
+            ++lines;
+            if (opened.fixture->view().grid().snapTick(double(tick)) != tick)
+                unsnappable.push_back(tick);
+        });
+
+Original expression:
+QVERIFY(lines > 0)
+
+A025 | ViewBucketsGridTest::gridLinesSnappable | src/checks/eventviews/viewbuckets_grid.cpp:224
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(unsnappable.size(), size_t(0))
+
+A026 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:230
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+;
+}
+
+void ViewBucketsGridTest::clockLatticeCrossesSignatureSeam()
+{
+    const auto opened = checks::eventviews::openTabFixture(FixtureShape::Signatures);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A027 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:235
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    SongView &view = opened.fixture->view();
+    // The 48-PPQN fixture's clock stride is 2 ticks; a signature at the odd
+    // tick 37 sits off the absolute clock lattice.
+    opened.fixture->document().setTimeSig(37, 5, 3);
+
+Original expression:
+QTRY_VERIFY(view.grid().segmentAt(37).start == 37)
+
+A028 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:236
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().segmentAt(36).next, Tick(37))
+
+A029 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:239
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    view.setGridSelection(songview::GridSelection::clock());
+    const Tick clock = view.grid().snapTicksAt(0);
+
+Original expression:
+QVERIFY2(clock > 1 && 37 % clock != 0, "the seam must sit off the clock lattice")
+
+A030 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:248
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    // The painted clock sub-grid needs its cells at least one grid-line
+    // stroke wide; zoom so the clock stride clears it.
+    SongView::ViewState zoomed = view.viewState();
+    zoomed.valid = true;
+    zoomed.pxPerBeat = 24.0 * layout::fontPx(4.0 / 3.0);
+    view.applyViewState(zoomed);
+    // Snap positions and next operations stay on the absolute lattice:
+    // nothing clamps to or re-anchors at the off-lattice seam.
+
+Original expression:
+QCOMPARE(view.grid().snapTickDown(37.0), Tick(36))
+
+A031 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:249
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().snapTickUp(37.0), Tick(38))
+
+A032 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:250
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().nextSnapTickAfter(Tick(35)), Tick(36))
+
+A033 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:251
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().nextSnapTickAfter(Tick(36)), Tick(38))
+
+A034 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:252
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(36)), Tick(38))
+
+A035 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:253
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().nextSnapTickAfter(Tick(37)), Tick(38))
+
+A036 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:260
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    // Painted sub-grid lines are the same absolute ticks: the seam itself
+    // is a beat line, not a sub-grid line.
+    std::vector<Tick> lines;
+    songview::detail::forEachSubGridLine(view.grid(), songview::detail::tickRange(30.0, 46.0),
+                                         [&lines](Tick tick, int) { lines.push_back(tick); });
+    const std::vector<Tick> expected{30, 32, 34, 38, 40, 42, 44};
+
+Original expression:
+QCOMPARE(lines.size(), expected.size())
+
+A037 | ViewBucketsGridTest::clockLatticeCrossesSignatureSeam | src/checks/eventviews/viewbuckets_grid.cpp:262
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    for (size_t i = 0; i < lines.size() && i < expected.size(); ++i)
+
+Original expression:
+QCOMPARE(lines[i], expected[i])
+
+A038 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:268
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+;
+}
+
+void ViewBucketsGridTest::fixedGridPaintDensityGuard()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A039 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:288
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    SongView &view = opened.fixture->view();
+    const double cell = layout::fontPx(4.0 / 3.0);
+    const auto applyZoom = [&view](double pxPerBeat) {
+        SongView::ViewState state = view.viewState();
+        state.valid = true;
+        state.pxPerBeat = pxPerBeat;
+        view.applyViewState(state);
+    };
+    const auto subGridLines = [&view](double begin, double end) {
+        std::vector<Tick> lines;
+        songview::detail::forEachSubGridLine(view.grid(), songview::detail::tickRange(begin, end),
+                                             [&lines](Tick tick, int) { lines.push_back(tick); });
+        return lines;
+    };
+    // A fixed eighth selection: 12-tick cells paint while each cell is at
+    // least the minimum cell width — pxPerBeat * stride / ticksPerBeat —
+    // and suppress below it.
+    view.setGridSelection(songview::GridSelection::musical(8));
+    applyZoom(2.0 * cell);
+
+Original expression:
+QVERIFY(!subGridLines(0.0, 120.0).empty())
+
+A040 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:290
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    applyZoom(cell);
+
+Original expression:
+QVERIFY(subGridLines(0.0, 120.0).empty())
+
+A041 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:292
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    // Suppression is paint-only: the editing snap lattice is unchanged.
+
+Original expression:
+QCOMPARE(view.grid().snapTicksAt(0), Tick(12))
+
+A042 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:293
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().snapTickDown(37.0), Tick(36))
+
+A043 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:294
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().nextSnapTickAfter(Tick(24)), Tick(36))
+
+A044 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:300
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    // The Clock selection draws as many lines as helpful: its cells paint
+    // while at least one grid-line stroke wide, and suppress below that.
+    view.setGridSelection(songview::GridSelection::clock());
+    const Tick clock = view.grid().snapTicksAt(0);
+    applyZoom(6.0 * cell);
+
+Original expression:
+QVERIFY(!subGridLines(0.0, 120.0).empty())
+
+A045 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:302
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+    applyZoom(2.0 * cell);
+
+Original expression:
+QVERIFY(subGridLines(0.0, 120.0).empty())
+
+A046 | ViewBucketsGridTest::fixedGridPaintDensityGuard | src/checks/eventviews/viewbuckets_grid.cpp:303
+Disposition: GAP
+Mapping/reason: SongViewModel bucket or grid-lattice observation with no Swift predicate: no Swift suite projects buildSongViewModel buckets (notes, lanes, voices, strip, unpaired/orphan counts, tempo events, dropped tracks) or asserts gridTicks/snapTicks, snapTickDown/Up, nextSnapTickAfter/nextSubdivisionTickAfter, segment maps, or painted sub-grid density. EditorGridCameraChecks uses snapTicks only as drag-input arithmetic, never as an asserted lattice.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.grid().snapTicksAt(0), clock)
+
+A047 | ViewBucketsGridTest::paintSmoke | src/checks/eventviews/viewbuckets_grid.cpp:309
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native rig.
+Source context since previous assertion:
+;
+}
+
+void ViewBucketsGridTest::paintSmoke()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A048 | ViewBucketsGridTest::paintSmoke | src/checks/eventviews/viewbuckets_grid.cpp:311
+Disposition: GAP
+Mapping/reason: Timeline-build guard; no Swift predicate builds this fixture timeline.
+Source context since previous assertion:
+;
+    const MidiTimeline *timeline = opened.fixture->view().timeline();
+
+Original expression:
+QVERIFY(timeline)
+
+A049 | ViewBucketsGridTest::paintSmoke | src/checks/eventviews/viewbuckets_grid.cpp:319
+Disposition: NATIVE
+Mapping/reason: Observes the live timeline Quick window and its grabbed pixels; presenter-level Swift cannot establish rendered output.
+Source context since previous assertion:
+;
+    for (int track = 0; track < 16; ++track) {
+        if (timeline->tracks[track].used)
+            opened.fixture->view().selectTrack(track);
+    }
+    opened.fixture->view().setPlayheadSample(timeline->lengthSamples / 2, true);
+    songview::TimelineQuickView *const quick = opened.fixture->view().quickView();
+    QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+
+Original expression:
+QVERIFY2(quickWindow, "the timeline Quick window is unavailable")
+
+A050 | ViewBucketsGridTest::paintSmoke | src/checks/eventviews/viewbuckets_grid.cpp:321
+Disposition: NATIVE
+Mapping/reason: Observes the live timeline Quick window and its grabbed pixels; presenter-level Swift cannot establish rendered output.
+Source context since previous assertion:
+;
+    const QImage image = quickWindow->grabWindow();
+
+Original expression:
+QVERIFY(!image.isNull())
+
+Remaining original source (closing sequence and helper bodies):
+;
+}
+
+int runViewBucketsGridCheck(const QStringList &qtArguments)
+{
+    ViewBucketsGridTest test;
+    QStringList arguments{QStringLiteral("view-buckets-grid")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+
+Swift assertion predicates
+
+None - no Swift counterpart identified.

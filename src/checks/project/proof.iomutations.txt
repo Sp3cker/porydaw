@@ -1,0 +1,1446 @@
+Assertion correspondence: project/iomutations.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/project/iomutations.cpp
+Original SHA-256: 7e9bc82238223d083d9896a86accebbe1892abdf03e38dba935c4507537c35b8
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute;
+PARTIAL identifies a related Swift predicate with an explicit unproved condition;
+GAP identifies an original predicate without an established equivalent;
+NATIVE identifies an observation only a native window/rendering/harness run can establish.
+97 assertion sites across failure stages, legacy-JSON preservation, voicegroup edit conflict/applied paths, semantic save, preview cleanup, creation collision, and closed-transport shutdown. Same-labelled Swift predicates cover stage error messages, file-byte/dirty integrity, legacy sidecar content, and bank-conflict errors; no site is marked MATCHED.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runProjectSessionSuite and runBankHistorySuite (SessionChecks.swift) own the paired Swift predicates via ProjectService/DocumentSession against staged swiftcore projects. The C++ ProjectIoFixture async deque, FileAside move-aside/restore brackets, and waitForResults/closed-ProjectIo helpers are C++-only.
+
+Fixture, sequence and row constraints
+failureStages_data expands over reconcile/midi/voicegroup/save rows; FileAside move-aside/restore brackets the midi and voicegroup rows; save/edit cases depend on exact waitFor cardinalities (+1/+2); closedTransport joins exactly 2 results on a closed ProjectIo.
+
+Original assertion inventory
+
+A001 | ProjectIoMutationsTest::init | src/checks/project/iomutations.cpp:194
+Disposition: GAP
+Mapping/reason: C++ harness setup guard (ProjectIoFixture initialize); no Swift predicate establishes this fixture precondition.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <QDir>
+  #include <QEventLoop>
+  #include <QFile>
+  #include <QFileInfo>
+  #include <QJsonDocument>
+  #include <QJsonObject>
+  #include <QThread>
+  #include <QTimer>
+
+  #include <deque>
+  #include <memory>
+  #include <optional>
+  #include <utility>
+  #include <variant>
+
+  #include "checks/project/iofixture.h"
+
+  namespace {
+
+  using project_check::loadSong;
+  using project_check::SongLoad;
+  using project_check::SongLoadEntry;
+
+  class FileAside final
+  {
+    public:
+      static std::optional<FileAside> moveAside(const QString &source, QString &error)
+      {
+          const QString aside = source + QStringLiteral(".porydaw_aside");
+          if (!QFile::rename(source, aside)) {
+              error = QStringLiteral("could not rename %1 aside").arg(source);
+              return std::nullopt;
+          }
+          return FileAside(source, aside);
+      }
+
+      ~FileAside() { restoreSilently(); }
+
+      FileAside(const FileAside &) = delete;
+      FileAside &operator=(const FileAside &) = delete;
+
+      FileAside(FileAside &&other) noexcept
+          : m_source(std::move(other.m_source))
+          , m_aside(std::move(other.m_aside))
+          , m_active(std::exchange(other.m_active, false))
+      {}
+
+      FileAside &operator=(FileAside &&) = delete;
+
+      bool restore(QString &error)
+      {
+          if (!m_active)
+              return true;
+          if (!QFile::rename(m_aside, m_source)) {
+              error = QStringLiteral("could not restore %1 from its aside").arg(m_source);
+              return false;
+          }
+          m_active = false;
+          return true;
+      }
+
+    private:
+      FileAside(QString source, QString aside)
+          : m_source(std::move(source))
+          , m_aside(std::move(aside))
+      {}
+
+      void restoreSilently()
+      {
+          if (m_active)
+              QFile::rename(m_aside, m_source);
+      }
+
+      QString m_source;
+      QString m_aside;
+      bool m_active = true;
+  };
+
+  struct LegacySongJson {
+      QString path;
+      QByteArray bytes;
+  };
+
+  std::optional<LegacySongJson> seedLegacySongJson(const QString &projectRoot,
+                                                   const QString &songLabel, QString &error)
+  {
+      if (!QDir(projectRoot).mkpath(QStringLiteral(".porydaw"))) {
+          error = QStringLiteral("could not create the legacy sidecar directory");
+          return std::nullopt;
+      }
+
+      QJsonObject root;
+      root.insert(QStringLiteral("view"), QJsonObject{{QStringLiteral("pxPerBeat"), 48.0},
+                                                      {QStringLiteral("selectedTrack"), 2}});
+      root.insert(QStringLiteral("editor"), QJsonObject{{QStringLiteral("laneHeight"), 96}});
+      const QByteArray bytes = QJsonDocument(root).toJson(QJsonDocument::Compact);
+      const QString path =
+          QDir(projectRoot).filePath(QStringLiteral(".porydaw/%1.json").arg(songLabel));
+
+      QFile file(path);
+      if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+          file.write(bytes) != bytes.size()) {
+          error = QStringLiteral("could not seed %1").arg(path);
+          return std::nullopt;
+      }
+      return LegacySongJson{path, bytes};
+  }
+
+  std::optional<QByteArray> readBytes(const QString &path, QString &error)
+  {
+      QFile file(path);
+      if (!file.open(QIODevice::ReadOnly)) {
+          error = QStringLiteral("could not read %1").arg(path);
+          return std::nullopt;
+      }
+      return file.readAll();
+  }
+
+  SongSaveSnapshot saveSnapshot(const project_check::OpenedProject &opened, const SongLoad &song)
+  {
+      SongSaveSnapshot snapshot;
+      snapshot.smf = song.midi.smf;
+      snapshot.midPath = opened.playableSong.midPath;
+      snapshot.label = opened.playableSong.label;
+      snapshot.cfg = opened.playableSong.cfg;
+      snapshot.flagsNeeded = true;
+      return snapshot;
+  }
+
+  int firstFilledSlot(const LoadedBankView &view)
+  {
+      for (int index = 0; index < view.slotViews.size(); ++index)
+          if (view.slotViews[index].voice.has_value())
+              return index;
+      return -1;
+  }
+
+  bool waitForResults(std::deque<ProjectResult> &results, QEventLoop &loop, int count, QString &error)
+  {
+      bool timedOut = false;
+      QTimer timer;
+      timer.setSingleShot(true);
+      timer.setInterval(30000);
+      QObject::connect(&timer, &QTimer::timeout, &loop, [&] {
+          timedOut = true;
+          loop.quit();
+      });
+      while (!timedOut && static_cast<int>(results.size()) < count) {
+          timer.start();
+          loop.exec();
+      }
+      timer.stop();
+      if (static_cast<int>(results.size()) >= count)
+          return true;
+      error = QStringLiteral("timed out waiting for %1 ProjectIo result(s); received %2")
+                  .arg(count)
+                  .arg(results.size());
+      return false;
+  }
+
+  enum class FailureSite { Reconcile, Midi, Voicegroup, Save };
+
+  class ProjectIoMutationsTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(ProjectIoMutationsTest)
+
+    public:
+      explicit ProjectIoMutationsTest(QString stagedRoot) : m_stagedRoot(std::move(stagedRoot)) {}
+
+    private slots:
+      void init();
+      void cleanup();
+      void failureStages_data();
+      void failureStages();
+      void legacyJsonUntouchedBySaveAndReload();
+      void editConflictVsApplied();
+      void semanticSaveBareAndWithRecipe();
+      void previewCleanupPrivateResult();
+      void creationCollisionRefusesLeavingStray();
+      void closedTransportFailsAndShutdownJoins();
+
+    private:
+      QString m_stagedRoot;
+      std::unique_ptr<project_check::ProjectIoFixture> m_fixture;
+  };
+
+  void ProjectIoMutationsTest::init()
+  {
+      m_fixture = std::make_unique<project_check::ProjectIoFixture>(m_stagedRoot);
+      QString error;
+
+Original expression:
+  QVERIFY2(m_fixture->initialize(error), qPrintable(error))
+
+A002 | ProjectIoMutationsTest::cleanup | src/checks/project/iomutations.cpp:199
+Disposition: GAP
+Mapping/reason: C++ harness teardown guard (caller-thread callbacks); no Swift predicate establishes this condition.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoMutationsTest::cleanup()
+  {
+
+Original expression:
+  QVERIFY(!m_fixture || m_fixture->callbacksReturnToCallerThread())
+
+A003 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:218
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+      m_fixture.reset();
+  }
+
+  void ProjectIoMutationsTest::failureStages_data()
+  {
+      QTest::addColumn<int>("site");
+      QTest::newRow("reconcile") << static_cast<int>(FailureSite::Reconcile);
+      QTest::newRow("midi") << static_cast<int>(FailureSite::Midi);
+      QTest::newRow("voicegroup") << static_cast<int>(FailureSite::Voicegroup);
+      QTest::newRow("save") << static_cast<int>(FailureSite::Save);
+  }
+
+  void ProjectIoMutationsTest::failureStages()
+  {
+      QFETCH(int, site);
+      const FailureSite failureSite = static_cast<FailureSite>(site);
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A004 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:225
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      if (failureSite == FailureSite::Reconcile) {
+          const std::optional<SongName> missing =
+              SongName::create(QStringLiteral("porydaw_missing_song"));
+
+Original expression:
+  QVERIFY(missing)
+
+A005 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:230
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (!missing)
+              return;
+          const int resultBase = m_fixture->resultCount();
+          m_fixture->io().submit(ProjectCommand{OpenSongInput{*missing}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A006 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:232
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          const auto *const failure = std::get_if<SongCommandFailure>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(failure)
+
+A007 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:234
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (failure) {
+
+Original expression:
+  QVERIFY(failure->song == *missing)
+
+A008 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:235
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(failure->stage, SongStage::Reconcile)
+
+A009 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:243
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          }
+          return;
+      }
+
+      if (failureSite == FailureSite::Midi) {
+          std::optional<FileAside> midiAside =
+              FileAside::moveAside(opened->playableSong.midPath, error);
+
+Original expression:
+  QVERIFY2(midiAside, qPrintable(error))
+
+A010 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:248
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (!midiAside)
+              return;
+          const int resultBase = m_fixture->resultCount();
+          m_fixture->io().submit(ProjectCommand{OpenSongInput{opened->song}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A011 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:250
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          const auto *const failure = std::get_if<SongCommandFailure>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(failure)
+
+A012 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:252
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (failure) {
+
+Original expression:
+  QVERIFY(failure->song == opened->song)
+
+A013 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:253
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(failure->stage, SongStage::Midi)
+
+A014 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:255
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          }
+
+Original expression:
+  QVERIFY2(midiAside->restore(error), qPrintable(error))
+
+A015 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:261
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          return;
+      }
+
+      const std::optional<SongLoad> initial =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
+
+Original expression:
+  QVERIFY2(initial, qPrintable(error))
+
+A016 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:269
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (!initial)
+          return;
+
+      if (failureSite == FailureSite::Voicegroup) {
+          const QString sourcePath =
+              QDir(opened->snapshot.root()).filePath(initial->bankId.sourceRelativePath());
+          std::optional<FileAside> sourceAside = FileAside::moveAside(sourcePath, error);
+
+Original expression:
+  QVERIFY2(sourceAside, qPrintable(error))
+
+A017 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:274
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (!sourceAside)
+              return;
+          const int resultBase = m_fixture->resultCount();
+          m_fixture->io().submit(ProjectCommand{OpenSongInput{opened->song}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 2, error), qPrintable(error))
+
+A018 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:275
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<MidiStage>(m_fixture->results()[resultBase]))
+
+A019 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:278
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          const auto *const failure =
+              std::get_if<SongCommandFailure>(&m_fixture->results()[resultBase + 1]);
+
+Original expression:
+  QVERIFY(failure)
+
+A020 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:280
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (failure) {
+
+Original expression:
+  QVERIFY(failure->song == opened->song)
+
+A021 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:281
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(failure->stage, SongStage::Voicegroup)
+
+A022 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:283
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          }
+
+Original expression:
+  QVERIFY2(sourceAside->restore(error), qPrintable(error))
+
+A023 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:291
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+          return;
+      }
+
+      SongSaveSnapshot failing = saveSnapshot(*opened, *initial);
+      failing.midPath = QDir::temp().filePath(QStringLiteral("porydaw_iocheck_missing/x.mid"));
+      const int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{SaveSongInput{opened->song, failing, std::nullopt}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A024 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:293
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+      const auto *const failure = std::get_if<SongCommandFailure>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(failure)
+
+A025 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:295
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (failure) {
+
+Original expression:
+  QVERIFY(failure->song == opened->song)
+
+A026 | ProjectIoMutationsTest::failureStages | src/checks/project/iomutations.cpp:296
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005-S012 in SessionChecks.swift (S005-S008 reach their case IDs through the assertFailureIntegrity closure parameter; S009-S012 through the reconcileID/midiID/voicegroupID/saveID locals); the same four stages report error messages with file-byte/dirty integrity through ProjectService, but SongCommandFailure stage tags, MidiStage/View sequencing, FileAside restore mechanics, and exact wait counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(failure->stage, SongStage::Save)
+
+A027 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:304
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A028 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:309
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+      const std::optional<SongLoad> initial =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
+
+Original expression:
+  QVERIFY2(initial, qPrintable(error))
+
+A029 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:314
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      if (!initial)
+          return;
+      const std::optional<LegacySongJson> legacy =
+          seedLegacySongJson(opened->snapshot.root(), opened->playableSong.label, error);
+
+Original expression:
+  QVERIFY2(legacy, qPrintable(error))
+
+A030 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:321
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      if (!legacy)
+          return;
+
+      SongSaveSnapshot snapshot = saveSnapshot(*opened, *initial);
+      int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{SaveSongInput{opened->song, snapshot, std::nullopt}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A031 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:322
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<SongSaved>(m_fixture->results().back()))
+
+A032 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:324
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      const std::optional<QByteArray> afterBare = readBytes(legacy->path, error);
+
+Original expression:
+  QVERIFY2(afterBare, qPrintable(error))
+
+A033 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:326
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      if (afterBare)
+
+Original expression:
+  QCOMPARE(*afterBare, legacy->bytes)
+
+A034 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:331
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+
+      resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{
+          SaveSongInput{opened->song, snapshot, SaveVoicegroupInput{initial->bankId, {}}}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 2, error), qPrintable(error))
+
+A035 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:332
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<LoadedBankView>(m_fixture->results()[resultBase]))
+
+A036 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:333
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<SongSaved>(m_fixture->results()[resultBase + 1]))
+
+A037 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:335
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      const std::optional<QByteArray> afterRecipe = readBytes(legacy->path, error);
+
+Original expression:
+  QVERIFY2(afterRecipe, qPrintable(error))
+
+A038 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:337
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      if (afterRecipe)
+
+Original expression:
+  QCOMPARE(*afterRecipe, legacy->bytes)
+
+A039 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:341
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+
+      const std::optional<SongLoad> reloaded =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Reload, nullptr, error);
+
+Original expression:
+  QVERIFY2(reloaded, qPrintable(error))
+
+A040 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:343
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      const std::optional<QByteArray> afterReload = readBytes(legacy->path, error);
+
+Original expression:
+  QVERIFY2(afterReload, qPrintable(error))
+
+A041 | ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload | src/checks/project/iomutations.cpp:345
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; the legacy sidecar content marker is checked once, but byte-equality after bare save, after recipe save, and after reload below is unproved.
+Source context since previous assertion:
+  ;
+      if (afterReload)
+
+Original expression:
+  QCOMPARE(*afterReload, legacy->bytes)
+
+A042 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:352
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoMutationsTest::editConflictVsApplied()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A043 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:357
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+      const std::optional<SongLoad> initial =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
+
+Original expression:
+  QVERIFY2(initial, qPrintable(error))
+
+A044 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:363
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (!initial)
+          return;
+
+      const int viewBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{LoadVoicegroupCommand{opened->song, initial->bankId}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(viewBase + 2, error), qPrintable(error))
+
+A045 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:365
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      const auto *const loadedView = std::get_if<LoadedBankView>(&m_fixture->results()[viewBase]);
+
+Original expression:
+  QVERIFY(loadedView)
+
+A046 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:369
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (!loadedView)
+          return;
+      const int slot = firstFilledSlot(*loadedView);
+
+Original expression:
+  QVERIFY(slot >= 0)
+
+A047 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:381
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (slot < 0)
+          return;
+
+      // Copy every value before appending to the result deque: the old runner retained pointers
+      // into its deque and could read a reallocation-dangling VoicegroupId/LoadedBankView.
+      const VoicegroupId bankId = loadedView->id;
+      const VgVoice originalVoice = *loadedView->slotViews[slot].voice;
+
+      int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{
+          VoicegroupEditInput{bankId, SetVoicegroupSlot{slot, originalVoice, std::nullopt}}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A048 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:384
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      const auto *const conflictResult =
+          std::get_if<VoicegroupEditResult>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(conflictResult)
+
+A049 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:386
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (conflictResult)
+
+Original expression:
+  QVERIFY(std::holds_alternative<VoicegroupEditConflictResult>(*conflictResult))
+
+A050 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:393
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+
+      VgVoice editedVoice = originalVoice;
+      ++editedVoice.key;
+      resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{
+          VoicegroupEditInput{bankId, SetVoicegroupSlot{slot, editedVoice, originalVoice}}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A051 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:396
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      const auto *const appliedResult =
+          std::get_if<VoicegroupEditResult>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(appliedResult)
+
+A052 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:400
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (!appliedResult)
+          return;
+      const auto *const applied = std::get_if<VoicegroupEditAppliedResult>(appliedResult);
+
+Original expression:
+  QVERIFY(applied)
+
+A053 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:403
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (!applied)
+          return;
+
+Original expression:
+  QVERIFY(applied->view.id == bankId)
+
+A054 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:404
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(applied->view.slotViews[slot].voice.has_value())
+
+A055 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:406
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+      if (applied->view.slotViews[slot].voice)
+
+Original expression:
+  QVERIFY(*applied->view.slotViews[slot].voice == editedVoice)
+
+A056 | ProjectIoMutationsTest::editConflictVsApplied | src/checks/project/iomutations.cpp:407
+Disposition: PARTIAL
+Mapping/reason: Related predicates S013-S015 in SessionChecks.swift; a stale voice triggers bankConflict with canUndo/canRedo unchanged, but result-variant discrimination, applied view contents, and materialization absence below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!applied->materialization.has_value())
+
+A057 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:414
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoMutationsTest::semanticSaveBareAndWithRecipe()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A058 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:419
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+      const std::optional<SongLoad> initial =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
+
+Original expression:
+  QVERIFY2(initial, qPrintable(error))
+
+A059 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:426
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      if (!initial)
+          return;
+      const SongSaveSnapshot snapshot = saveSnapshot(*opened, *initial);
+
+      int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{SaveSongInput{opened->song, snapshot, std::nullopt}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A060 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:427
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase + 1)
+
+A061 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:429
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      const auto *const bareSaved = std::get_if<SongSaved>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(bareSaved)
+
+A062 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:431
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      if (bareSaved) {
+
+Original expression:
+  QVERIFY(bareSaved->song == opened->song)
+
+A063 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:432
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bareSaved->savedSnapshot.label, opened->playableSong.label)
+
+A064 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:433
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(bareSaved->flagsWritten)
+
+A065 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:439
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      }
+
+      resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{
+          SaveSongInput{opened->song, snapshot, SaveVoicegroupInput{initial->bankId, {}}}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 2, error), qPrintable(error))
+
+A066 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:440
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase + 2)
+
+A067 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:443
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      const auto *const view = std::get_if<LoadedBankView>(&m_fixture->results()[resultBase]);
+      const auto *const recipeSaved = std::get_if<SongSaved>(&m_fixture->results()[resultBase + 1]);
+
+Original expression:
+  QVERIFY(view)
+
+A068 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:444
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(recipeSaved)
+
+A069 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:446
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      if (view)
+
+Original expression:
+  QVERIFY(view->id == initial->bankId)
+
+A070 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:448
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      if (recipeSaved) {
+
+Original expression:
+  QVERIFY(recipeSaved->song == opened->song)
+
+A071 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:449
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(recipeSaved->flagsWritten)
+
+A072 | ProjectIoMutationsTest::semanticSaveBareAndWithRecipe | src/checks/project/iomutations.cpp:454
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes 120 BPM sample scheduling only, not bare/recipe save results or flags.
+Source context since previous assertion:
+  ;
+      }
+
+      const std::optional<SongLoad> reloaded =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Reload, nullptr, error);
+
+Original expression:
+  QVERIFY2(reloaded, qPrintable(error))
+
+A073 | ProjectIoMutationsTest::previewCleanupPrivateResult | src/checks/project/iomutations.cpp:461
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S003) observes reopen timing only, not preview-cleanup completion.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoMutationsTest::previewCleanupPrivateResult()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A074 | ProjectIoMutationsTest::previewCleanupPrivateResult | src/checks/project/iomutations.cpp:467
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S003) observes reopen timing only, not preview-cleanup completion.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      const int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{CleanupPreviewInput{}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A075 | ProjectIoMutationsTest::previewCleanupPrivateResult | src/checks/project/iomutations.cpp:468
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S003) observes reopen timing only, not preview-cleanup completion.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase + 1)
+
+A076 | ProjectIoMutationsTest::previewCleanupPrivateResult | src/checks/project/iomutations.cpp:469
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S003) observes reopen timing only, not preview-cleanup completion.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<PreviewCleanupCompleted>(m_fixture->results().back()))
+
+A077 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:476
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoMutationsTest::creationCollisionRefusesLeavingStray()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A078 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:481
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+      const std::optional<SongLoad> initial =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
+
+Original expression:
+  QVERIFY2(initial, qPrintable(error))
+
+A079 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:490
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      if (!initial)
+          return;
+
+      const QString label = QStringLiteral("projectiocheck_stray");
+      const QString strayPath = QDir(opened->snapshot.root())
+                                    .filePath(QStringLiteral("sound/songs/midi/%1.mid").arg(label));
+      const QByteArray strayBytes = QByteArrayLiteral("do not overwrite this stray MIDI");
+      QFile stray(strayPath);
+
+Original expression:
+  QVERIFY2(stray.open(QIODevice::WriteOnly | QIODevice::Truncate),
+               qPrintable(stray.errorString()))
+
+A080 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:492
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stray.write(strayBytes), static_cast<qint64>(strayBytes.size()))
+
+A081 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:499
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      stray.close();
+
+      const int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(
+          ProjectCommand{CreateSongInput{label, opened->constant, opened->playableSong.player,
+                                         opened->playableSong.cfg, QString{}, initial->midi.smf}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A082 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:501
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      const auto *const failure = std::get_if<CommandFailure>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(failure)
+
+A083 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:503
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      if (failure)
+
+Original expression:
+  QVERIFY(!failure->message.isEmpty())
+
+A084 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:505
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      const std::optional<QByteArray> preserved = readBytes(strayPath, error);
+
+Original expression:
+  QVERIFY2(preserved, qPrintable(error))
+
+A085 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:507
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+      if (preserved)
+
+Original expression:
+  QCOMPARE(*preserved, strayBytes)
+
+A086 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:508
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(QFile::remove(strayPath))
+
+A087 | ProjectIoMutationsTest::creationCollisionRefusesLeavingStray | src/checks/project/iomutations.cpp:509
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes tempo-meta stripping only, not creation refusal or stray-byte preservation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!QFileInfo::exists(strayPath))
+
+A088 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:516
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A089 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:533
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      std::deque<ProjectResult> results;
+      QEventLoop loop;
+      const QThread *const callerThread = QThread::currentThread();
+      bool callbacksOnCallerThread = true;
+      auto closed =
+          std::make_unique<ProjectIo>([&](ProjectResult result, std::optional<ProjectCommand>) {
+              callbacksOnCallerThread &= QThread::currentThread() == callerThread;
+              results.push_back(std::move(result));
+              loop.quit();
+          });
+
+      closed->submit(ProjectCommand{RefreshCatalogInput{}});
+      closed->submit(ProjectCommand{OpenSongInput{opened->song}});
+
+Original expression:
+  QVERIFY2(waitForResults(results, loop, 2, error), qPrintable(error))
+
+A090 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:534
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(callbacksOnCallerThread)
+
+A091 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:535
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(results.size()), 2)
+
+A092 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:538
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      const auto *const catalogFailure = std::get_if<CommandFailure>(&results[0]);
+      const auto *const songFailure = std::get_if<SongCommandFailure>(&results[1]);
+
+Original expression:
+  QVERIFY(catalogFailure)
+
+A093 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:539
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(songFailure)
+
+A094 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:541
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (catalogFailure)
+
+Original expression:
+  QVERIFY(!catalogFailure->message.isEmpty())
+
+A095 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:543
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      if (songFailure) {
+
+Original expression:
+  QVERIFY(songFailure->song == opened->song)
+
+A096 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:544
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(songFailure->stage, SongStage::Reconcile)
+
+A097 | ProjectIoMutationsTest::closedTransportFailsAndShutdownJoins | src/checks/project/iomutations.cpp:552
+Disposition: GAP
+Mapping/reason: No Swift coverage of closed-transport failure or shutdown join; the callback-thread and result-count conjunctions below remain open.
+Source context since previous assertion:
+  ;
+      }
+
+      closed->submit(ProjectCommand{OpenProjectInput{m_fixture->root()}});
+      closed->submit(ProjectCommand{OpenSongInput{opened->song}});
+      const int delivered = static_cast<int>(results.size());
+      closed.reset();
+      loop.processEvents();
+
+Original expression:
+  QCOMPARE(static_cast<int>(results.size()), delivered)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace
+
+  int runProjectIoMutationsCheck(const QString &stagedRoot, const QStringList &qtArguments)
+  {
+      ProjectIoMutationsTest test(stagedRoot);
+      QStringList arguments{QStringLiteral("project-io-mutations")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "iomutations.moc"
+
+Swift assertion predicates
+
+S001 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:538
+  report.expectEqual(UInt64(24_000), initialSampleAt24,
+                         cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
+                         what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
+
+S002 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:772
+  report.expect(legacyContent?.contains("\"protected\": true") == true,
+                    cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
+                    message: "save leaves legacy sidecar JSON untouched")
+
+S003 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:811
+  report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
+                             cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
+                             what: "reopen reproduces saved authoritative 150 BPM timing")
+
+S004 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:854
+  report.expectEqual(false, reopenedHasTempoMeta,
+                             cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
+                             what: "tempo metas remain stripped while authoritative timing persists")
+
+S005 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:933
+  report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
+                             what: "failed stage preserves MIDI file bytes")
+
+S006 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:935
+  report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
+                             what: "failed stage preserves voicegroup file bytes")
+
+S007 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:937
+  report.expectEqual(true, session.document.isDirty, cppID: cppID,
+                             what: "failed stage leaves document dirty")
+
+S008 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:939
+  report.expectEqual(true, session.bankDirty, cppID: cppID,
+                             what: "failed stage leaves bank dirty")
+
+S009 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:950
+  report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                        cppID: reconcileID,
+                        message: "reconcile stage reports the native playable-song failure")
+
+S010 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:968
+  report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
+                            cppID: midiID,
+                            message: "MIDI stage reports its missing source file")
+
+S011 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:989
+  report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
+                            cppID: voicegroupID,
+                            message: "voicegroup stage reports its missing source file")
+
+S012 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1013
+  report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                        cppID: saveID,
+                        message: "save stage reports the unwritable destination")
+
+S013 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1388
+  report.expectEqual(ProjectServiceError.bankConflict, error,
+                             cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                             what: "stale expected voice triggers bankConflict")
+
+S014 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1395
+  report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
+                         cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                         what: "initial conflict leaves canUndo unchanged")
+
+S015 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1398
+  report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
+                         cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                         what: "initial conflict leaves canRedo unchanged")

@@ -96,6 +96,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public var plotHeight: Double = 0
     public var devicePixelRatio: Double = 1
     public var baseFontPx: Double = GridCameraPolicy.seedBaseFontPx
+    public var promptAppearance: [String: QVariantSettable] = [:]
+    public var promptFont: [String: QVariantSettable] = [:]
     public var captionFont: [String: QVariantSettable] = [:]
     public var titleFont: [String: QVariantSettable] = [:]
     /// `false` while no track is presented: the plot draws its own message then
@@ -255,6 +257,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
         let maximum = Int((Double(minimum) * VoiceChangesPagePolicy.maximumBodyRows).rounded())
         bodyPolicy = EditorDrawerBodyPolicy(maximumBodyHeight: maximum) { _, _ in minimum }
         self.baseFontPx = base
+        promptAppearance = PromptAppearance.metrics(base: base)
+        promptFont = PromptAppearance.font(base: base)
         publishTypography()
     }
 
@@ -313,6 +317,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
         self.devicePixelRatio = nextDpr
         if fontChanged {
             self.baseFontPx = nextFont
+            promptAppearance = PromptAppearance.metrics(base: nextFont)
+            promptFont = PromptAppearance.font(base: nextFont)
             publishTypography()
         }
         if changed { rebuildContent() }

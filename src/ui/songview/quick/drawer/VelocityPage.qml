@@ -16,6 +16,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import ".." as Shared
 import "../swiftroll"
 import ".." as Shared
 
@@ -460,11 +461,14 @@ FocusScope {
 
     // ---- local prompt -------------------------------------------------------
 
-    VelocityPrompt {
-        id: prompt
+    property var modalHost: null
 
+    Shared.VelocityPrompt {
+        id: prompt
+        parent: page.modalHost
         anchors.fill: parent
         model: page.model
+        promptPalette: page.gridPalette
         hintService: page.hintService
         hintScopeAllowed: true
 

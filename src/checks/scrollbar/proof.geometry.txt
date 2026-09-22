@@ -1,0 +1,455 @@
+Assertion correspondence: scrollbar/geometry.cpp
+
+Reference revision: 1d2d8a819b851071e8b1ec5767832a17d9fc271e
+Original: src/checks/scrollbar/geometry.cpp
+Original SHA-256: 2a350fe816265dd168c72fb035d4eb10c4b75d6b8838996554dfd8da445aa64f
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+No Swift counterpart file was identified in this checkout (no .swift under
+src/checks/scrollbar/ or covering this suite elsewhere), so there are no Swift
+predicates to cite; every site below is GAP or NATIVE.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter scrollbar --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+No converted-window evidence is available for this suite in this checkout.
+
+Execution ownership
+No Swift entry point executes these checks. Native ownership: ScrollbarTest
+methods layoutFollowsCanonicalBands, scrollbarHostContainsBothTracks,
+drawerResizeFollowsRollBand, and eventListHidesOnlyRollScrollbar, driven
+through the ScrollbarTest fixture declared in
+src/checks/scrollbar/tst_scrollbar.h and implemented in
+src/checks/scrollbar/control.cpp (no assertion sites): view(), window(),
+bar()/thumb(), withinTrack(), plus the canonical band layout
+(TimelineBandLayout/TimelineBandGeometry), SongView scrollbar-rect accessors,
+and the editor drawer. None of these methods uses data rows; each site
+executes once per run.
+
+Fixture, sequence and row constraints
+No data rows or loops expand these sites. drawerResizeFollowsRollBand mutates
+drawer section height before its sites, and eventListHidesOnlyRollScrollbar
+toggles event-list visibility mid-method, so sites after those mutations
+observe the mutated layout. QTRY_* sites poll until the layout/item state
+settles; they are still one site each. Original setup, branch guards and
+helper implementations at the reference revision remain authoritative; this
+inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:49
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/scrollbar/tst_scrollbar.h"
+
+  #include <cmath>
+  #include <optional>
+
+  #include <QPointF>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QRectF>
+  #include <QSizeF>
+  #include <QtTest>
+
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/layout.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/songview/timecamera.h"
+  #include "ui/songview/timelinebandlayout.h"
+
+  namespace {
+
+  constexpr qreal kTolerance = 0.01;
+
+  bool near(qreal actual, qreal expected)
+  {
+      return std::abs(actual - expected) <= kTolerance;
+  }
+
+  QRectF windowRect(const QQuickWindow &window)
+  {
+      return {QPointF{}, QSizeF(window.size())};
+  }
+
+  QRectF sceneRect(const QQuickItem &item)
+  {
+      return item.mapRectToScene(item.boundingRect());
+  }
+
+  } // namespace
+
+  void ScrollbarTest::layoutFollowsCanonicalBands()
+  {
+      SongView &songView = view();
+      const songview::TimelineBandLayout &bands = songView.timelineBandLayout();
+      const std::optional<songview::TimelineBandGeometry> &roll =
+          bands.geometry(songview::TimelineBand::Roll);
+      const std::optional<songview::TimelineBandGeometry> &otherEvents =
+          bands.geometry(songview::TimelineBand::OtherEvents);
+Original expression:
+  QVERIFY(roll.has_value());
+
+A002 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:50
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(otherEvents.has_value());
+
+A003 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:54
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const QRectF horizontalRect(songView.horizontalScrollbarRect());
+      const QRectF verticalRect(songView.verticalScrollbarRect());
+Original expression:
+  QVERIFY(!horizontalRect.isEmpty());
+
+A004 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:55
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!verticalRect.isEmpty());
+
+A005 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:56
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(horizontalRect.left(), songView.timelineSplitX()));
+
+A006 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:57
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(horizontalRect.right(), window().width()));
+
+A007 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:58
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(horizontalRect.height(), layout::space(layout::Space::Two)));
+
+A008 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:59
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(horizontalRect.top(), otherEvents->rect.top() + otherEvents->rect.height()));
+
+A009 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:61
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.left(), roll->rect.left() + roll->rect.width()));
+
+A010 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:62
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.width(), layout::space(layout::Space::Two)));
+
+A011 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:63
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.top(), roll->rect.top()));
+
+A012 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:64
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.height(), roll->rect.height()));
+
+A013 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:65
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(roll->plotRect.right() < verticalRect.left() + kTolerance);
+
+A014 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:67
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(bar(Qt::Horizontal).isVisible() && thumb(Qt::Horizontal).isVisible());
+
+A015 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:68
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(bar(Qt::Vertical).isVisible() && thumb(Qt::Vertical).isVisible());
+
+A016 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:70
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const auto actualVerticalRect = [&] { return sceneRect(bar(Qt::Vertical)).toAlignedRect(); };
+Original expression:
+  QTRY_VERIFY(!actualVerticalRect().isEmpty());
+
+A017 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:71
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_COMPARE(actualVerticalRect().left(), roll->rect.right() + 1);
+
+A018 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:72
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_COMPARE(actualVerticalRect().right(), window().width() - 1);
+
+A019 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:73
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(actualVerticalRect().left() > roll->plotRect.right());
+
+A020 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:74
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(withinTrack(Qt::Horizontal));
+
+A021 | ScrollbarTest::layoutFollowsCanonicalBands | src/checks/scrollbar/geometry.cpp:75
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(withinTrack(Qt::Vertical));
+
+A022 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:84
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  }
+
+  void ScrollbarTest::scrollbarHostContainsBothTracks()
+  {
+      QQuickWindow &quickWindow = window();
+      QQuickItem &horizontalBar = bar(Qt::Horizontal);
+      QQuickItem &verticalBar = bar(Qt::Vertical);
+Original expression:
+  QTRY_VERIFY(!horizontalBar.boundingRect().isEmpty());
+
+A023 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:85
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(!verticalBar.boundingRect().isEmpty());
+
+A024 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:87
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const QRectF host = windowRect(quickWindow);
+Original expression:
+  QTRY_VERIFY(host.contains(sceneRect(horizontalBar)));
+
+A025 | ScrollbarTest::scrollbarHostContainsBothTracks | src/checks/scrollbar/geometry.cpp:88
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(host.contains(sceneRect(verticalBar)));
+
+A026 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:99
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  }
+
+  void ScrollbarTest::drawerResizeFollowsRollBand()
+  {
+      SongView &songView = view();
+      const int initialHeight = songView.drawerSectionHeight(EditorDrawerPage::Automations);
+      const int initialViewportHeight = songView.rollViewportHeight();
+
+      songView.setDrawerSectionHeight(EditorDrawerPage::Automations, initialHeight + 80);
+Original expression:
+  QTRY_VERIFY(songView.rollViewportHeight() != initialViewportHeight);
+
+A027 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:102
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const std::optional<songview::TimelineBandGeometry> &roll =
+          songView.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+Original expression:
+  QVERIFY(roll.has_value());
+
+A028 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:104
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const QRectF verticalRect(songView.verticalScrollbarRect());
+Original expression:
+  QVERIFY(!verticalRect.isEmpty());
+
+A029 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:105
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.top(), roll->rect.top()));
+
+A030 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:106
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.height(), roll->rect.height()));
+
+A031 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:107
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(near(verticalRect.left(), roll->rect.left() + roll->rect.width()));
+
+A032 | ScrollbarTest::drawerResizeFollowsRollBand | src/checks/scrollbar/geometry.cpp:108
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(withinTrack(Qt::Vertical));
+
+A033 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:116
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  }
+
+  void ScrollbarTest::eventListHidesOnlyRollScrollbar()
+  {
+      SongView &songView = view();
+      songView.setEventListVisible(true);
+Original expression:
+  QTRY_VERIFY(songView.verticalScrollbarRect().isEmpty());
+
+A034 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:117
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(!bar(Qt::Vertical).isVisible());
+
+A035 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:118
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(!songView.horizontalScrollbarRect().isEmpty());
+
+A036 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:119
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(bar(Qt::Horizontal).isVisible() && thumb(Qt::Horizontal).isVisible());
+
+A037 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:125
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const songview::TimeCamera &camera = songView.camera();
+      const qreal horizontalTarget =
+          camera.minHScroll() + (camera.maxHScroll() - camera.minHScroll()) / 3.0;
+      songView.setHScroll(horizontalTarget);
+Original expression:
+  QTRY_VERIFY(near(songView.camera().scrollX(), horizontalTarget));
+
+A038 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:126
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(withinTrack(Qt::Horizontal));
+
+A039 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:129
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      songView.setEventListVisible(false);
+Original expression:
+  QTRY_VERIFY(!songView.verticalScrollbarRect().isEmpty());
+
+A040 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:130
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: observes live QQuickItem visibility, which a presenter-level Swift check cannot establish.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(bar(Qt::Vertical).isVisible() && thumb(Qt::Vertical).isVisible());
+
+A041 | ScrollbarTest::eventListHidesOnlyRollScrollbar | src/checks/scrollbar/geometry.cpp:131
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(withinTrack(Qt::Vertical));
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+Swift assertion predicates
+No Swift counterpart was identified, so no S entries exist.
+
+Shared helper: none (no Swift fixture files carrying expects were identified).

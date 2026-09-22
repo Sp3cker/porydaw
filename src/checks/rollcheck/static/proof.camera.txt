@@ -1,0 +1,1518 @@
+Assertion correspondence: rollcheck/static/camera.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/rollcheck/static/camera.cpp
+Original SHA-256: cd54f262cc3b30c64e2b1ff8ee7bc1b843c4cad469b58b5aea08c7ac4644fe78
+Swift counterpart: src/checks/rollcheck/static/camera.swift
+Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+runEditorCameraChecks is called in its previous suite position. checkGridCameraWheel
+is called between checkViewport and checkProjection by EditorGridCameraChecks;
+it shares the existing session, grid, and publication counters.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:70
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  #include "checks/rollcheck/static/tst_pianorollstatic.h"
+
+  #include <QCoreApplication>
+  #include <QEvent>
+  #include <QImage>
+  #include <QtTest>
+
+  #include <cmath>
+  #include <cstdint>
+  #include <limits>
+  #include <vector>
+
+  #include "checks/rollcheck/static/fixtures.h"
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "core/songdocument.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/detail.h"
+  #include "ui/songview/pianoroll.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickview.h"
+
+  namespace checks::rollcheck::staticcheck {
+  namespace {
+
+  int keyAt(const SongView &view, qreal y)
+  {
+      const qreal dpr = view.quickView() ? view.quickView()->quickDevicePixelRatio() : 1.0;
+      for (int row = 0; row < 128; ++row) {
+          const qreal edge =
+              std::round((double(row + 1) * view.camera().keyHeight() - view.camera().scrollY()) *
+                         dpr) /
+              dpr;
+          if (y < edge)
+              return 127 - row;
+      }
+      return 0;
+  }
+
+  qreal rowCenter(const SongView &view, int key)
+  {
+      const qreal dpr = view.quickView() ? view.quickView()->quickDevicePixelRatio() : 1.0;
+      const auto edge = [&view, dpr](int row) {
+          return std::round((double(row) * view.camera().keyHeight() - view.camera().scrollY()) *
+                            dpr) /
+                 dpr;
+      };
+      return std::floor((edge(127 - key) + edge(128 - key)) / 2.0);
+  }
+
+  void wheel(songview::TimelineInputItem &input, const QPointF &position, QPoint pixel, QPoint angle,
+             Qt::KeyboardModifiers modifiers = Qt::NoModifier,
+             Qt::ScrollPhase phase = Qt::NoScrollPhase)
+  {
+      checks::events::sendWheel(input, position, pixel, angle, Qt::NoButton, modifiers, phase, false);
+  }
+  } // namespace
+
+  PianoRollStaticTest::PianoRollStaticTest(QString projectRoot, QString songLabel)
+      : m_projectRoot(std::move(projectRoot))
+      , m_songLabel(std::move(songLabel))
+  {}
+
+  void PianoRollStaticTest::tickRangeRejectsInvalidBounds()
+  {
+      using songview::detail::tickRange;
+      const double nan = std::numeric_limits<double>::quiet_NaN();
+      const double infinity = std::numeric_limits<double>::infinity();
+Original expression:
+  QVERIFY(tickRange(nan, 100.0).empty())
+
+A002 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:71
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(0.0, nan).empty())
+
+A003 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:72
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(infinity, 100.0).empty())
+
+A004 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:73
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(0.0, -infinity).empty())
+
+A005 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:74
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(-64.0, -1.0).empty())
+
+A006 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:75
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(48.0, 48.0).empty())
+
+A007 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:76
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(64.0, 32.0).empty())
+
+A008 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:77
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(1.0, 0x1p64).empty())
+
+A009 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:78
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(0x1p64, 0x1p64 + 4096.0).empty())
+
+A010 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:79
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(tickRange(1.0, std::numeric_limits<double>::max()).empty())
+
+A011 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:81
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const songview::detail::TickRange clipped = tickRange(-24.0, 72.5);
+Original expression:
+  QCOMPARE(clipped.begin, uint64_t(0))
+
+A012 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:82
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(clipped.end, uint64_t(72))
+
+A013 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:84
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const songview::detail::TickRange fractional = tickRange(96.75, 289.25);
+Original expression:
+  QCOMPARE(fractional.begin, uint64_t(96))
+
+A014 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:85
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(fractional.end, uint64_t(289))
+
+A015 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:87
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const double largestBelowCeiling = std::nextafter(double(CoreTimeDefaults::kNoTick), 0.0);
+Original expression:
+  QCOMPARE(tickRange(0.0, largestBelowCeiling).end, Tick(largestBelowCeiling))
+
+A016 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:88
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(tickRange(double(CoreTimeDefaults::kMaxTick) - 2048.0,
+                         double(CoreTimeDefaults::kMaxTick) - 1024.0)
+                   .begin,
+               CoreTimeDefaults::kMaxTick - 2048)
+
+A017 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:98
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::tickRangeWalksFractionalLattice()
+  {
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A018 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:106
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      const SongView::ViewState original = view.viewState();
+      SongView::ViewState zoomed = original;
+      zoomed.pxPerBeat = 384.0;
+      zoomed.gridSelection = songview::GridSelection::automatic();
+      view.applyViewState(zoomed);
+      const songview::Grid::Segment segment = view.grid().segmentAt(96);
+Original expression:
+  QVERIFY(segment.start <= 96)
+
+A019 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:107
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(segment.next >= 289)
+
+A020 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:109
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const Tick lattice = view.grid().gridTicksAt(96);
+Original expression:
+  QVERIFY(lattice > 0)
+
+A021 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:110
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(lattice < segment.beatTicks)
+
+A022 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:129
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const auto walk = [&view](double begin, double end) {
+          std::vector<Tick> ticks;
+          songview::detail::forEachSubGridLine(view.grid(), songview::detail::tickRange(begin, end),
+                                               [&ticks](Tick tick, int) { ticks.push_back(tick); });
+          return ticks;
+      };
+      // Independent membership expectation on each segment's sub-beat lattice.
+      const auto expectedLines = [&view](Tick begin, Tick end) {
+          std::vector<Tick> ticks;
+          for (Tick tick = begin; tick < end; ++tick) {
+              const songview::Grid::Segment s = view.grid().segmentAt(tick);
+              const Tick step = view.grid().gridTicksAt(tick);
+              if (step > 0 && step < s.beatTicks && (tick - s.start) % step == 0 &&
+                  (tick - s.start) % s.beatTicks != 0 && view.grid().drawsSubGridIn(s))
+                  ticks.push_back(tick);
+          }
+          return ticks;
+      };
+Original expression:
+  QCOMPARE(walk(96.75, 289.25), expectedLines(96, 289))
+
+A023 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:130
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(walk(std::numeric_limits<double>::quiet_NaN(), 100.0).empty())
+
+A024 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:138
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // A coarser lattice keeps both drawn and snap strides above the clock floor.
+      SongView::ViewState coarse = original;
+      coarse.pxPerBeat = 192.0;
+      coarse.gridSelection = songview::GridSelection::musical(16);
+      view.applyViewState(coarse);
+      const Tick latticeG = view.grid().gridTicksAt(0);
+      const Tick snapG = view.grid().snapTicksAt(0);
+Original expression:
+  QVERIFY(latticeG > 1)
+
+A025 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:139
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(latticeG < segment.beatTicks)
+
+A026 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:140
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(96 % latticeG == 0)
+
+A027 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:141
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(snapG >= 3)
+
+A028 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:142
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(segment.beatTicks % snapG == 0)
+
+A029 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:144
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // Aligned and interior ticks advance to the same next subdivision.
+Original expression:
+  QVERIFY2(2 * uint64_t(latticeG) < uint64_t(segment.next - 96),
+               "lattice must step at least twice below the segment end")
+
+A030 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:146
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(96)), Tick(96 + latticeG))
+
+A031 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:147
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(97)), Tick(96 + latticeG))
+
+A032 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:151
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // The first ceiling-aligned candidate (96 + latticeG) already lies at
+      // or beyond the range end: the segment contributes nothing.
+      const std::vector<Tick> firstOutside = walk(97, 98);
+Original expression:
+  QVERIFY2(firstOutside.empty(), "a first aligned candidate past the range end must be skipped")
+
+A033 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:154
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // The first candidate is the beat line at 96: only its callback is
+      // skipped; the walk still advances through the rest of the range.
+Original expression:
+  QCOMPARE(walk(95, 110), expectedLines(95, 110))
+
+A034 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:157
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // Fractional nearest tie on either side of the midpoint: the lower
+      // candidate wins exactly at the tie.
+Original expression:
+  QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0), Tick(96))
+
+A035 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:158
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 - 0.25), Tick(96))
+
+A036 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:159
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTick(96.0 + snapG / 2.0 + 0.25), Tick(96 + snapG))
+
+A037 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:160
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTickDown(96.0 + snapG / 2.0 + 0.25), Tick(96))
+
+A038 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:161
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTickUp(96.0 + snapG / 2.0 - 0.25), Tick(96 + snapG))
+
+A039 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:167
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // A mid-cell signature change re-anchors the lattice: the first
+      // segment's walk stops at the seam (its next candidate lies at the
+      // segment end), and the new segment restarts its own lattice and
+      // beat-line omission from its start.
+      fixture.tab()->document().setTimeSig(102, 4, 2);
+Original expression:
+  QTRY_VERIFY(view.grid().segmentAt(102).start == 102)
+
+A040 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:168
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().segmentAt(101).next, Tick(102))
+
+A041 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:169
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(walk(95, 130), expectedLines(95, 130))
+
+A042 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:170
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(walk(100, 110), expectedLines(100, 110))
+
+A043 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:171
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTickDown(103.5), Tick(102))
+
+A044 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:172
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTickUp(101.5), Tick(102))
+
+A045 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:175
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // Stop at the signature seam, then restart on its new lattice.
+      const Tick latticeSeam = view.grid().gridTicksAt(102);
+Original expression:
+  QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(101)), Tick(102))
+
+A046 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:176
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().nextSubdivisionTickAfter(Tick(102)), Tick(102 + latticeSeam))
+
+A047 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:177
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTick(103.5), Tick(102))
+
+A048 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:178
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTick(103.5 + double(snapG)), Tick(102 + snapG))
+
+A049 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:180
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      fixture.tab()->document().deleteTimeSig(102);
+Original expression:
+  QTRY_VERIFY(view.grid().segmentAt(102).start == segment.start)
+
+A050 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:188
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      view.applyViewState(original);
+  }
+
+  void PianoRollStaticTest::verticalCameraWheelContract()
+  {
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A051 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:203
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      auto &roll = *fixture.rollInput();
+      const SongView::ViewState original = view.viewState();
+      SongView::ViewState state = original;
+      state.keyHeight = 8.0;
+      state.scrollY = 300.0;
+      view.applyViewState(state);
+      const QPointF anchor(40.0, 200.0);
+      for (int index = 0; index < 4; ++index)
+          wheel(roll, anchor, {}, {0, 30}, Qt::ControlModifier);
+      const double partialHeight = view.camera().keyHeight();
+      const double partialScroll = view.camera().scrollY();
+      view.applyViewState(state);
+      wheel(roll, anchor, {}, {0, 120}, Qt::ControlModifier);
+Original expression:
+  QVERIFY(std::abs(view.camera().keyHeight() - partialHeight) <= 1e-12)
+
+A052 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:204
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollY() - partialScroll) <= 1e-10)
+
+A053 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:208
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const double settledHeight = view.camera().keyHeight();
+      const double settledScroll = view.camera().scrollY();
+      wheel(roll, anchor, {}, {0, 120}, Qt::ControlModifier, Qt::ScrollMomentum);
+Original expression:
+  QVERIFY(std::abs(view.camera().keyHeight() - settledHeight) <= 1e-12)
+
+A054 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:209
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollY() - settledScroll) <= 1e-10)
+
+A055 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:213
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      const double row = (anchor.y() + view.camera().scrollY()) / view.camera().keyHeight();
+      wheel(roll, anchor, {}, {0, 30}, Qt::ControlModifier);
+Original expression:
+  QVERIFY(std::abs((anchor.y() + view.camera().scrollY()) / view.camera().keyHeight() - row) <=
+              1e-12)
+
+A056 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:218
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      for (int index = 0; index < 10; ++index)
+          wheel(roll, anchor, {}, {0, 120}, Qt::ControlModifier);
+Original expression:
+  QVERIFY(std::abs(view.camera().keyHeight() - 16.0) <= 1e-12)
+
+A057 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:221
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      wheel(roll, anchor, {0, 240}, {}, Qt::ControlModifier);
+Original expression:
+  QVERIFY(std::abs(view.camera().keyHeight() - 16.0) <= 1e-12)
+
+A058 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:225
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const double keyboardScroll = view.camera().scrollY();
+      wheel(*fixture.gutterInput(), {fixture.gutterInput()->bounds().width() - 1.0, anchor.y()},
+            {0, 1}, {});
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollY() - (keyboardScroll - 0.5)) <= 1e-12)
+
+A059 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:231
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      for (int index = 0; index < 4; ++index)
+          wheel(roll, anchor, {}, {0, 30}, Qt::ControlModifier);
+      for (int index = 0; index < 4; ++index)
+          wheel(roll, anchor, {}, {0, -30}, Qt::ControlModifier);
+Original expression:
+  QVERIFY(std::abs(view.camera().keyHeight() - state.keyHeight) <= 1e-12)
+
+A060 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:232
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollY() - state.scrollY) <= 1e-10)
+
+A061 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:236
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.keyHeight = 9.375;
+      state.scrollY = 257.625;
+      view.applyViewState(state);
+Original expression:
+  QCOMPARE(view.viewState().keyHeight, state.keyHeight)
+
+A062 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:237
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.viewState().scrollY, state.scrollY)
+
+A063 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:245
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const int boundaryRow = 40;
+      const qreal dpr = fixture.rollInput()->devicePixelRatio();
+      const qreal boundary =
+          std::round((boundaryRow * view.camera().keyHeight() - view.camera().scrollY()) * dpr) / dpr;
+      checks::events::sendMouse(*fixture.gutterInput(), QEvent::MouseMove,
+                                QPointF(4.0, boundary - .25), Qt::NoButton, Qt::NoButton,
+                                Qt::NoModifier);
+Original expression:
+  QCOMPARE(fixture.roll()->property("hoverKey").toInt(), 128 - boundaryRow)
+
+A064 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:249
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      checks::events::sendMouse(*fixture.gutterInput(), QEvent::MouseMove,
+                                QPointF(4.0, boundary + .25), Qt::NoButton, Qt::NoButton,
+                                Qt::NoModifier);
+Original expression:
+  QCOMPARE(fixture.roll()->property("hoverKey").toInt(), 127 - boundaryRow)
+
+A065 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:253
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.keyHeight = 11.0;
+      state.scrollY = 217.0;
+      view.applyViewState(state);
+Original expression:
+  QCOMPARE(view.viewState().keyHeight, 11.0)
+
+A066 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:254
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.viewState().scrollY, 217.0)
+
+A067 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:262
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      view.applyViewState(original);
+  }
+
+  void PianoRollStaticTest::horizontalCameraWheelContract()
+  {
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A068 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:279
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      auto &roll = *fixture.rollInput();
+      const SongView::ViewState original = view.viewState();
+      SongView::ViewState state = original;
+      // Stay below the font-scaled maximum on every supported platform.
+      state.pxPerBeat = 300.125;
+      state.scrollPx = 23.625;
+      const QPointF anchor(73.375, 200.0);
+      view.applyViewState(state);
+      for (int index = 0; index < 4; ++index)
+          wheel(roll, anchor, {}, {0, 30});
+      const double partialScale = view.camera().pxPerBeat();
+      const double partialScroll = view.camera().scrollX();
+      view.applyViewState(state);
+      wheel(roll, anchor, {}, {0, 120});
+      const double expectedScale = state.pxPerBeat * std::pow(1.0015, 120.0);
+Original expression:
+  QVERIFY(std::abs(view.camera().pxPerBeat() - expectedScale) <= expectedScale * 1e-12)
+
+A069 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:280
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().pxPerBeat() - partialScale) <= 1e-12)
+
+A070 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:281
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() - partialScroll) <= 1e-9)
+
+A071 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:286
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const double fullScale = view.camera().pxPerBeat();
+      const double fullScroll = view.camera().scrollX();
+      view.applyViewState(state);
+      wheel(roll, anchor, {0, 24}, {});
+Original expression:
+  QVERIFY(std::abs(view.camera().pxPerBeat() - fullScale) <= 1e-12)
+
+A072 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:287
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() - fullScroll) <= 1e-9)
+
+A073 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:292
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      const double horizontalScroll = view.camera().scrollX();
+      const double horizontalScale = view.camera().pxPerBeat();
+      wheel(roll, anchor, {8, 0}, {});
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() - (horizontalScroll - 8.0)) <= 1e-12)
+
+A074 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:293
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().pxPerBeat() - horizontalScale) <= 1e-12)
+
+A075 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:297
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      const double tick = view.camera().tickAtContentX(anchor.x());
+      wheel(roll, anchor, {}, {0, 30});
+Original expression:
+  QVERIFY(std::abs(view.camera().tickAtContentX(anchor.x()) - tick) <= 1e-9)
+
+A076 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:303
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.applyViewState(state);
+      for (int index = 0; index < 4; ++index)
+          wheel(roll, anchor, {}, {0, 30});
+      for (int index = 0; index < 4; ++index)
+          wheel(roll, anchor, {}, {0, -30});
+Original expression:
+  QVERIFY(std::abs(view.camera().pxPerBeat() - state.pxPerBeat) <= 1e-10)
+
+A077 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:304
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() - state.scrollPx) <= 1e-9)
+
+A078 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:308
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.pxPerBeat = 311.375;
+      state.scrollPx = 47.625;
+      view.applyViewState(state);
+Original expression:
+  QCOMPARE(view.viewState().pxPerBeat, state.pxPerBeat)
+
+A079 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:309
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.viewState().scrollPx, state.scrollPx)
+
+A080 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:328
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      view.applyViewState(original);
+  }
+
+  void PianoRollStaticTest::affineCameraProjection_data()
+  {
+      QTest::addColumn<double>("pxPerBeat");
+      QTest::addColumn<double>("scrollPx");
+      QTest::newRow("low") << 37.125 << .375;
+      QTest::newRow("fractional") << 37.375 << 13.625;
+      QTest::newRow("high") << 512.5 << 71.3125;
+  }
+
+  void PianoRollStaticTest::affineCameraProjection()
+  {
+      QFETCH(double, pxPerBeat);
+      QFETCH(double, scrollPx);
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A081 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:338
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      const SongView::ViewState original = view.viewState();
+      SongView::ViewState state = original;
+      state.pxPerBeat = pxPerBeat;
+      state.scrollPx = scrollPx;
+      state.gridSelection = songview::GridSelection::automatic();
+      view.applyViewState(state);
+      const qreal visibleWidth = fixture.rollInput()->bounds().width();
+      const double affineTick = view.camera().tickAtContentX(visibleWidth * 0.371) + 0.375;
+Original expression:
+  QVERIFY(std::abs(view.camera().tickAtContentX(view.camera().contentX(affineTick)) -
+                       affineTick) <= 1e-9)
+
+A082 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:351
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      Tick tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
+      int visible = 0;
+      for (int guard = 0; guard < 10000; ++guard) {
+          const qreal x = view.camera().contentX(double(tick));
+          if (x > visibleWidth)
+              break;
+          if (x >= 0.0) {
+              ++visible;
+              for (const qreal origin : {0.0, .25}) {
+                  for (const qreal dpr : {1.0, 2.0}) {
+                      const qreal displayed = view.camera().displayX(double(tick), origin, dpr);
+Original expression:
+  QCOMPARE(displayed, std::round((origin + x) * dpr) / dpr)
+
+A083 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:352
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.grid().snapTick(view.camera().tickAtContentX(displayed - origin)),
+                               tick)
+
+A084 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:358
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+                  }
+              }
+          }
+          const Tick next = view.grid().snapTickUp(double(tick) + 1.0);
+Original expression:
+  QVERIFY(next > tick)
+
+A085 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:361
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+          tick = next;
+      }
+Original expression:
+  QVERIFY(visible >= 2)
+
+A086 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:369
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      view.applyViewState(original);
+  }
+
+  void PianoRollStaticTest::cameraRangeAndPreRollRaster()
+  {
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A087 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:374
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      auto &roll = *fixture.rollInput();
+      const SongView::ViewState original = view.viewState();
+      const double pad = view.camera().leadPadPx();
+Original expression:
+  QVERIFY(pad > 0.0)
+
+A088 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:378
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView::ViewState state = original;
+      state.scrollPx = -1e9;
+      view.applyViewState(state);
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() + pad) <= 1e-9)
+
+A089 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:381
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.scrollPx = 1e9;
+      view.applyViewState(state);
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() - double(fixture.tab()->timeline()->lengthTicks) *
+                                                     view.camera().pxPerTick()) <= 1e-9)
+
+A090 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:384
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      view.goToStart();
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() + pad) <= 1e-9)
+
+A091 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:385
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.editCursorTick(), uint64_t(0))
+
+A092 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:391
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.scrollPx = 0.0;
+      view.applyViewState(state);
+      state.scrollPx = -pad;
+      view.applyViewState(state);
+      const auto rollBand = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+Original expression:
+  QVERIFY(rollBand.has_value())
+
+A093 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:393
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QImage raster = checks::support::captureQuickBand(view, rollBand->rect);
+Original expression:
+  QVERIFY(!raster.isNull())
+
+A094 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:395
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const qreal dpr = raster.devicePixelRatio();
+Original expression:
+  QVERIFY(dpr > 0.0)
+
+A095 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:417
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const auto isBlackKey = [](int key) {
+          switch (key % 12) {
+          case 1:
+          case 3:
+          case 6:
+          case 8:
+          case 10:
+              return true;
+          default:
+              return false;
+          }
+      };
+      const int midKey = keyAt(view, roll.bounds().height() / 2.0);
+      int naturalKey = -1;
+      int accidentalKey = -1;
+      for (int key = midKey - 4; key <= midKey + 4; ++key) {
+          if (key < 0 || key > 127 || rowCenter(view, key) < 0 ||
+              rowCenter(view, key) >= roll.bounds().height())
+              continue;
+          (isBlackKey(key) ? accidentalKey : naturalKey) = key;
+      }
+Original expression:
+  QVERIFY(naturalKey >= 0)
+
+A096 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:418
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(accidentalKey >= 0)
+
+A097 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:426
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const qreal plotOffset = rollBand->plotRect.x() - rollBand->rect.x();
+      const auto pixel = [&raster, dpr](qreal x, qreal y) {
+          return raster.pixel(qRound(x * dpr), qRound(y * dpr));
+      };
+      const QRgb padNatural = pixel(plotOffset + pad / 2.0, rowCenter(view, naturalKey));
+      const QRgb padAccidental = pixel(plotOffset + pad / 2.0, rowCenter(view, accidentalKey));
+      const QRgb plainNatural = pixel(plotOffset + pad + 20.0, rowCenter(view, naturalKey));
+Original expression:
+  QCOMPARE(padNatural, padAccidental)
+
+A098 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:427
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(padNatural != plainNatural)
+
+A099 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:431
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.scrollPx = 0.0;
+      view.applyViewState(state);
+      wheel(roll, {40.0, 200.0}, {8, 0}, {});
+Original expression:
+  QVERIFY(std::abs(view.camera().scrollX() + 8.0) <= 1e-12)
+
+A100 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:434
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      state.scrollPx = -pad / 2.0;
+      view.applyViewState(state);
+Original expression:
+  QVERIFY(std::abs(view.viewState().scrollPx + pad / 2.0) <= 1e-12)
+
+A101 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:442
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      view.applyViewState(original);
+  }
+
+  void PianoRollStaticTest::scratchSpaceDrawGrowsTimeline()
+  {
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A102 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:465
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      SongDocument &document = fixture.tab()->document();
+      auto &roll = *fixture.rollInput();
+      const SongView::ViewState original = view.viewState();
+      const Tick length = fixture.tab()->timeline()->lengthTicks;
+      const QByteArray bytes = document.smf().write();
+      const int undo = document.undoStack()->index();
+      SongView::ViewState state = original;
+      state.scrollPx = 1e9;
+      view.applyViewState(state);
+      const Tick tick =
+          view.grid().snapTickDown(view.camera().tickAtContentX(roll.bounds().width() / 2.0));
+      const int key = keyAt(view, roll.bounds().height() / 2.0);
+      const qreal begin = view.camera().contentX(double(tick));
+      const qreal end = view.camera().contentX(double(tick + view.grid().snapTicksAt(tick)));
+      checks::events::sendMouse(roll, QEvent::MouseButtonDblClick,
+                                QPointF((begin + end) / 2.0, rowCenter(view, key)), Qt::LeftButton,
+                                Qt::LeftButton, Qt::NoModifier);
+      checks::events::sendMouse(roll, QEvent::MouseButtonRelease,
+                                QPointF((begin + end) / 2.0, rowCenter(view, key)), Qt::LeftButton,
+                                Qt::NoButton, Qt::NoModifier);
+      DocNote note;
+Original expression:
+  QVERIFY(tick >= length)
+
+A103 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:466
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(document.findNote(fixture.track(), tick, uint8_t(key), &note))
+
+A104 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:467
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.tab()->timeline()->lengthTicks > length)
+
+A105 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:470
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      while (document.undoStack()->index() > undo && document.undoStack()->canUndo())
+          document.undoStack()->undo();
+Original expression:
+  QCOMPARE(document.smf().write(), bytes)
+
+A106 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:478
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      view.applyViewState(original);
+  }
+
+  void PianoRollStaticTest::keyboardGutterHoverTracksRows()
+  {
+      CameraFixture fixture(m_projectRoot, m_songLabel);
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A107 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:485
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = *fixture.view();
+      auto &gutter = *fixture.gutterInput();
+      const int y = int(gutter.bounds().height()) / 2;
+      const int expected = keyAt(view, y);
+      checks::events::sendMouse(gutter, QEvent::MouseMove, QPointF(4.0, y), Qt::NoButton,
+                                Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QCOMPARE(fixture.roll()->property("hoverKey").toInt(), expected)
+
+A108 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:489
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      checks::events::sendMouse(gutter, QEvent::MouseMove,
+                                QPointF(4.0, rowCenter(view, expected - 1)), Qt::NoButton,
+                                Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QCOMPARE(fixture.roll()->property("hoverKey").toInt(), expected - 1)
+
+A109 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:492
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      checks::events::sendMouse(gutter, QEvent::Leave, QPointF(4.0, y), Qt::NoButton, Qt::NoButton,
+                                Qt::NoModifier);
+Original expression:
+  QCOMPARE(fixture.roll()->property("hoverKey").toInt(), -1)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace checks::rollcheck::staticcheck
+
+
+Swift assertion predicates
+
+S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
+  report.expect(near(compact.snapshot.viewportWidth, 50) &&
+                    near(compact.snapshot.minHScroll, -48) &&
+                    near(compact.snapshot.maxHScroll, 0),
+                    cppID: cameraTransformID,
+                    message: "caller-resolved minimum viewport produces observable camera bounds")
+
+S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
+  report.expect(near(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
+                    message: "tick/content transforms round-trip with a fractional offset")
+
+S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
+  report.expect(near(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
+                    message: "horizontal restoration preserves fractional offsets")
+
+S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
+  report.expect(near(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+                    cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
+
+S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
+  report.expect(near(camera.snapshot.scrollX, -48) && near(camera.snapshot.minHScroll, -48),
+                    cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
+
+S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
+  report.expect(near(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
+                    message: "bound timeline end reaches the plot origin")
+
+S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
+  report.expect(near(viewportCamera.snapshot.scrollX, -48),
+                    cppID: cameraTransformID,
+                    message: "bound viewport shrink reclamps the changed pre-roll floor")
+
+S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
+  report.expect(near(viewportCamera.snapshot.scrollX, 10.25),
+                    cppID: cameraTransformID,
+                    message: "bound viewport updates preserve a legal fractional offset")
+
+S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
+  report.expect(zoom.zoomChanged && zoom.scrollChanged &&
+                    near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
+                    message: "interactive time zoom preserves its tick anchor")
+
+S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
+  report.expect(near(clampedTimeZoom.snapshot.scrollX, 64) &&
+                    !near(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
+                    cppID: cameraZoomID,
+                    message: "time zoom reaches its bound when the pointer anchor is unreachable")
+
+S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
+  report.expect(near(camera.snapshot.pixelsPerBeat, 48) &&
+                    near(camera.snapshot.keyHeight, 16) && near(camera.snapshot.scrollX, 10.5) &&
+                    near(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
+                    message: "unanchored restoration keeps valid fractional camera state")
+
+S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
+  report.expect(near(sanitized.snapshot.pixelsPerBeat, 32) &&
+                    near(sanitized.snapshot.keyHeight, 12) &&
+                    near(sanitized.snapshot.scrollX, 0) && near(sanitized.snapshot.scrollY, 0),
+                    cppID: cameraZoomID,
+                    message: "restoration sanitizes non-finite transient view-state values independently")
+
+S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
+  report.expect(near(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
+                    message: "content shrink reclamps the horizontal offset")
+
+S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
+  report.expect(near(camera.snapshot.viewportWidth, 800) && near(camera.snapshot.scrollY, 0),
+                    cppID: cameraTransformID,
+                    message: "viewport growth reclamps vertical content")
+
+S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
+  report.expect(near(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
+                    message: "an unbound timeline homes to its lead pad")
+
+S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
+  report.expect(near(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
+                    message: "unbound viewport updates follow the resolved home")
+
+S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
+  report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
+          chromatic.row(forPitch: pitch) == 127 - pitch &&
+              chromatic.visiblePitch(at: 127 - pitch) == pitch
+      }, cppID: cameraPitchID,
+      message: "chromatic pitch mapping remains bijective across the full MIDI range")
+
+S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:108
+  report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
+                    folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
+                    folded.nearestVisiblePitch(to: 62) == 60 &&
+                    folded.nearestVisiblePitch(to: 100) == 67 &&
+                    folded.nearestVisiblePitch(to: -5) == 60 &&
+                    emptyProjection.nearestVisiblePitch(to: 60) == nil,
+                    cppID: cameraPitchID,
+                    message: "pitch rows and nearest lookup preserve production ordering")
+
+S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:116
+  report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
+                    folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
+                    cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
+
+S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
+  report.expect(near(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
+                         10) &&
+                    folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
+                    folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
+                    cppID: cameraPitchID,
+                    message: "fractional DPR snapping defines the inverse row boundary")
+
+S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
+  report.expect(near(projectedContent.snapshot.scrollY, 15),
+                    cppID: cameraPitchID,
+                    message: "pitch projection shrink reclamps the vertical offset")
+
+S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
+  report.expect(near(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
+                    message: "vertical bounds derive from projected row height")
+
+S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
+  report.expect(near(anchoredRow, resultingRow), cppID: cameraZoomID,
+                    message: "pitch zoom preserves its row anchor when bounds permit")
+
+S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
+  report.expect(near(clampedPitchZoom.snapshot.scrollY, 0) &&
+                    near(clampedPitchZoom.snapshot.maxVScroll, 0) &&
+                    !near(rowAfterBoundedZoom, rowBeforeBoundedZoom),
+                    cppID: cameraZoomID,
+                    message: "pitch zoom reaches its bound when the row anchor is unreachable")
+
+S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
+  report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
+                    cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
+
+S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
+  report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
+                    message: "hidden pitches do not move the camera")
+
+S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:173
+  report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
+                    near(reveal.snapshot.scrollX, 573.3333333333),
+                    cppID: cameraTransformID,
+                    message: "tick reveal uses the production one-third anchor")
+
+S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:178
+  report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
+                                               preferEnd: false, dpr: 1) &&
+                    near(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
+                    message: "a fitting range on the physical right boundary stays visible")
+
+S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:182
+  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                              preferEnd: false, dpr: 1) &&
+                    near(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
+                    message: "wide range reveal prefers its requested leading edge")
+
+S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:187
+  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                              preferEnd: true, dpr: 1) &&
+                    near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
+                    message: "wide range reveal honors the requested trailing edge")
+
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:220
+  report.expect(
+              after.pixelsPerBeat > before.pixelsPerBeat
+                  && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
+                  && counters.camera == publications + 1,
+              cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
+
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:233
+  report.expect(
+          session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
+          cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
+
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:248
+  report.expect(
+          gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
+              && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
+                      angleZoom * pow(1.0015, 120), tolerance: 1e-7),
+          cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
+
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:253
+  report.expect(
+          counters.camera == 2,
+          cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
+
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:263
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
+
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:278
+  report.expect(
+          gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
+              && minimumPublications == 1 && counters.camera == minimumPublications,
+          cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
+
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:295
+  report.expect(
+          gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
+              && maximumPublications == 1 && counters.camera == maximumPublications,
+          cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
+
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:306
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
+
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:318
+  report.expect(
+          pitchAfter.keyHeight > pitchBefore.keyHeight
+              && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
+              && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
+
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:329
+  report.expect(
+          session.camera.snapshot == pitchMomentum && counters.camera == 0,
+          cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
+
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")

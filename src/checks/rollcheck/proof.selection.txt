@@ -1,0 +1,1211 @@
+Assertion correspondence: rollcheck/selection.cpp
+
+Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
+Original: src/checks/rollcheck/selection.cpp
+Original SHA-256: 8b6e0fcc40ed8cc900e586579465c65944ed837fa7c47b473bdd1f698dffe50c
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup, rows,
+loops, and guards between assertions verbatim. MATCHED identifies an equivalent
+Swift predicate with execution; PARTIAL a related predicate with an explicit
+unproved condition; NATIVE a retained native-window/rendering/input or harness
+obligation a presenter-level Swift check cannot establish; GAP an original
+predicate without a replacement assertion. No same-dir Swift counterpart exists
+and no Swift file covering this suite was identified, so this file lists no S
+predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
+or claims whole-case equivalence.
+Six slots cover band sweep selection, press audition, pending-draw readout,
+minimum draw distance, modifier velocity drags, and non-Scale moves. Selection,
+note-field, velocity, duration, undo-count, and smf sites are document/model
+observations and therefore GAP. Seed guards, the provisional ring, sounding
+previews (audition/gliss/re-attack/release), rendering, hover marks, gesture
+starts, edit-cursor parks, and free-cell/span probes need the native surface and
+are NATIVE.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry point executes these checks. The original slots run under
+PianoRollTest (checks/rollcheck/tst_pianoroll.h): selectionBandSweep,
+selectionPressAudition, selectionPendingDrawReadout,
+selectionMinimumDrawDistance, selectionModifierVelocity, selectionNonScaleMove.
+Slots seed from makeVelocitySeed/makePaintingSeed (checks/rollcheck/rollcheck.h)
+on the per-slot PianoRollFixture (m_fixture), sample rows through SnappedRows,
+deliver press/move/release and key strokes through checks::events
+(checks/support/eventsynth.h), and read note-name rendering state
+(ui/typography.h) in the readout slot.
+
+Fixture, sequence and row constraints
+Seed has_value guards open five slots; free-cell/span probes guard drag and
+move sequences. Audition on/off key tallies expand one site per key event.
+Distance cases contrast subthreshold drags (no note) with Space::One drags (one
+snap cell). Velocity sequences pin the hover mark, land at 78 from a 93 seed,
+and walk chord-held, grouped, and repeated drags with exact one-command holds.
+The move slot commits the same NoteId at its target, clears the old position,
+and follows with a Right nudge. Undo-count holds and smf restoration guards
+close the slots.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:36
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  #include "checks/rollcheck/tst_pianoroll.h"
+
+  #include "checks/rollcheck/rollcheck.h"
+
+  #include <QApplication>
+  #include <QByteArray>
+  #include <QEvent>
+  #include <QFontMetrics>
+  #include <QImage>
+  #include <QObject>
+  #include <QPoint>
+  #include <QRectF>
+  #include <QScopeGuard>
+  #include <QtTest>
+  #include <algorithm>
+  #include <cstdint>
+  #include <optional>
+  #include <utility>
+  #include <vector>
+
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "core/songdocument.h"
+  #include "ui/layout.h"
+  #include "ui/songview.h"
+  #include "ui/songview/pianoroll.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/typography.h"
+
+  using namespace checks::rollcheck;
+
+  void PianoRollTest::selectionBandSweep()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A002 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:92
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const PencilVelocityFixture &fixture = *seed;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
+      const SnappedRows rows{view, *roll};
+      const Cell &a = fixture.a;
+      const Cell &b = fixture.b;
+      const DocNote &noteA = fixture.noteA;
+      const DocNote &noteB = fixture.noteB;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+
+      // Band-sweep audition: notes audition (self-releasing, duration in
+      // samples) as the right-drag rubber band first covers them, release
+      // early when the band leaves them (velocity-0 emission), re-audition on
+      // re-entry, all release at the drag's end, and no undo commands.
+      {
+          std::vector<int> onKeys, offKeys;
+          quint32 minDur = UINT32_MAX;
+          auto conn = QObject::connect(&view, &SongView::auditionNoteTimed, &view,
+                                       [&](int, int key, int velocity, quint32 dur) {
+                                           if (velocity > 0) {
+                                               onKeys.push_back(key);
+                                               minDur = std::min(minDur, dur);
+                                           } else {
+                                               offKeys.push_back(key);
+                                           }
+                                       });
+          const int preBandCount = doc.undoStack()->count();
+          const QPoint sweepStart(1, 0);
+          const QPoint sweepEnd(std::max(a.center.x(), b.center.x()) + 4,
+                                std::max(a.center.y(), b.center.y()) + 4);
+          view.selectionModel().clearNoteSelection();
+          // The band is provisional until release, but covered notes should
+          // use the same selection ring as the velocity drawer's live preview.
+          const qreal previewDpr = roll->devicePixelRatio();
+          const QRectF previewNoteBox = rows.noteBox(rows.noteRect(
+              view.camera().displayX(double(noteA.tick), 0.0, previewDpr),
+              view.camera().displayX(double(noteA.tick + noteA.duration), 0.0, previewDpr),
+              noteA.key));
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, sweepStart, Qt::RightButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(4, 4), Qt::NoButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          // The gesture queues the retained-layer rebuild through the Quick
+          // host's zero-duration coalescing timer. Drain that synchronization
+          // before captureQuickFramebuffer() requests the frame to sample.
+          checks::support::pumpQuick();
+          const QImage previewImage = check.captureQuickFramebuffer();
+          const qreal previewRasterDpr = previewImage.devicePixelRatio();
+          const int previewCenterX =
+              qRound((pianoKeyboardWidth + previewNoteBox.center().x()) * previewRasterDpr);
+          const int previewBottomY = qRound(previewNoteBox.bottom() * previewRasterDpr) - 1;
+          if (!isSelectionRingColor(previewImage.pixel(previewCenterX, previewBottomY)))
+Original expression:
+  QFAIL("band-dragged note did not show a provisional selection ring")
+
+A003 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:94
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!view.selectionModel().noteSelection().empty())
+Original expression:
+  QFAIL("band drag committed selection before release")
+
+A004 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:97
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+          if (std::find(onKeys.begin(), onKeys.end(), a.key) == onKeys.end())
+Original expression:
+  QFAIL("sweeping the band over a note did not audition it")
+
+A005 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:103
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          // Retreat to a band covering nothing: the departed notes' previews
+          // must release now, not ring out their durations.
+          checks::events::sendMouse(*roll, QEvent::MouseMove, sweepStart + QPoint(4, 4), Qt::NoButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          if (std::find(offKeys.begin(), offKeys.end(), a.key) == offKeys.end())
+Original expression:
+  QFAIL("shrinking the band did not release the departed note")
+
+A006 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:110
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*roll, QEvent::MouseMove, sweepEnd, Qt::NoButton, Qt::RightButton,
+                                    Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, sweepEnd, Qt::RightButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          QObject::disconnect(conn);
+          if (std::count(onKeys.begin(), onKeys.end(), a.key) < 2)
+Original expression:
+  QFAIL("re-covering a note did not re-audition it")
+
+A007 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:114
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const std::vector<NoteId> &sel = view.selectionModel().noteSelection();
+          if (sel.size() < 2 || std::find(sel.begin(), sel.end(), noteA.noteId) == sel.end() ||
+              std::find(sel.begin(), sel.end(), noteB.noteId) == sel.end())
+Original expression:
+  QFAIL("band release did not select the swept notes")
+
+A008 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:123
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          // Every key that auditioned was eventually released (mid-drag or at
+          // the drag's end).
+          auto keySet = [](std::vector<int> keys) {
+              std::sort(keys.begin(), keys.end());
+              keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+              return keys;
+          };
+          if (keySet(onKeys) != keySet(offKeys))
+Original expression:
+  QFAIL("band sweep left auditioned keys unreleased")
+
+A009 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:125
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          if (!onKeys.empty() && minDur == 0)
+Original expression:
+  QFAIL("band sweep auditioned a zero-length note")
+
+A010 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:127
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != preBandCount)
+Original expression:
+  QFAIL("band sweep pushed an undo command")
+
+A011 | PianoRollTest::selectionBandSweep | src/checks/rollcheck/selection.cpp:132
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          view.selectionModel().clearNoteSelection(); // the sections below manage their own
+      }
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A012 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:139
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::selectionPressAudition()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A013 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const PencilVelocityFixture &fixture = *seed;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int track = check.track();
+      const SnappedRows rows{view, *roll};
+      // This slot starts where the former combined scenario entered selection
+      // handling: note B has just been velocity-dragged from 73 to 93, and the
+      // committed value is the pencil's active velocity latch.
+      checks::events::sendMouse(*roll, QEvent::MouseButtonPress, fixture.b.center, Qt::LeftButton,
+                                Qt::LeftButton, Qt::ControlModifier);
+      checks::events::sendMouse(*roll, QEvent::MouseMove, fixture.b.center - QPoint(0, 20),
+                                Qt::NoButton, Qt::LeftButton, Qt::ControlModifier);
+      checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, fixture.b.center - QPoint(0, 20),
+                                Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+      DocNote latched;
+Original expression:
+  QVERIFY2(doc.findNote(track, fixture.b.tick, uint8_t(fixture.b.key), &latched) &&
+                   latched.velocity == 93,
+               "selection audition fixture did not establish the velocity latch")
+
+A014 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:171
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+
+      // Empty-space press audition: a plain left press sounds its row at the
+      // latched velocity right away, glisses when the held cursor crosses
+      // rows, and releases on mouse-up — while the release in place still
+      // parks the edit cursor without touching the document. A press that
+      // grows into a draw keeps the already-sounding key ringing instead of
+      // re-attacking it.
+      {
+          const Cell e = check.findFreeCell();
+          if (e.key < 0) {
+Original expression:
+  QFAIL("no free grid cell for the press audition")
+
+A015 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:191
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          }
+          std::vector<std::pair<int, int>> aud; // key, velocity
+          auto conn =
+              QObject::connect(&view, &SongView::auditionNote, &view,
+                               [&](int, int key, int velocity) { aud.push_back({key, velocity}); });
+          bool buttonHeld = false;
+          QPoint heldPosition = e.center;
+          const auto releasePress = qScopeGuard([&] {
+              if (buttonHeld) {
+                  checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, heldPosition,
+                                            Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+              }
+              QObject::disconnect(conn);
+          });
+          const int preCount = doc.undoStack()->count();
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, e.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          buttonHeld = true;
+          if (aud != std::vector<std::pair<int, int>>{{e.key, 93}})
+Original expression:
+  QFAIL("empty-space press did not audition its row at the latched velocity")
+
+A016 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:197
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          const QPoint gliss(e.center.x(), rows.centerY(e.key - 1));
+          heldPosition = gliss;
+          checks::events::sendMouse(*roll, QEvent::MouseMove, gliss, Qt::NoButton, Qt::LeftButton,
+                                    Qt::NoModifier);
+          if (aud.empty() || aud.back() != std::make_pair(e.key - 1, 93))
+Original expression:
+  QFAIL("holding the press across a row did not gliss the preview")
+
+A017 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:202
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, gliss, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          buttonHeld = false;
+          if (aud.empty() || aud.back().second != 0)
+Original expression:
+  QFAIL("releasing the press did not release the preview")
+
+A018 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:204
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != preCount)
+Original expression:
+  QFAIL("a plain empty-space click edited the document")
+
+A019 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:207
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          if (view.editCursorTick() !=
+              view.grid().snapTick(view.camera().tickAtContentX(e.center.x())))
+Original expression:
+  QFAIL("the press audition broke the click's edit-cursor park")
+
+A020 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:224
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          // Draw growth: press the still-free cell again and drag right past
+          // the drag threshold; the press's preview must carry into the draw
+          // with no second attack on the same key.
+          aud.clear();
+          const QPoint pull = e.center + QPoint(QApplication::startDragDistance() + 8, 0);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, e.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          buttonHeld = true;
+          heldPosition = pull;
+          checks::events::sendMouse(*roll, QEvent::MouseMove, pull, Qt::NoButton, Qt::LeftButton,
+                                    Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, pull, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          buttonHeld = false;
+          QObject::disconnect(conn);
+          if (std::count(aud.begin(), aud.end(), std::make_pair(e.key, 93)) != 1)
+Original expression:
+  QFAIL("growing the press into a draw re-attacked the sounding key")
+
+A021 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:227
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote drawn;
+          if (!doc.findNote(track, e.tick, uint8_t(e.key), &drawn))
+Original expression:
+  QFAIL("the press-grown draw did not commit its note")
+
+A022 | PianoRollTest::selectionPressAudition | src/checks/rollcheck/selection.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A023 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:238
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::selectionPendingDrawReadout()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A024 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:266
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+
+      // The pending draw note ignores note-name mode: nothing may cover the
+      // note while it is being placed, so toggling note-name mode mid-gesture
+      // must leave the preview pixel-identical. The probe uses rows too short
+      // for the settled label font, so the comparison is sensitive only to the
+      // draw preview itself.
+      {
+          const auto readoutPadding = layout::space(layout::Space::Half);
+          auto readoutFont = typography::noteName(roll->font());
+          readoutFont.setPixelSize(
+              std::max(layout::singlePixel(), readoutFont.pixelSize() - 2 * layout::singlePixel()));
+          const auto readoutMetrics = QFontMetrics(readoutFont);
+          const SongView::ViewState viewBeforeReadout = view.viewState();
+          SongView::ViewState readoutShortRows = viewBeforeReadout;
+          // Short rows where the fixed face cannot fit, so no settled name
+          // ever paints on the probed rows.
+          readoutShortRows.keyHeight =
+              double(readoutMetrics.ascent() + readoutMetrics.descent() + 2 * readoutPadding);
+          view.applyViewState(readoutShortRows);
+          view.setNoteNameMode(true);
+          const Cell readoutCell = check.findFreeCell();
+          if (readoutCell.key < 0) {
+Original expression:
+  QFAIL("no free grid cell for the draw readout probe")
+
+A025 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:282
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+          } else {
+              const int undoIndexBeforeReadout = doc.undoStack()->index();
+              const QPoint readoutEnd =
+                  readoutCell.center + QPoint(QApplication::startDragDistance() + 8, 0);
+              checks::events::sendMouse(*roll, QEvent::MouseButtonPress, readoutCell.center,
+                                        Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+              checks::events::sendMouse(*roll, QEvent::MouseMove, readoutEnd, Qt::NoButton,
+                                        Qt::LeftButton, Qt::NoModifier);
+              const QImage readoutOn = check.captureQuickFramebuffer();
+              view.setNoteNameMode(false);
+              const QImage readoutOff = check.captureQuickFramebuffer();
+              view.setNoteNameMode(true);
+              checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, readoutEnd, Qt::LeftButton,
+                                        Qt::NoButton, Qt::NoModifier);
+              if (readoutOn != readoutOff)
+Original expression:
+  QFAIL("note-name mode changed the pending draw-note rendering")
+
+A026 | PianoRollTest::selectionPendingDrawReadout | src/checks/rollcheck/selection.cpp:290
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              while (doc.undoStack()->index() > undoIndexBeforeReadout && doc.undoStack()->canUndo())
+                  doc.undoStack()->undo();
+          }
+          view.applyViewState(viewBeforeReadout);
+      }
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A027 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:297
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::selectionMinimumDrawDistance()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A028 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:313
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int track = check.track();
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+
+      // Drawing begins at a layout Space::One horizontal drag; a shorter
+      // gesture remains a click, while one at the threshold creates a
+      // one-snap-cell note.
+      {
+          const int drawStartDistance = layout::space(layout::Space::One);
+          const qreal belowDrawStartDistance = std::max(0.0, double(drawStartDistance) - 0.5);
+          const Cell f = check.findFreeCell();
+          if (f.key < 0) {
+Original expression:
+  QFAIL("no free grid cell for the minimum-distance draw")
+
+A029 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:324
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          }
+          const QPointF belowDrawEnd = QPointF(f.center) + QPointF(belowDrawStartDistance, 0.0);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, belowDrawEnd, Qt::NoButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, belowDrawEnd, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          DocNote tiny;
+          if (doc.findNote(track, f.tick, uint8_t(f.key), &tiny))
+Original expression:
+  QFAIL("a subthreshold horizontal drag drew a note")
+
+A030 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:333
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, f.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, f.center + QPoint(drawStartDistance, 0),
+                                    Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                    f.center + QPoint(drawStartDistance, 0), Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          if (!doc.findNote(track, f.tick, uint8_t(f.key), &tiny))
+Original expression:
+  QFAIL("a Space::One horizontal drag did not draw a note")
+
+A031 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:335
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          else if (tiny.duration != view.grid().snapTicksAt(f.tick))
+Original expression:
+  QFAIL("the minimum-distance note is not one snap cell long")
+
+A032 | PianoRollTest::selectionMinimumDrawDistance | src/checks/rollcheck/selection.cpp:339
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A033 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:346
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::selectionModifierVelocity()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A034 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:363
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const PencilVelocityFixture &fixture = *seed;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int track = check.track();
+      const Cell &a = fixture.a;
+      const Cell &b = fixture.b;
+      // The former combined scenario entered this section after its preceding
+      // velocity drag had raised note B from 73 to 93.
+      checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                Qt::LeftButton, Qt::ControlModifier);
+      checks::events::sendMouse(*roll, QEvent::MouseMove, b.center - QPoint(0, 20), Qt::NoButton,
+                                Qt::LeftButton, Qt::ControlModifier);
+      checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center - QPoint(0, 20),
+                                Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+      DocNote raised;
+Original expression:
+  QVERIFY2(doc.findNote(track, b.tick, uint8_t(b.key), &raised) && raised.velocity == 93,
+               "modifier velocity fixture did not establish note B at 93")
+
+A035 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:392
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+
+      // Modifier velocity gesture (Ableton-style): with the roll.velocity_drag
+      // chord held (Ctrl by default), a vertical drag from anywhere on note B
+      // adjusts its velocity — 1px = 1 step, 15px down lands 93 -> 78 — with
+      // the hover mark pinned to the note's row. Crossing the drag threshold
+      // preserves a selected group when the grabbed note is already selected;
+      // otherwise it re-anchors the selection to the grabbed note. Without a
+      // preceding drag, Ctrl+click keeps its selection-toggle meaning
+      // (deferred to release), and a vertical jitter under the drag threshold
+      // is still that click: it toggles, changes no velocity, and pushes no
+      // undo command.
+      {
+          const auto sameNoteFields = [](const DocNote &x, const DocNote &y) {
+              return x.noteId == y.noteId && x.engineTrack == y.engineTrack &&
+                     x.smfTrack == y.smfTrack && x.onIndex == y.onIndex && x.endIndex == y.endIndex &&
+                     x.tick == y.tick && x.duration == y.duration && x.key == y.key &&
+                     x.velocity == y.velocity && x.channel == y.channel;
+          };
+          click(*roll, b.center); // plain click: select B (velocity 93)
+          const int preCount = doc.undoStack()->count();
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 15), Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          if (check.roll().property("hoverKey").toInt() != b.key)
+Original expression:
+  QFAIL("modifier velocity drag did not pin the hover mark")
+
+A036 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:397
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 15),
+                                    Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+          DocNote bMod;
+          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
+Original expression:
+  QFAIL("modifier velocity drag did not land at 78")
+
+A037 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:400
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const NoteId bId = bMod.noteId;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
+Original expression:
+  QFAIL("modifier velocity drag did not leave only its anchor selected")
+
+A038 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:402
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != preCount + 1)
+Original expression:
+  QFAIL("modifier velocity drag did not push exactly one command")
+
+A039 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:411
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+          // Clicks keep their ordinary meaning: a Ctrl+click toggles, deferred
+          // to release, and the release never crosses the drag threshold.
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton,
+                                    Qt::NoButton, Qt::ControlModifier);
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{})
+Original expression:
+  QFAIL("Ctrl+click after a velocity drag did not keep its toggle meaning")
+
+A040 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:421
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          // A vertical jitter under the drag threshold is still that click:
+          // it toggles, changes no velocity, and pushes no undo command.
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, b.center + QPoint(0, 2), Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, b.center + QPoint(0, 2),
+                                    Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
+Original expression:
+  QFAIL("a sub-threshold Ctrl-jitter did not act as the toggle click")
+
+A041 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:423
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) || bMod.velocity != 78)
+Original expression:
+  QFAIL("a sub-threshold Ctrl-jitter changed the velocity")
+
+A042 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:425
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != preCount + 1)
+Original expression:
+  QFAIL("a Ctrl-click or jitter pushed an undo command")
+
+A043 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:440
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+          // At the platform threshold the deferred press becomes a velocity drag.
+          const int velocityDragDistance = QApplication::startDragDistance();
+          const int thresholdCount = doc.undoStack()->count();
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove,
+                                    b.center + QPoint(0, velocityDragDistance), Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease,
+                                    b.center + QPoint(0, velocityDragDistance), Qt::LeftButton,
+                                    Qt::NoButton, Qt::ControlModifier);
+          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bMod) ||
+              bMod.velocity != 78 - velocityDragDistance)
+Original expression:
+  QFAIL("a threshold Ctrl-drag did not start the velocity gesture")
+
+A044 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:442
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{bId})
+Original expression:
+  QFAIL("the threshold velocity drag did not leave only its anchor selected")
+
+A045 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:444
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != thresholdCount + 1)
+Original expression:
+  QFAIL("the threshold velocity drag did not push exactly one command")
+
+A046 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:451
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+          // With the chord still held, a different note under the cursor is
+          // edited the same way: the new crossing re-anchors the selection to
+          // the grabbed note alone and touches nothing else.
+          DocNote aBefore;
+          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aBefore))
+Original expression:
+  QFAIL("note A went missing before the chord-held velocity drag")
+
+A047 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:462
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const NoteId aId = aBefore.noteId;
+          const int heldCount = doc.undoStack()->count();
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(0, 15), Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15),
+                                    Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+          DocNote aAfter, bAfterDrag;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{aId})
+Original expression:
+  QFAIL("the chord-held drag on another note kept the prior note selected")
+
+A048 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:465
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAfter) ||
+              int(aAfter.velocity) != int(aBefore.velocity) - 15)
+Original expression:
+  QFAIL("the chord-held velocity drag did not adjust the grabbed note")
+
+A049 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:468
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAfterDrag) ||
+              !sameNoteFields(bAfterDrag, bMod))
+Original expression:
+  QFAIL("the chord-held velocity drag also adjusted the prior note")
+
+A050 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:470
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != heldCount + 1)
+Original expression:
+  QFAIL("the chord-held velocity drag did not push exactly one command")
+
+A051 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:479
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+          // Decisive regression: the anchor sits inside a multi-note selection.
+          // A chord velocity drag must preserve the selection and apply the
+          // same delta to every selected note from its own original velocity.
+          view.selectionModel().setNoteSelection({aId, bId});
+          DocNote aGrouped, bGrouped;
+          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aGrouped) ||
+              !doc.findNote(track, b.tick, uint8_t(b.key), &bGrouped))
+Original expression:
+  QFAIL("notes A/B went missing before the grouped velocity drag")
+
+A052 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:489
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const int groupCount = doc.undoStack()->count();
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, a.center + QPoint(0, 15), Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center + QPoint(0, 15),
+                                    Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+          DocNote aAdjusted, bAdjusted;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>({aId, bId}))
+Original expression:
+  QFAIL("a grouped velocity drag did not preserve the selected notes")
+
+A053 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:492
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aAdjusted) ||
+              int(aAdjusted.velocity) != int(aGrouped.velocity) - 15)
+Original expression:
+  QFAIL("the grouped velocity drag did not adjust its anchor")
+
+A054 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:495
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bAdjusted) ||
+              int(bAdjusted.velocity) != int(bGrouped.velocity) - 15)
+Original expression:
+  QFAIL("the grouped velocity drag did not adjust the other selected note")
+
+A055 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:497
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != groupCount + 1)
+Original expression:
+  QFAIL("the grouped velocity drag did not push exactly one command")
+
+A056 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:510
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+          // Repeating the drag on the same selected anchor keeps the group and
+          // applies the opposite delta to both notes.
+          const int repeatCount = doc.undoStack()->count();
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseMove, a.center - QPoint(0, 15), Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, a.center - QPoint(0, 15),
+                                    Qt::LeftButton, Qt::NoButton, Qt::ControlModifier);
+          DocNote aRepeated, bRepeated;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>({aId, bId}))
+Original expression:
+  QFAIL("repeating a grouped velocity drag did not preserve the selected notes")
+
+A057 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:513
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, a.tick, uint8_t(a.key), &aRepeated) ||
+              !sameNoteFields(aRepeated, aGrouped))
+Original expression:
+  QFAIL("repeating the grouped velocity drag did not restore its anchor")
+
+A058 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:516
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!doc.findNote(track, b.tick, uint8_t(b.key), &bRepeated) ||
+              !sameNoteFields(bRepeated, bGrouped))
+Original expression:
+  QFAIL("repeating the grouped velocity drag did not restore the other selected note")
+
+A059 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:518
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->count() != repeatCount + 1)
+Original expression:
+  QFAIL("the repeated grouped velocity drag did not push exactly one command")
+
+A060 | PianoRollTest::selectionModifierVelocity | src/checks/rollcheck/selection.cpp:529
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+          doc.undoStack()->undo();
+          doc.undoStack()->undo();
+          doc.undoStack()->undo();
+          doc.undoStack()->undo();
+          doc.undoStack()->undo(); // restore both fixture velocities for later checks
+          view.selectionModel().clearNoteSelection();
+      }
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A061 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:556
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::selectionNonScaleMove()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem *roll = &check.rollInput();
+      const int track = check.track();
+      const SnappedRows rows{view, *roll};
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+
+      // Ordinary-mode move release: with Scale Fold forced off, a plain body
+      // press (well clear of the edge resize grips) on a wide note drags the
+      // document's own note, not just a visual preview. The release must
+      // commit the same NoteId at the target position, vacate the old one,
+      // and leave exactly that id selected — and the still-selected note must
+      // answer a standard arrow nudge without being reselected. A release
+      // that only reverts the preview, or strands the next arrow, fails here.
+      {
+          const SongView::ViewState viewBefore = view.viewState();
+          const bool foldBefore = view.scaleFold();
+          view.setScaleFold(false);
+          const Cell cell = check.findFreeCell();
+          if (cell.key < 0) {
+Original expression:
+  QFAIL("no free grid cell for the non-Scale move")
+
+A062 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:571
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+              view.setScaleFold(foldBefore);
+              return;
+          }
+          const Tick snap = view.grid().snapTicksAt(cell.tick);
+          const qreal dpr = roll->devicePixelRatio();
+          const qreal cellPx = view.camera().displayX(double(cell.tick + snap), 0.0, dpr) -
+                               view.camera().displayX(double(cell.tick), 0.0, dpr);
+          Tick widthTicks = snap * 4;
+          while (
+              (view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr) > roll->width() - 4 ||
+               check.isOccupied(cell.tick, widthTicks, cell.key)) &&
+              widthTicks > snap * 2)
+              widthTicks -= snap;
+          if (check.isOccupied(cell.tick, widthTicks, cell.key)) {
+Original expression:
+  QFAIL("no free span for the non-Scale move")
+
+A063 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:579
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              view.setScaleFold(foldBefore);
+              return;
+          }
+          const int undoBase = doc.undoStack()->index();
+          doc.addNote(track, cell.tick, uint8_t(cell.key), uint32_t(widthTicks), 93);
+          QCoreApplication::processEvents(); // the view model must see the note before the press
+          if (doc.undoStack()->index() != undoBase + 1)
+Original expression:
+  QFAIL("the wide non-Scale probe add did not push exactly one command")
+
+A064 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:582
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote probe;
+          if (!doc.findNote(track, cell.tick, uint8_t(cell.key), &probe))
+Original expression:
+  QFAIL("the wide non-Scale probe note did not commit")
+
+A065 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:594
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const NoteId moveId = probe.noteId;
+          // Press the body center: whole snap cells of width keep the point
+          // clear of the edge grips on both sides.
+          const int bodyX =
+              qRound((view.camera().displayX(double(cell.tick), 0.0, dpr) +
+                      view.camera().displayX(double(cell.tick + widthTicks), 0.0, dpr)) /
+                     2.0);
+          const QPoint body(bodyX, rows.centerY(cell.key));
+          checks::events::sendMouse(*roll, QEvent::MouseButtonPress, body, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{moveId})
+Original expression:
+  QFAIL("the body press did not grab the note as the whole selection")
+
+A066 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:602
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          // Drag exactly two snap cells right: the move preview snaps the
+          // grabbed offset to the press tick's grid, so the destination is
+          // deterministic, and two cells clear any drag threshold.
+          const QPoint target(body + QPoint(qRound(cellPx * 2.0), 0));
+          checks::events::sendMouse(*roll, QEvent::MouseMove, target, Qt::NoButton, Qt::LeftButton,
+                                    Qt::NoModifier);
+          if (doc.undoStack()->index() != undoBase + 1)
+Original expression:
+  QFAIL("the move preview mutated the document before release")
+
+A067 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:608
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          checks::events::sendMouse(*roll, QEvent::MouseButtonRelease, target, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          DocNote moved;
+          if (!doc.findNote(moveId, &moved) || moved.tick != cell.tick + 2 * snap ||
+              moved.key != cell.key || moved.duration != widthTicks)
+Original expression:
+  QFAIL("the non-Scale move release did not commit the same NoteId at its target")
+
+A068 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:611
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          DocNote stranded;
+          if (doc.findNote(track, cell.tick, uint8_t(cell.key), &stranded))
+Original expression:
+  QFAIL("the non-Scale move release left a note at the old position")
+
+A069 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:613
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{moveId})
+Original expression:
+  QFAIL("the non-Scale move release did not leave exactly the moved note selected")
+
+A070 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:615
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->index() != undoBase + 2)
+Original expression:
+  QFAIL("the non-Scale move release did not push exactly one command")
+
+A071 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:623
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          // Without reselecting, the standard arrow must move the same
+          // still-selected NoteId: a release that strands the gesture would
+          // leave the note here.
+          sendKeyStroke(*roll, Qt::Key_Right, Qt::NoModifier, false);
+          DocNote nudged;
+          if (!doc.findNote(moveId, &nudged) || nudged.tick != cell.tick + 3 * snap ||
+              nudged.key != cell.key)
+Original expression:
+  QFAIL("the post-release Right nudge did not move the same NoteId")
+
+A072 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:625
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (view.selectionModel().noteSelection() != std::vector<NoteId>{moveId})
+Original expression:
+  QFAIL("the Right nudge did not keep the moved note selected")
+
+A073 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:627
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (doc.undoStack()->index() != undoBase + 3)
+Original expression:
+  QFAIL("the Right nudge did not push exactly one command")
+
+A074 | PianoRollTest::selectionNonScaleMove | src/checks/rollcheck/selection.cpp:637
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          while (doc.undoStack()->index() > undoBase && doc.undoStack()->canUndo())
+              doc.undoStack()->undo();
+          view.selectionModel().clearNoteSelection();
+          view.setScaleFold(foldBefore);
+          view.applyViewState(viewBefore); // the nudge's keep-in-sight scroll must not leak
+          checks::support::pumpQuick();    // consume the restoration repaint before later probes
+      }
+      while (doc.undoStack()->index() > undo)
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }

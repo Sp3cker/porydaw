@@ -173,21 +173,19 @@ final class NoteCommands {
     }
 
     private func toggleMute() {
-        guard let track = selectedTrack else { return }
-        if session.mutedTracks.contains(track) {
-            session.mutedTracks.remove(track)
-        } else {
-            session.mutedTracks.insert(track)
-        }
+        guard selectedTrack != nil else { return }
+        let scope = session.selectedTracks
+        guard !scope.isEmpty else { return }
+        session.mutedTracks = scope.isSubset(of: session.mutedTracks)
+            ? session.mutedTracks.subtracting(scope) : session.mutedTracks.union(scope)
     }
 
     private func toggleSolo() {
-        guard let track = selectedTrack else { return }
-        if session.soloedTracks.contains(track) {
-            session.soloedTracks.remove(track)
-        } else {
-            session.soloedTracks.insert(track)
-        }
+        guard selectedTrack != nil else { return }
+        let scope = session.selectedTracks
+        guard !scope.isEmpty else { return }
+        session.soloedTracks = scope.isSubset(of: session.soloedTracks)
+            ? session.soloedTracks.subtracting(scope) : session.soloedTracks.union(scope)
     }
 
     private func split(editCursor: Tick, nextSubdivision: (Tick) -> Tick) {

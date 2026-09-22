@@ -1,0 +1,1113 @@
+Assertion correspondence: nativegraphics/tst_nativewindowing.cpp
+
+Reference revision: 02dce75dd21f84e3b59b399d84afb9f123775e39
+Original: src/checks/nativegraphics/tst_nativewindowing.cpp
+Original SHA-256: 582680d75ae76272483d539b25d0716d043a765c5f324cbcc9821170036d5745
+Swift counterpart: src/checks/nativegraphics/tst_playhead_quick.swift
+Swift SHA-256: 65999594c79fdf7013a07d04b3bd111cb4a05428b54d9d2eb063b682497604ab
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+The paired Swift suite covers only SharedPlayheadPresenter publication and
+reprojection (checkPublicationAndReprojection). Native windowing, header
+selection and voice-picker widgets, the theme dialog, and scene-chunk
+rendering have no Swift predicates here; most sites below are NATIVE, with
+GAP for header-model data invariants the presenter suite does not touch.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+No Swift function executes these windowing checks. The paired presenter
+coverage is checkPublicationAndReprojection, called in SharedPlayheadChecks
+order in src/checks/nativegraphics/tst_playhead_quick.swift; it drives no
+window, dialog, picker, or scene chunk. The C++ fixture is
+src/checks/nativegraphics/nativegraphics_fixture.h and .cpp (Rig via makeRig),
+with checks/support/quickframebuffer.h (pumpQuick, captureQuickBand,
+devicePixelRect), checks/support/eventsynth.h (primeMouseMove), and
+checks/voicepickerdriver.h (voice-picker probes).
+
+Fixture, sequence and row constraints
+Every rig uses kWindowSize 1280x800. The Windows-only
+replacementBackgroundBeforeFirstFrame case expands two song replacements by
+two repaint colors by 64 pixels. headerSelectionAndVoicePicker expands its
+model loop once per header row with the add-track row last. The contrast case
+visits slider values 0 then 100 with captures between. The geometry-chunk case
+stages baseline, populated, shrunken, cleared, partial, and reactivated
+captures around 256-rect and 506-triangle chunk loads.
+
+Original assertion inventory and source sequence
+
+A001 | NativeWindowingTest::freshRig | src/checks/nativegraphics/tst_nativewindowing.cpp:115
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  #include "checks/nativegraphics/nativegraphics_fixture.h"
+
+  #include <QtTest>
+
+  #include "checks/voicepickerdriver.h"
+
+  #include <QApplication>
+  #include <QGuiApplication>
+  #include <QImage>
+  #include <QPushButton>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QSettings>
+  #include <QSlider>
+  #include <QTabWidget>
+  #include <QTemporaryDir>
+
+  #include <QScopeGuard>
+
+  #include <array>
+  #include <cmath>
+  #include <memory>
+  #include <optional>
+  #include <utility>
+
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "checks/support/songfixture.h"
+
+  #include "core/songdocument.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickscene.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/songview/trackheadermodel.h"
+  #include "ui/theme/themecontroller.h"
+  #include "ui/theme/themedialog.h"
+  #include "ui/theme/themeruntime.h"
+
+  #ifdef Q_OS_WIN
+  #ifndef WIN32_LEAN_AND_MEAN
+  #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+  #endif
+
+  namespace {
+
+  constexpr QSize kWindowSize{1280, 800};
+
+  QColor averageColor(const QImage &image, const QPointF &logicalPoint)
+  {
+      const QRect device = checks::support::devicePixelRect(
+          image, QRect{qFloor(logicalPoint.x()), qFloor(logicalPoint.y()), 1, 1});
+      if (device.isEmpty())
+          return {};
+
+      qint64 red = 0;
+      qint64 green = 0;
+      qint64 blue = 0;
+      qint64 alpha = 0;
+      for (int y = device.top(); y <= device.bottom(); ++y) {
+          for (int x = device.left(); x <= device.right(); ++x) {
+              const QColor pixel = image.pixelColor(x, y);
+              red += pixel.red();
+              green += pixel.green();
+              blue += pixel.blue();
+              alpha += pixel.alpha();
+          }
+      }
+      const qint64 count = device.width() * device.height();
+      return QColor{int(red / count), int(green / count), int(blue / count), int(alpha / count)};
+  }
+
+  bool nearColor(const QColor &actual, const QColor &expected, int tolerance = 14)
+  {
+      return qAbs(actual.alpha() - expected.alpha()) <= tolerance &&
+             qAbs(actual.red() - expected.red()) <= tolerance &&
+             qAbs(actual.green() - expected.green()) <= tolerance &&
+             qAbs(actual.blue() - expected.blue()) <= tolerance;
+  }
+
+  bool channelBetween(int value, int left, int right)
+  {
+      return value >= (std::min)(left, right) && value <= (std::max)(left, right);
+  }
+
+  class NativeWindowingTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(NativeWindowingTest)
+
+    public:
+      NativeWindowingTest(QString projectRoot, QString songLabel)
+          : m_projectRoot(std::move(projectRoot))
+          , m_songLabel(std::move(songLabel))
+      {}
+
+    private slots:
+  #ifdef Q_OS_WIN
+      void replacementBackgroundBeforeFirstFrame();
+  #endif
+      void headerSelectionAndVoicePicker();
+      void gridContrastPreviewAndApply();
+      void geometryChunksShrinkClearAndReactivate();
+
+    private:
+      std::unique_ptr<checks::nativegraphics::Rig> freshRig() const
+      {
+          QString error;
+          std::unique_ptr<checks::nativegraphics::Rig> rig =
+              checks::nativegraphics::makeRig(m_projectRoot, m_songLabel, kWindowSize, error);
+          if (!rig)
+Original expression:
+  QTest::qFail(qPrintable(error), __FILE__, __LINE__)
+
+A002 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:130
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          return rig;
+      }
+
+      QString m_projectRoot;
+      QString m_songLabel;
+  };
+
+  #ifdef Q_OS_WIN
+  void NativeWindowingTest::replacementBackgroundBeforeFirstFrame()
+  {
+      // A native erase can be presented before Quick renders the new song.
+      // Supply a white memory surface so this verifies actual paint, not just
+      // the WM_ERASEBKGND return value (Qt already acknowledges it).
+      HDC dc = CreateCompatibleDC(nullptr);
+Original expression:
+  QVERIFY(dc)
+
+A003 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:141
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const auto releaseDc = qScopeGuard([dc] { DeleteDC(dc); });
+      BITMAPINFO info{};
+      info.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+      info.bmiHeader.biWidth = 8;
+      info.bmiHeader.biHeight = -8;
+      info.bmiHeader.biPlanes = 1;
+      info.bmiHeader.biBitCount = 32;
+      info.bmiHeader.biCompression = BI_RGB;
+      void *pixels = nullptr;
+      HBITMAP bitmap = CreateDIBSection(dc, &info, DIB_RGB_COLORS, &pixels, nullptr, 0);
+Original expression:
+  QVERIFY(bitmap && pixels)
+
+A004 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:152
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const HGDIOBJ previous = SelectObject(dc, bitmap);
+      const auto releaseBitmap = qScopeGuard([=] {
+          SelectObject(dc, previous);
+          DeleteObject(bitmap);
+      });
+
+      QTabWidget tabs;
+      const QColor background = themes::color(themes::Role::window_background);
+      for (int replacement = 0; replacement < 2; ++replacement) {
+          const auto name = SongName::create(QStringLiteral("background_%1").arg(replacement));
+Original expression:
+  QVERIFY(name)
+
+A005 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:156
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          SongTab tab(*name);
+          tabs.addTab(&tab, name->value());
+          QQuickWindow *const quick = tab.view().quickView()->quickWindow();
+Original expression:
+  QVERIFY(quick)
+
+A006 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:158
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          quick->resize(kWindowSize);
+Original expression:
+  QCOMPARE(quick->color(), background)
+
+A007 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:159
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!quick->isExposed())
+
+A008 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:164
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          for (const QColor &color : {background, background.lighter(150)}) {
+              quick->setColor(color);
+              std::fill_n(static_cast<QRgb *>(pixels), 64, qRgb(255, 255, 255));
+              const auto hwnd = reinterpret_cast<HWND>(quick->winId());
+Original expression:
+  QCOMPARE(SendMessage(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(dc), 0), LRESULT(1))
+
+A009 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:167
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+              GdiFlush();
+              for (int pixel = 0; pixel < 64; ++pixel)
+Original expression:
+  QCOMPARE(QColor::fromRgb(static_cast<QRgb *>(pixels)[pixel]), color)
+
+A010 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:177
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+          }
+          tabs.removeTab(tabs.indexOf(&tab));
+      }
+  }
+  #endif
+
+  void NativeWindowingTest::headerSelectionAndVoicePicker()
+  {
+      std::unique_ptr<checks::nativegraphics::Rig> rig = freshRig();
+Original expression:
+  QVERIFY(rig)
+
+A011 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:180
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      SongView &view = rig->song->view();
+      auto *quick = view.quickView();
+Original expression:
+  QVERIFY(quick && quick->rootObject() && quick->quickWindow())
+
+A012 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:181
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(quick->quickWindow()->isExposed())
+
+A013 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:187
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      auto *headers = view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"),
+                                                                   Qt::FindDirectChildrenOnly);
+      auto *headerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+          QStringLiteral("timelineTrackHeadersInput"));
+Original expression:
+  QVERIFY(headers)
+
+A014 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:188
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(headerInput)
+
+A015 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:190
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason))
+
+A016 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:191
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(QGuiApplication::focusWindow() == quick->quickWindow() &&
+                  QGuiApplication::focusObject() == headerInput && headerInput->hasActiveFocus())
+
+A017 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:205
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int selectedTrack = view.selectionModel().primaryTrack();
+      int selectedRow = -1;
+      int alternateRow = -1;
+      int previousTrack = -1;
+      int addRows = 0;
+      for (int row = 0; row < headers->rowCount(); ++row) {
+          const QModelIndex index = headers->index(row, 0);
+          const bool isAdd =
+              headers->data(index, songview::TrackHeaderModel::IsAddTrackRole).toBool();
+          if (isAdd) {
+              ++addRows;
+Original expression:
+  QCOMPARE(row, headers->rowCount() - 1)
+
+A018 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:209
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              continue;
+          }
+          const int track = headers->data(index, songview::TrackHeaderModel::TrackRole).toInt();
+Original expression:
+  QVERIFY(track > previousTrack)
+
+A019 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:210
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(addRows == 0)
+
+A020 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:217
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          previousTrack = track;
+          if (track == selectedTrack)
+              selectedRow = row;
+          else if (alternateRow < 0)
+              alternateRow = row;
+      }
+Original expression:
+  QCOMPARE(addRows, rig->song->document().canAddTrack() ? 1 : 0)
+
+A021 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:218
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(selectedRow >= 0)
+
+A022 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int targetRow = alternateRow >= 0 ? alternateRow : selectedRow;
+      const QModelIndex target = headers->index(targetRow, 0);
+      const int targetTrack = headers->data(target, songview::TrackHeaderModel::TrackRole).toInt();
+Original expression:
+  QVERIFY(targetTrack >= 0)
+
+A023 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      headers->setScrollY(qreal(targetRow * headers->rowHeight()));
+      checks::support::pumpQuick();
+      const QRectF title = headers->data(target, songview::TrackHeaderModel::TitleRectRole).toRectF();
+      const QPointF body =
+          title.center() + QPointF(0.0, targetRow * headers->rowHeight() - headers->scrollY());
+      const QPointF voice = headers->voiceLineRect().center() +
+                            QPointF(0.0, targetRow * headers->rowHeight() - headers->scrollY());
+Original expression:
+  QVERIFY(!title.isEmpty())
+
+A024 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:232
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(headerInput->bounds().contains(body))
+
+A025 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:233
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(headerInput->bounds().contains(voice))
+
+A026 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:237
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QPoint bodyInWindow = headerInput->mapToScene(body).toPoint();
+      const QPoint voiceInWindow = headerInput->mapToScene(voice).toPoint();
+Original expression:
+  QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, bodyInWindow))
+
+A027 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:239
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      QTest::mouseClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, bodyInWindow);
+Original expression:
+  QTRY_COMPARE(view.selectionModel().primaryTrack(), targetTrack)
+
+A028 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:242
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const int undoBefore = rig->song->document().undoStack()->index();
+Original expression:
+  QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, voiceInWindow))
+
+A029 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:244
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      QTest::mouseDClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, voiceInWindow);
+Original expression:
+  QTRY_VERIFY(static_cast<bool>(checks::voicepicker::active(view)))
+
+A030 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:246
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
+Original expression:
+  QVERIFY(picker.root->isVisible())
+
+A031 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:247
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(picker.list->isVisible())
+
+A032 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:248
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(picker.search->hasActiveFocus())
+
+A033 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:251
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      checks::voicepicker::filter(picker, QStringLiteral("127"));
+Original expression:
+  QTRY_VERIFY(checks::voicepicker::row(picker, 127) &&
+                  checks::voicepicker::row(picker, 127)->isVisible())
+
+A034 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:255
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      checks::voicepicker::filter(picker, QStringLiteral("zz-no-such-voice"));
+Original expression:
+  QTRY_VERIFY(!picker.accept->property("enabled").toBool())
+
+A035 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:258
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      checks::voicepicker::filter(picker, QString());
+Original expression:
+  QTRY_VERIFY(checks::voicepicker::row(picker, 0) &&
+                  checks::voicepicker::row(picker, 0)->isVisible())
+
+A036 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:261
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(picker.window, Qt::Key_Escape);
+Original expression:
+  QTRY_VERIFY(!quick_popup::popupSession(view)->isOpen())
+
+A037 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:262
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(rig->song->document().undoStack()->index(), undoBefore)
+
+A038 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:265
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const auto *rename =
+          quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineTrackHeaderRename"));
+Original expression:
+  QVERIFY(!rename || !rename->isVisible())
+
+A039 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:271
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+  }
+
+  void NativeWindowingTest::gridContrastPreviewAndApply()
+  {
+      auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
+Original expression:
+  QVERIFY(application)
+
+A040 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:277
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      themes::Theme original;
+      for (std::size_t index = 0; index < themes::roleCount; ++index)
+          original.colors[index] = themes::color(static_cast<themes::Role>(index));
+      const auto restoreTheme = qScopeGuard([&] { themes::apply(*application, original); });
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid())
+
+A041 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:282
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      QSettings settings(directory.filePath(QStringLiteral("theme.ini")), QSettings::IniFormat);
+      themes::ThemeController controller(*application, settings);
+      controller.restore();
+      auto rig = freshRig();
+Original expression:
+  QVERIFY(rig)
+
+A042 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:285
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = rig->song->view();
+      const auto &roll = view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+Original expression:
+  QVERIFY(roll)
+
+A043 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:290
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      themes::ThemeDialog dialog(controller);
+      auto *slider = dialog.findChild<QSlider *>(QStringLiteral("gridLineContrastSlider"));
+      auto *apply = dialog.findChild<QPushButton *>(QStringLiteral("themeApplyButton"));
+      auto *close = dialog.findChild<QPushButton *>(QStringLiteral("themeCloseButton"));
+Original expression:
+  QVERIFY(slider && apply && close)
+
+A044 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:298
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      QString error;
+      const auto capture = [&] {
+          checks::support::pumpQuick();
+          return checks::support::captureQuickBand(view, roll->plotRect, &error);
+      };
+      slider->setValue(0);
+      const QImage soft = capture();
+Original expression:
+  QVERIFY2(!soft.isNull(), qPrintable(error))
+
+A045 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:301
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      slider->setValue(100);
+      const QImage strong = capture();
+Original expression:
+  QVERIFY2(!strong.isNull(), qPrintable(error))
+
+A046 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:302
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(strong != soft, "Dragging contrast must repaint the existing Quick grid")
+
+A047 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:304
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      apply->click();
+Original expression:
+  QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 100)
+
+A048 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:306
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      slider->setValue(0);
+Original expression:
+  QCOMPARE(capture(), soft)
+
+A049 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:308
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      close->click();
+Original expression:
+  QCOMPARE(capture(), strong)
+
+A050 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:314
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void NativeWindowingTest::geometryChunksShrinkClearAndReactivate()
+  {
+      std::unique_ptr<checks::nativegraphics::Rig> rig = freshRig();
+Original expression:
+  QVERIFY(rig)
+
+A051 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:317
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      SongView &view = rig->song->view();
+      auto *quick = view.quickView();
+Original expression:
+  QVERIFY(quick && quick->rootObject())
+
+A052 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:322
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const std::optional<songview::TimelineBandGeometry> &roll =
+          view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+      const QRectF band =
+          QRectF(roll->rect).intersected(QRectF(QPointF{}, quick->rootObject()->size()));
+Original expression:
+  QVERIFY(band.width() >= 160.0 && band.height() >= 120.0)
+
+A053 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:389
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      auto *item = new songview::TimelineQuickItem(quick->rootObject());
+      auto *scene = new songview::TimelineQuickScene(item);
+      item->setWidth(quick->rootObject()->width());
+      item->setHeight(quick->rootObject()->height());
+      item->setZ(10'000.0);
+      item->setSceneLayer(songview::TimelineQuickLayer::PianoDrawPreviewFill);
+      item->setScene(scene);
+      const auto cleanup = qScopeGuard([item] {
+          item->setScene(nullptr);
+          item->deleteLater();
+          checks::support::pumpQuick();
+      });
+
+      const auto layer = songview::TimelineQuickLayer::PianoDrawPreviewFill;
+      const qreal x = band.left() + 24.0;
+      const qreal y = band.top() + 24.0;
+      const QRectF filler{x + 120.0, y + 88.0, 1.0, 1.0};
+      const QRectF oldSolid{x, y, 20.0, 20.0};
+      const QRectF oldGradient{x + 32.0, y, 48.0, 20.0};
+      const std::array<QPointF, 3> oldTriangle{QPointF{x + 96.0, y + 20.0},
+                                               QPointF{x + 116.0, y + 20.0}, QPointF{x + 106.0, y}};
+      const QRectF marker{x, y + 36.0, 20.0, 20.0};
+      const QRectF newSolid{x, y + 64.0, 20.0, 20.0};
+      const QRectF newGradient{x + 32.0, y + 64.0, 48.0, 20.0};
+      const std::array<QPointF, 3> newTriangle{
+          QPointF{x + 96.0, y + 84.0}, QPointF{x + 116.0, y + 84.0}, QPointF{x + 106.0, y + 64.0}};
+      const QColor fillerColor{8, 12, 16};
+      const QColor oldSolidColor{208, 24, 112};
+      const QColor oldBase{20, 52, 192};
+      const QColor oldLeft{232, 20, 88, 128};
+      const QColor oldRight{24, 232, 72, 128};
+      const QColor oldTriangleColor{232, 176, 24};
+      const QColor markerColor{16, 200, 72};
+      const QColor newSolidColor{40, 168, 232};
+      const QColor newBase{168, 44, 24};
+      const QColor newLeft{32, 224, 224, 128};
+      const QColor newRight{240, 48, 224, 128};
+      const QColor newTriangleColor{128, 48, 232};
+      const QRectF clip = band;
+
+      QString captureError;
+      const auto capture = [&] {
+          item->update();
+          checks::support::pumpQuick();
+          return checks::support::captureQuickBand(view, roll->rect, &captureError);
+      };
+      const auto inBand = [&band](const QPointF &point) { return point - band.topLeft(); };
+      const auto point = [](const QRectF &rect) { return rect.center(); };
+      const auto trianglePoint = [](const std::array<QPointF, 3> &triangle) {
+          return (triangle[0] + triangle[1] + triangle[2]) / 3.0;
+      };
+      const auto addRectLoad = [&] {
+          for (int index = 0; index < 256; ++index)
+              songview::timeline_quick::addRect(scene->layer(layer), filler, fillerColor, clip);
+      };
+      const auto addTriangleLoad = [&](const std::array<QPointF, 3> &triangle, const QColor &color) {
+          songview::timeline_quick::addClippedTriangle(scene->layer(layer), triangle[0], triangle[1],
+                                                       triangle[2], color, clip);
+          for (int index = 1; index < 506; ++index)
+              songview::timeline_quick::addClippedTriangle(scene->layer(layer), filler.topLeft(),
+                                                           filler.bottomRight(), filler.bottomLeft(),
+                                                           fillerColor, clip);
+      };
+
+      const QImage baseline = capture();
+Original expression:
+  QVERIFY2(!baseline.isNull(), qPrintable(captureError))
+
+A054 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:404
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const auto matchesBaseline = [&](const QImage &image, const QPointF &rootPoint) {
+          return nearColor(averageColor(image, inBand(rootPoint)),
+                           averageColor(baseline, inBand(rootPoint)));
+      };
+
+      songview::timeline_quick::resetLayer(scene->layer(layer));
+      addRectLoad();
+      songview::timeline_quick::addRect(scene->layer(layer), marker, markerColor, clip);
+      songview::timeline_quick::addRect(scene->layer(layer), oldSolid, oldSolidColor, clip);
+      songview::timeline_quick::addRect(scene->layer(layer), oldGradient, oldBase, clip);
+      songview::timeline_quick::addHorizontalGradient(scene->layer(layer), oldGradient, oldLeft,
+                                                      oldRight, clip);
+      addTriangleLoad(oldTriangle, oldTriangleColor);
+      const QImage populated = capture();
+Original expression:
+  QVERIFY2(!populated.isNull(), qPrintable(captureError))
+
+A055 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:405
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(nearColor(averageColor(populated, inBand(point(oldSolid))), oldSolidColor))
+
+A056 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:406
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(
+          nearColor(averageColor(populated, inBand(trianglePoint(oldTriangle))), oldTriangleColor))
+
+A057 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:413
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      songview::timeline_quick::resetLayer(scene->layer(layer));
+      addRectLoad();
+      songview::timeline_quick::addRect(scene->layer(layer), marker, markerColor, clip);
+      const QImage shrunken = capture();
+Original expression:
+  QVERIFY2(!shrunken.isNull(), qPrintable(captureError))
+
+A058 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:414
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(nearColor(averageColor(shrunken, inBand(point(marker))), markerColor))
+
+A059 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:415
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(shrunken, point(oldSolid)))
+
+A060 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:416
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(shrunken, point(oldGradient)))
+
+A061 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:417
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(shrunken, trianglePoint(oldTriangle)))
+
+A062 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:421
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      songview::timeline_quick::resetLayer(scene->layer(layer));
+      const QImage cleared = capture();
+Original expression:
+  QVERIFY2(!cleared.isNull(), qPrintable(captureError))
+
+A063 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:422
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(cleared, point(marker)))
+
+A064 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:423
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(cleared, point(oldSolid)))
+
+A065 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:424
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(cleared, trianglePoint(oldTriangle)))
+
+A066 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:432
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      songview::timeline_quick::resetLayer(scene->layer(layer));
+      addRectLoad();
+      songview::timeline_quick::addClippedTriangle(scene->layer(layer), newTriangle[0],
+                                                   newTriangle[1], newTriangle[2], newTriangleColor,
+                                                   clip);
+      const QImage partial = capture();
+Original expression:
+  QVERIFY2(!partial.isNull(), qPrintable(captureError))
+
+A067 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:433
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(nearColor(averageColor(partial, inBand(trianglePoint(newTriangle))), newTriangleColor))
+
+A068 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:434
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(partial, marker.topLeft() + QPointF{15.0, 15.0}))
+
+A069 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:445
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      songview::timeline_quick::resetLayer(scene->layer(layer));
+      addRectLoad();
+      songview::timeline_quick::addRect(scene->layer(layer), marker, newSolidColor, clip);
+      songview::timeline_quick::addRect(scene->layer(layer), newSolid, newSolidColor, clip);
+      songview::timeline_quick::addRect(scene->layer(layer), newGradient, newBase, clip);
+      songview::timeline_quick::addHorizontalGradient(scene->layer(layer), newGradient, newLeft,
+                                                      newRight, clip);
+      addTriangleLoad(newTriangle, newTriangleColor);
+      const QImage reactivated = capture();
+Original expression:
+  QVERIFY2(!reactivated.isNull(), qPrintable(captureError))
+
+A070 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:451
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QColor gradientLeft = averageColor(
+          reactivated, inBand(QPointF{newGradient.left() + 2.0, newGradient.center().y()}));
+      const QColor gradientMiddle = averageColor(reactivated, inBand(point(newGradient)));
+      const QColor gradientRight = averageColor(
+          reactivated, inBand(QPointF{newGradient.right() - 2.0, newGradient.center().y()}));
+Original expression:
+  QVERIFY(nearColor(averageColor(reactivated, inBand(point(newSolid))), newSolidColor))
+
+A071 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:452
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(
+          nearColor(averageColor(reactivated, inBand(trianglePoint(newTriangle))), newTriangleColor))
+
+A072 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:454
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!nearColor(gradientMiddle, averageColor(baseline, inBand(point(newGradient))), 5))
+
+A073 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:455
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(channelBetween(gradientMiddle.red(), gradientLeft.red(), gradientRight.red()))
+
+A074 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:456
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(channelBetween(gradientMiddle.green(), gradientLeft.green(), gradientRight.green()))
+
+A075 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:457
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(channelBetween(gradientMiddle.blue(), gradientLeft.blue(), gradientRight.blue()))
+
+A076 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:458
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(reactivated, point(oldSolid)))
+
+A077 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:459
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(reactivated, point(oldGradient)))
+
+A078 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:460
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(matchesBaseline(reactivated, trianglePoint(oldTriangle)))
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace
+
+  int runRollWindowingCheck(const QString &projectRoot, const QString &songLabel,
+                            const QStringList &qtArguments)
+  {
+      NativeWindowingTest test{projectRoot, songLabel};
+      QStringList arguments{QStringLiteral("rollwindowingcheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "tst_nativewindowing.moc"
+
+Swift assertion predicates
+
+S001 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:10
+  report.expect(presenter.observe(sample: sample, transport: 0), cppID: sharedPlayheadPublicationID,
+                    message: "a changed observation publishes")
+
+S002 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:14
+  report.expect(gridCameraNear(presenter.tick, 48, tolerance: 0.5) && presenter.timelineAttached
+                        && presenter.playing == false,
+                    cppID: sharedPlayheadPublicationID,
+                    message: "the published tick is the authoritative sample's timeline position")
+
+S003 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:18
+  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: presenter.tick)),
+                    cppID: sharedPlayheadPublicationID,
+                    message: "the published projection is the session camera's contentX")
+
+S004 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:21
+  report.expect(presenter.visible == (presenter.contentX >= 0 && presenter.contentX < width),
+                    cppID: sharedPlayheadPublicationID,
+                    message: "published visibility follows the projected position and viewport")
+
+S005 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:24
+  report.expect(presenter.observe(sample: sample, transport: 0) == false
+                        && presenter.presentationCount == count,
+                    cppID: sharedPlayheadPublicationID,
+                    message: "a repeated identical observation publishes nothing")
+
+S006 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:29
+  report.expect(presenter.presentationCount == count, cppID: sharedPlayheadPublicationID,
+                    message: "reprojecting an unchanged camera publishes nothing")
+
+S007 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:34
+  report.expect(gridCameraNear(presenter.tick, tick), cppID: sharedPlayheadReprojectionID,
+                    message: "a camera publication keeps the authoritative tick")
+
+S008 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:36
+  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)), cppID: sharedPlayheadReprojectionID,
+                    message: "a camera publication reprojects through the new camera")
+
+S009 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:38
+  report.expect(presenter.presentationCount == count + 1, cppID: sharedPlayheadReprojectionID,
+                    message: "one camera publication presents exactly once")
+
+S010 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:41
+  report.expect(!presenter.visible && presenter.contentX < 0, cppID: sharedPlayheadReprojectionID,
+                    message: "a camera scrolled past the position hides the segment")
+
+S011 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:44
+  report.expect(presenter.visible && gridCameraNear(presenter.tick, tick)
+                        && gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)),
+                    cppID: sharedPlayheadReprojectionID,
+                    message: "scrolling back re-renders the same retained position")

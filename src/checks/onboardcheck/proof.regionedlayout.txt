@@ -1,0 +1,1009 @@
+Assertion correspondence: onboardcheck/regionedlayout.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/onboardcheck/regionedlayout.cpp
+Original SHA-256: a59d94a22f58702307844009f0f4f90f7179be69a1b51acafec4ff6e31344219
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+All 82 sites in this file are GAP: regionedValueLayouts and regionedAliasLayouts exercise pure SongRegistry register/unregister/makePlan helpers against regioned song_table.inc/songs.h fixtures on a copied project. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them.
+Site tally: 82 sites (82 GAP).
+
+Execution and ownership
+The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf) and the file-local define/song/regionFixture layout helpers, which carry no assertion sites.
+
+Fixture, sequence and row constraints
+regionedValueLayouts_data expands markerless, music, se, and delete into distinct runs; regionedAliasLayouts_data expands insert, stranded, and overflow. The markerless and se branches return early after asserting plan ids and header edits; the delete branch asserts repointing of PH_ONE/PH_TWO across table, header, and charmap snapshots; the stranded branch migrates a straggler entry and asserts refill reuse of id 8; the overflow branch asserts SE id allocation (4, then 9 past the music region) and END_MUS aliasing. Per-path snapshot loops expand single sites into per-file instances. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Verification
+Command: deno task verify --filter onboardcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
+
+Swift sources inspected (SHA-256)
+No same-dir regionedlayout.swift exists, and no Swift check references this
+file's methods or behavior. Inspected at this revision:
+src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+(sole Swift file carrying onboardcheck/ cppIDs; all of them name
+OnboardingTest::import* methods, none in this file).
+
+Original assertion inventory and source sequence
+
+A001 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:78
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/onboardcheck/onboardingtest.h"
+
+  #include <QFile>
+
+  #include <algorithm>
+
+  #include "checks/support/songfixture.h"
+
+  namespace {
+  QByteArray define(const char *name, const char *value)
+  {
+      QByteArray line("#define ");
+      line += name;
+      return line + QByteArray(std::max(1, 28 - int(line.size())), ' ') + value + '\n';
+  }
+
+  QByteArray song(const char *label, const char *player, int playerNumber = 0)
+  {
+      return QByteArray("\tsong ") + label + ", " + player + ", " + QByteArray::number(playerNumber) +
+             '\n';
+  }
+
+  bool regionFixture(const QString &root, bool alias, QString &error)
+  {
+      const QByteArray table =
+          QByteArrayLiteral(
+              "\t.equiv MUSIC_PLAYER_BGM, 0\n\t.equiv MUSIC_PLAYER_SE1, 1\n\ngSongTable::\n") +
+          song("mus_dummy", "MUSIC_PLAYER_BGM") + song("se_use_item", "MUSIC_PLAYER_SE1", 1) +
+          song("se_last", "MUSIC_PLAYER_SE1", 1) + song("dummy_song_header", "MUSIC_PLAYER_BGM") +
+          song("dummy_song_header", "MUSIC_PLAYER_BGM") + song("mus_first", "MUSIC_PLAYER_BGM") +
+          song("mus_last", "MUSIC_PLAYER_BGM") + song("ph_one", "MUSIC_PLAYER_SE1", 1) +
+          song("ph_two", "MUSIC_PLAYER_SE1", 1);
+      const QByteArray header =
+          define("MUS_DUMMY", "0") + define("SE_USE_ITEM", "1") + define("SE_LAST", "2") +
+          (alias ? define("END_SE", "SE_LAST") : QByteArray()) + define("START_MUS", "5") +
+          define("MUS_FIRST", "5") + define("MUS_LAST", "6") +
+          define("END_MUS", alias ? "MUS_LAST" : "6") + define("PH_ONE", "7") +
+          define("PH_TWO", "8") + define("MUS_NONE", "0xFFFF");
+      const auto write = [&error](const QString &path, const QByteArray &bytes) {
+          QFile file(path);
+          if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate) ||
+              file.write(bytes) != bytes.size()) {
+              error = path + QStringLiteral(": ") + file.errorString();
+              return false;
+          }
+          return true;
+      };
+      return write(root + QStringLiteral("/sound/song_table.inc"), table) &&
+             write(root + QStringLiteral("/include/constants/songs.h"), header) &&
+             write(root + QStringLiteral("/charmap.txt"),
+                   QByteArrayLiteral("MUS_DUMMY = 00 00\nSE_USE_ITEM = 01 00\nSE_LAST = 02 00\n"
+                                     "MUS_FIRST = 05 00\nMUS_LAST = 06 00\nPH_ONE = 07 00\n"
+                                     "PH_TWO = 08 00\n")) &&
+             write(root + QStringLiteral("/src/debug.c"),
+                   (alias ? QByteArrayLiteral(
+                                "static const u8 *const sBGMNames[END_MUS - START_MUS + 1];\n")
+                          : QByteArray()) +
+                       QByteArrayLiteral("#define SOUND_LIST_BGM \\\n    X(MUS_FIRST) \\\n"
+                                         "    X(MUS_LAST)\n\n#define SOUND_LIST_SE \\\n"
+                                         "    X(SE_USE_ITEM) \\\n    X(SE_LAST)\n"));
+  }
+  } // namespace
+
+  void OnboardingTest::regionedValueLayouts_data()
+  {
+      QTest::addColumn<QString>("operation");
+      QTest::newRow("markerless-appends") << QStringLiteral("markerless");
+      QTest::newRow("music-insert") << QStringLiteral("music");
+      QTest::newRow("se-gap") << QStringLiteral("se");
+      QTest::newRow("delete-repoints") << QStringLiteral("delete");
+  }
+
+  void OnboardingTest::regionedValueLayouts()
+  {
+      QFETCH(QString, operation);
+      QString error;
+      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error));
+
+A002 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:80
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString root = fixture->root();
+
+Original expression:
+  QVERIFY2(regionFixture(root, false, error), qPrintable(error));
+
+A003 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:88
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QStringList fixturePaths = {
+          root + QStringLiteral("/sound/song_table.inc"),
+          root + QStringLiteral("/include/constants/songs.h"), root + QStringLiteral("/charmap.txt"),
+          root + QStringLiteral("/src/debug.c"), root + QStringLiteral("/ld_script.ld")};
+      QList<QByteArray> fixtureBytes;
+      for (const QString &path : fixturePaths) {
+          fixtureBytes.append(readFile(path, error));
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A004 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:92
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      }
+      if (operation == QStringLiteral("markerless")) {
+          QByteArray header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A005 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:96
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          header.replace(define("END_SE", "SE_LAST"), QByteArray());
+          header.replace(define("START_MUS", "5"), QByteArray());
+          header.replace(define("END_MUS", "6"), QByteArray());
+
+Original expression:
+  QVERIFY2(writeFile(root + QStringLiteral("/include/constants/songs.h"), header, error),
+                   qPrintable(error));
+
+A006 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:98
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(SongRegistry::makePlan(root, QStringLiteral("mus_markerless"),
+                                          QStringLiteral("MUS_MARKERLESS"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"))
+                       .songId,
+                   9);
+
+A007 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:107
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+      int id = -1;
+      if (operation == QStringLiteral("se")) {
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("se_valcheck"),
+                                              QStringLiteral("SE_VALCHECK"),
+                                              QStringLiteral("MUSIC_PLAYER_SE1"), &error, &id),
+                   qPrintable(error));
+
+A008 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:111
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 3);
+
+A009 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:113
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          const QByteArray table = readFile(root + QStringLiteral("/sound/song_table.inc"), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A010 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:114
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(table.contains(song("se_valcheck", "MUSIC_PLAYER_SE1", 1) +
+                                 song("dummy_song_header", "MUSIC_PLAYER_BGM")));
+
+A011 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          QByteArray expectedHeader = fixtureBytes[1];
+          expectedHeader.replace(define("START_MUS", "5"),
+                                 define("SE_VALCHECK", "3") + define("START_MUS", "5"));
+
+Original expression:
+  QCOMPARE(readFile(root + QStringLiteral("/include/constants/songs.h"), error),
+                   expectedHeader);
+
+A012 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A013 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:123
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          const QByteArray debug = readFile(root + QStringLiteral("/src/debug.c"), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A014 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:124
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(debug.indexOf("X(SE_VALCHECK)") > debug.indexOf("#define SOUND_LIST_SE"));
+
+A015 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:127
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("mus_valcheck"),
+                                          QStringLiteral("MUS_VALCHECK"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+               qPrintable(error));
+
+A016 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:131
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 7);
+
+A017 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:133
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString headerPath = root + QStringLiteral("/include/constants/songs.h");
+
+Original expression:
+  QVERIFY(readFile(headerPath, error).contains(define("END_MUS", "7")));
+
+A018 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:134
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A019 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:136
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (operation == QStringLiteral("delete")) {
+
+Original expression:
+  QVERIFY2(SongRegistry::unregisterSong(root, QStringLiteral("mus_valcheck"),
+                                                QStringLiteral("MUS_VALCHECK"), &error),
+                   qPrintable(error));
+
+A020 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:139
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(readFile(headerPath, error).contains(define("END_MUS", "6")));
+
+A021 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:140
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A022 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          QByteArray expectedTable = fixtureBytes[0];
+          const QByteArray firstPhoneme = song("ph_one", "MUSIC_PLAYER_SE1", 1);
+          expectedTable.replace(firstPhoneme, song("mus_dummy", "MUSIC_PLAYER_BGM") + firstPhoneme);
+          QByteArray expectedHeader = fixtureBytes[1];
+          expectedHeader.replace(define("PH_ONE", "7") + define("PH_TWO", "8"),
+                                 define("PH_ONE", "8") + define("PH_TWO", "9"));
+          QByteArray expectedCharmap = fixtureBytes[2];
+          expectedCharmap.replace(QByteArrayLiteral("PH_ONE = 07 00\nPH_TWO = 08 00\n"),
+                                  QByteArrayLiteral("PH_ONE = 08 00\nPH_TWO = 09 00\n"));
+
+Original expression:
+  QCOMPARE(readFile(fixturePaths[0], error), expectedTable);
+
+A023 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:151
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A024 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:152
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(fixturePaths[1], error), expectedHeader);
+
+A025 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A026 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:154
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(fixturePaths[2], error), expectedCharmap);
+
+A027 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A028 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(fixturePaths[3], error), fixtureBytes[3]);
+
+A029 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:157
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A030 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:158
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(fixturePaths[4], error), fixtureBytes[4]);
+
+A031 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:159
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A032 | OnboardingTest::regionedValueLayouts | src/checks/onboardcheck/regionedlayout.cpp:160
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(SongRegistry::makePlan(root, QStringLiteral("mus_reuse"),
+                                          QStringLiteral("MUS_REUSE"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"))
+                       .songId,
+                   7);
+
+A033 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:181
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      }
+  }
+
+  void OnboardingTest::regionedAliasLayouts_data()
+  {
+      QTest::addColumn<QString>("operation");
+      QTest::newRow("music-and-se") << QStringLiteral("insert");
+      QTest::newRow("stranded-migrate") << QStringLiteral("stranded");
+      QTest::newRow("reuse-and-overflow") << QStringLiteral("overflow");
+  }
+
+  void OnboardingTest::regionedAliasLayouts()
+  {
+      QFETCH(QString, operation);
+      QString error;
+      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error));
+
+A034 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:183
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString root = fixture->root();
+
+Original expression:
+  QVERIFY2(regionFixture(root, true, error), qPrintable(error));
+
+A035 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      int id = -1;
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("mus_oldcheck"),
+                                          QStringLiteral("MUS_OLDCHECK"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+               qPrintable(error));
+
+A036 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:189
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 7);
+
+A037 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:191
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      QByteArray header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A038 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:192
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(header.contains(define("END_MUS", "MUS_OLDCHECK")));
+
+A039 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:193
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(
+          readFile(root + QStringLiteral("/charmap.txt"), error).contains("MUS_OLDCHECK = 07 00"));
+
+A040 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:195
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A041 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:196
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(SongRegistry::checkRegistration(root, QStringLiteral("mus_oldcheck"),
+                                              QStringLiteral("MUS_OLDCHECK"))
+                  .complete());
+
+A042 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:200
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (operation == QStringLiteral("insert")) {
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("se_oldcheck"),
+                                              QStringLiteral("SE_OLDCHECK"),
+                                              QStringLiteral("MUSIC_PLAYER_SE1"), &error, &id),
+                   qPrintable(error));
+
+A043 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:204
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 3);
+
+A044 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:205
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(readFile(root + QStringLiteral("/src/debug.c"), error).contains("X(SE_OLDCHECK)"));
+
+A045 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:206
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A046 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:209
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("se_oldcheck"),
+                                          QStringLiteral("SE_OLDCHECK"),
+                                          QStringLiteral("MUSIC_PLAYER_SE1"), &error, &id),
+               qPrintable(error));
+
+A047 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:219
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (operation == QStringLiteral("stranded")) {
+          const QString tablePath = root + QStringLiteral("/sound/song_table.inc");
+          const QString headerPath = root + QStringLiteral("/include/constants/songs.h");
+          const QString charmapPath = root + QStringLiteral("/charmap.txt");
+          const QString debugPath = root + QStringLiteral("/src/debug.c");
+          const QByteArray table = readFile(tablePath, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A048 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:220
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(writeFile(tablePath, table + song("mus_straggler", "MUSIC_PLAYER_BGM"), error),
+                   qPrintable(error));
+
+A049 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          header = readFile(headerPath, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A050 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:226
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          header.replace(define("MUS_OLDCHECK", "7"),
+                         define("MUS_OLDCHECK", "7") + define("MUS_STRAGGLER", "9"));
+
+Original expression:
+  QVERIFY2(writeFile(headerPath, header, error), qPrintable(error));
+
+A051 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          const QByteArray charmap = readFile(charmapPath, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A052 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:229
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(
+              writeFile(charmapPath, charmap + QByteArrayLiteral("MUS_STRAGGLER = 09 00\n"), error),
+              qPrintable(error));
+
+A053 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:233
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          QByteArray debugBeforeMigration = readFile(debugPath, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A054 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:237
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          debugBeforeMigration.replace(
+              QByteArrayLiteral("    X(MUS_OLDCHECK)\n"),
+              QByteArrayLiteral("    X(MUS_OLDCHECK) \\\n    X(MUS_STRAGGLER)\n"));
+
+Original expression:
+  QVERIFY2(writeFile(debugPath, debugBeforeMigration, error), qPrintable(error));
+
+A055 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:238
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!SongRegistry::checkRegistration(root, QStringLiteral("mus_straggler"),
+                                                   QStringLiteral("MUS_STRAGGLER"))
+                       .inSongsH);
+
+A056 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:241
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("mus_straggler"),
+                                              QStringLiteral("MUS_STRAGGLER"),
+                                              QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+                   qPrintable(error));
+
+A057 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:245
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 8);
+
+A058 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:246
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(debugPath, error), debugBeforeMigration);
+
+A059 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:247
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A060 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:248
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(SongRegistry::checkRegistration(root, QStringLiteral("mus_straggler"),
+                                                  QStringLiteral("MUS_STRAGGLER"))
+                      .complete());
+
+A061 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:251
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::unregisterSong(root, QStringLiteral("mus_straggler"),
+                                                QStringLiteral("MUS_STRAGGLER"), &error),
+                   qPrintable(error));
+
+A062 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:254
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(readFile(headerPath, error).contains(define("END_MUS", "MUS_OLDCHECK")));
+
+A063 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:255
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A064 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:256
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(SongRegistry::makePlan(root, QStringLiteral("mus_refill"),
+                                          QStringLiteral("MUS_REFILL"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"))
+                       .songId,
+                   8);
+
+A065 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:261
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("mus_refill"),
+                                              QStringLiteral("MUS_REFILL"),
+                                              QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+                   qPrintable(error));
+
+A066 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:265
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 8);
+
+A067 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:266
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(readFile(headerPath, error)
+                      .contains(define("MUS_REFILL", "8") + define("END_MUS", "MUS_REFILL")));
+
+A068 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:268
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A069 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:271
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("mus_reuse_source"),
+                                          QStringLiteral("MUS_REUSE_SOURCE"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+               qPrintable(error));
+
+A070 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:275
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 8);
+
+A071 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:276
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::unregisterSong(root, QStringLiteral("mus_reuse_source"),
+                                            QStringLiteral("MUS_REUSE_SOURCE"), &error),
+               qPrintable(error));
+
+A072 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:279
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(SongRegistry::makePlan(root, QStringLiteral("mus_refill"),
+                                      QStringLiteral("MUS_REFILL"),
+                                      QStringLiteral("MUSIC_PLAYER_BGM"))
+                   .songId,
+               8);
+
+A073 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:284
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("mus_refill"),
+                                          QStringLiteral("MUS_REFILL"),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+               qPrintable(error));
+
+A074 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 8);
+
+A075 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:289
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("se_extra"),
+                                          QStringLiteral("SE_EXTRA"),
+                                          QStringLiteral("MUSIC_PLAYER_SE1"), &error, &id),
+               qPrintable(error));
+
+A076 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:293
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 4);
+
+A077 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:294
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, QStringLiteral("se_over"), QStringLiteral("SE_OVER"),
+                                          QStringLiteral("MUSIC_PLAYER_SE1"), &error, &id),
+               qPrintable(error));
+
+A078 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:297
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(id, 9);
+
+A079 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:299
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QByteArray debug = readFile(root + QStringLiteral("/src/debug.c"), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A080 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:300
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(debug.indexOf("X(SE_OVER)") < debug.indexOf("#define SOUND_LIST_SE"));
+
+A081 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:302
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      header = readFile(root + QStringLiteral("/include/constants/songs.h"), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A082 | OnboardingTest::regionedAliasLayouts | src/checks/onboardcheck/regionedlayout.cpp:303
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(header.contains(define("END_MUS", "SE_OVER")));
+
+Remaining original source (closing sequence and helper bodies):
+
+  }
+
+
+Swift assertion predicates
+None. No Swift counterpart exists and no report.expect* call covers this file, so there are no S entries.
+
+Shared helper:
+None. No Swift fixture file carries expects for this file.

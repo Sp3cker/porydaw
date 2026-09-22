@@ -315,6 +315,7 @@ void SwiftRollGatedTest::hostClipboardRoundTripAndReplacement()
     const QString preGestureSummary = surface.grid->property("noteSummary").toString();
     const QString preGestureRevision = surface.grid->property("appliedRevisionText").toString();
 
+    QVERIFY(!copy->isEnabled());
     QVERIFY(sendShortcut(surface.view, copy));
 
     const QMimeData *const duringMime = QApplication::clipboard()->mimeData();
@@ -327,6 +328,7 @@ void SwiftRollGatedTest::hostClipboardRoundTripAndReplacement()
     QTest::mouseRelease(surface.view, Qt::LeftButton, Qt::NoModifier, pressPoint);
 
     // Positive copy after release
+    QVERIFY(copy->isEnabled());
     QApplication::clipboard()->clear();
     QVERIFY(sendShortcut(surface.view, copy));
     const QMimeData *const mime = QApplication::clipboard()->mimeData();

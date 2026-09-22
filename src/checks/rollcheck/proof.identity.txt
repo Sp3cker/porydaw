@@ -1,0 +1,343 @@
+Assertion correspondence: rollcheck/identity.cpp
+
+Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
+Original: src/checks/rollcheck/identity.cpp
+Original SHA-256: 14b6f45a36b2cf769bc6c886c20980ef133de0ba504524ab8a14c7416813bddc
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+No counterpart predicates were identified, so no S entries follow.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Duplicate-note identity, unassigned-timeline projection and ViewState round-trip run on an isolated SongDocument/SongView pair plus a hand-built MidiTimeline; no gated Swift-surface slot executes these scenarios. Three sites are native loader/window preconditions; the remaining eleven stay open.
+
+Verification
+Command: deno task verify --filter swiftrollgated --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+PianoRollTest::duplicateNoteIdentity, timelineProjection and viewStateRoundTrip run as QTest slots via runRollCheck in src/checks/rollcheck.cpp. The slots build their own projection document from the loaded song; no harness seed is used. No counterpart file carries predicates for these scenarios.
+
+Fixture, sequence and row constraints
+duplicateNoteIdentity mints two equal-visible duplicates and edits one by ID; timelineProjection projects a two-event hand-built MidiTimeline; viewStateRoundTrip perturbs every retained ViewState field once. No data rows; the candidate-track scan only selects an alternate track and never re-executes an assertion.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:27
+Disposition: NATIVE
+Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Source context since previous assertion:
+  #include "checks/rollcheck/rollcheck.h"
+  #include "checks/rollcheck/tst_pianoroll.h"
+
+  #include <QQuickWindow>
+  #include <QSize>
+  #include <QtTest>
+
+  #include <algorithm>
+  #include <cmath>
+  #include <memory>
+  #include <utility>
+  #include <vector>
+
+  #include "checks/support/songfixture.h"
+  #include "checks/support/support.h"
+  #include "core/songdocument.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/songviewmodel.h"
+
+  void PianoRollTest::duplicateNoteIdentity()
+  {
+      QString error;
+      const std::unique_ptr<checks::LoadedSong> source =
+          checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+Original expression:
+  QVERIFY2(source, qPrintable(error));
+
+A002 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:32
+Disposition: NATIVE
+Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Source context since previous assertion:
+      SongDocument projectionDoc;
+      QString projectionError;
+      if (!projectionDoc.load(source->songInfo(), &projectionError)) {
+Original expression:
+  QFAIL("could not load note identity projection fixture");
+
+A003 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:55
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; document-level duplicate-identity minting is exercised by the editcheck Swift suite, not by any rollcheck counterpart. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      const int track = m_fixture->track();
+      const std::vector<DocNote> before = projectionDoc.notesForTrack(track);
+      const SongDocument::NewNote duplicate{480, 60, 24, 100};
+      projectionDoc.addNotes(track, {duplicate, duplicate});
+      const std::vector<DocNote> after = projectionDoc.notesForTrack(track);
+      std::vector<DocNote> duplicates;
+      for (const DocNote &candidate : after) {
+          const bool existed =
+              std::any_of(before.begin(), before.end(), [&](const DocNote &previous) {
+                  return previous.noteId == candidate.noteId;
+              });
+          if (!existed)
+              duplicates.push_back(candidate);
+      }
+      if (duplicates.size() != 2 || !duplicates[0].noteId.isAssigned() ||
+          !duplicates[1].noteId.isAssigned() || duplicates[0].noteId == duplicates[1].noteId ||
+          duplicates[0].tick != duplicates[1].tick ||
+          duplicates[0].duration != duplicates[1].duration ||
+          duplicates[0].key != duplicates[1].key ||
+          duplicates[0].velocity != duplicates[1].velocity) {
+Original expression:
+  QFAIL("document did not mint distinct equal-visible duplicate note IDs");
+
+A004 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:61
+Disposition: NATIVE
+Mapping/reason: Original native fixture/loader setup obligation. A presenter-level Swift check cannot establish this precondition.
+Source context since previous assertion:
+      }
+
+      SongView identityView(projectionDoc);
+      auto identityTimeline = projectionDoc.buildTimeline(48000.0);
+      songview::TimelineQuickView *const identityQuick = identityView.quickView();
+Original expression:
+  QVERIFY(identityQuick && identityQuick->quickWindow());
+
+A005 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:74
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      identityQuick->quickWindow()->resize(QSize(800, 480));
+      identityView.setSong(identityTimeline.get(), nullptr);
+      checks::support::bindEditActionsForTest(identityView);
+      QObject::connect(&projectionDoc, &SongDocument::documentChanged, &identityView, [&] {
+          auto rebuilt = projectionDoc.buildTimeline(48000.0);
+          identityView.updateSong(rebuilt.get());
+          identityTimeline = std::move(rebuilt);
+      });
+      identityView.selectTrack(track);
+      identityView.selectionModel().setNoteSelection({duplicates[0].noteId, duplicates[1].noteId});
+      identityView.trackHeaderClicked(track, Qt::NoModifier);
+      if (!identityView.selectionModel().noteSelection().empty())
+Original expression:
+  QFAIL("plain click on the active track header did not clear note selection");
+
+A006 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:97
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const DocNote firstBefore = duplicates[0];
+      const DocNote secondBefore = duplicates[1];
+      const auto sameNoteIdentityAndValue = [](const DocNote &lhs, const DocNote &rhs) {
+          return lhs.noteId == rhs.noteId && lhs.engineTrack == rhs.engineTrack &&
+                 lhs.smfTrack == rhs.smfTrack && lhs.tick == rhs.tick &&
+                 lhs.duration == rhs.duration && lhs.key == rhs.key && lhs.velocity == rhs.velocity &&
+                 lhs.channel == rhs.channel;
+      };
+      identityView.selectionModel().setNoteSelection({firstBefore.noteId});
+      projectionDoc.moveNotes({firstBefore}, 0, 1);
+      DocNote firstMoved;
+      DocNote secondUntouched;
+      DocNote expectedMoved = firstBefore;
+      expectedMoved.key++;
+      const bool firstEdit = projectionDoc.findNote(firstBefore.noteId, &firstMoved) &&
+                             sameNoteIdentityAndValue(firstMoved, expectedMoved);
+      const bool secondStable = projectionDoc.findNote(secondBefore.noteId, &secondUntouched) &&
+                                sameNoteIdentityAndValue(secondUntouched, secondBefore);
+      const std::vector<NoteId> &editedSelection = identityView.selectionModel().noteSelection();
+      if (!firstEdit || !secondStable || editedSelection.size() != 1 ||
+          editedSelection.front() != firstBefore.noteId) {
+Original expression:
+  QFAIL("one-ID edit changed the wrong duplicate");
+
+A007 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:109
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      projectionDoc.undoStack()->undo();
+      DocNote firstRestored;
+      DocNote secondRestored;
+      const bool undoRestored = projectionDoc.findNote(firstBefore.noteId, &firstRestored) &&
+                                projectionDoc.findNote(secondBefore.noteId, &secondRestored) &&
+                                sameNoteIdentityAndValue(firstRestored, firstBefore) &&
+                                sameNoteIdentityAndValue(secondRestored, secondBefore);
+      const std::vector<NoteId> &undoSelection = identityView.selectionModel().noteSelection();
+      if (!undoRestored || undoSelection.size() != 1 || undoSelection.front() != firstBefore.noteId) {
+Original expression:
+  QFAIL("one-ID SongView edit did not restore both duplicates on Undo");
+
+A008 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:117
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      identityView.selectionModel().setNoteSelection({duplicates[0].noteId, duplicates[1].noteId});
+      const int otherTrack = track == 0 ? 1 : 0;
+      if (otherTrack < projectionDoc.engineTrackCount()) {
+          identityView.trackHeaderClicked(otherTrack, Qt::NoModifier);
+          if (!identityView.selectionModel().noteSelection().empty())
+Original expression:
+  QFAIL("switching track headers did not clear note selection");
+
+A009 | PianoRollTest::timelineProjection | src/checks/rollcheck/identity.cpp:131
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+  }
+
+  void PianoRollTest::timelineProjection()
+  {
+      MidiTimeline ordinaryTimeline;
+      ordinaryTimeline.lengthTicks = 288;
+      ordinaryTimeline.events = {
+          {0, 240, 0x9, 2, 65, 83, NoteId{}},
+          {0, 288, 0x8, 2, 65, 0, NoteId{}},
+      };
+      const SongViewModel ordinary = buildSongViewModel(ordinaryTimeline);
+      if (ordinary.notes.size() != 1) {
+Original expression:
+  QFAIL("ordinary unassigned timeline note did not project");
+
+A010 | PianoRollTest::timelineProjection | src/checks/rollcheck/identity.cpp:137
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      const ViewNote &note = ordinary.notes.front();
+      if (note.noteId.isAssigned() || note.startTick != 240 || note.endTick() != 288 ||
+          note.key != 65 || note.velocity != 83 || note.track != 2) {
+Original expression:
+  QFAIL("ordinary unassigned timeline note changed during projection");
+
+A011 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:155
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+  }
+
+  void PianoRollTest::viewStateRoundTrip()
+  {
+      SongView &view = m_fixture->view();
+      songview::TimelineInputItem &rollInput = m_fixture->rollInput();
+      const SongView::ViewState before = view.viewState();
+      const int track = m_fixture->track();
+      const EditorAutomationRowId lane{EditorAutomationRowKind::ControlChange, uint8_t(track), 7};
+      EditorViewState cosmetics;
+      cosmetics.laneHeight = 64;
+      cosmetics.laneHeights.emplace(lane, 96);
+      cosmetics.laneRanges.emplace(lane, 91);
+      cosmetics.emptyLanes.emplace(lane);
+      view.applyEditorViewState(cosmetics);
+      if (view.editorViewState() != cosmetics)
+Original expression:
+  QFAIL("SongView did not retain typed cosmetic EditorViewState");
+
+A012 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:215
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.setEditCursorTick(view.grid().snapTick(96.0));
+      const SongView::ViewState snapshot = view.viewState();
+      SongView::ViewState perturbed = snapshot;
+      perturbed.pxPerBeat = snapshot.pxPerBeat < 64.0 ? 64.0 : 16.0;
+      perturbed.keyHeight = snapshot.keyHeight < 16.0 ? 16.0 : 8.0;
+      perturbed.scrollPx = snapshot.scrollPx == 0.0 ? 1.0 : 0.0;
+      perturbed.scrollY = snapshot.scrollY == 0.0 ? 1.0 : 0.0;
+      int alternateTrack = snapshot.selectedTrack;
+      for (int candidate = 0; candidate < 16; ++candidate) {
+          if (candidate != snapshot.selectedTrack && m_fixture->timeline().tracks[candidate].used) {
+              alternateTrack = candidate;
+              break;
+          }
+      }
+      perturbed.selectedTrack = alternateTrack;
+      perturbed.editCursorTick = snapshot.editCursorTick == 0 ? 1 : 0;
+      perturbed.gridSelection = snapshot.gridSelection == songview::GridSelection::musical(4)
+                                    ? songview::GridSelection::musical(8)
+                                    : songview::GridSelection::musical(4);
+      perturbed.gridTriplet = !snapshot.gridTriplet;
+      perturbed.eventList = !snapshot.eventList;
+      SongView::ViewState expected = perturbed;
+      expected.pxPerBeat = std::clamp(perturbed.pxPerBeat, 4.0, 640.0);
+      expected.keyHeight = std::clamp(perturbed.keyHeight, 4.0, 32.0);
+      const double tpb = double(m_fixture->timeline().ticksPerBeat);
+      const double maxHScroll =
+          std::max(0.0, double(m_fixture->timeline().lengthTicks) * expected.pxPerBeat / tpb + 100.0 -
+                            std::max<qreal>(50, rollInput.width()));
+      expected.scrollPx = std::clamp(perturbed.scrollPx, 0.0, maxHScroll);
+      const double maxRollScroll = std::max(0.0, 128.0 * expected.keyHeight - rollInput.height());
+      expected.scrollY = std::clamp(perturbed.scrollY, 0.0, maxRollScroll);
+      expected.selectedTrack = snapshot.selectedTrack;
+      if (perturbed.selectedTrack >= 0 && perturbed.selectedTrack < 16 &&
+          m_fixture->timeline().tracks[perturbed.selectedTrack].used) {
+          expected.selectedTrack = perturbed.selectedTrack;
+      }
+      expected.editCursorTick = std::min(perturbed.editCursorTick, m_fixture->timeline().lengthTicks);
+      expected.gridSelection = perturbed.gridSelection;
+      view.applyViewState(perturbed);
+      const SongView::ViewState applied = view.viewState();
+      const auto sameViewState = [](const SongView::ViewState &lhs, const SongView::ViewState &rhs) {
+          return lhs.valid == rhs.valid && std::abs(lhs.pxPerBeat - rhs.pxPerBeat) <= 1e-12 &&
+                 std::abs(lhs.keyHeight - rhs.keyHeight) <= 1e-12 &&
+                 std::abs(lhs.scrollPx - rhs.scrollPx) <= 1e-12 &&
+                 std::abs(lhs.scrollY - rhs.scrollY) <= 1e-12 &&
+                 lhs.selectedTrack == rhs.selectedTrack && lhs.editCursorTick == rhs.editCursorTick &&
+                 lhs.gridSelection == rhs.gridSelection && lhs.gridTriplet == rhs.gridTriplet &&
+                 lhs.eventList == rhs.eventList;
+      };
+      const auto differs = [](double lhs, double rhs) { return std::abs(lhs - rhs) > 1e-12; };
+      if (!differs(expected.pxPerBeat, snapshot.pxPerBeat) ||
+          !differs(expected.keyHeight, snapshot.keyHeight) ||
+          !differs(expected.scrollPx, snapshot.scrollPx) ||
+          !differs(expected.scrollY, snapshot.scrollY) ||
+          expected.selectedTrack == snapshot.selectedTrack ||
+          expected.editCursorTick == snapshot.editCursorTick ||
+          expected.gridSelection == snapshot.gridSelection ||
+          expected.gridTriplet == snapshot.gridTriplet || expected.eventList == snapshot.eventList) {
+Original expression:
+  QFAIL("ViewState perturbation did not change every retained field");
+
+A013 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:218
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+      if (!sameViewState(applied, expected))
+Original expression:
+  QFAIL("ViewState apply did not retain every normalized perturbed field");
+
+A014 | PianoRollTest::viewStateRoundTrip | src/checks/rollcheck/identity.cpp:223
+Disposition: GAP
+Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.applyViewState(snapshot);
+      const SongView::ViewState restored = view.viewState();
+      if (view.editorViewState() != cosmetics || !sameViewState(restored, snapshot))
+Original expression:
+  QFAIL("ViewState capture/apply did not restore runtime state without changing cosmetics");
+
+Remaining original source (closing sequence and helper bodies):
+      view.applyViewState(before);
+  }
+
+Counterpart executable predicate index
+No counterpart predicates identified; no S entries.

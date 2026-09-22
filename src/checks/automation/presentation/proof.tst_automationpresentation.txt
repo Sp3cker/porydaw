@@ -1,0 +1,450 @@
+Assertion correspondence: automation/presentation/tst_automationpresentation.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/automation/presentation/tst_automationpresentation.cpp
+Original SHA-256: 0d15772061c1b3e0e74b1e55c3bcdc8b0823d965504346fba2a8cc010170b0a9
+Swift counterpart: src/checks/automation/presentation/tst_automationpresentation.swift
+Swift SHA-256: d6d51a256caab61787a5d22110668696f60ea0e1c41f758d5b6a82d9dcbd1758
+
+Purpose and status
+Each A entry is one original assertion or failure site, including helper and setup sites.
+Repeated rows and loops execute a site more than once. The source SHA pins the entire
+original sequence; the context inventory below records its rows, loops and fixtures.
+MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
+a specific related scenario differs; GAP means exact assertion correspondence is not
+established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+A method name or related Swift case alone never establishes an assertion match.
+This inventory does not authorize removing native checks. Unresolved entries remain work.
+
+Execution and ownership
+The original swiftcore suite entrypoints invoke these paired functions in their original
+order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
+VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
+Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+
+Verification evidence
+Pending: root will record the exact final tree and selected Deno verification run.
+
+Fixture, sequence, data-row and loop inventory
+Each line below is an exact original source anchor. Multiline declarations, helper
+implementations, native event delivery and the complete order remain in the pinned source.
+src/checks/automation/presentation/tst_automationpresentation.cpp:176 | QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error));
+src/checks/automation/presentation/tst_automationpresentation.cpp:191 | m_rig = checks::EditorRig::create(*m_document, config, error);
+src/checks/automation/presentation/tst_automationpresentation.cpp:218 | QTest::keyClick(m_quickWindow, Qt::Key_Escape);
+src/checks/automation/presentation/tst_automationpresentation.cpp:253 | for (int index = 0; index < int(rows.size()); ++index) {
+src/checks/automation/presentation/tst_automationpresentation.cpp:303 | void AutomationPresentationTest::mouseMove(songview::TimelineInputItem &input, QPointF contentPoint)
+src/checks/automation/presentation/tst_automationpresentation.cpp:335 | mouseMove(*m_plotInput, plotPoint);
+src/checks/automation/presentation/tst_automationpresentation.cpp:338 | mouseMove(*m_gutterInput, {m_gutterInput->bounds().center().x(), plotPoint.y()});
+src/checks/automation/presentation/tst_automationpresentation.cpp:342 | mouseMove(*m_plotInput, plotPoint);
+src/checks/automation/presentation/tst_automationpresentation.cpp:354 | mouseMove(*m_plotInput, lanePoint(pan, 24, 64));
+src/checks/automation/presentation/tst_automationpresentation.cpp:405 | mouseMove(*m_plotInput, plotPoint);
+src/checks/automation/presentation/tst_automationpresentation.cpp:408 | mouseMove(*m_plotInput, plotPoint);
+
+Original assertion inventory
+
+A001 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:176
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(m_document->adoptSmf(presentationSmf(), song, &error), qPrintable(error))
+
+A002 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:192
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY2(m_rig, qPrintable(error))
+
+A003 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:195
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(root)
+
+A004 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:200
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_plotInput)
+
+A005 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:201
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_gutterInput)
+
+A006 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:203
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_quickWindow)
+
+A007 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:204
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed())
+
+A008 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:205
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(!m_plotInput->bounds().isEmpty())
+
+A009 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:206
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(!m_gutterInput->bounds().isEmpty())
+
+A010 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:207
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(page() && page()->canvas())
+
+A011 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:208
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(m_gutterInput->window(), m_quickWindow.data())
+
+A012 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:209
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_plotInput->interaction() == page()->canvas())
+
+A013 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:210
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_gutterInput->interaction() == page()->canvas())
+
+A014 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:211
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(quickScene())
+
+A015 | AutomationPresentationTest::cleanup | src/checks/automation/presentation/tst_automationpresentation.cpp:232
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(mouseGrabCleared)
+
+A016 | AutomationPresentationTest::mouseMove | src/checks/automation/presentation/tst_automationpresentation.cpp:307
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(input.window(), m_quickWindow.data())
+
+A017 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:325
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A018 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:328
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(panRow))
+
+A019 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:330
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A020 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:332
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!plot.isEmpty())
+
+A021 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:336
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!m_plotInput->cursor().pixmap().isNull())
+
+A022 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:339
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(m_gutterInput->cursor().shape(), Qt::ArrowCursor)
+
+A023 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:341
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
+
+A024 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:343
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!m_plotInput->cursor().pixmap().isNull())
+
+A025 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:349
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A026 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:352
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A027 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:356
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!pixmap.isNull())
+
+A028 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:357
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(pixmap.devicePixelRatio(), m_plotInput->devicePixelRatio())
+
+A029 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:363
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A030 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:365
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas)
+
+A031 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:366
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_plotInput)
+
+A032 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:367
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(m_plotInput->interaction() == canvas)
+
+A033 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:370
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A034 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:378
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
+
+A035 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:380
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!pixmapAtOne.isNull())
+
+A036 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:381
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(qFuzzyCompare(pixmapAtOne.devicePixelRatio(), 1.0))
+
+A037 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:384
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
+
+A038 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:386
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!pixmapAtTwo.isNull())
+
+A039 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:387
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(qFuzzyCompare(pixmapAtTwo.devicePixelRatio(), 2.0))
+
+A040 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:390
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
+
+A041 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:392
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!pixmapAtOneAgain.isNull())
+
+A042 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:393
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(qFuzzyCompare(pixmapAtOneAgain.devicePixelRatio(), 1.0))
+
+A043 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:399
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage)
+
+A044 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:402
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A045 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:406
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!m_plotInput->cursor().pixmap().isNull())
+
+A046 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:409
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(m_plotInput->cursor().shape(), Qt::ArrowCursor)
+
+Swift executable assertion index
+The S entries are exact predicates already called by the suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:19
+Swift expression:
+  report.expect(fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                    message: "a parameter switch is accepted")
+
+S002 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:21
+Swift expression:
+  report.expectEqual(fixture.panLane, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
+                         what: "the switched parameter becomes active")
+
+S003 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:23
+Swift expression:
+  report.expectEqual(panIndex, fixture.page.activeParameterIndex, cppID: drawerAutomationSwitchID,
+                         what: "the catalog index follows the switch")
+
+S004 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:25
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: drawerAutomationSwitchID,
+                         what: "switching a parameter mutates nothing")
+
+S005 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:27
+Swift expression:
+  report.expectEqual(selection, fixture.page.selection, cppID: drawerAutomationSwitchID,
+                         what: "switching a parameter keeps the explicit selection")
+
+S006 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:29
+Swift expression:
+  report.expectEqual([fixture.panLane], fixture.page.selectedParameters, cppID: drawerAutomationSwitchID,
+                         what: "the inactive parameter's selection indicator survives the switch")
+
+S007 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:31
+Swift expression:
+  report.expectEqual("Pan (PAN)", AutomationCatalog.title(fixture.page.activeParameter),
+                         cppID: drawerAutomationSwitchID, what: "the active lane title is the switched parameter's")
+
+S008 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:33
+Swift expression:
+  report.expectEqual(2, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
+                         what: "the active lane publishes its written-event count")
+
+S009 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:35
+Swift expression:
+  report.expectEqual(fixture.projection(fixture.panLane).points.map(\.x),
+                         fixture.page.projection?.points.map(\.x) ?? [], cppID: drawerAutomationSwitchID,
+                         what: "the active projection is the switched parameter's")
+
+S010 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:38
+Swift expression:
+  report.expect(!fixture.page.activateParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                    message: "re-activating the active parameter is not a switch")
+
+S011 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:40
+Swift expression:
+  report.expect(!fixture.page.activateParameter(index: AutomationCatalog.count), cppID: drawerAutomationSwitchID,
+                    message: "an index outside the catalog is rejected")
+
+S012 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:45
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: volumeIndex), cppID: drawerAutomationSwitchID,
+                    message: "a parameter with events can be pinned as a ghost")
+
+S013 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:47
+Swift expression:
+  report.expectEqual(["Volume (VOL) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationSwitchID,
+                         what: "the ghost label counts the lane's written events")
+
+S014 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:49
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: volumeIndex), cppID: drawerAutomationSwitchID,
+                    message: "the same parameter unpins")
+
+S015 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:51
+Swift expression:
+  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationSwitchID,
+                         what: "unpinning drops the label")
+
+S016 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:53
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: volumeIndex), cppID: drawerAutomationSwitchID,
+                    message: "the ghost pins again")
+
+S017 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:55
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationSwitchID,
+                    message: "toggling the active parameter clears its ghosts")
+
+S018 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:57
+Swift expression:
+  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationSwitchID,
+                         what: "the active parameter owns every pin")
+
+S019 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:60
+Swift expression:
+  report.expect(!fixture.page.toggleGhostParameter(index: emptyIndex), cppID: drawerAutomationSwitchID,
+                    message: "a parameter with no events cannot be pinned")
+
+S020 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:66
+Swift expression:
+  report.expectEqual(AutomationPagePolicy.noTrackMessage, fixture.page.plotMessage,
+                         cppID: drawerAutomationSwitchID,
+                         what: "no selected track publishes the missing-track message")
+
+S021 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:69
+Swift expression:
+  report.expect(fixture.page.activateParameter(index: AutomationCatalog.count - 1), cppID: drawerAutomationSwitchID,
+                    message: "Tempo stays selectable without a track")
+
+S022 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:71
+Swift expression:
+  report.expectEqual(AutomationParameter.tempo, fixture.page.activeParameter, cppID: drawerAutomationSwitchID,
+                         what: "Tempo becomes the active parameter")
+
+S023 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:73
+Swift expression:
+  report.expectEqual("", fixture.page.plotMessage, cppID: drawerAutomationSwitchID,
+                         what: "Tempo's plot presents without a selected track")
+
+S024 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:75
+Swift expression:
+  report.expectEqual(1, fixture.page.laneCount, cppID: drawerAutomationSwitchID,
+                         what: "Tempo publishes its own event count")
+
+S025 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presentation/tst_automationpresentation.swift:79
+Swift expression:
+  report.expectEqual("", fixture.page.plotMessage, cppID: drawerAutomationSwitchID,
+                         what: "a selected track presents again")

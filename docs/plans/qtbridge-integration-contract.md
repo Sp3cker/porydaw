@@ -42,7 +42,7 @@ Local patch `src/ui/songview/quick/swiftroll/qtbridge-object-return.patch`
 | Hunk | QtBridge source | Purpose |
 | --- | --- | --- |
 | 1 | `Sources/QtBridgeMacros/Extensions.swift:124` | Allow identifier (bridged object) return types from `@QtBridgeable` methods. |
-| 2 | `CMakeLists.txt:59` | Propagate host `CMAKE_MAKE_PROGRAM`/Swift compiler/flags into the macro plugin ExternalProject; `BUILD_ALWAYS`. |
+| 2 | `CMakeLists.txt:59` | Propagate host `CMAKE_MAKE_PROGRAM`/Swift compiler/flags into the macro plugin ExternalProject; declare `QtBridgeMacros` as `BUILD_BYPRODUCTS` so Ninja rebuilds it only when stale. |
 | 3 | `Sources/QtBridge/QmlInstantiable.swift:50` | Make `registerQmlElement()` public so consumer modules register QML elements. |
 | 4 | `Sources/QtBridge/QVariant.swift:95,181` | `QVariant` from `Optional<Wrapped: QObjectBuildable>` (typed null) + `Optional: QVariantGettable`. |
 

@@ -1,0 +1,2824 @@
+Assertion correspondence: swiftgridprototype/jurisdiction_smoke.cpp
+
+Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
+Original: src/checks/swiftgridprototype/jurisdiction_smoke.cpp
+Original SHA-256: 8839ce8414b255b08e68462adb1c2d481a995faac984fe62fcee50dfb18cd1b8
+Swift counterpart: src/checks/rollcheck/static/camera.swift
+Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift SHA-256: ad6b435c13a3df031787816508ea95f14b5ec8b96a8539df4fb620a3107f08a3
+Deleted in: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced Wave 4 re-scoped grid milestone: writable Swift roll through production seams
+Note: swiftrollgated/*.swift matches no file in this checkout; the receiving lane is C++-only (tst_swiftrollgated.cpp). The deletion commit records the load-bearing prototype rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+
+Status and evidence
+This is an assertion-site inventory of the deleted prototype jurisdiction (undo/cancel/escape) smoke, not a count-based equivalence claim. Every require/awaitState site appears below, including UndoScene-harness guards and per-row revision guards. S identifiers identify exact Swift predicates in the named production counterparts, listed after the inventory. MATCHED identifies an equivalent model predicate; PARTIAL a related predicate with an explicit unproved condition; NATIVE a prototype native-window/rendering/harness observation a presenter-level Swift check cannot establish; GAP an original predicate without a replacement assertion. Only the two grip rows named in the deletion commit have a recorded receiving home (swiftrollgated testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce); every other row below is bookkept as GAP or NATIVE against the Swift S-inventory.
+
+Verification
+Command: deno task verify --filter swiftrollgated --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+RunEditorGridCameraChecks/checkOrderedSelection owns the revision/selection pairs (PARTIAL-SEL rows) at DocumentSession level. verifyGridUndo/verifyGridCancel/verifyGridEscape and the verify*Row/cancelStatus/cancelIdle/requireFreshDrawCommits helpers have no Swift owner: the prototype QUndoStack rows, cancel-jurisdiction rows (ungrab, focus-loss, hidden, window-deactivate, right-ungrab), and Escape rows (gesture, pitch editor, note menu, idle) execute only in the deleted prototype QML scene. The 30-note undo fixture and the SGS cancel-reason codes above have no shared Swift fixture in this pairing.
+
+Fixture, sequence and row constraints
+No QTest data rows: each verify*Row function is one fixture row executed by verifyGridUndo/verifyGridCancel/verifyGridEscape after a resetDemo restore of the 30-note fixture. undoNotes/undoSummary/undoSelectedCount fold the noteSummary JSON per site; undoColorCount folds framebuffer regions per site. awaitState polls each predicate up to 3s. Guards: UndoScene::reveal pins viewport/content and native-window containment before every pointer helper; requireFreshDrawCommits pins the before+1 revision step for draw commits; reset() requires the resetDemo round-trip and pins revision 0 with empty undo/redo.
+Original setup, branch guards, and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | awaitState | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:34
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+#include "grid_smoke.h"
+
+#include <QCoreApplication>
+#include <QEvent>
+#include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QPointer>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QTest>
+
+#include <chrono>
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+
+namespace {
+using namespace std::chrono_literals;
+
+void require(bool condition, const char *reason)
+{
+    if (!condition) {
+        std::fprintf(stderr, "SWIFT_GRID_SMOKE FAIL: %s\n", reason);
+        std::fflush(stderr);
+        std::exit(EXIT_FAILURE);
+    }
+}
+
+template <typename Predicate>
+void awaitState(Predicate predicate, const char *reason)
+{
+Original expression:
+    require(QTest::qWaitFor(predicate, 3s), reason);
+
+A002 | center | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:61
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+}
+
+void pass(const char *scenario)
+{
+    std::printf("SWIFT_GRID_SMOKE %s PASS\n", scenario);
+    std::fflush(stdout);
+}
+
+QQuickItem *namedItem(QQuickItem *parent, const QString &name)
+{
+    if (parent->objectName() == name)
+        return parent;
+    for (QQuickItem *child : parent->childItems()) {
+        if (auto *found = namedItem(child, name))
+            return found;
+    }
+    return nullptr;
+}
+
+QRectF sceneRect(QQuickItem *item)
+{
+    return item->mapRectToScene(QRectF(0, 0, item->width(), item->height()));
+}
+
+QPoint center(QQuickItem *item)
+{
+Original expression:
+    require(item, "missing native undo target");
+
+A003 | UndoScene::reveal | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:155
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    return sceneRect(item).center().toPoint();
+}
+
+QJsonArray undoNotes(QObject *model)
+{
+    return QJsonDocument::fromJson(model->property("noteSummary").toString().toUtf8()).array();
+}
+
+QString undoSummary(QObject *model)
+{
+    return model->property("noteSummary").toString();
+}
+
+int undoSelectedCount(QObject *model)
+{
+    int count = 0;
+    for (const QJsonValue value : undoNotes(model)) {
+        if (value.toObject().value("selected").toBool())
+            ++count;
+    }
+    return count;
+}
+
+int undoAddedNoteId(const QJsonArray &before, const QJsonArray &after)
+{
+    for (const QJsonValue value : after) {
+        const int id = value.toObject().value("id").toInt(-1);
+        bool found = false;
+        for (const QJsonValue prior : before) {
+            if (prior.toObject().value("id").toInt(-2) == id) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            return id;
+    }
+    return -1;
+}
+
+int undoColorCount(const QImage &image, QRectF logical, QRgb color)
+{
+    const double dpr = image.devicePixelRatio();
+    const QRect region = QRectF(logical.topLeft() * dpr, logical.size() * dpr)
+                             .toAlignedRect()
+                             .intersected(image.rect());
+    int count = 0;
+    for (int y = region.top(); y <= region.bottom(); ++y) {
+        for (int x = region.left(); x <= region.right(); ++x) {
+            if (image.pixelColor(x, y).rgb() == color)
+                ++count;
+        }
+    }
+    return count;
+}
+
+struct UndoScene {
+    QPointer<QQuickWindow> window;
+    QPointer<QQuickItem> viewport;
+    QPointer<QQuickItem> surface;
+    QPointer<QObject> model;
+    double baseFont = 0;
+    double dpr = 1;
+    double beatWidth = 0;
+    double rowHeight = 0;
+    double leadPad = 0;
+    int ticksPerBeat = 0;
+
+    QQuickItem *item(const char *name) const
+    {
+        return namedItem(window->contentItem(), QString::fromLatin1(name));
+    }
+
+    QPointF point(double tick, int pitch) const
+    {
+        return {leadPad + tick * beatWidth / ticksPerBeat, (127.0 - pitch + 0.5) * rowHeight};
+    }
+
+    double pixelSnap(double value) const { return std::round(value * dpr) / dpr; }
+
+    QRectF expectedBox(int tick, int duration, int pitch) const
+    {
+        const double pixel = 1.0 / dpr;
+        const double x0 = pixelSnap(leadPad + tick * beatWidth / ticksPerBeat);
+        const double x1 = pixelSnap(leadPad + (tick + duration) * beatWidth / ticksPerBeat);
+        const double top = pixelSnap((127 - pitch) * rowHeight);
+        const double bottom = pixelSnap((128 - pitch) * rowHeight);
+        return {x0, top + pixel, qMax(std::round(baseFont / 6.0), x1 - x0),
+                bottom - top - 2 * pixel};
+    }
+
+    void reveal(QPointF content) const
+    {
+Original expression:
+        require(viewport && surface && window, "grid scene destroyed during undo smoke");
+
+A004 | UndoScene::reveal | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:160
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        const double maxX =
+            qMax(0.0, viewport->property("contentWidth").toDouble() - viewport->width());
+        const double maxY =
+            qMax(0.0, viewport->property("contentHeight").toDouble() - viewport->height());
+Original expression:
+        require(viewport->setProperty("contentX",
+                                      qBound(0.0, content.x() - viewport->width() / 2, maxX)),
+                "cannot scroll horizontal viewport");
+
+A005 | UndoScene::reveal | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:163
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+        require(viewport->setProperty("contentY",
+                                      qBound(0.0, content.y() - viewport->height() / 2, maxY)),
+                "cannot scroll vertical viewport");
+
+A006 | UndoScene::reveal | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:168
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        QTest::qWait(20ms);
+        const QPointF scenePoint = surface->mapToScene(content);
+Original expression:
+        require(scenePoint.x() >= 0 && scenePoint.x() < window->width() && scenePoint.y() >= 0 &&
+                    scenePoint.y() < window->height(),
+                "undo gesture target is outside the native window");
+
+A007 | UndoScene::release | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:191
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    }
+
+    QPoint windowPoint(QPointF content) const { return surface->mapToScene(content).toPoint(); }
+
+    void press(QPointF content) const
+    {
+        reveal(content);
+        QTest::mousePress(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
+        QTest::qWait(30ms);
+    }
+
+    void move(QPointF content) const
+    {
+        QTest::mouseMove(window, windowPoint(content));
+        QTest::qWait(30ms);
+    }
+
+    void release(QPointF content) const
+    {
+        QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
+Original expression:
+        awaitState([this] { return model->property("activeNoteId").toInt() == -1; },
+                   "pointer release did not finish the undo gesture");
+
+A008 | UndoScene::reset | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:210
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    }
+
+    void click(QPointF content) const
+    {
+        press(content);
+        release(content);
+    }
+
+    void doubleClick(QPointF content) const
+    {
+        reveal(content);
+        QTest::mouseDClick(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
+        QTest::qWait(50ms);
+    }
+
+    void reset() const
+    {
+Original expression:
+        require(QMetaObject::invokeMethod(window, "resetDemo"), "cannot reset the prototype");
+
+A009 | UndoScene::reset | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:211
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+        awaitState(
+            [&] { return undoNotes(model).size() == 30 && namedItem(surface, "gridNote_1"); },
+            "reset did not restore the musical fixture");
+
+A010 | UndoScene::undo | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:219
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        QTest::qWait(50ms);
+    }
+
+    void undo() const
+    {
+Original expression:
+        require(QMetaObject::invokeMethod(model, "undo"), "cannot invoke undo");
+
+A011 | UndoScene::redo | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:225
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        QTest::qWait(30ms);
+    }
+
+    void redo() const
+    {
+Original expression:
+        require(QMetaObject::invokeMethod(model, "redo"), "cannot invoke redo");
+
+A012 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:248
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+        QTest::qWait(30ms);
+    }
+
+    int revision() const { return model->property("revision").toInt(); }
+    bool canUndo() const { return model->property("canUndo").toBool(); }
+    bool canRedo() const { return model->property("canRedo").toBool(); }
+    int lastCancelReason() const { return model->property("lastCancelReason").toInt(); }
+
+    QJsonObject note(int id) const
+    {
+        for (const QJsonValue &value : undoNotes(model)) {
+            if (value.toObject().value("id").toInt(-1) == id)
+                return value.toObject();
+        }
+        return {};
+    }
+};
+
+void verifyDrawRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo() && !scene.canRedo(),
+            "reset did not clear undo history");
+
+A013 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:254
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    const QJsonArray before = undoNotes(scene.model);
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+    scene.release(scene.point(146, 102));
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
+               "draw did not commit exactly one note");
+
+A014 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:257
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString drawn = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 1 && scene.canUndo() && !scene.canRedo(),
+            "draw commit did not push exactly one command");
+
+A015 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:260
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == before.size(); },
+               "undo did not remove the drawn note");
+
+A016 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:262
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoSummary(scene.model) == fixture, "undo did not restore the exact fixture");
+
+A017 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:263
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.canRedo() && !scene.canUndo(), "undo left canUndo/canRedo inconsistent");
+
+A018 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:264
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 1, "undo changed the monotonic revision");
+
+A019 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:265
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(undoSelectedCount(scene.model) == 0, "stale draw selection is not inert");
+
+A020 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:267
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == drawn; },
+               "redo did not restore the drawn note");
+
+A021 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:269
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.canUndo() && !scene.canRedo(), "redo left canUndo/canRedo inconsistent");
+
+A022 | verifyDrawRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:270
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 1, "redo changed the monotonic revision");
+
+A023 | verifyMoveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:284
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("undo-draw-commit-restores-fixture");
+}
+
+void verifyMoveRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QRectF firstBox = scene.expectedBox(0, 18, 60);
+    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
+    scene.press(firstBox.center());
+    // Undo restores note state but not selection (spec section 3.1), and the
+    // press selected note 1, so the exact-restore reference is captured with
+    // that selection established and the notes still at fixture positions.
+    const QString fixture = undoSummary(scene.model);
+Original expression:
+    require(undoNotes(scene.model).size() == 30 && scene.revision() == 0,
+            "press selected without committing");
+
+A024 | verifyMoveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.move(moved);
+    scene.release(moved);
+Original expression:
+    awaitState(
+        [&] {
+            const QJsonObject value = scene.note(1);
+            return value.value("tick").toInt(-1) == 6 && value.value("pitch").toInt(-1) == 61;
+        },
+        "move did not commit source-rounded movement");
+
+A025 | verifyMoveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:295
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString movedSummary = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 1, "move commit did not push exactly one command");
+
+A026 | verifyMoveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:297
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == fixture; },
+               "move undo did not restore the exact fixture");
+
+A027 | verifyMoveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:300
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == movedSummary; },
+               "move redo did not restore the moved summary");
+
+A028 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:319
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("undo-move-commit");
+}
+
+void verifyResizeRow(const UndoScene &scene)
+{
+    // Undo restores note state but not selection (spec section 3.1), so each
+    // drag is an independent sub-row: reset, press to establish that drag's
+    // selection, capture the reference, then commit/undo/redo exactly.
+    const double reach = scene.baseFont * 0.25;
+    scene.reset();
+    const QRectF trailingBox = scene.expectedBox(24, 18, 64);
+    const QPointF gripRight(trailingBox.right() + reach / 2, trailingBox.center().y());
+    const QPointF longer = gripRight + QPointF(scene.beatWidth * 6 / 24, 0);
+    scene.press(gripRight);
+    const QString trailingFixture = undoSummary(scene.model);
+    scene.move(longer);
+    scene.release(longer);
+Original expression:
+    awaitState([&] { return scene.note(2).value("duration").toInt(-1) == 24; },
+               "trailing resize did not commit");
+
+A029 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:322
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString afterTrailing = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 1, "trailing resize did not push exactly one command");
+
+A030 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:324
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == trailingFixture; },
+               "trailing-resize undo did not restore the exact fixture");
+
+A031 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:327
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == afterTrailing; },
+               "trailing-resize redo did not restore the trailing state");
+
+A032 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:338
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+
+    scene.reset();
+    const QRectF leadingBox = scene.expectedBox(72, 18, 71);
+    const QPointF gripLeft(leadingBox.left() - reach / 2, leadingBox.center().y());
+    const QPointF earlier = gripLeft - QPointF(scene.beatWidth * 6 / 24, 0);
+    scene.press(gripLeft);
+    const QString leadingFixture = undoSummary(scene.model);
+    scene.move(earlier);
+    scene.release(earlier);
+Original expression:
+    awaitState(
+        [&] {
+            const QJsonObject value = scene.note(4);
+            return value.value("tick").toInt(-1) == 66 && value.value("duration").toInt(-1) == 24;
+        },
+        "leading resize did not commit");
+
+A033 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:345
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString afterLeading = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 1, "leading resize did not push exactly one command");
+
+A034 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:347
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == leadingFixture; },
+               "leading-resize undo did not restore the exact fixture");
+
+A035 | verifyResizeRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:350
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == afterLeading; },
+               "leading-resize redo did not restore the leading state");
+
+A036 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:366
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("undo-resize-leading-and-trailing");
+}
+
+void verifyMenuDeleteRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+    const QRectF band = sceneRect(scene.item("gridNote_1"))
+                            .united(sceneRect(scene.item("gridNote_2")))
+                            .adjusted(-6, -6, 6, 6);
+    const QPoint start = band.topLeft().toPoint();
+    const QPoint end = band.bottomRight().toPoint();
+    QTest::mousePress(scene.window, Qt::RightButton, Qt::NoModifier, start);
+    QTest::mouseMove(scene.window, end);
+Original expression:
+    awaitState([&] { return undoSelectedCount(scene.model) == 2; },
+               "right-drag did not select two notes");
+
+A037 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:369
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    QTest::mouseRelease(scene.window, Qt::RightButton, Qt::NoModifier, end);
+Original expression:
+    require(undoSelectedCount(scene.model) == 2, "released reticle discarded its selection");
+
+A038 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:372
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::mouseClick(scene.window, Qt::RightButton, Qt::NoModifier,
+                      center(scene.item("gridNote_1")));
+Original expression:
+    awaitState([&] { return scene.item("noteContextMenu")->property("opened").toBool(); },
+               "right click did not open the note menu");
+
+A039 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:377
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Down);
+    QTest::keyClick(scene.window, Qt::Key_Down);
+    QTest::keyClick(scene.window, Qt::Key_Return);
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == 28; },
+               "menu Delete did not delete selection");
+
+A040 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:380
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString deleted = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 1, "menu delete did not push exactly one command");
+
+A041 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:381
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(undoSelectedCount(scene.model) == 0, "menu delete kept a selection");
+
+A042 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:383
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == fixture; },
+               "menu-delete undo did not restore both notes exactly");
+
+A043 | verifyMenuDeleteRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:386
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == deleted; },
+               "menu-delete redo did not restore the deleted state");
+
+A044 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:397
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("undo-menu-delete-selection");
+}
+
+void verifyDoubleClickRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+    const QJsonArray before = undoNotes(scene.model);
+    scene.doubleClick(scene.point(420, 110));
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
+               "double-click did not add one note");
+
+A045 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:400
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString added = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 1, "double-click add did not push exactly one command");
+
+A046 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:402
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    const int addedId = undoAddedNoteId(before, undoNotes(scene.model));
+Original expression:
+    require(addedId > 0, "added double-click note has no identity");
+
+A047 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:404
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.doubleClick(scene.expectedBox(420, 6, 110).center());
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == before.size(); },
+               "double-click on an existing note did not delete it");
+
+A048 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:407
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    const QString removed = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 2, "double-click remove did not push exactly one command");
+
+A049 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:408
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(removed == fixture, "double-click add-then-remove did not return to the fixture");
+
+A050 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:410
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
+               "double-click-remove undo did not restore the added note");
+
+A051 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:416
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    // Undo restores note state but not selection (spec section 3.1): the
+    // remove cleared the selection, so re-select the restored note with a
+    // no-command click before comparing against `added`.
+    scene.click(scene.expectedBox(420, 6, 110).center());
+Original expression:
+    require(scene.revision() == 2, "selecting the restored note pushed a command");
+
+A052 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:417
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == added; },
+               "double-click-remove undo did not restore the added note");
+
+A053 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:420
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == fixture; },
+               "double-click-add undo did not restore the exact fixture");
+
+A054 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:423
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == added; },
+               "double-click-add redo did not restore the added note");
+
+A055 | verifyDoubleClickRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:426
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.redo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == removed; },
+               "double-click-remove redo did not restore the removed state");
+
+A056 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:435
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("undo-doubleclick-add-and-remove");
+}
+
+void verifyPitchCurveRow(const UndoScene &scene)
+{
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+Original expression:
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
+
+A057 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:437
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_G);
+Original expression:
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "G did not open a functional pitch popup");
+
+A058 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:442
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    auto *graph = scene.item("pitchBendGraph");
+    const QRectF plot = graph->property("canvasRect").toRectF();
+Original expression:
+    require(plot.width() > 0 && plot.height() > 0, "pitch graph has no native canvas geometry");
+
+A059 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:459
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QRectF curveRegion = graph->mapRectToScene(plot).adjusted(6, 6, -6, -6);
+    const QRectF upperCurve(curveRegion.x(), curveRegion.y(), curveRegion.width(),
+                            curveRegion.height() / 3);
+    const int preCount = undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84));
+    const QPoint low = graph
+                           ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 2 / 18,
+                                                plot.y() + (plot.height() - 1) * 0.8))
+                           .toPoint();
+    const QPoint high = graph
+                            ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 16 / 18,
+                                                 plot.y() + (plot.height() - 1) * 0.2))
+                            .toPoint();
+    QTest::mousePress(scene.window, Qt::LeftButton, Qt::ShiftModifier, low);
+    QTest::mouseMove(scene.window, high);
+    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::ShiftModifier, high);
+    QTest::qWait(40ms);
+Original expression:
+    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
+            "pitch gesture did not change the committed curve");
+
+A060 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:462
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the pitch popup");
+
+A061 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:464
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 1 && scene.canUndo(),
+            "pitch commit did not push exactly one controller command");
+
+A062 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:467
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_G);
+Original expression:
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "pitch popup did not reopen");
+
+A063 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:471
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::qWait(40ms);
+Original expression:
+    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
+            "edited pitch curve did not survive popup close and reopen");
+
+A064 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:474
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the reopened pitch popup");
+
+A065 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:477
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    require(scene.canRedo() && !scene.canUndo(), "pitch undo left canUndo/canRedo inconsistent");
+
+A066 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:479
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_G);
+Original expression:
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "pitch popup did not reopen after undo");
+
+A067 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:483
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::qWait(40ms);
+Original expression:
+    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) == preCount,
+            "pitch undo did not restore the pre-commit curve on reopen");
+
+A068 | verifyPitchCurveRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:486
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the pitch popup after undo");
+
+A069 | verifyNoCommandRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:495
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("undo-pitch-curve-commit");
+}
+
+void verifyNoCommandRow(const UndoScene &scene)
+{
+    scene.reset();
+    scene.click(scene.point(98, 100));
+Original expression:
+    require(scene.model->property("editCursorTick").toInt() == 96,
+            "empty click did not snap its edit cursor");
+
+A070 | verifyNoCommandRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:498
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    scene.click(scene.expectedBox(0, 18, 60).center());
+Original expression:
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note");
+
+A071 | verifyNoCommandRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:499
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoNotes(scene.model).size() == 30, "cursor and selection changed the note count");
+
+A072 | verifyNoCommandRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:500
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(!scene.canUndo() && !scene.canRedo() && scene.revision() == 0,
+            "cursor and selection pushed an undo command");
+
+A073 | verifyResetRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:513
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("undo-no-command-for-cursor-and-selection");
+}
+
+void verifyResetRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+    const QJsonArray before = undoNotes(scene.model);
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+    scene.release(scene.point(146, 102));
+Original expression:
+    awaitState([&] { return undoNotes(scene.model).size() == before.size() + 1; },
+               "draw did not commit exactly one note");
+
+A074 | verifyResetRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:515
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.canUndo() && scene.revision() == 1, "draw commit did not push one command");
+
+A075 | verifyResetRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:517
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    scene.reset();
+Original expression:
+    require(!scene.canUndo() && !scene.canRedo() && scene.revision() == 0,
+            "reset did not clear undo history");
+
+A076 | verifyResetRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:519
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoNotes(scene.model).size() == 30, "reset did not restore the fixture count");
+
+A077 | verifyResetRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:520
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoSummary(scene.model) == fixture, "reset did not restore the exact fixture");
+
+A078 | verifyResetRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:522
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    require(undoNotes(scene.model).size() == 30 && scene.revision() == 0,
+            "undo after reset is not inert");
+
+A079 | requireFreshDrawCommits | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:543
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("undo-reset-clears-history");
+}
+
+QString cancelStatus(const UndoScene &scene)
+{
+    return scene.model->property("statusText").toString();
+}
+
+bool cancelIdle(const UndoScene &scene)
+{
+    return cancelStatus(scene).contains(QStringLiteral("notes,"));
+}
+
+void requireFreshDrawCommits(const UndoScene &scene, const char *reason)
+{
+    const int before = scene.revision();
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+    scene.release(scene.point(146, 102));
+Original expression:
+    require(scene.revision() == before + 1, reason);
+
+A080 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:553
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+}
+
+void verifyCancelUngrabRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QRectF firstBox = scene.expectedBox(0, 18, 60);
+    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
+    scene.press(firstBox.center());
+    const QString pressed = undoSummary(scene.model);
+Original expression:
+    require(scene.revision() == 0, "press committed before the ungrab cancel");
+
+A081 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:555
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.move(moved);
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
+            "move did not preview before the ungrab cancel");
+
+A082 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:558
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QQuickItem *grabber = scene.window->mouseGrabberItem();
+Original expression:
+    require(grabber, "pressed QML input item has no native mouse grab");
+
+A083 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:560
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    grabber->ungrabMouse();
+Original expression:
+    awaitState([&] { return scene.model->property("activeNoteId").toInt() == -1; },
+               "native mouse ungrab did not cancel the move gesture");
+
+A084 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:564
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::NoModifier, scene.windowPoint(moved));
+    QTest::qWait(30ms);
+Original expression:
+    require(undoSummary(scene.model) == pressed,
+            "ungrab cancel moved notes or changed the selection");
+
+A085 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:566
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "ungrab cancel left a live gesture");
+
+A086 | verifyCancelUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:567
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "ungrab cancel pushed an undo command");
+
+A087 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:579
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    pass("cancel-ungrab-discards-move-preview");
+}
+
+void verifyCancelFocusLostRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QRectF firstBox = scene.expectedBox(0, 18, 60);
+    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
+    scene.press(firstBox.center());
+    const QString pressed = undoSummary(scene.model);
+    QQuickItem *input = scene.item("pianoGridInput");
+Original expression:
+    require(input && input->hasActiveFocus(),
+            "grid input did not hold active focus during the drag");
+
+A088 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:582
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.move(moved);
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
+            "move did not preview before the focus steal");
+
+A089 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:585
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QQuickItem *stop = scene.item("transportStop");
+Original expression:
+    require(stop, "missing transport stop for the focus steal");
+
+A090 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:588
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    stop->forceActiveFocus();
+    QTest::qWait(50ms);
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
+            "focus loss tore down a live gesture instead of surviving");
+
+A091 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:590
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.model->property("activeNoteId").toInt() == 1,
+            "focus loss dropped the active note");
+
+A092 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:595
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    const QPointF further = moved + QPointF(scene.beatWidth * 6 / 24, 0);
+    scene.move(further);
+    scene.release(further);
+Original expression:
+    awaitState(
+        [&] {
+            const QJsonObject value = scene.note(1);
+            return value.value("tick").toInt(-1) == 12 && value.value("pitch").toInt(-1) == 61;
+        },
+        "move after focus loss did not commit");
+
+A093 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:601
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 1, "post-focus-loss commit did not push exactly one command");
+
+A094 | verifyCancelFocusLostRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:603
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.undo();
+Original expression:
+    awaitState([&] { return undoSummary(scene.model) == pressed; },
+               "undo did not restore the pre-move state after focus loss");
+
+A095 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:617
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    input->forceActiveFocus();
+    QTest::qWait(30ms);
+    pass("cancel-focuslost-keeps-live-gesture");
+}
+
+void verifyCancelHiddenRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+    scene.reveal(scene.expectedBox(0, 18, 60).center());
+    QTest::mouseMove(scene.window, scene.windowPoint(scene.expectedBox(0, 18, 60).center()));
+    QTest::qWait(30ms);
+Original expression:
+    require(scene.model->property("cursorKind").toInt() == 1,
+            "note hover did not arm the move cursor before the hidden cancel");
+
+A096 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:623
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.reveal(scene.point(24, 60));
+    const QPoint gutterTarget(qRound(scene.model->property("keyboardWidth").toDouble() / 2),
+                              scene.windowPoint(scene.point(24, 60)).y());
+    QTest::mouseMove(scene.window, gutterTarget);
+Original expression:
+    awaitState([&] { return scene.model->property("hoverKey").toInt() >= 0; },
+               "keyboard hover did not arm before the hidden cancel");
+
+A097 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:627
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
+            "draw did not preview before the hidden cancel");
+
+A098 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:629
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(namedItem(scene.surface, QStringLiteral("drawPreview")),
+            "draw preview item is missing before the hidden cancel");
+
+A099 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:631
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0, "draw preview committed before the hidden cancel");
+
+A100 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:632
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.surface->setProperty("visible", false), "cannot hide the grid surface");
+
+A101 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:633
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(!scene.surface->isVisible(), "surface hide did not report !isVisible");
+
+A102 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:634
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
+               "hidden cancel left the draw preview");
+
+A103 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:636
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "hidden cancel left a live gesture");
+
+A104 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:637
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.model->property("hoverKey").toInt() == -1,
+            "hidden cancel did not clear keyboard hover");
+
+A105 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:639
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.model->property("cursorKind").toInt() == 0,
+            "hidden cancel did not reset the cursor");
+
+A106 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:641
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "hidden cancel pushed an undo command");
+
+A107 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:642
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.lastCancelReason() == 2, "surface hide did not record Hidden");
+
+A108 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:643
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.surface->setProperty("visible", true), "cannot restore the grid surface");
+
+A109 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:646
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    QTest::qWait(50ms);
+    scene.release(scene.point(146, 102));
+Original expression:
+    require(undoSummary(scene.model) == fixture && scene.revision() == 0,
+            "post-teardown release committed after the hidden cancel");
+
+A110 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:654
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    requireFreshDrawCommits(scene, "fresh draw did not commit after the surface hidden cancel");
+    // Window-level Hidden: QEvent::Hide on the host window. The filter
+    // names Hidden (2). No QML onVisibleChanged on the window.
+    scene.reset();
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
+            "draw did not preview before window hide");
+
+A111 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:657
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    scene.window->hide();
+Original expression:
+    awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
+               "window hide left the draw preview");
+
+A112 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:659
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "window hide left a live gesture");
+
+A113 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:660
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(!scene.window->isVisible(), "window hide left the window visible");
+
+A114 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:661
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.lastCancelReason() == 2, "window hide did not record Hidden");
+
+A115 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:662
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoSummary(scene.model) == fixture, "window hide mutated notes or selection");
+
+A116 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:663
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "window hide pushed an undo command");
+
+A117 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:665
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    scene.window->show();
+Original expression:
+    awaitState([&] { return scene.window->isVisible(); },
+               "window did not reshow after the hide cancel");
+
+A118 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:669
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    QTest::qWait(50ms);
+    scene.release(scene.point(146, 102));
+Original expression:
+    require(undoSummary(scene.model) == fixture && scene.revision() == 0,
+            "post-teardown release committed after window hide");
+
+A119 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:679
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    requireFreshDrawCommits(scene, "fresh draw did not commit after the window hidden cancel");
+    // Editor-open coverage (spec S6.2: pitch preview discarded when the
+    // editor is open). The modal popup precludes a live grid gesture, so
+    // this phase selects, opens the editor with G, and hides the grid:
+    // notes and revision must be untouched, the popup session must
+    // survive, and dismissal must commit no controller command.
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+Original expression:
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the editor");
+
+A120 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:682
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QString selected = undoSummary(scene.model);
+    QTest::keyClick(scene.window, Qt::Key_G);
+Original expression:
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "G did not open the pitch popup before the hidden cancel");
+
+A121 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:685
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
+            "pitch editor is missing at the hidden cancel");
+
+A122 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:687
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.surface->setProperty("visible", false),
+            "cannot hide the grid surface with editor open");
+
+A123 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:690
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::qWait(50ms);
+Original expression:
+    require(undoSummary(scene.model) == selected, "hidden cancel mutated notes with editor open");
+
+A124 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:691
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(),
+            "hidden cancel pushed a command with editor open");
+
+A125 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:693
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
+            "hidden cancel tore down the pitch popup");
+
+A126 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:695
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(),
+            "hidden cancel hid the pitch popup");
+
+A127 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:697
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.surface->setProperty("visible", true), "cannot restore the grid surface");
+
+A128 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:700
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::qWait(50ms);
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the pitch popup after the hidden cancel");
+
+A129 | verifyCancelHiddenRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:702
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(),
+            "hidden cancel with editor open fabricated a controller command");
+
+A130 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:714
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("cancel-hidden-tears-down-and-clears-hover");
+}
+
+void verifyCancelWindowDeactivatedRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+    scene.reveal(scene.expectedBox(0, 18, 60).center());
+    QTest::mouseMove(scene.window, scene.windowPoint(scene.expectedBox(0, 18, 60).center()));
+    QTest::qWait(30ms);
+Original expression:
+    require(scene.model->property("cursorKind").toInt() == 1,
+            "note hover did not arm the move cursor before window deactivate");
+
+A131 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:720
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.reveal(scene.point(24, 60));
+    const QPoint gutterTarget(qRound(scene.model->property("keyboardWidth").toDouble() / 2),
+                              scene.windowPoint(scene.point(24, 60)).y());
+    QTest::mouseMove(scene.window, gutterTarget);
+Original expression:
+    awaitState([&] { return scene.model->property("hoverKey").toInt() >= 0; },
+               "keyboard hover did not arm before window deactivate");
+
+A132 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:724
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    scene.press(scene.point(168, 100));
+    scene.move(scene.point(146, 102));
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Drawing")),
+            "draw did not preview before window deactivate");
+
+A133 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:730
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    // Host filter names WindowDeactivated (3). Visibility is the scenario
+    // distinction, not the reason separator. Do not assert !isActive.
+    QEvent deactivate(QEvent::WindowDeactivate);
+    QCoreApplication::sendEvent(scene.window, &deactivate);
+Original expression:
+    awaitState([&] { return !namedItem(scene.surface, QStringLiteral("drawPreview")); },
+               "window deactivate left the draw preview");
+
+A134 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:732
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "window deactivate left a live gesture");
+
+A135 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:733
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.model->property("hoverKey").toInt() == -1,
+            "window deactivate did not clear keyboard hover");
+
+A136 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:735
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.model->property("cursorKind").toInt() == 0,
+            "window deactivate did not reset the cursor");
+
+A137 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:737
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoSummary(scene.model) == fixture, "window deactivate mutated notes or selection");
+
+A138 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:738
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "window deactivate pushed an undo command");
+
+A139 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:739
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.window->isVisible(), "window deactivate hid the window");
+
+A140 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:740
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(scene.lastCancelReason() == 3, "window deactivate did not record WindowDeactivated");
+
+A141 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:742
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    scene.release(scene.point(146, 102));
+Original expression:
+    require(undoSummary(scene.model) == fixture && scene.revision() == 0,
+            "post-teardown release committed after window deactivate");
+
+A142 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:749
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    requireFreshDrawCommits(scene, "fresh draw did not commit after window deactivate");
+    // Host arbitration: with the pitch popup open and no grid gesture, the
+    // same window event must leave the popup session alone.
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+Original expression:
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
+
+A143 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:751
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_G);
+Original expression:
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "G did not open the pitch popup before window deactivate");
+
+A144 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:757
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QEvent popupDeactivate(QEvent::WindowDeactivate);
+    QCoreApplication::sendEvent(scene.window, &popupDeactivate);
+    QTest::qWait(50ms);
+Original expression:
+    require(scene.lastCancelReason() == 3,
+            "popup window deactivate did not record WindowDeactivated");
+
+A145 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:759
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.window->property("pitchBridge").value<QObject *>() != nullptr,
+            "window deactivate tore down the pitch popup");
+
+A146 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:761
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0, "window deactivate pushed a command with no grid gesture");
+
+A147 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:762
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(),
+            "window deactivate hid the pitch popup");
+
+A148 | verifyCancelWindowDeactivatedRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:766
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    scene.item("pitchBendGraph")->forceActiveFocus();
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the pitch popup after window deactivate");
+
+A149 | verifyCancelRightUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:782
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("cancel-window-deactivated-matches-hidden");
+}
+
+void verifyCancelRightUngrabRow(const UndoScene &scene)
+{
+    scene.reset();
+    const QString fixture = undoSummary(scene.model);
+    const QRectF band = sceneRect(scene.item("gridNote_1"))
+                            .united(sceneRect(scene.item("gridNote_2")))
+                            .adjusted(-6, -6, 6, 6);
+    const QPoint start = band.topLeft().toPoint();
+    const QPoint end = band.bottomRight().toPoint();
+    QTest::mousePress(scene.window, Qt::RightButton, Qt::NoModifier, start);
+    QTest::mouseMove(scene.window, end);
+Original expression:
+    awaitState([&] { return undoSelectedCount(scene.model) == 2; },
+               "right-drag did not select two notes before the ungrab cancel");
+
+A150 | verifyCancelRightUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:785
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QQuickItem *grabber = scene.window->mouseGrabberItem();
+Original expression:
+    require(grabber, "right-drag did not acquire the native mouse grab");
+
+A151 | verifyCancelRightUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:787
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    grabber->ungrabMouse();
+Original expression:
+    awaitState([&] { return undoSelectedCount(scene.model) == 0; },
+               "right ungrab did not restore the captured selection");
+
+A152 | verifyCancelRightUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:791
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::mouseRelease(scene.window, Qt::RightButton, Qt::NoModifier, end);
+    QTest::qWait(30ms);
+Original expression:
+    require(undoSummary(scene.model) == fixture,
+            "right ungrab did not restore the exact pre-press selection");
+
+A153 | verifyCancelRightUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:793
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "right ungrab left a live gesture");
+
+A154 | verifyCancelRightUngrabRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:794
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "right ungrab pushed an undo command");
+
+A155 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:809
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("cancel-right-ungrab-restores-captured-selection");
+}
+
+void verifyEscapeGestureRow(const UndoScene &scene)
+{
+    // Left gesture: Escape mid-move cancels through the pointer-ungrab
+    // teardown — notes unmoved, gesture gone, the selection captured at
+    // press survives, revision untouched.
+    scene.reset();
+    const QRectF firstBox = scene.expectedBox(0, 18, 60);
+    const QPointF moved = firstBox.center() + QPointF(scene.beatWidth * 6 / 24, -scene.rowHeight);
+    scene.press(firstBox.center());
+    const QString pressed = undoSummary(scene.model);
+    scene.move(moved);
+Original expression:
+    require(cancelStatus(scene).startsWith(QStringLiteral("Moving")),
+            "move did not preview before the Escape cancel");
+
+A156 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:812
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return scene.model->property("activeNoteId").toInt() == -1; },
+               "Escape did not cancel the live move gesture");
+
+A157 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:816
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::NoModifier, scene.windowPoint(moved));
+    QTest::qWait(30ms);
+Original expression:
+    require(undoSummary(scene.model) == pressed,
+            "Escape moved notes or dropped the press-captured selection");
+
+A158 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:818
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(undoSelectedCount(scene.model) == 1,
+            "Escape did not preserve the press-captured selection");
+
+A159 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:820
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "Escape left a live gesture");
+
+A160 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:821
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "Escape pushed an undo command");
+
+A161 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:834
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    // Right gesture: the band grows the selection past the press capture;
+    // Escape restores exactly selectionAtRightPress.
+    scene.reset();
+    scene.click(firstBox.center());
+    const QString captured = undoSummary(scene.model);
+    const QRectF band = sceneRect(scene.item("gridNote_1"))
+                            .united(sceneRect(scene.item("gridNote_2")))
+                            .adjusted(-6, -6, 6, 6);
+    const QPoint start = band.topLeft().toPoint();
+    const QPoint end = band.bottomRight().toPoint();
+    QTest::mousePress(scene.window, Qt::RightButton, Qt::NoModifier, start);
+    QTest::mouseMove(scene.window, end);
+Original expression:
+    awaitState([&] { return undoSelectedCount(scene.model) == 2; },
+               "right-drag did not grow the selection before Escape");
+
+A162 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:837
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return undoSelectedCount(scene.model) == 1; },
+               "Escape did not restore the right-press selection");
+
+A163 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:841
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    QTest::mouseRelease(scene.window, Qt::RightButton, Qt::NoModifier, end);
+    QTest::qWait(30ms);
+Original expression:
+    require(undoSummary(scene.model) == captured,
+            "Escape did not restore the exact right-press selection");
+
+A164 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:843
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(cancelIdle(scene), "Escape left a live right gesture");
+
+A165 | verifyEscapeGestureRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:844
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(),
+            "right-gesture Escape pushed an undo command");
+
+A166 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:856
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("escape-cancels-live-gesture-preserving-selection");
+}
+
+void verifyEscapePitchEditorRow(const UndoScene &scene)
+{
+    // A committed numeric edit survives while the dragged live preview is
+    // discarded: Escape from the graph's focus cancels the graph gesture,
+    // drops the preview, and closes the popup through the arbiter.
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+Original expression:
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note for the popup");
+
+A167 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:858
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_G);
+Original expression:
+    awaitState(
+        [&] { return scene.item("pitchBendGraph") && scene.item("pitchBendGraph")->isVisible(); },
+        "G did not open the pitch popup for the Escape row");
+
+A168 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:866
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::mouseDClick(scene.window, Qt::LeftButton, Qt::NoModifier,
+                       center(scene.item("bendRangeInput")));
+    QTest::qWait(30ms);
+    QTest::keyClick(scene.window, Qt::Key_7);
+    QTest::keyClick(scene.window, Qt::Key_Return);
+Original expression:
+    awaitState([&] { return scene.item("bendRangeInput")->property("text").toString() == "7"; },
+               "pitch bend range numeric editor did not accept text input");
+
+A169 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:868
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 1, "numeric edit did not push exactly one command");
+
+A170 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:885
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    auto *graph = scene.item("pitchBendGraph");
+    const QRectF plot = graph->property("canvasRect").toRectF();
+    const QRectF curveRegion = graph->mapRectToScene(plot).adjusted(6, 6, -6, -6);
+    const QRectF upperCurve(curveRegion.x(), curveRegion.y(), curveRegion.width(),
+                            curveRegion.height() / 3);
+    const QPoint low = graph
+                           ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 2 / 18,
+                                                plot.y() + (plot.height() - 1) * 0.8))
+                           .toPoint();
+    const QPoint high = graph
+                            ->mapToScene(QPointF(plot.x() + (plot.width() - 1) * 16 / 18,
+                                                 plot.y() + (plot.height() - 1) * 0.2))
+                            .toPoint();
+    QTest::mousePress(scene.window, Qt::LeftButton, Qt::ShiftModifier, low);
+    QTest::mouseMove(scene.window, high);
+    QTest::qWait(40ms);
+Original expression:
+    require(undoColorCount(scene.window->grabWindow(), upperCurve, qRgb(205, 84, 84)) > 5,
+            "unreleased pitch gesture did not produce a live preview");
+
+A171 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:888
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.window->property("pitchBridge").value<QObject *>(); },
+               "Escape did not dismiss the pitch popup through the arbiter");
+
+A172 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:891
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    QTest::mouseRelease(scene.window, Qt::LeftButton, Qt::ShiftModifier, high);
+Original expression:
+    require(scene.revision() == 1, "Escape discard pushed an undo command");
+
+A173 | verifyEscapePitchEditorRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:892
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.canUndo(), "Escape discard dropped the committed numeric edit");
+
+A174 | verifyEscapeNoteMenuRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:904
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    // G-reopen raster (discarded preview vs surviving numeric) is
+    // [cutover-disposable]: delivery-dependent. Cutover gate is
+    // selectionkey unmodified (charter V-1).
+    pass("escape-closes-pitch-editor-discarding-preview");
+}
+
+void verifyEscapeNoteMenuRow(const UndoScene &scene)
+{
+    scene.reset();
+    QTest::mouseClick(scene.window, Qt::RightButton, Qt::NoModifier,
+                      center(scene.item("gridNote_1")));
+Original expression:
+    awaitState([&] { return scene.item("noteContextMenu")->property("opened").toBool(); },
+               "right click did not open the note menu");
+
+A175 | verifyEscapeNoteMenuRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:908
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const QString selected = undoSummary(scene.model);
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return !scene.item("noteContextMenu")->property("opened").toBool(); },
+               "Escape did not close the note menu through the arbiter");
+
+A176 | verifyEscapeNoteMenuRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:910
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+Original expression:
+    require(undoSummary(scene.model) == selected, "menu Escape did not preserve the selection");
+
+A177 | verifyEscapeNoteMenuRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:911
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == 0 && !scene.canUndo(), "menu Escape pushed an undo command");
+
+A178 | verifyEscapeIdleRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:921
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    pass("escape-closes-note-menu");
+}
+
+void verifyEscapeIdleRow(const UndoScene &scene)
+{
+    // The preceding pointer click gives the grid its production-equivalent
+    // input focus, so this row exercises real key delivery through QML.
+    scene.reset();
+    scene.click(scene.expectedBox(0, 18, 60).center());
+Original expression:
+    require(undoSelectedCount(scene.model) == 1, "click did not select one note");
+
+A179 | verifyEscapeIdleRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:924
+Disposition: NATIVE
+Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    const int rev = scene.revision();
+    QQuickItem *input = scene.item("pianoGridInput");
+Original expression:
+    require(input && input->hasActiveFocus(),
+            "grid input did not hold active focus for idle Escape");
+
+A180 | verifyEscapeIdleRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:927
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+    QTest::keyClick(scene.window, Qt::Key_Escape);
+Original expression:
+    awaitState([&] { return undoSelectedCount(scene.model) == 0; },
+               "idle Escape did not clear the selection through the grid input");
+
+A181 | verifyEscapeIdleRow | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:929
+Disposition: PARTIAL
+Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Source context since previous assertion:
+
+Original expression:
+    require(scene.revision() == rev && !scene.canUndo(), "idle Escape pushed an undo command");
+
+A182 | verifyGridUndo | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:940
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+    pass("escape-idle-clears-selection");
+}
+
+} // namespace
+
+void verifyGridUndo(QQuickWindow *window, QObject *model)
+{
+    UndoScene scene{window, nullptr, nullptr, model};
+    scene.surface = namedItem(window->contentItem(), QStringLiteral("pianoGridSurface"));
+    scene.viewport = namedItem(window->contentItem(), QStringLiteral("pianoGridViewport"));
+Original expression:
+    require(scene.surface && scene.viewport, "grid scene is missing for the undo smoke");
+
+A183 | verifyGridUndo | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:947
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001-S041 (runEditorCameraChecks/checkGridCameraWheel, rollcheck/static/camera.swift) and S052-S076 (checkViewport/checkProjection, swiftcore/EditorGridCameraChecks.swift) assert the same camera/scroll/zoom/time-axis/pitch-projection math at presenter level. Unproved: the prototype observed it through the QML viewport or the sgm_ parity-oracle substrate; no live C++/Swift differential sweep establishes these numbers here.
+Source context since previous assertion:
+
+    scene.baseFont = model->property("baseFontPx").toDouble();
+    scene.dpr = model->property("devicePixelRatio").toDouble();
+    scene.beatWidth = model->property("beatWidth").toDouble();
+    scene.rowHeight = model->property("rowHeight").toDouble();
+    scene.leadPad = model->property("leadPadWidth").toDouble();
+    scene.ticksPerBeat = model->property("ticksPerBeat").toInt();
+Original expression:
+    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
+                scene.leadPad >= 48 && scene.ticksPerBeat == 24,
+            "grid metrics do not match the production 24 TPQN projection");
+
+A184 | verifyGridCancel | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:966
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+
+    verifyDrawRow(scene);
+    verifyMoveRow(scene);
+    verifyResizeRow(scene);
+    verifyMenuDeleteRow(scene);
+    verifyDoubleClickRow(scene);
+    verifyPitchCurveRow(scene);
+    verifyNoCommandRow(scene);
+    verifyResetRow(scene);
+}
+
+void verifyGridCancel(QQuickWindow *window, QObject *model)
+{
+    UndoScene scene{window, nullptr, nullptr, model};
+    scene.surface = namedItem(window->contentItem(), QStringLiteral("pianoGridSurface"));
+    scene.viewport = namedItem(window->contentItem(), QStringLiteral("pianoGridViewport"));
+Original expression:
+    require(scene.surface && scene.viewport, "grid scene is missing for the cancel smoke");
+
+A185 | verifyGridCancel | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:973
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001-S041 (runEditorCameraChecks/checkGridCameraWheel, rollcheck/static/camera.swift) and S052-S076 (checkViewport/checkProjection, swiftcore/EditorGridCameraChecks.swift) assert the same camera/scroll/zoom/time-axis/pitch-projection math at presenter level. Unproved: the prototype observed it through the QML viewport or the sgm_ parity-oracle substrate; no live C++/Swift differential sweep establishes these numbers here.
+Source context since previous assertion:
+
+    scene.baseFont = model->property("baseFontPx").toDouble();
+    scene.dpr = model->property("devicePixelRatio").toDouble();
+    scene.beatWidth = model->property("beatWidth").toDouble();
+    scene.rowHeight = model->property("rowHeight").toDouble();
+    scene.leadPad = model->property("leadPadWidth").toDouble();
+    scene.ticksPerBeat = model->property("ticksPerBeat").toInt();
+Original expression:
+    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
+                scene.leadPad >= 48 && scene.ticksPerBeat == 24,
+            "grid metrics do not match the production 24 TPQN projection");
+
+A186 | verifyGridEscape | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:989
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype undo/cancel/escape observation below remains an open obligation. The deletion commit records only the load-bearing grip rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Source context since previous assertion:
+
+
+    verifyCancelUngrabRow(scene);
+    verifyCancelFocusLostRow(scene);
+    verifyCancelHiddenRow(scene);
+    verifyCancelWindowDeactivatedRow(scene);
+    verifyCancelRightUngrabRow(scene);
+}
+
+void verifyGridEscape(QQuickWindow *window, QObject *model)
+{
+    UndoScene scene{window, nullptr, nullptr, model};
+    scene.surface = namedItem(window->contentItem(), QStringLiteral("pianoGridSurface"));
+    scene.viewport = namedItem(window->contentItem(), QStringLiteral("pianoGridViewport"));
+Original expression:
+    require(scene.surface && scene.viewport, "grid scene is missing for the escape smoke");
+
+A187 | verifyGridEscape | src/checks/swiftgridprototype/jurisdiction_smoke.cpp:996
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001-S041 (runEditorCameraChecks/checkGridCameraWheel, rollcheck/static/camera.swift) and S052-S076 (checkViewport/checkProjection, swiftcore/EditorGridCameraChecks.swift) assert the same camera/scroll/zoom/time-axis/pitch-projection math at presenter level. Unproved: the prototype observed it through the QML viewport or the sgm_ parity-oracle substrate; no live C++/Swift differential sweep establishes these numbers here.
+Source context since previous assertion:
+
+    scene.baseFont = model->property("baseFontPx").toDouble();
+    scene.dpr = model->property("devicePixelRatio").toDouble();
+    scene.beatWidth = model->property("beatWidth").toDouble();
+    scene.rowHeight = model->property("rowHeight").toDouble();
+    scene.leadPad = model->property("leadPadWidth").toDouble();
+    scene.ticksPerBeat = model->property("ticksPerBeat").toInt();
+Original expression:
+    require(scene.baseFont > 0 && scene.dpr > 0 && scene.beatWidth > 0 && scene.rowHeight > 0 &&
+                scene.leadPad >= 48 && scene.ticksPerBeat == 24,
+            "grid metrics do not match the production 24 TPQN projection");
+
+Remaining original source (closing sequence and helper bodies):
+
+
+    verifyEscapeGestureRow(scene);
+    verifyEscapePitchEditorRow(scene);
+    verifyEscapeNoteMenuRow(scene);
+    verifyEscapeIdleRow(scene);
+    // escape-single-arbiter-paths: menu/popup/grid wiring are the three
+    // rows above. Cross-surface G/focus matrix is cutover/selectionkey
+    // (charter V-1), not sandbox focus plumbing.
+}
+
+Swift assertion predicates
+
+S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
+report.expect(near(compact.snapshot.viewportWidth, 50) &&
+                  near(compact.snapshot.minHScroll, -48) &&
+                  near(compact.snapshot.maxHScroll, 0),
+                  cppID: cameraTransformID,
+                  message: "caller-resolved minimum viewport produces observable camera bounds")
+
+S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
+report.expect(near(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
+                  message: "tick/content transforms round-trip with a fractional offset")
+
+S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
+report.expect(near(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
+                  message: "horizontal restoration preserves fractional offsets")
+
+S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
+report.expect(near(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+                  cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
+
+S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
+report.expect(near(camera.snapshot.scrollX, -48) && near(camera.snapshot.minHScroll, -48),
+                  cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
+
+S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
+report.expect(near(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
+                  message: "bound timeline end reaches the plot origin")
+
+S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
+report.expect(near(viewportCamera.snapshot.scrollX, -48),
+                  cppID: cameraTransformID,
+                  message: "bound viewport shrink reclamps the changed pre-roll floor")
+
+S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
+report.expect(near(viewportCamera.snapshot.scrollX, 10.25),
+                  cppID: cameraTransformID,
+                  message: "bound viewport updates preserve a legal fractional offset")
+
+S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
+report.expect(zoom.zoomChanged && zoom.scrollChanged &&
+                  near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
+                  message: "interactive time zoom preserves its tick anchor")
+
+S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
+report.expect(near(clampedTimeZoom.snapshot.scrollX, 64) &&
+                  !near(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
+                  cppID: cameraZoomID,
+                  message: "time zoom reaches its bound when the pointer anchor is unreachable")
+
+S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
+report.expect(near(camera.snapshot.pixelsPerBeat, 48) &&
+                  near(camera.snapshot.keyHeight, 16) && near(camera.snapshot.scrollX, 10.5) &&
+                  near(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
+                  message: "unanchored restoration keeps valid fractional camera state")
+
+S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
+report.expect(near(sanitized.snapshot.pixelsPerBeat, 32) &&
+                  near(sanitized.snapshot.keyHeight, 12) &&
+                  near(sanitized.snapshot.scrollX, 0) && near(sanitized.snapshot.scrollY, 0),
+                  cppID: cameraZoomID,
+                  message: "restoration sanitizes non-finite transient view-state values independently")
+
+S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
+report.expect(near(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
+                  message: "content shrink reclamps the horizontal offset")
+
+S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
+report.expect(near(camera.snapshot.viewportWidth, 800) && near(camera.snapshot.scrollY, 0),
+                  cppID: cameraTransformID,
+                  message: "viewport growth reclamps vertical content")
+
+S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
+report.expect(near(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
+                  message: "an unbound timeline homes to its lead pad")
+
+S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
+report.expect(near(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
+                  message: "unbound viewport updates follow the resolved home")
+
+S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
+report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
+        chromatic.row(forPitch: pitch) == 127 - pitch &&
+            chromatic.visiblePitch(at: 127 - pitch) == pitch
+    }, cppID: cameraPitchID,
+    message: "chromatic pitch mapping remains bijective across the full MIDI range")
+
+S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:108
+report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
+                  folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
+                  folded.nearestVisiblePitch(to: 62) == 60 &&
+                  folded.nearestVisiblePitch(to: 100) == 67 &&
+                  folded.nearestVisiblePitch(to: -5) == 60 &&
+                  emptyProjection.nearestVisiblePitch(to: 60) == nil,
+                  cppID: cameraPitchID,
+                  message: "pitch rows and nearest lookup preserve production ordering")
+
+S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:116
+report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
+                  folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
+                  cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
+
+S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
+report.expect(near(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
+                       10) &&
+                  folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
+                  folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
+                  cppID: cameraPitchID,
+                  message: "fractional DPR snapping defines the inverse row boundary")
+
+S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
+report.expect(near(projectedContent.snapshot.scrollY, 15),
+                  cppID: cameraPitchID,
+                  message: "pitch projection shrink reclamps the vertical offset")
+
+S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
+report.expect(near(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
+                  message: "vertical bounds derive from projected row height")
+
+S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
+report.expect(near(anchoredRow, resultingRow), cppID: cameraZoomID,
+                  message: "pitch zoom preserves its row anchor when bounds permit")
+
+S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
+report.expect(near(clampedPitchZoom.snapshot.scrollY, 0) &&
+                  near(clampedPitchZoom.snapshot.maxVScroll, 0) &&
+                  !near(rowAfterBoundedZoom, rowBeforeBoundedZoom),
+                  cppID: cameraZoomID,
+                  message: "pitch zoom reaches its bound when the row anchor is unreachable")
+
+S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
+report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
+                  cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
+
+S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
+report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
+                  message: "hidden pitches do not move the camera")
+
+S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:173
+report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
+                  near(reveal.snapshot.scrollX, 573.3333333333),
+                  cppID: cameraTransformID,
+                  message: "tick reveal uses the production one-third anchor")
+
+S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:178
+report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
+                                             preferEnd: false, dpr: 1) &&
+                  near(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
+                  message: "a fitting range on the physical right boundary stays visible")
+
+S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:182
+report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                            preferEnd: false, dpr: 1) &&
+                  near(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
+                  message: "wide range reveal prefers its requested leading edge")
+
+S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:187
+report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                            preferEnd: true, dpr: 1) &&
+                  near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
+                  message: "wide range reveal honors the requested trailing edge")
+
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:220
+report.expect(
+            after.pixelsPerBeat > before.pixelsPerBeat
+                && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
+                && counters.camera == publications + 1,
+            cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
+
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:233
+report.expect(
+        session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
+        cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
+
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:248
+report.expect(
+        gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
+            && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
+                    angleZoom * pow(1.0015, 120), tolerance: 1e-7),
+        cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
+
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:253
+report.expect(
+        counters.camera == 2,
+        cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
+
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:263
+report.expect(
+        gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
+        cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
+
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:278
+report.expect(
+        gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
+            && minimumPublications == 1 && counters.camera == minimumPublications,
+        cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
+
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:295
+report.expect(
+        gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
+            && maximumPublications == 1 && counters.camera == maximumPublications,
+        cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
+
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:306
+report.expect(
+        gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
+        cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
+
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:318
+report.expect(
+        pitchAfter.keyHeight > pitchBefore.keyHeight
+            && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
+            && counters.camera == 1,
+        cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
+
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:329
+report.expect(
+        session.camera.snapshot == pitchMomentum && counters.camera == 0,
+        cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
+
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
+report.expect(
+        gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
+        cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")
+
+S042 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:106
+report.expect(session.selectedNoteOrder == [b, a]
+        && session.document.note(session.selectedNoteOrder[0])?.velocity == 90,
+        cppID: id, message: "Ctrl-add of earlier A(v40) retains later B(v90) as first selection")
+
+S043 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:111
+report.expectEqual([a, b], session.selectedNoteOrder, cppID: id,
+                       what: "deselecting and re-adding appends the note")
+
+S044 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:114
+report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+                       what: "replacement preserves first occurrence and removes duplicates")
+
+S045 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:118
+report.expect(Array(session.selectedNoteOrder.prefix(2)) == [b, a]
+        && session.selectedNotes.contains(c),
+        cppID: id, message: "band keeps press order before newly covered notes")
+
+S046 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:122
+report.expectEqual([b, a], session.selectedNoteOrder, cppID: id,
+                       what: "band cancellation restores selection order")
+
+S047 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:126
+report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+                       what: "order-only replacement publishes the selection domain")
+
+S048 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:133
+report.expectEqual([SessionChangeDomains.selection], publications, cppID: id,
+                       what: "order-only replacement and additive selection coalesce")
+
+S049 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:138
+report.expect(publications.isEmpty, cppID: id,
+                  message: "unchanged normalized selection publishes nothing")
+
+S050 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:140
+report.expect(session.document.revision == revision
+        && session.document.history.currentIdentity == history
+        && session.document.isDirty == dirty,
+        cppID: id, message: "selection gestures never mutate document or history")
+
+S051 | checkOrderedSelection | src/checks/rollcheck/EditorGridCameraChecks.swift:146
+report.expect(session.selectedNoteOrder == [c, a] && session.selectedNotes == Set([c, a]),
+                  cppID: id, message: "deletion prunes membership and preserves survivor order")
+
+S052 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:160
+report.expect(
+        gridCameraNear(first.viewportWidth, 640) && gridCameraNear(first.rollHeight, 320),
+        cppID: viewportID, message: "viewport dimensions are pushed into the session camera")
+
+S053 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:163
+report.expect(
+        gridCameraNear(first.minHScroll, expectedMin)
+            && gridCameraNear(first.maxHScroll,
+                    Double(session.timeline.lengthTicks) * first.pixelsPerTick)
+            && gridCameraNear(first.maxVScroll, expectedMaxV),
+        cppID: viewportID, message: "camera bounds derive from viewport, document extent, and projection")
+
+S054 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:169
+report.expect(
+        first.scrollY >= 0 && first.scrollY <= first.maxVScroll,
+        cppID: viewportID, message: "first viewport push homes vertically within camera bounds")
+
+S055 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:172
+report.expect(
+        gridCameraNear(grid.beatWidth, first.pixelsPerBeat) && gridCameraNear(grid.rowHeight, first.keyHeight),
+        cppID: viewportID, message: "published scales equal the session camera snapshot")
+
+S056 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:183
+report.expect(
+        session.camera.snapshot == fractional && counters.camera == 0,
+        cppID: viewportID, message: "identical viewport push preserves fractional offsets and publishes nothing")
+
+S057 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:191
+report.expect(
+        tallViewport.maxVScroll < shortHeight.maxVScroll
+            && gridCameraNear(tallViewport.scrollY, tallViewport.maxVScroll),
+        cppID: viewportID, message: "roll-height increase reclamps vertical scroll")
+
+S058 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:206
+report.expect(
+        gridCameraNear(doubled.pixelsPerBeat, 69) && gridCameraNear(doubled.keyHeight, 26),
+        cppID: viewportID, message: "double-font push applies the rounded font-relative defaults")
+
+S059 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:209
+report.expect(
+        gridCameraNear(restored.pixelsPerBeat, 35) && gridCameraNear(restored.keyHeight, 13),
+        cppID: viewportID, message: "font push back restores the exact earlier scale")
+
+S060 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:212
+report.expect(
+        counters.camera == 2,
+        cppID: viewportID, message: "each effective font push publishes exactly once")
+
+S061 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:227
+report.expect(
+        gridCameraNear(fontMinimum.pixelsPerBeat, 9) && gridCameraNear(fontMinimum.keyHeight, 9),
+        cppID: viewportID, message: "pushed font defines time and key-height minimums")
+
+S062 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:230
+report.expect(
+        gridCameraNear(fontMaximum.pixelsPerBeat, 1_387) && gridCameraNear(fontMaximum.keyHeight, 69),
+        cppID: viewportID, message: "pushed font defines time and key-height maximums")
+
+S063 | checkViewport | src/checks/rollcheck/EditorGridCameraChecks.swift:250
+report.expect(
+        farID != nil && expandedLength > originalLength
+            && session.timeline.lengthTicks < expandedLength
+            && gridCameraNear(shrunk.scrollX, shrunk.maxHScroll),
+        cppID: viewportID, message: "document shrink privately reconciles extent and reclamps horizontal scroll")
+
+S064 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:272
+report.expect(
+        !markXs.isEmpty && markXs.allSatisfy { $0 >= -cullingWidth - 2 && $0 <= 2 * cullingWidth + 2 },
+        cppID: projectionID, message: "generated time marks stay inside the one-viewport culling window")
+
+S065 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:275
+report.expect(
+        (markXs.min() ?? 1) <= 0 && (markXs.max() ?? -1) >= cullingWidth,
+        cppID: projectionID, message: "generated time marks cover the visible plot")
+
+S066 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:281
+report.expect(
+        grid.noteSummary == summaryBeforeCameraMove,
+        cppID: projectionID, message: "camera movement does not alter noteSummary document state")
+
+S067 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:309
+report.expect(
+        projected,
+        cppID: projectionID, message: "known note rectangle equals the camera projection")
+
+S068 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:317
+report.expect(
+        maskCount == (zeroX > 0 ? 1 : 0),
+        cppID: projectionID, message: "pre-roll mask presence follows the projected tick-zero position")
+
+S069 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:329
+report.expect(
+        session.selectedNotes.contains(originalNote.id),
+        cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
+
+S070 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:347
+report.expect(
+        previewRect.map {
+            gridCameraNear($0.x, session.camera.displayX(
+                tick: Double(expectedTick), origin: 0, dpr: grid.devicePixelRatio))
+                && gridCameraNear($0.y, expectedPreviewY + 1 / grid.devicePixelRatio)
+        } ?? false,
+        cppID: projectionID, message: "one-cell drag publishes the snapped tick and pitch preview")
+
+S071 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:358
+report.expect(
+        session.document.revision == originalRevision + 1
+            && moved.map { Int($0.tick) == expectedTick && Int($0.pitch) == expectedPitch } == true,
+        cppID: projectionID, message: "endPointer commits one revision at the snapped tick and pitch")
+
+S072 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:402
+report.expect(
+        session.document.revision == drawRevision + 1
+            && created.map { Int($0.tick) == drawTick && Int($0.pitch) == drawPitch } == true,
+        cppID: projectionID, message: "draw drag on an empty row adds one snapped note")
+
+S073 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:416
+report.expect(
+        session.selectedNotes == visibleIDs,
+        cppID: projectionID, message: "right-drag band selects exactly the visible intersecting notes")
+
+S074 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:425
+report.expect(
+        session.document.revision == cancelRevision
+            && session.document.notes(in: grid.trackIndex).count == cancelCount,
+        cppID: projectionID, message: "inputCancelled discards an active gesture without document mutation")
+
+S075 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:432
+report.expect(
+        session.document.revision == cancelRevision
+            && session.document.notes(in: grid.trackIndex).count == cancelCount,
+        cppID: projectionID, message: "Escape discards an active gesture without document mutation")
+
+S076 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:440
+report.expect(
+        session.document.revision == cancelRevision,
+        cppID: projectionID, message: "press outside projected pitch rows is rejected")
+
+S077 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:475
+report.expect(
+        counters.camera == before + 1
+            && gridCameraNear(tickReveal.scrollX, expectedTickReveal),
+        cppID: isolationID, message: "ensureTickVisible uses the reveal fraction in one publication")
+
+S078 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:488
+report.expect(
+        counters.camera == before + 1
+            && gridCameraNear(
+                endReveal.scrollX,
+                endReveal.maxHScroll - endReveal.viewportWidth
+                    + 1 / grid.devicePixelRatio),
+        cppID: isolationID, message: "preferEnd true aligns an oversized range to the right edge")
+
+S079 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:504
+report.expect(
+        counters.camera == before + 1 && gridCameraNear(startReveal.scrollX, 0),
+        cppID: isolationID, message: "preferEnd false aligns an oversized range to its start")
+
+S080 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:512
+report.expect(
+        counters.camera == before + 1
+            && gridCameraNear(keyReveal.scrollY, keyReveal.maxVScroll),
+        cppID: isolationID, message: "ensureKeyVisible aligns the bottom pitch at the viewport edge")
+
+S081 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:516
+report.expect(
+        gridCameraNear(grid.cameraScrollX, session.camera.snapshot.scrollX)
+            && gridCameraNear(grid.cameraScrollY, session.camera.snapshot.scrollY),
+        cppID: isolationID, message: "presenter scroll values track the revealed session camera")
+
+S082 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:536
+report.expect(
+        counters.camera == before,
+        cppID: isolationID, message: "redundant, non-finite, hidden, and already-visible navigation is silent")
+
+S083 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:542
+report.expect(
+        session.camera.snapshot == published && grid.editCursorTick == Int(cursor),
+        cppID: isolationID, message: "direct edit-cursor change neither moves camera nor republishes presenter cursor")
+
+S084 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:545
+report.expect(
+        counters.document == 0 && counters.playback == 0 && counters.cursor == 1
+            && session.document.revision == revision && session.document.isDirty == dirty
+            && session.document.history.canUndo == canUndo
+            && session.document.history.canRedo == canRedo,
+        cppID: isolationID, message: "camera navigation is isolated from document, playback, dirty state, and history")
+
+S085 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:563
+report.expect(
+        inserted?.count == 1 && counters.camera == 0,
+        cppID: isolationID, message: "committed document edit performs no standalone camera publication")
+
+S086 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:566
+report.expect(
+        counters.playback == 1 && counters.document == 1 && counters.coherentDocumentCallback,
+        cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
+
+Shared helper:
+No shared Swift fixture file carrying report.expect*/expectEqual calls was identified for this pairing: camera.swift is self-contained (Foundation+PorydawApp) and EditorGridCameraChecks.swift builds its DocumentSession inline (fixture-guard report.fail calls at EditorGridCameraChecks.swift:78,88,322,393,533 are guard aborts, not predicates). The expectEqual helper itself lives in src/checks/support/corecheck/CoreCheckSupport.swift (SHA-256: d4419a4b2e15d1291d435c2e410d3b2f8357a875f9cb27751e01ef1d01beaf65) as a definition, not a call site:
+    func expectEqual<T: Equatable>(_ expected: T, _ actual: T, cppID: String,
+                                    what: String) {
+        if expected == actual {
+            pass(cppID, row: what)
+        } else {
+            fail(cppID, "\(what): expected=\(expected) actual=\(actual)")
+        }
+    }

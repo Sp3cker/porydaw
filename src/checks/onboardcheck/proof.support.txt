@@ -1,0 +1,410 @@
+Assertion correspondence: onboardcheck/support.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/onboardcheck/support.cpp
+Original SHA-256: 20d14a92ec00a9031cfbcd86ec7a65e914dd199a574e6d7c57583ff078f8e7b8
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+All 13 sites in this file are GAP: projectEnumerationAndTrackBudgets exercises pure SongRegistry voicegroup/musicPlayer parsing and DecompProject track budgets against a rewritten music_player_table.inc on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them. The file's helper bodies (copyProject, readFile, writeFile, midiFixture, registeredCount, midiDirectory, defaultCfg, compile, openSong, waitForDialog, closeWorkspace, runOnboardCheck) carry no assertion sites.
+Site tally: 13 sites (13 GAP).
+
+Execution and ownership
+The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures: checks/support/songfixture.h (ProjectFixture::copyOf).
+
+Fixture, sequence and row constraints
+No data rows, loops, or branch guards expand these sites beyond a single run: the test rewrites music_player_table.inc with literal, numeric, and unknown-symbol track counts, asserts parsed budgets (BGM 12, SE1 3, SE2 16 via NUM_TRACKS_SE2 - 4, SE3 -1), asserts project.trackBudgetFor fallbacks (12 and 16), then restores the original table. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Verification
+Command: deno task verify --filter onboardcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
+
+Swift sources inspected (SHA-256)
+No same-dir support.swift exists, and no Swift check references this
+file's methods or behavior. Inspected at this revision:
+src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+(sole Swift file carrying onboardcheck/ cppIDs; all of them name
+OnboardingTest::import* methods, none in this file).
+
+Original assertion inventory and source sequence
+
+A001 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/onboardcheck/onboardingtest.h"
+
+  #include <QAbstractButton>
+  #include <QApplication>
+  #include <QFile>
+  #include <QFileInfo>
+  #include <QMessageBox>
+  #include <QProcess>
+  #include <QWidget>
+  #include <optional>
+
+  #include "checks/support/asyncwait.h"
+  #include "checks/support/songfixture.h"
+  #include "mainwindow.h"
+  #include "ui/songtab.h"
+  #include "ui/workspaceui.h"
+
+  OnboardingTest::OnboardingTest(QString projectRoot, QString mid2agbPath)
+      : m_projectRoot(std::move(projectRoot))
+      , m_mid2agbPath(std::move(mid2agbPath))
+  {}
+
+  OnboardingTest::~OnboardingTest() = default;
+
+  std::unique_ptr<checks::ProjectFixture> OnboardingTest::copyProject(QString &error)
+  {
+      return checks::ProjectFixture::copyOf(m_projectRoot, error);
+  }
+
+  QByteArray OnboardingTest::readFile(const QString &path, QString &error) const
+  {
+      QFile file(path);
+      if (!file.open(QIODevice::ReadOnly)) {
+          error = path + QStringLiteral(": ") + file.errorString();
+          return {};
+      }
+      error.clear();
+      return file.readAll();
+  }
+
+  bool OnboardingTest::writeFile(const QString &path, const QByteArray &bytes, QString &error) const
+  {
+      QFile file(path);
+      if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+          error = path + QStringLiteral(": ") + file.errorString();
+          return false;
+      }
+      if (file.write(bytes) != bytes.size()) {
+          error = path + QStringLiteral(": ") + file.errorString();
+          return false;
+      }
+      error.clear();
+      return true;
+  }
+
+  bool OnboardingTest::midiFixture(const QString &name, SmfFile &midi, QString &error) const
+  {
+      const QString path = m_projectRoot + QStringLiteral("/test_midis/") + name;
+      return SmfFile::readFile(path, &midi, &error);
+  }
+
+  int OnboardingTest::registeredCount(const DecompProject &project) const
+  {
+      int count = 0;
+      for (const SongInfo &song : project.songs())
+          count += song.registered ? 1 : 0;
+      return count;
+  }
+
+  QString OnboardingTest::midiDirectory(const QString &root) const
+  {
+      return root + QStringLiteral("/sound/songs/midi");
+  }
+
+  bool OnboardingTest::defaultCfg(const QString &root, SongCfg &cfg, QString &error) const
+  {
+      const QStringList voicegroups = SongRegistry::voicegroupArgs(root);
+      if (voicegroups.isEmpty()) {
+          error = QStringLiteral("project has no voicegroups");
+          return false;
+      }
+      cfg = {};
+      cfg.exactGate = true;
+      cfg.reverb = 50;
+      cfg.masterVolume = 100;
+      cfg.voicegroupArg = voicegroups.first();
+      cfg.rawFlags = SongRegistry::mergeCfgFlags(cfg);
+      error.clear();
+      return true;
+  }
+
+  bool OnboardingTest::compile(const QString &root, const QString &midPath, const QStringList &flags,
+                               QString &error) const
+  {
+      const QString binary =
+          m_mid2agbPath.isEmpty() ? root + QStringLiteral("/tools/mid2agb/mid2agb") : m_mid2agbPath;
+      if (!QFileInfo(binary).isExecutable()) {
+          error = QStringLiteral("mid2agb is not executable: ") + binary;
+          return false;
+      }
+      if (!midPath.endsWith(QStringLiteral(".mid"))) {
+          error = QStringLiteral("expected a .mid file: ") + midPath;
+          return false;
+      }
+      const QString out = midPath.left(midPath.size() - 4) + QStringLiteral(".s");
+      QProcess process;
+      process.start(binary, QStringList(flags) << midPath << out);
+      if (!process.waitForFinished(15000)) {
+          error = QStringLiteral("mid2agb timed out: ") + process.errorString();
+          return false;
+      }
+      const QString detail = QString::fromLocal8Bit(process.readAllStandardOutput()) +
+                             QString::fromLocal8Bit(process.readAllStandardError());
+      if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0 ||
+          QFileInfo(out).size() <= 0) {
+          error = QStringLiteral("mid2agb failed: ") + detail;
+          return false;
+      }
+      error.clear();
+      return true;
+  }
+
+  bool OnboardingTest::openSong(MainWindow &window, const QString &root, const QString &label,
+                                QString &error) const
+  {
+      window.m_persistSession = false;
+      window.m_workspace->restoreSongFilters({});
+      const std::optional<SongName> name = SongName::create(label);
+      if (!name) {
+          error = QStringLiteral("invalid song label: ") + label;
+          return false;
+      }
+      window.m_workspace->requestProjectOpenAt(root);
+      if (checks::async_wait::waitUntil([] { return true; },
+                                        [&window] {
+                                            const ProjectOpenState state =
+                                                window.m_workspace->projectState().state;
+                                            return state == ProjectOpenState::Ready ||
+                                                   state == ProjectOpenState::Failed;
+                                        }) != checks::async_wait::Result::Ready ||
+          window.m_workspace->projectState().state != ProjectOpenState::Ready) {
+          error = QStringLiteral("project did not open");
+          return false;
+      }
+      window.m_workspace->requestSongOpen(*name);
+      if (checks::async_wait::waitUntil(
+              [&window] {
+                  return window.m_workspace->projectState().state == ProjectOpenState::Ready;
+              },
+              [&window, &name] {
+                  SongTab *tab = window.m_workspace->songTabFor(*name);
+                  return tab && tab->isReady() && window.m_workspace->selectedSongTab() == tab;
+              }) != checks::async_wait::Result::Ready) {
+          error = QStringLiteral("song tab did not become ready: ") + label;
+          return false;
+      }
+      SongTab *tab = window.m_workspace->songTabFor(*name);
+      if (!tab || tab->document().label() != label) {
+          error = QStringLiteral("opened wrong song tab: ") + label;
+          return false;
+      }
+      error.clear();
+      return true;
+  }
+
+  QMessageBox *OnboardingTest::waitForDialog(MainWindow &window, OnboardingDialog operation,
+                                             QString &error) const
+  {
+      QMessageBox *dialog = nullptr;
+      const auto expectedRole = [operation] {
+          switch (operation) {
+          case OnboardingDialog::Register:
+              return QMessageBox::AcceptRole;
+          case OnboardingDialog::Delete:
+              return QMessageBox::DestructiveRole;
+          }
+          return QMessageBox::InvalidRole;
+      };
+      const bool appeared = QTest::qWaitFor([&] {
+          QWidget *const modal = QApplication::activeModalWidget();
+          if (!modal)
+              return false;
+          auto *box = qobject_cast<QMessageBox *>(modal);
+          if (!box || box->parent() != &window) {
+              error = QStringLiteral("unexpected modal dialog: ") + modal->metaObject()->className();
+              modal->close();
+              return true;
+          }
+          for (QAbstractButton *button : box->buttons()) {
+              if (box->buttonRole(button) == expectedRole()) {
+                  dialog = box;
+                  return true;
+              }
+          }
+          error = QStringLiteral("unexpected modal button roles after requested operation");
+          box->reject();
+          return true;
+      });
+      if (!appeared && error.isEmpty())
+          error = QStringLiteral("expected modal dialog did not appear");
+      return dialog;
+  }
+
+  void OnboardingTest::closeWorkspace(MainWindow &window) const
+  {
+      window.close();
+      QCoreApplication::processEvents();
+  }
+
+  int runOnboardCheck(const QString &projectRoot, const QString &mid2agbPath,
+                      const QStringList &qtArguments)
+  {
+      OnboardingTest test(projectRoot, mid2agbPath);
+      QStringList arguments{QStringLiteral("onboardcheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  void OnboardingTest::projectEnumerationAndTrackBudgets()
+  {
+      QString error;
+      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error));
+
+A002 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:225
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString root = fixture->root();
+
+Original expression:
+  QVERIFY(!SongRegistry::voicegroupArgs(root).isEmpty());
+
+A003 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:226
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!SongRegistry::musicPlayers(root).isEmpty());
+
+A004 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:229
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString tablePath = root + QStringLiteral("/sound/music_player_table.inc");
+      const QByteArray original = readFile(tablePath, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A005 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:237
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QByteArray table =
+          QByteArrayLiteral("\t.equiv NUM_TRACKS_BGM, 12\n\t.equiv NUM_TRACKS_SE2, 20\n\n"
+                            "gMPlayTable::\n"
+                            "\tmusic_player gMPlayInfo_BGM, gMPlayTrack_BGM, NUM_TRACKS_BGM, 0\n"
+                            "\tmusic_player gMPlayInfo_SE1, gMPlayTrack_SE1, 3, 1\n"
+                            "\tmusic_player gMPlayInfo_SE2, gMPlayTrack_SE2, NUM_TRACKS_SE2, 1\n"
+                            "\tmusic_player gMPlayInfo_SE3, gMPlayTrack_SE3, NUM_TRACKS_WHO, 0\n");
+
+Original expression:
+  QVERIFY2(writeFile(tablePath, table, error), qPrintable(error));
+
+A006 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:245
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QVector<MusicPlayer> players = SongRegistry::musicPlayers(root);
+      const auto count = [&players](const QString &name) {
+          for (const MusicPlayer &player : players)
+              if (player.name == name)
+                  return player.trackCount;
+          return -2;
+      };
+
+Original expression:
+  QCOMPARE(count(QStringLiteral("MUSIC_PLAYER_BGM")), 12);
+
+A007 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:246
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(count(QStringLiteral("MUSIC_PLAYER_SE1")), 3);
+
+A008 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:247
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(count(QStringLiteral("MUSIC_PLAYER_SE2")), 16);
+
+A009 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:248
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(count(QStringLiteral("MUSIC_PLAYER_SE3")), -1);
+
+A010 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:250
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      DecompProject project;
+
+Original expression:
+  QVERIFY2(project.open(root, &error), qPrintable(error));
+
+A011 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:253
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      SongInfo song;
+      song.player = QStringLiteral("MUSIC_PLAYER_BGM");
+
+Original expression:
+  QCOMPARE(project.trackBudgetFor(song), 12);
+
+A012 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:255
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      song.player = QStringLiteral("MUSIC_PLAYER_SE3");
+
+Original expression:
+  QCOMPARE(project.trackBudgetFor(song), 16);
+
+A013 | OnboardingTest::projectEnumerationAndTrackBudgets | src/checks/onboardcheck/support.cpp:256
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(writeFile(tablePath, original, error), qPrintable(error));
+
+Remaining original source (closing sequence and helper bodies):
+
+  }
+
+
+Swift assertion predicates
+None. No Swift counterpart exists and no report.expect* call covers this file, so there are no S entries.
+
+Shared helper:
+None. No Swift fixture file carries expects for this file.

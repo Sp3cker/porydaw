@@ -1,0 +1,876 @@
+Assertion correspondence: onboardcheck/deletion.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/onboardcheck/deletion.cpp
+Original SHA-256: a427826289dd35840dd13b7ba45f32107ebaa1e33089811d631ad956548d199b
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+All 71 sites in this file are GAP: songDeletion and voicegroupDeletion exercise pure SongRegistry unregister/removeSongFlags and VoicegroupSource create/delete helpers against project files on a copied fixture. No window, dialog, or rendering state is observed, so the assertions are portable in principle, but no Swift predicate establishes any of them.
+Site tally: 71 sites (71 GAP).
+
+Execution and ownership
+The retained native harness owns this file: runOnboardCheck (support.cpp) QTest::qExecs OnboardingTest. No Swift entry point executes these checks; there are no S entries and no shared-helper expects for this file. Shared C++ fixtures/helpers: checks/support/songfixture.h (ProjectFixture::copyOf), project/voicegroupsource.h, and the file-local songMid/songCfg/songTable path helpers.
+
+Fixture, sequence and row constraints
+songDeletion_data expands mid-delete-and-reuse (reuse), double-delete-six-files (double), entry-zero-refused (entry-zero), and stray-unregistered (stray) into distinct runs. The entry-zero branch asserts refusal leaves all six snapshotted files byte-identical and returns early; the stray branch unregisters an unregistered label and returns early; the double branch asserts a second unregister is a byte-identical no-op and returns early; the fall-through reuse path deletes two songs, asserts dummy-slot accounting, ordering of the replacement constant, and full restoration of the original snapshots. voicegroupDeletion_data expands sole, shared, keysplit, and c-reference gates; the shared and keysplit gates assert deletableVoicegroup is empty and return early, while the fall-through sole path deletes the voicegroup and asserts hub restoration plus idempotent re-delete. Loops over snapshot paths and song_table lines expand single sites into per-file/per-line instances. Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
+
+Verification
+Command: deno task verify --filter onboardcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+No deno lane covers the native QTest harness; the entry point is runOnboardCheck (support.cpp) via QTest::qExec. Native harness results support only retained native obligations, not Swift parity.
+
+Swift sources inspected (SHA-256)
+No same-dir deletion.swift exists, and no Swift check references this
+file's methods or behavior. Inspected at this revision:
+src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+(sole Swift file carrying onboardcheck/ cppIDs; all of them name
+OnboardingTest::import* methods, none in this file).
+
+Original assertion inventory and source sequence
+
+A001 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:40
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/onboardcheck/onboardingtest.h"
+
+  #include <QFile>
+  #include <QRegularExpression>
+
+  #include "checks/support/songfixture.h"
+  #include "project/voicegroupsource.h"
+
+  namespace {
+  QString songMid(const QString &root, const QString &label)
+  {
+      return root + QStringLiteral("/sound/songs/midi/%1.mid").arg(label);
+  }
+
+  QString songCfg(const QString &root)
+  {
+      return root + QStringLiteral("/sound/songs/midi/midi.cfg");
+  }
+
+  QString songTable(const QString &root)
+  {
+      return root + QStringLiteral("/sound/song_table.inc");
+  }
+  } // namespace
+
+  void OnboardingTest::songDeletion_data()
+  {
+      QTest::addColumn<QString>("caseName");
+      QTest::newRow("mid-delete-and-reuse") << QStringLiteral("reuse");
+      QTest::newRow("double-delete-six-files") << QStringLiteral("double");
+      QTest::newRow("entry-zero-refused") << QStringLiteral("entry-zero");
+      QTest::newRow("stray-unregistered") << QStringLiteral("stray");
+  }
+
+  void OnboardingTest::songDeletion()
+  {
+      QFETCH(QString, caseName);
+      QString error;
+      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error));
+
+A002 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:44
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString root = fixture->root();
+      const QString midiDir = midiDirectory(root);
+      SongCfg cfg;
+
+Original expression:
+  QVERIFY2(defaultCfg(root, cfg, error), qPrintable(error));
+
+A003 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:53
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QStringList snapshots = {songTable(root),
+                                     root + QStringLiteral("/include/constants/songs.h"),
+                                     root + QStringLiteral("/ld_script.ld"),
+                                     root + QStringLiteral("/charmap.txt"),
+                                     songCfg(root),
+                                     root + QStringLiteral("/src/debug.c")};
+      QList<QByteArray> original;
+      for (const QString &path : snapshots) {
+
+Original expression:
+  QVERIFY2(QFile::exists(path), qPrintable(path));
+
+A004 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:55
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          original.append(readFile(path, error));
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A005 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:70
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      }
+      const QByteArray table0 = original[0];
+      QRegularExpression entry(QStringLiteral(R"(^\s*song\s+(\w+))"));
+      QString fallback;
+      int tableEntries = 0;
+      int originalDummies = 0;
+      for (const QByteArray &line : table0.split('\n')) {
+          const QRegularExpressionMatch match = entry.match(QString::fromUtf8(line));
+          if (!match.hasMatch())
+              continue;
+          if (fallback.isEmpty())
+              fallback = match.captured(1);
+          ++tableEntries;
+      }
+
+Original expression:
+  QVERIFY(!fallback.isEmpty());
+
+A006 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:78
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      for (const QByteArray &line : table0.split('\n')) {
+          const QRegularExpressionMatch match = entry.match(QString::fromUtf8(line));
+          originalDummies += match.hasMatch() && match.captured(1) == fallback;
+      }
+      const RegistrationPlan probe = SongRegistry::makePlan(
+          root, QStringLiteral("mus_onboardcheck_probe"), QStringLiteral("MUS_ONBOARDCHECK_PROBE"),
+          QStringLiteral("MUSIC_PLAYER_BGM"));
+
+Original expression:
+  QVERIFY(probe.songId != 0);
+
+A007 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:80
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (originalDummies == 1)
+
+Original expression:
+  QCOMPARE(probe.songId, tableEntries);
+
+A008 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:82
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (caseName == QStringLiteral("entry-zero")) {
+
+Original expression:
+  QVERIFY(!SongRegistry::unregisterSong(root, fallback,
+                                                SongRegistry::constantForLabel(fallback), &error));
+
+A009 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:84
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!error.isEmpty());
+
+A010 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:86
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          for (int i = 0; i < snapshots.size(); ++i) {
+
+Original expression:
+  QCOMPARE(readFile(snapshots[i], error), original[i]);
+
+A011 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:87
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A012 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:95
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          }
+          return;
+      }
+
+      const QString label = caseName == QStringLiteral("stray")
+                                ? QStringLiteral("mus_onboardcheck_stray")
+                                : QStringLiteral("mus_onboardcheck_del_a");
+
+Original expression:
+  QVERIFY2(SongRegistry::blankSong().writeFile(songMid(root, label), &error), qPrintable(error));
+
+A013 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:96
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::writeSongFlags(midiDir, label, cfg.rawFlags, &error), qPrintable(error));
+
+A014 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:98
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (caseName == QStringLiteral("stray")) {
+
+Original expression:
+  QVERIFY2(SongRegistry::unregisterSong(root, label, SongRegistry::constantForLabel(label),
+                                                &error),
+                   qPrintable(error));
+
+A015 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:101
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(songTable(root), error), table0);
+
+A016 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:102
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A017 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:103
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::removeSongFlags(midiDir, label, &error), qPrintable(error));
+
+A018 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:105
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          const QByteArray cfgBytes = readFile(songCfg(root), error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A019 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:106
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!cfgBytes.contains(label.toUtf8() + ".mid"));
+
+A020 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:110
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+      int id = -1;
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, label, SongRegistry::constantForLabel(label),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &id),
+               qPrintable(error));
+
+A021 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:114
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString second = QStringLiteral("mus_onboardcheck_del_b");
+
+Original expression:
+  QVERIFY2(SongRegistry::blankSong().writeFile(songMid(root, second), &error), qPrintable(error));
+
+A022 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:115
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::writeSongFlags(midiDir, second, cfg.rawFlags, &error),
+               qPrintable(error));
+
+A023 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:118
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      int secondId = -1;
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, second, SongRegistry::constantForLabel(second),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &secondId),
+               qPrintable(error));
+
+A024 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(secondId, id + 1);
+
+A025 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:122
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(
+          SongRegistry::unregisterSong(root, label, SongRegistry::constantForLabel(label), &error),
+          qPrintable(error));
+
+A026 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:125
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::removeSongFlags(midiDir, label, &error), qPrintable(error));
+
+A027 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:126
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(QFile::remove(songMid(root, label)));
+
+A028 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:132
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      int dummiesAfterDelete = 0;
+      for (const QByteArray &line : readFile(songTable(root), error).split('\n')) {
+          const QRegularExpressionMatch match = entry.match(QString::fromUtf8(line));
+          dummiesAfterDelete += match.hasMatch() && match.captured(1) == fallback;
+      }
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A029 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:133
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(dummiesAfterDelete, originalDummies + 1);
+
+A030 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:137
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const RegistrationPlan replacementPlan = SongRegistry::makePlan(
+          root, QStringLiteral("mus_onboardcheck_del_c"), QStringLiteral("MUS_ONBOARDCHECK_DEL_C"),
+          QStringLiteral("MUSIC_PLAYER_BGM"));
+
+Original expression:
+  QCOMPARE(replacementPlan.songId, id);
+
+A031 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:140
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      for (int index = 1; index < snapshots.size(); ++index) {
+          const QByteArray bytes = readFile(snapshots[index], error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A032 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:141
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!bytes.contains("MUS_ONBOARDCHECK_DEL_A"));
+
+A033 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:143
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      }
+
+Original expression:
+  QVERIFY(SongRegistry::checkRegistration(root, second, SongRegistry::constantForLabel(second))
+                  .complete());
+
+A034 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:149
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      if (caseName == QStringLiteral("double")) {
+          QList<QByteArray> before;
+          for (const QString &path : snapshots) {
+              before.append(readFile(path, error));
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A035 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:151
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          }
+
+Original expression:
+  QVERIFY2(SongRegistry::unregisterSong(root, label, SongRegistry::constantForLabel(label),
+                                                &error),
+                   qPrintable(error));
+
+A036 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          for (int i = 0; i < snapshots.size(); ++i) {
+
+Original expression:
+  QCOMPARE(readFile(snapshots[i], error), before[i]);
+
+A037 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A038 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:161
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          }
+          return;
+      }
+      const QString replacement = QStringLiteral("mus_onboardcheck_del_c");
+
+Original expression:
+  QVERIFY2(SongRegistry::blankSong().writeFile(songMid(root, replacement), &error),
+               qPrintable(error));
+
+A039 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:163
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::writeSongFlags(midiDir, replacement, cfg.rawFlags, &error),
+               qPrintable(error));
+
+A040 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      int replacementId = -1;
+
+Original expression:
+  QVERIFY2(SongRegistry::registerSong(root, replacement,
+                                          SongRegistry::constantForLabel(replacement),
+                                          QStringLiteral("MUSIC_PLAYER_BGM"), &error, &replacementId),
+               qPrintable(error));
+
+A041 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:170
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(replacementId, id);
+
+A042 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:172
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QByteArray header = readFile(snapshots[1], error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A043 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:173
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(header.indexOf("MUS_ONBOARDCHECK_DEL_C") < header.indexOf("MUS_ONBOARDCHECK_DEL_B"));
+
+A044 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:175
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QByteArray charmap = readFile(snapshots[3], error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A045 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:176
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(charmap.indexOf("MUS_ONBOARDCHECK_DEL_C") < charmap.indexOf("MUS_ONBOARDCHECK_DEL_B"));
+
+A046 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:177
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::unregisterSong(root, replacement,
+                                            SongRegistry::constantForLabel(replacement), &error),
+               qPrintable(error));
+
+A047 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::removeSongFlags(midiDir, replacement, &error), qPrintable(error));
+
+A048 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:181
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(QFile::remove(songMid(root, replacement)));
+
+A049 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(
+          SongRegistry::unregisterSong(root, second, SongRegistry::constantForLabel(second), &error),
+          qPrintable(error));
+
+A050 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(SongRegistry::removeSongFlags(midiDir, second, &error), qPrintable(error));
+
+A051 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(QFile::remove(songMid(root, second)));
+
+A052 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:188
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      for (int i = 0; i < snapshots.size(); ++i) {
+
+Original expression:
+  QCOMPARE(readFile(snapshots[i], error), original[i]);
+
+A053 | OnboardingTest::songDeletion | src/checks/onboardcheck/deletion.cpp:189
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A054 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:207
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      }
+  }
+
+  void OnboardingTest::voicegroupDeletion_data()
+  {
+      QTest::addColumn<QString>("gate");
+      QTest::newRow("sole-user") << QStringLiteral("sole");
+      QTest::newRow("shared-user") << QStringLiteral("shared");
+      QTest::newRow("keysplit-reference") << QStringLiteral("keysplit");
+      QTest::newRow("c-reference") << QStringLiteral("c-reference");
+  }
+
+  void OnboardingTest::voicegroupDeletion()
+  {
+      QFETCH(QString, gate);
+      QString error;
+      std::unique_ptr<checks::ProjectFixture> fixture = copyProject(error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error));
+
+A055 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:212
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      const QString root = fixture->root();
+      const QString name = QStringLiteral("onboardcheckvg");
+      const QString hub = root + QStringLiteral("/sound/voice_groups.inc");
+      const QByteArray hubBefore = readFile(hub, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A056 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(VoicegroupSource::createVoicegroup(root, name, {}, {}, &error), qPrintable(error));
+
+A057 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:214
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(VoicegroupSource::appendIncludeLine(root, name, &error), qPrintable(error));
+
+A058 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      SongInfo user;
+      user.label = QStringLiteral("mus_vg_user");
+      user.cfg.voicegroupArg = QStringLiteral("_onboardcheckvg");
+      QVector<SongInfo> songs{user};
+      if (gate == QStringLiteral("shared")) {
+          SongInfo second = user;
+          second.label = QStringLiteral("mus_vg_user_2");
+          songs.append(second);
+
+Original expression:
+  QVERIFY(SongRegistry::deletableVoicegroup(root, songs, user.label).isEmpty());
+
+A059 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+      const QString ref = root + QStringLiteral("/src/onboardcheck_ref.c");
+      if (gate == QStringLiteral("c-reference")) {
+
+Original expression:
+  QVERIFY2(
+              writeFile(ref, QByteArrayLiteral("extern int voicegroup_onboardcheckvg[];\n"), error),
+              qPrintable(error));
+
+A060 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(SongRegistry::deletableVoicegroup(root, songs, user.label).isEmpty());
+
+A061 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:232
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(QFile::remove(ref));
+
+A062 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:236
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+      }
+      if (gate == QStringLiteral("keysplit")) {
+          const QString sub = QStringLiteral("onboardchecksub");
+
+Original expression:
+  QVERIFY2(VoicegroupSource::createVoicegroup(root, sub, {}, {}, &error), qPrintable(error));
+
+A063 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:239
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          const QString host = root + QStringLiteral("/sound/voicegroups/onboardcheckvg.inc");
+          const QByteArray hostBefore = readFile(host, error);
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A064 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:240
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(writeFile(host,
+                             hostBefore +
+                                 QByteArrayLiteral(
+                                     "\tvoice_keysplit voicegroup_onboardchecksub, KeySplitTable1\n"),
+                             error),
+                   qPrintable(error));
+
+A065 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:250
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          SongInfo subUser = user;
+          subUser.label = QStringLiteral("mus_vg_sub_user");
+          subUser.cfg.voicegroupArg = QStringLiteral("_onboardchecksub");
+          songs.append(subUser);
+
+Original expression:
+  QVERIFY(SongRegistry::deletableVoicegroup(root, songs, subUser.label).isEmpty());
+
+A066 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:253
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+          return;
+      }
+
+Original expression:
+  QCOMPARE(SongRegistry::deletableVoicegroup(root, songs, user.label), name);
+
+A067 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:254
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(VoicegroupSource::deleteVoicegroup(root, name, &error), qPrintable(error));
+
+A068 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:255
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!QFile::exists(root + QStringLiteral("/sound/voicegroups/onboardcheckvg.inc")));
+
+A069 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:256
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(readFile(hub, error), hubBefore);
+
+A070 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:257
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error));
+
+A071 | OnboardingTest::voicegroupDeletion | src/checks/onboardcheck/deletion.cpp:258
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY2(VoicegroupSource::deleteVoicegroup(root, name, &error), qPrintable(error));
+
+Remaining original source (closing sequence and helper bodies):
+
+  }
+
+
+Swift assertion predicates
+None. No Swift counterpart exists and no report.expect* call covers this file, so there are no S entries.
+
+Shared helper:
+None. No Swift fixture file carries expects for this file.

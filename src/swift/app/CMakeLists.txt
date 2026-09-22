@@ -33,6 +33,7 @@ add_library(PorydawApp STATIC
     commands/EditKeyArbiter.swift
     commands/Clipboard.swift
     drawer/EditorDrawer.swift
+    drawer/PromptAppearance.swift
     drawer/EditorDrawerLayout.swift
     drawer/velocity/VelocityContext.swift
     drawer/velocity/VelocityAxis.swift
@@ -60,6 +61,7 @@ add_library(PorydawApp STATIC
     drawer/automation/AutomationTapTempo.swift
     drawer/automation/AutomationPage.swift
     headers/TrackHeaders.swift
+    headers/TrackActivity.swift
     headers/TrackHeadersGeometry.swift
     headers/TrackHeadersInput.swift
 )
@@ -81,6 +83,11 @@ set_target_properties(PorydawApp PROPERTIES
     Swift_MODULE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/module"
     Swift_LANGUAGE_VERSION 6
 )
+
+if(PORYDAW_BUILD_CHECKS)
+    target_compile_options(PorydawApp PRIVATE
+        "$<$<COMPILE_LANGUAGE:Swift>:-enable-testing>")
+endif()
 
 target_include_directories(PorydawApp INTERFACE
     "$<$<COMPILE_LANGUAGE:Swift>:$<TARGET_PROPERTY:PorydawApp,Swift_MODULE_DIRECTORY>>"

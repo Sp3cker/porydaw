@@ -1,0 +1,564 @@
+Assertion correspondence: automation/domain/xcmd.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/automation/domain/xcmd.cpp
+Original SHA-256: ce94aa2bcbce0e2561750338e11d1e55d6bb2f7d98fae1142998f64e8cde99ab
+Swift counterpart: src/checks/automation/domain/xcmd.swift
+Swift SHA-256: 86883051d8fe07e4827afda5f0c96d40554c4fccb409f277999f51f48844c202
+
+Purpose and status
+Each A entry is one original assertion or failure site, including helper and setup sites.
+Repeated rows and loops execute a site more than once. The source SHA pins the entire
+original sequence; the context inventory below records its rows, loops and fixtures.
+MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
+a specific related scenario differs; GAP means exact assertion correspondence is not
+established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+A method name or related Swift case alone never establishes an assertion match.
+This inventory does not authorize removing native checks. Unresolved entries remain work.
+
+Execution and ownership
+The original swiftcore suite entrypoints invoke these paired functions in their original
+order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
+VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
+Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+
+Verification evidence
+Pending: root will record the exact final tree and selected Deno verification run.
+
+Fixture, sequence, data-row and loop inventory
+Each line below is an exact original source anchor. Multiline declarations, helper
+implementations, native event delivery and the complete order remain in the pinned source.
+src/checks/automation/domain/xcmd.cpp:31 | for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+src/checks/automation/domain/xcmd.cpp:47 | for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+src/checks/automation/domain/xcmd.cpp:63 | for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+src/checks/automation/domain/xcmd.cpp:81 | for (const SmfEvent &event : document.smf().tracks[std::size_t(smfTrack)].events) {
+src/checks/automation/domain/xcmd.cpp:195 | while (doc.undoStack()->index() > 0)
+src/checks/automation/domain/xcmd.cpp:284 | while (doc.undoStack()->index() > before.undoIndex)
+
+Original assertion inventory
+
+A001 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:108
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{96, 34}}))
+
+A002 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:109
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_LENGTH).points(), {{96, 17}}))
+
+A003 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:110
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 96) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 34},
+                                                        {xcmd::kSelectorController, 0x09},
+                                                        {xcmd::kPayloadController, 17}}))
+
+A004 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:119
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(isOneEdit(moveBefore, snapshot()))
+
+A005 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:120
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{192, 35}}))
+
+A006 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:121
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 192) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 35}}))
+
+A007 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:128
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), before.smf)
+
+A008 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:129
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_VOLUME).empty())
+
+A009 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:130
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_LENGTH).empty())
+
+A010 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:139
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(volume.size() == 2)
+
+A011 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:140
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 96) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 34}}))
+
+A012 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:143
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 192) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 35}}))
+
+A013 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:148
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{192, 35}}))
+
+A014 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:149
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 96).empty())
+
+A015 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:150
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 192) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 35}}))
+
+A016 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:154
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_VOLUME).empty())
+
+A017 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:155
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytes(doc, kTrack).empty())
+
+A018 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:161
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(),
+                         {{192, 35}, {384, 36}}))
+
+A019 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:163
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 192) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 35}}))
+
+A020 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:166
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 384) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 36}}))
+
+A021 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:176
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{160, 36}}))
+
+A022 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:177
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 96) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x09},
+                                                        {xcmd::kPayloadController, 17}}))
+
+A023 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:180
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 160) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 36}}))
+
+A024 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:183
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 192) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x09},
+                                                        {xcmd::kPayloadController, 18}}))
+
+A025 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:193
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(snapshot() == opaqueBefore)
+
+A026 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:204
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(isOneEdit(malformedBefore, snapshot()))
+
+A027 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:205
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytes(doc, kTrack) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x01},
+                                                        {xcmd::kPayloadController, 1},
+                                                        {xcmd::kPayloadController, 2},
+                                                        {xcmd::kSelectorController, 0x03},
+                                                        {xcmd::kPayloadController, 99},
+                                                        {xcmd::kSelectorController, 0x08},
+                                                        {xcmd::kPayloadController, 30}}))
+
+A028 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:215
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(snapshot() == rejectedBefore)
+
+A029 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:226
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.removeTimeRange({96, 192}, volumeScope))
+
+A030 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:227
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_VOLUME).empty())
+
+A031 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:228
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 96) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x09},
+                                                        {xcmd::kPayloadController, 17}}))
+
+A032 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:232
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), rangeBefore.smf)
+
+A033 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:243
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.removeTimeRange({96, 192}, wholeSong))
+
+A034 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:244
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_VOLUME).empty())
+
+A035 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:245
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_LENGTH).points(), {{96, 18}}))
+
+A036 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:246
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(xcmdBytesAt(doc, kTrack, 96) ==
+              (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x09},
+                                                        {xcmd::kPayloadController, 18}}))
+
+A037 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:250
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), cutBefore.smf)
+
+A038 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:252
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_VOLUME).empty())
+
+A039 | AutomationDomainTest::xcmdTimeRangeCuts | src/checks/automation/domain/xcmd.cpp:253
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_LENGTH).points(), {{96, 18}}))
+
+A040 | AutomationDomainTest::xcmdSweepPreservesNotes | src/checks/automation/domain/xcmd.cpp:281
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(notes(doc, kTrack) == beforeSweepNotes)
+
+A041 | AutomationDomainTest::xcmdSweepPreservesNotes | src/checks/automation/domain/xcmd.cpp:282
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(lane.points(), {{kDragBegin, 32}, {kExistingPoint, 48}}))
+
+A042 | AutomationDomainTest::xcmdSweepPreservesNotes | src/checks/automation/domain/xcmd.cpp:286
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), before.smf)
+
+A043 | AutomationDomainTest::xcmdRangeRemoveOnly | src/checks/automation/domain/xcmd.cpp:301
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(isOneEdit(before, snapshot()))
+
+A044 | AutomationDomainTest::xcmdRangeRemoveOnly | src/checks/automation/domain/xcmd.cpp:303
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{192, 35}}))
+
+A045 | AutomationDomainTest::xcmdRangeRemoveOnly | src/checks/automation/domain/xcmd.cpp:304
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(doc.lanePoints(kTrack, DOC_CC_ECHO_LENGTH).empty())
+
+A046 | AutomationDomainTest::xcmdRangeRemoveOnly | src/checks/automation/domain/xcmd.cpp:305
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(ccChain(doc, kTrack) == (std::vector<CcByte>{{0, 0x0A, 80},
+                                                           {0, 0x07, 64},
+                                                           {192, xcmd::kSelectorController, 0x08},
+                                                           {192, xcmd::kPayloadController, 35},
+                                                           {288, 0x07, 48},
+                                                           {384, 0x0A, 110}}))
+
+A047 | AutomationDomainTest::xcmdRangeRemoveOnly | src/checks/automation/domain/xcmd.cpp:312
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), before.smf)
+
+A048 | AutomationDomainTest::xcmdRangeRemoveOnly | src/checks/automation/domain/xcmd.cpp:314
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(snapshot().smf, after.smf)
+
+A049 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:326
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(isOneEdit(leftBefore, snapshot()))
+
+A050 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:328
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(ccChain(doc, kTrack) == (std::vector<CcByte>{{0, 0x0A, 80},
+                                                           {0, 0x07, 64},
+                                                           {96, xcmd::kSelectorController, 0x09},
+                                                           {96, xcmd::kPayloadController, 17},
+                                                           {144, xcmd::kSelectorController, 0x08},
+                                                           {144, xcmd::kPayloadController, 34},
+                                                           {192, xcmd::kSelectorController, 0x09},
+                                                           {192, xcmd::kPayloadController, 18},
+                                                           {288, 0x07, 48},
+                                                           {384, 0x0A, 110}}))
+
+A051 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:339
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), leftBefore.smf)
+
+A052 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:341
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(snapshot().smf, leftAfter.smf)
+
+A053 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:349
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(isOneEdit(rightBefore, snapshot()))
+
+A054 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:351
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(ccChain(doc, kTrack) == (std::vector<CcByte>{{0, 0x0A, 80},
+                                                           {0, 0x07, 64},
+                                                           {96, xcmd::kSelectorController, 0x09},
+                                                           {96, xcmd::kPayloadController, 17},
+                                                           {192, xcmd::kSelectorController, 0x09},
+                                                           {192, xcmd::kPayloadController, 18},
+                                                           {192, xcmd::kSelectorController, 0x08},
+                                                           {192, xcmd::kPayloadController, 34},
+                                                           {288, 0x07, 48},
+                                                           {384, 0x0A, 110}}))
+
+A055 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:362
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), rightBefore.smf)
+
+A056 | AutomationDomainTest::xcmdRangeMoves | src/checks/automation/domain/xcmd.cpp:364
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(snapshot().smf, rightAfter.smf)
+
+A057 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:377
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(isOneEdit(before, snapshot()))
+
+A058 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:379
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.engineTrackCount(), newTrack + 1)
+
+A059 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:380
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(samePoints(CCLaneAdapter(doc, newTrack, DOC_CC_ECHO_VOLUME).points(), {{96, 34}}))
+
+A060 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:381
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(ccChain(doc, newTrack) == (std::vector<CcByte>{{96, xcmd::kSelectorController, 0x08},
+                                                             {96, xcmd::kPayloadController, 34}}))
+
+A061 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:384
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(doc.smf().write(), before.smf)
+
+A062 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:386
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(snapshot().smf, after.smf)
+
+Swift executable assertion index
+The S entries are exact predicates already called by the suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:14
+Swift expression:
+  report.expectEqual(["120:100"], fixture.laneValues(echo.points.map {
+          AutomationLanePoint(tick: $0.tick, value: $0.value)
+      }), cppID: drawerAutomationProjectionID, what: "an XCMD lane projects through the same lane API")
+
+S002 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:17
+Swift expression:
+  report.expectEqual(1, echo.eventCount, cppID: drawerAutomationProjectionID,
+                         what: "an XCMD lane counts its written events")
+
+S003 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:19
+Swift expression:
+  report.expectEqual("Echo volume (xIECV)", AutomationCatalog.title(fixture.echoLane),
+                         cppID: drawerAutomationProjectionID, what: "an XCMD row keeps its descriptor title")
+
+S004 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:22
+Swift expression:
+  report.expect(metadata.neutral == nil && metadata.defaultValue == nil, cppID: drawerAutomationProjectionID,
+                    message: "an XCMD lane has neither a neutral nor an engine default")
+
+S005 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:24
+Swift expression:
+  report.expect(echo.leadIn == nil, cppID: drawerAutomationProjectionID,
+                    message: "an XCMD lane supplies no lead-in")
+
+S006 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:26
+Swift expression:
+  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum],
+                         echo.scaleLabels.map(\.role), cppID: drawerAutomationProjectionID,
+                         what: "an XCMD lane labels its extremes with no neutral")
+
+S007 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:33
+Swift expression:
+  report.expect(AutomationCommit.apply(edit, in: fixture.document), cppID: drawerAutomationProjectionID,
+                    message: "an XCMD lane commits through the same lane write")
+
+S008 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:35
+Swift expression:
+  report.expectEqual(["120:5", "144:100"], fixture.values(fixture.echoLane), cppID: drawerAutomationProjectionID,
+                         what: "the XCMD lane writes its projected replacement")
+
+S009 | drawerAutomationXcmdParity | src/checks/automation/domain/xcmd.swift:37
+Swift expression:
+  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationProjectionID,
+                         what: "one XCMD replacement is one revision")
+
+S010 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:54
+Swift expression:
+  report.expect(document.duplicateTime(TimeRange(startTick: 10, endTick: 20), scope: scope),
+                    cppID: "automation-domain/AutomationDomainTest::xcmdRangeMoves",
+                    message: "XCMD lane duplicate reconciles through epoch planner")
+
+S011 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:57
+Swift expression:
+  report.expectEqual(["12:40", "22:40"], document.lanePoints(
+          track: 0, lane: .controller(Xcmd.echoVolumeLane)).map(pointShape),
+          cppID: "automation-domain/AutomationDomainTest::xcmdCanonicalEdits",
+          what: "known copied points rebuild canonically")
+
+S012 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:62
+Swift expression:
+  report.expect(assessment.blocks.contains { $0.kind == .unknownSelectorEpoch && $0.payloadCount == 1 },
+                    cppID: "automation-domain/AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection",
+                    message: "unselected opaque epoch remains byte-exact")
+
+S013 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:67
+Swift expression:
+  report.expect(!document.lanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane))
+          .contains { $0.tick == 22 },
+          cppID: "automation-domain/AutomationDomainTest::xcmdRangeRemoveOnly",
+          message: "range cut removes copied logical point")
+
+S014 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:71
+Swift expression:
+  report.expect(document.notes(in: 0).count == 1,
+                    cppID: "automation-domain/AutomationDomainTest::xcmdSweepPreservesNotes",
+                    message: "lane-only XCMD sweep preserves notes")
+
+S015 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:75
+Swift expression:
+  report.expectEqual(beforeCut, coreTimeBytes(document),
+                         cppID: "automation-domain/AutomationDomainTest::xcmdTimeRangeCuts",
+                         what: "XCMD cut is one reversible history entry")
+
+S016 | coreTimeXcmdTimeTraffic | src/checks/automation/domain/xcmd.swift:86
+Swift expression:
+  report.expect(expansion.applyRangeEdit(xcmdEdit) &&
+          expansion.lanePoints(track: 1, lane: .controller(Xcmd.echoLengthLane)).count == 1,
+          cppID: "automation-domain/AutomationDomainTest::xcmdExpansionPaste",
+          message: "track expansion builds descriptor traffic through the canonical planner")

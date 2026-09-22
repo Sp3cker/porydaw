@@ -1,0 +1,90 @@
+Assertion correspondence: playback/tst_loop.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/playback/tst_loop.cpp
+Original SHA-256: a96225b0fa13175e78177a2f42657aca96b52cd2cd5939dcb92a13b88bc4ffa1
+Swift counterpart: src/checks/playback/tst_loop.swift
+Swift SHA-256: 156fe5d8ee9f67788af48fca50a7d217ed057763e69d48f187e936ae12edbff0
+
+Purpose and status
+One entry per original assertion or failure site, including initialization.
+MATCHED means the listed predicate and its scenario are represented in Swift;
+execution evidence is recorded separately below. This is source correspondence,
+not a live C++/Swift differential comparison or permission to delete native checks.
+There are no omitted original assertion sites in this file.
+
+Execution and ownership
+runPlaybackSuite calls runPairedLoopChecks in the same position as before.
+Shared loader and writer: swiftcore/PlaybackChecks.swift. Shared engine and channel
+inspection: playback/transportfixture.swift. Engine uses the retained native M4A
+backend while timeline generation and chase/prime/render operations use Swift.
+
+Fixture, sequence and rows
+Division 24; 48000 Hz; 120 BPM; 1000 samples per tick. Conductor loop markers 96/288; end 384. Program 0. Notes (on,off,key): (96,120,60), (192,312,67), (240,300,65), (264,288,62), (288,312,64), velocity 100. Fresh engine and Sequencer for each row; render in <=512-frame chunks to the exact sample position; inspect sorted keyed-on PCM keys (CHN_ON set, CHN_STOP clear).
+Rows (sample,looping,keys): pass-1-tied-note-sounds=(200000,true,[67]); pass-2-gate-carry-holds-across-wrap=(298000,true,[60,65,67]); gate-carry-releases-at-written-duration=(310000,true,[60,67]); pass-2-tied-note-stacks=(392000,true,[67,67]); pass-3-tied-note-stacks=(584000,true,[67,67,67]); loop-boundary-notes-play-without-looping=(298000,false,[64,65,67]).
+
+Verification evidence
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
+This records the completed checkpoint before the subsequent shared corpus-loader
+extraction/range additions; updated combined verification is pending.
+Legacy native source suites are not registered in the current checkcatalog;
+no native loopcheck/primecheck execution is claimed.
+
+Shared fixture provenance
+The engine bridge uses checks::SustainVoicegroup from playback/sustainvoicegroup.h.
+Its program 2 override is unused by these fixtures (loop program 0; prime 5/7/9).
+src/checks/playback/transportfixture.swift SHA-256: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
+src/checks/playback/PlaybackChecks.swift SHA-256: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
+src/checks/playback/sustainvoicegroup.h SHA-256: 2605285c630cfa4cf37212ac02a59140adb17d5fcaa5567ac48fd0c55abbffe5
+src/checks/support/corecheck/native_check.cpp SHA-256: 5093b74731d2bc0c64ee6793df3649d97b280b6146cc97844ea6a54704c75815
+
+Original assertion inventory
+
+A001 | LoopTest::init | src/checks/playback/tst_loop.cpp:123
+Disposition: MATCHED
+Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks / playbackPairLoadSwiftTimeline
+Mapping/reason: The original non-null timeline requirement is enforced by the throwing MIDI loader and guard binding of loopTimeline; failure reports and aborts this suite.
+Original expression:
+  QVERIFY2(timeline, "synthesized song built wrong")
+
+A002 | LoopTest::init | src/checks/playback/tst_loop.cpp:126
+Disposition: MATCHED
+Swift: src/checks/playback/tst_loop.swift :: runLoopRows
+Mapping/reason: Each row checks hasLoop and start == 96 * 1000 and end == 288 * 1000 before rendering.
+Original expression:
+  QVERIFY2(timeline->hasLoop() && timeline->loopStartSample == kLoopStartTick * kSamplesPerTick &&
+                   timeline->loopEndSample == kLoopEndTick * kSamplesPerTick,
+               "synthesized song has wrong loop points")
+
+A003 | LoopTest::synthesizedLoopSongHasExactLoopPoints | src/checks/playback/tst_loop.cpp:152
+Disposition: MATCHED
+Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks
+Mapping/reason: report.expect(loopTimeline.hasLoop) checks the same property.
+Original expression:
+  QVERIFY2(m_timeline->hasLoop(), "synthesized song has no loop")
+
+A004 | LoopTest::synthesizedLoopSongHasExactLoopPoints | src/checks/playback/tst_loop.cpp:153
+Disposition: MATCHED
+Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks
+Mapping/reason: report.expectEqual(96 * playbackCheckSamplesPerTick, loopTimeline.loopStartSample) checks sample 96000.
+Original expression:
+  QCOMPARE(m_timeline->loopStartSample, kLoopStartTick * kSamplesPerTick)
+
+A005 | LoopTest::synthesizedLoopSongHasExactLoopPoints | src/checks/playback/tst_loop.cpp:154
+Disposition: MATCHED
+Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks
+Mapping/reason: report.expectEqual(288 * playbackCheckSamplesPerTick, loopTimeline.loopEndSample) checks sample 288000.
+Original expression:
+  QCOMPARE(m_timeline->loopEndSample, kLoopEndTick * kSamplesPerTick)
+
+A006 | LoopTest::loopWrapMatchesHardwareGoto | src/checks/playback/tst_loop.cpp:213
+Disposition: MATCHED
+Swift: src/checks/playback/tst_loop.swift :: runLoopRows
+Mapping/reason: report.expectEqual(row.expectedKeys, actualKeys) replaces the original keys != expected QFAIL branch. Exact six sample positions, looping flags and ordered key multisets are retained.
+Original expression:
+  QFAIL(qPrintable(QStringLiteral("keyed-on notes at t=%1 (looping=%2): [%3 ], expected "
+                                          "[%4 ]")
+                               .arg(samplePos)
+                               .arg(looping)
+                               .arg(actualKeys, expectedText)))

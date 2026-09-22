@@ -1,0 +1,434 @@
+Assertion correspondence: themelayout/tst_themelayout_chrome.cpp
+
+Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
+Original: src/checks/themelayout/tst_themelayout_chrome.cpp
+Original SHA-256: 6b4733c529e563202102d4084ba4f5d8fdf1af563e0cb568394997e044da4ddf
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site in this file appears below. The file holds two
+native rendering cases: ThemeLayoutTest::comboArrowAndPopup (stylesheet-backed
+combo arrow raster in resting and hover states plus popup outline pixel) and
+ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette (application
+palette pins plus a poison-calibration swatch proving the widget zoo grabs
+would reveal a leaked platform palette). Source context preserves setup,
+helpers, and guards between assertions verbatim.
+MATCHED means a corresponding Swift predicate was identified and would execute;
+PARTIAL means a related Swift predicate exists with a stated unproved condition;
+GAP means no equivalent Swift assertion is established;
+NATIVE means the site observes native window/rendering/harness state a
+presenter-level Swift check cannot establish. Every site in this file observes
+native widgets, native style geometry, grabbed pixels, or the native
+application palette, so every site is NATIVE and none is MATCHED or PARTIAL.
+No Swift counterpart file covering this suite was identified.
+
+Verification
+Command: deno task verify --filter themecheck --verbose
+Command: deno task verify --filter darkbasecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+comboArrowAndPopup executes under themecheck;
+darkBaselineMasksPoisonedPlatformPalette executes under darkbasecheck.
+
+Execution and ownership
+Native ownership only. runThemeLayoutThemeCheck and runThemeLayoutDarkBaseCheck
+(defined in src/checks/themelayout/themelayoutcheck.cpp) launch the two lanes;
+ThemeLayoutTest::init applies the vanilla theme and saves font/palette/
+stylesheet, while ThemeLayoutDarkBaseTest::init only saves them because the
+lane runner pre-poisons the palette. No Swift entry point executes any of
+this. Suite declarations live in src/checks/themelayout/tst_themelayout.h; no
+shared Swift fixture file exists. The file-local helpers PoisonSwatch,
+matchesDarkBaselinePoison, poisonPixelCount, and containsColor are grab/pixel
+instruments, inventoried via the assertions that use them.
+
+Fixture, sequence and row constraints
+No data rows: each case runs once per lane. comboArrowAndPopup requires the
+combo to become visible (QTRY_VERIFY) before style geometry and grabs are
+meaningful; the hover raster is produced by driving the same
+drawComplexControl path with a synthesized MouseOver option, explicitly not
+the production cursor hit test. darkBaselineMasksPoisonedPlatformPalette
+requires the calibration swatch to show at least one poison pixel (A017)
+before the zoo grab's zero-poison assertion (A021) is meaningful; the zoo
+covers label, button, line edit, checkbox, radio, combo, progress, slider,
+tabs, group box, and scrollbar widgets.
+Original setup, branch guards, and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:85
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the combo widget
+must become visible before style geometry and pixel grabs mean anything. A
+presenter check cannot establish native widget visibility.
+Source context since previous assertion:
+  #include "checks/themelayout/tst_themelayout.h"
+
+  #include "ui/theme/themeresolver.h"
+  #include "ui/theme/themeruntime.h"
+
+  #include <QAbstractItemView>
+  #include <QApplication>
+  #include <QCheckBox>
+  #include <QComboBox>
+  #include <QGroupBox>
+  #include <QImage>
+  #include <QLabel>
+  #include <QLineEdit>
+  #include <QPaintEvent>
+  #include <QPainter>
+  #include <QProgressBar>
+
+  #include <QPushButton>
+  #include <QRadioButton>
+  #include <QScrollBar>
+  #include <QStyle>
+  #include <QStyleOptionComboBox>
+  #include <QTabBar>
+  #include <QVBoxLayout>
+  #include <QtTest>
+
+  #include <cmath>
+
+  namespace {
+
+  constexpr QColor kDarkBaselinePoison(40, 0, 40);
+  constexpr int kDarkBaselinePoisonRgbManhattanTolerance = 24;
+
+  class PoisonSwatch final : public QWidget
+  {
+    protected:
+      void paintEvent(QPaintEvent *event) override
+      {
+          Q_UNUSED(event);
+          QPainter painter(this);
+          painter.fillRect(rect(), kDarkBaselinePoison);
+      }
+  };
+
+  bool matchesDarkBaselinePoison(const QColor &color)
+  {
+      const int distance = std::abs(color.red() - kDarkBaselinePoison.red()) +
+                           std::abs(color.green() - kDarkBaselinePoison.green()) +
+                           std::abs(color.blue() - kDarkBaselinePoison.blue());
+      return distance <= kDarkBaselinePoisonRgbManhattanTolerance;
+  }
+
+  int poisonPixelCount(const QImage &image)
+  {
+      int count = 0;
+      for (int y = 0; y < image.height(); ++y) {
+          for (int x = 0; x < image.width(); ++x) {
+              if (matchesDarkBaselinePoison(image.pixelColor(x, y)))
+                  ++count;
+          }
+      }
+      return count;
+  }
+
+  bool containsColor(const QImage &image, const QRect &rect, const QColor &color)
+  {
+      for (int y = rect.top(); y <= rect.bottom(); ++y) {
+          for (int x = rect.left(); x <= rect.right(); ++x) {
+              if (image.pixelColor(x, y) == color)
+                  return true;
+          }
+      }
+      return false;
+  }
+
+  } // namespace
+
+  void ThemeLayoutTest::comboArrowAndPopup()
+  {
+      QComboBox combo;
+      combo.addItem(QStringLiteral("Arrow"));
+      combo.resize(120, 30);
+      combo.show();
+      combo.ensurePolished();
+Original expression:
+  QTRY_VERIFY(combo.isVisible());
+
+A002 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:91
+Disposition: NATIVE
+Mapping/reason: Original native style obligation: the native style must report
+a non-empty combo-arrow sub-control rect. A presenter check cannot establish
+native style geometry.
+Source context since previous assertion:
+  ;
+
+      QStyleOptionComboBox option;
+      option.initFrom(&combo);
+      const QRect arrowRect = combo.style()->subControlRect(QStyle::CC_ComboBox, &option,
+                                                            QStyle::SC_ComboBoxArrow, &combo);
+Original expression:
+  QVERIFY(!arrowRect.isEmpty());
+
+A003 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:93
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: grabbing the resting
+combo must produce a non-null image before any pixel predicate is meaningful.
+Source context since previous assertion:
+  ;
+      const QImage restingImage = combo.grab().toImage();
+Original expression:
+  QVERIFY(!restingImage.isNull());
+
+A004 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:96
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the resting arrow raster
+must contain the combo_text role color inside the arrow rect.
+Source context since previous assertion:
+  ;
+      const QColor arrowColor = themes::color(themes::Role::combo_text);
+      const QColor hoverColor = themes::color(themes::Role::combo_drop_down_hover_background);
+Original expression:
+  QVERIFY(containsColor(restingImage, arrowRect, arrowColor));
+
+A005 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:97
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the resting arrow raster
+must not yet contain the hover-background role color.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!containsColor(restingImage, arrowRect, hoverColor));
+
+A006 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:105
+Disposition: NATIVE
+Mapping/reason: Original native style obligation: the hover-state option must
+still cover the same arrow-center position the test will paint.
+Source context since previous assertion:
+  ;
+
+      const QPoint hoverPosition = arrowRect.center();
+      QStyleOptionComboBox hoverOption;
+      hoverOption.initFrom(&combo);
+      hoverOption.state |= QStyle::State_MouseOver;
+      const QRect hoverArrowRect = combo.style()->subControlRect(QStyle::CC_ComboBox, &hoverOption,
+                                                                 QStyle::SC_ComboBoxArrow, &combo);
+Original expression:
+  QVERIFY(hoverArrowRect.contains(hoverPosition));
+
+A007 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:123
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the synthesized-hover
+raster painted through drawComplexControl must contain the hover-background
+role color inside the hover arrow rect.
+Source context since previous assertion:
+  ;
+      hoverOption.editable = combo.isEditable();
+      hoverOption.frame = combo.hasFrame();
+      hoverOption.currentIcon = combo.itemIcon(combo.currentIndex());
+      hoverOption.currentText = combo.currentText();
+      hoverOption.iconSize = combo.iconSize();
+      hoverOption.subControls = QStyle::SC_All;
+      hoverOption.activeSubControls = QStyle::SC_ComboBoxArrow;
+
+      // Exercise the same stylesheet-backed drawComplexControl path used by the
+      // production ComboBox painter. This verifies its hover raster, not the
+      // production painter's native QCursor hit test.
+      QImage hoveredImage(combo.size(), QImage::Format_ARGB32_Premultiplied);
+      hoveredImage.fill(Qt::transparent);
+      {
+          QPainter painter(&hoveredImage);
+          combo.style()->drawComplexControl(QStyle::CC_ComboBox, &hoverOption, &painter, &combo);
+      }
+Original expression:
+  QVERIFY(containsColor(hoveredImage, hoverArrowRect, hoverColor));
+
+A008 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:127
+Disposition: NATIVE
+Mapping/reason: Original native window obligation: showPopup must open a
+separate popup window rather than reusing the combo window.
+Source context since previous assertion:
+  ;
+
+      combo.showPopup();
+      QWidget *popup = combo.view()->window();
+Original expression:
+  QVERIFY(popup != combo.window());
+
+A009 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:128
+Disposition: NATIVE
+Mapping/reason: Original native window obligation: the popup window must
+become visible before its grab is meaningful.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(popup->isVisible());
+
+A010 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:130
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: grabbing the popup must
+produce a non-null image before the outline-pixel predicate.
+Source context since previous assertion:
+  ;
+      const QImage popupImage = popup->grab().toImage();
+Original expression:
+  QVERIFY(!popupImage.isNull());
+
+A011 | ThemeLayoutTest::comboArrowAndPopup | src/checks/themelayout/tst_themelayout_chrome.cpp:131
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the popup grab's origin
+pixel must equal the menu_outline role color.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(popupImage.pixelColor(0, 0), themes::color(themes::Role::menu_outline));
+
+A012 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:138
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: after lane
+startup, the Active Window palette entry must equal the vanilla
+window_background role, proving the poisoned platform palette is masked.
+Source context since previous assertion:
+  ;
+      combo.hidePopup();
+  }
+
+  void ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette()
+  {
+      const themes::Theme vanilla = themes::vanilla();
+Original expression:
+  QCOMPARE(m_application->palette().color(QPalette::Active, QPalette::Window),
+           vanilla.color(themes::Role::window_background));
+
+A013 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:140
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: the Active
+WindowText palette entry must equal the vanilla window_text role.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(m_application->palette().color(QPalette::Active, QPalette::WindowText),
+           vanilla.color(themes::Role::window_text));
+
+A014 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:142
+Disposition: NATIVE
+Mapping/reason: Original native application-state obligation: the Active Base
+palette entry must equal the vanilla item_background role.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(m_application->palette().color(QPalette::Active, QPalette::Base),
+           vanilla.color(themes::Role::item_background));
+
+A015 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:148
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the poison
+calibration swatch must become visible before its grab calibrates the poison
+detector.
+Source context since previous assertion:
+  ;
+
+      PoisonSwatch calibration;
+      calibration.resize(16, 16);
+      calibration.show();
+Original expression:
+  QTRY_VERIFY(calibration.isVisible());
+
+A016 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:150
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: grabbing the calibration
+swatch must produce a non-null image.
+Source context since previous assertion:
+  ;
+      const QImage calibrationImage = calibration.grab().toImage();
+Original expression:
+  QVERIFY(!calibrationImage.isNull());
+
+A017 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:151
+Disposition: NATIVE
+Mapping/reason: Original native calibration obligation: the swatch grab must
+contain at least one poison pixel, proving the detector would catch a leaked
+platform palette before A021 asserts its absence in the zoo.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(poisonPixelCount(calibrationImage) > 0);
+
+A018 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:188
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window obligation: the eleven-widget
+zoo must become visible before its grab is meaningful.
+Source context since previous assertion:
+  ;
+
+      QWidget zoo;
+      auto *layout = new QVBoxLayout(&zoo);
+      layout->addWidget(new QLabel(QStringLiteral("Label"), &zoo));
+      layout->addWidget(new QPushButton(QStringLiteral("Button"), &zoo));
+      auto *lineEdit = new QLineEdit(QStringLiteral("edit"), &zoo);
+      layout->addWidget(lineEdit);
+      auto *checkBox = new QCheckBox(QStringLiteral("Check"), &zoo);
+      checkBox->setChecked(true);
+      layout->addWidget(checkBox);
+      auto *radio = new QRadioButton(QStringLiteral("Radio"), &zoo);
+      radio->setChecked(true);
+      layout->addWidget(radio);
+      auto *combo = new QComboBox(&zoo);
+      combo->addItem(QStringLiteral("Combo"));
+      layout->addWidget(combo);
+      auto *progress = new QProgressBar(&zoo);
+      progress->setRange(0, 100);
+      progress->setValue(60);
+      layout->addWidget(progress);
+      auto *slider = new QSlider(Qt::Horizontal, &zoo);
+      slider->setValue(40);
+      layout->addWidget(slider);
+      auto *tabs = new QTabBar(&zoo);
+      tabs->addTab(QStringLiteral("One"));
+      tabs->addTab(QStringLiteral("Two"));
+      layout->addWidget(tabs);
+      auto *group = new QGroupBox(QStringLiteral("Group"), &zoo);
+      auto *groupLayout = new QVBoxLayout(group);
+      groupLayout->addWidget(new QLabel(QStringLiteral("inside"), group));
+      layout->addWidget(group);
+      auto *scroll = new QScrollBar(Qt::Horizontal, &zoo);
+      scroll->setRange(0, 100);
+      layout->addWidget(scroll);
+      zoo.show();
+      zoo.ensurePolished();
+Original expression:
+  QTRY_VERIFY(zoo.isVisible());
+
+A019 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:190
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: grabbing the zoo must
+produce a non-null image.
+Source context since previous assertion:
+  ;
+      const QImage zooImage = zoo.grab().toImage();
+Original expression:
+  QVERIFY(!zooImage.isNull());
+
+A020 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:191
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the zoo grab must have
+positive extent before the poison scan.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(zooImage.width() > 0 && zooImage.height() > 0);
+
+A021 | ThemeLayoutDarkBaseTest::darkBaselineMasksPoisonedPlatformPalette | src/checks/themelayout/tst_themelayout_chrome.cpp:192
+Disposition: NATIVE
+Mapping/reason: Original native rendering obligation: the zoo grab must
+contain zero poison pixels, proving no widget leaks the poisoned platform
+palette. Calibrated by A017.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(poisonPixelCount(zooImage), 0);
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+Swift assertion predicates
+None identified: no Swift counterpart file establishes predicates for this
+suite.
+
+Shared helper
+None: no Swift fixture file carries expects for this suite.

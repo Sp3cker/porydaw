@@ -1,0 +1,2156 @@
+Assertion correspondence: editcheck/tst_songdocument_document.cpp
+
+Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
+Original: src/checks/editcheck/tst_songdocument_document.cpp
+Original SHA-256: c73b4bcc38040e9e0866aceb87e7295c0c33b4d7b8c66bfa2859498618732d99
+Swift counterpart: src/checks/editcheck/NoteChecks.swift
+Swift SHA-256: 9cd49c319b9b161331451f67c3d9a85050aa0180a45226845d9708028792df39
+
+Scope
+All 250 original assertion sites are listed below across 12 methods. The primary
+Swift counterpart owns runNoteEditsSuite (adoptionAndPairing, insertionAnd
+Collision, movementAndResize, velocityEditing, compatibilityRegressions) and
+runDocumentHistorySuite (gestureAndIdentityHistory, saveIdentity,
+historyMergeContracts). Track-remap publication additionally cites trackEditing
+in src/checks/editcheck/EventChecks.swift (SHA-256
+9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1). The legacy
+C++ editcheck suite is not registered in the current checkcatalog, so no native
+run of these sites is claimed. Swift has no QUndoStack count/index accessors
+and never counts documentChanged emissions; every such site is GAP.
+
+Fixture and sequence
+twoTrackFile is a division-24 SMF (conductor, two-note track 0 with velocities
+100/90, program track). Synthetic stage, makeDocument synthetics, and the
+ownership fixture (16 hardware channels) carry no assertion sites themselves.
+Velocity tests use last-write-wins batches with 0/200 clamping to 1/127.
+Remap tests assert exact smf/engine maps across move/add/delete/duplicate/raw
+insert/delete plus undo/redo. Crossing/net-zero/merged tests drive moveNotes
+with mergeable edits and observe identity, key, revision, signal-order, and
+byte outcomes.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Original assertion inventory
+
+A001 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:50
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent; Swift documents construct directly.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("publication")),
+           qPrintable(fixture.error));
+
+A002 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:52
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: No Swift predicate asserts the post-load revision value.
+Original expression:
+  QCOMPARE(fixture.document.revision(), uint64_t(1));
+
+A003 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:53
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts publishes ("each real call including return-to-origin publishes once") on edit paths; the load-time remap-then-changed order is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("remap"), QStringLiteral("changed")}));
+
+A004 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:54
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: No Swift predicate asserts per-signal revision values at load.
+Original expression:
+  QVERIFY((revisions == std::vector<uint64_t>{1, 1}));
+
+A005 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:55
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts remap publication on add/undo/redo with engine maps; the single load-time remap is unproved.
+Original expression:
+  QCOMPARE(remaps.size(), size_t(1));
+
+A006 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:56
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts empty load-time SMF track maps.
+Original expression:
+  QVERIFY(remaps.front().smfTrackMap.empty());
+
+A007 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:57
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts empty load-time engine track maps.
+Original expression:
+  QVERIFY(remaps.front().engineTrackMap.empty());
+
+A008 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:58
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the load-time SMF track count.
+Original expression:
+  QCOMPARE(remaps.front().newSmfTrackCount, 3);
+
+A009 | EditCheckTest::documentLoadPublication | src/checks/editcheck/tst_songdocument_document.cpp:59
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the load-time engine track count.
+Original expression:
+  QCOMPARE(remaps.front().newEngineTrackCount, 2);
+
+A010 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:65
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("tempo-empty")),
+           qPrintable(fixture.error));
+
+A011 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:68
+Disposition: MATCHED
+Swift: S046 | src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift S046 asserts empty typed tempo in live state under the same cppID.
+Original expression:
+  QVERIFY(document.tempoPoints().empty());
+
+A012 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:70
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift builds no C++ timeline; timeline construction is unproved.
+Original expression:
+  QVERIFY(timeline);
+
+A013 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:71
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift has no timeline predicates; the default tempo map size is unproved.
+Original expression:
+  QCOMPARE(timeline->tempoMap.size(), size_t(1));
+
+A014 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:72
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift has no timeline predicates; the default tempo tick is unproved.
+Original expression:
+  QCOMPARE(timeline->tempoMap.front().tick, uint64_t(0));
+
+A015 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:73
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift has no timeline predicates; the default tempo value is unproved.
+Original expression:
+  QCOMPARE(timeline->tempoMap.front().bpm, 120.0);
+
+A016 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:77
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
+Mapping/reason: Swift tempo add/remove predicates run on nonempty state with count assertions; the empty-document add/remove cycle is unproved.
+Original expression:
+  QVERIFY(document.tempoPoints().empty());
+
+A017 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:79
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
+Mapping/reason: Swift has no tempo-undo-to-single-point predicate on this path; the undone point equality is unproved.
+Original expression:
+  QVERIFY((document.tempoPoints() == std::vector<TempoPoint>{point}));
+
+A018 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:81
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
+Mapping/reason: Swift has no tempo-redo-to-empty predicate on this path.
+Original expression:
+  QVERIFY(document.tempoPoints().empty());
+
+A019 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:84
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: No Swift predicate reports file-save success; Swift captureSave guards return silently on failure.
+Original expression:
+  QVERIFY2(document.save(&error), qPrintable(error));
+
+A020 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:85
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: No Swift predicate reads back a saved file.
+Original expression:
+  QVERIFY2(SmfFile::readFile(fixture.song.midPath, &saved, &error), qPrintable(error));
+
+A021 | EditCheckTest::documentTempoEmpty | src/checks/editcheck/tst_songdocument_document.cpp:88
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The "typed tempo is removed from raw chunks" predicate asserts no live tempo metas; absence in saved-file bytes is unproved.
+Original expression:
+  QVERIFY(!isTempoMeta(event));
+
+A022 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:103
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("velocity")), qPrintable(fixture.error));
+
+A023 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:106
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate asserts this fixture's two-note projection count; Swift uses its own three-note fixture.
+Original expression:
+  QCOMPARE(notes.size(), size_t(2));
+
+A024 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:107
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate asserts bare assignedness of these fixture identities.
+Original expression:
+  QVERIFY(notes[0].noteId.isAssigned());
+
+A025 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:108
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate asserts bare assignedness of these fixture identities.
+Original expression:
+  QVERIFY(notes[1].noteId.isAssigned());
+
+A026 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:109
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: insertionAndCollision
+Mapping/reason: Swift asserts distinct identities for duplicate insertions and reminted adoption identities; distinctness of this velocity fixture's pair is unproved.
+Original expression:
+  QVERIFY(notes[0].noteId != notes[1].noteId);
+
+A027 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:116
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The "batch velocity is atomic, clamped, and last-write-wins" predicate implies commit success via revision comparison; the Optional-return commit API itself is unproved.
+Original expression:
+  QVERIFY(result);
+
+A028 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:117
+Disposition: MATCHED
+Swift: S030 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift S030 asserts the batch commit returns revision + 1 under the same cppID.
+Original expression:
+  QCOMPARE(*result, before + 1);
+
+A029 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:118
+Disposition: MATCHED
+Swift: S030 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift S030 asserts changed == revision + 1 under the same cppID (setVelocities returns the post-commit revision, so this is the document revision).
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A030 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:119
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift has no undo-count accessor; the single-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), undoCount + 1);
+
+A031 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:122
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent; Swift indexes notes directly.
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &first));
+
+A032 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:123
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent; Swift indexes notes directly.
+Original expression:
+  QVERIFY(document.findNote(notes[1].noteId, &second));
+
+A033 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:124
+Disposition: MATCHED
+Swift: S030 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift S030 asserts the first note reads 99 under the same cppID.
+Original expression:
+  QCOMPARE(first.velocity, uint8_t(99));
+
+A034 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:125
+Disposition: MATCHED
+Swift: S030 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift S030 asserts the second note clamps 200 to 127 under the same cppID.
+Original expression:
+  QCOMPARE(second.velocity, uint8_t(127));
+
+A035 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:126
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The "one relative batch publishes one revision" predicate asserts single publication; the exact changed-signal order is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A036 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:127
+Disposition: PARTIAL
+Swift: S041 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift S041 asserts note-only mutations publish without a track remap on move paths; the velocity-commit instance here is unproved (Swift never observes remap publication for setVelocities).
+Original expression:
+  QVERIFY(remaps.empty());
+
+A037 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:131
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift asserts no revision predicates for velocity undo; the undo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), changed + 1);
+
+A038 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:132
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &first));
+
+A039 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:133
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(notes[1].noteId, &second));
+
+A040 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:134
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The undo-restores predicate asserts 99/127 (post-nudge undo in the Swift sequence); restoration of the 100 original here is unproved.
+Original expression:
+  QCOMPARE(first.velocity, uint8_t(100));
+
+A041 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:135
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The undo-restores predicate asserts 99/127 (post-nudge undo in the Swift sequence); restoration of the 90 original here is unproved.
+Original expression:
+  QCOMPARE(second.velocity, uint8_t(90));
+
+A042 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:136
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The "one relative batch publishes one revision" predicate asserts single publication; the exact changed-signal order on undo is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A043 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:140
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift asserts no revision predicates for velocity redo; the redo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), undone + 1);
+
+A044 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:141
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(notes[0].noteId, &first));
+
+A045 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:142
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The redo predicate asserts the redone value on the nudge path (value 1); redo of the set-velocities batch to 99 here is unproved.
+Original expression:
+  QCOMPARE(first.velocity, uint8_t(99));
+
+A046 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:147
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The atomic-batch predicate implies commit success via revision comparison; the single-entry floor commit API result is unproved.
+Original expression:
+  QVERIFY(lower);
+
+A047 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:148
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Revision-plus-one commit is asserted for the three-entry batch; the single-entry floor commit value is unproved.
+Original expression:
+  QCOMPARE(*lower, lowerBefore + 1);
+
+A048 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:149
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Revision-plus-one commit is asserted for the three-entry batch; the single-entry floor commit revision is unproved.
+Original expression:
+  QCOMPARE(document.revision(), lowerBefore + 1);
+
+A049 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:150
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift has no undo-count accessor; the single-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), lowerUndo + 1);
+
+A050 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:151
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(first.noteId, &first));
+
+A051 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:152
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The domain floor value 1 is asserted on the insert and relative-nudge paths; the explicit-set-to-zero path here is unproved.
+Original expression:
+  QCOMPARE(first.velocity, uint8_t(1));
+
+A052 | EditCheckTest::documentVelocityAtomic | src/checks/editcheck/tst_songdocument_document.cpp:153
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: The "one relative batch publishes one revision" predicate asserts single publication; the exact changed-signal order is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A053 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:162
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("velocity-rejects")),
+           qPrintable(fixture.error));
+
+A054 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:170
+Disposition: MATCHED
+Swift: S031 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift S031 asserts a stale single-entry velocity revision rejects without mutation under the same cppID.
+Original expression:
+  QVERIFY(!document.setNotesVelocities(revision - 1, {{notes[0].noteId, 42}}));
+
+A055 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:171
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Stale-revision rejection is asserted for a single entry; the stale multi-entry batch here is unproved.
+Original expression:
+  QVERIFY(
+          !document.setNotesVelocities(revision - 1, {{notes[0].noteId, 42}, {notes[1].noteId, 77}}));
+
+A056 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:173
+Disposition: MATCHED
+Swift: S033 | src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift S033 asserts one invalid participant rejects the whole batch with unchanged revision (cross-suite cppID velocity-model/VelocityModelTest::gestureAtomicity; same setVelocities batch observation with a fresh unknown NoteID).
+Original expression:
+  QVERIFY(!document.setNotesVelocities(revision, {{notes[0].noteId, 42}, {NoteId{}, 77}}));
+
+A057 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:176
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate covers a no-op same-value velocity commit returning the current revision.
+Original expression:
+  QVERIFY(result);
+
+A058 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:177
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate asserts a no-op commit returns the unchanged revision.
+Original expression:
+  QCOMPARE(*result, revision);
+
+A059 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:178
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate asserts byte stability for a no-op velocity commit.
+Original expression:
+  QCOMPARE(document.smf().write(), bytes);
+
+A060 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:179
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: No Swift predicate asserts revision stability for a no-op velocity commit.
+Original expression:
+  QCOMPARE(document.revision(), revision);
+
+A061 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:180
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift has no undo-count accessor; entry-count stability is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), undoCount);
+
+A062 | EditCheckTest::documentVelocityRejects | src/checks/editcheck/tst_songdocument_document.cpp:181
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: velocityEditing
+Mapping/reason: Swift never counts documentChanged emissions.
+Original expression:
+  QCOMPARE(changedCount, 0);
+
+A063 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:187
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: insertionAndCollision
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("duplicate-identities")),
+           qPrintable(fixture.error));
+
+A064 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:192
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift guards duplicateTrack success with suite failure on nil; the nonnegative slot index itself is unasserted.
+Original expression:
+  QVERIFY(copy >= 0);
+
+A065 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:194
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The "duplicate preserves the fixture's literal note" predicate asserts preserved shape on one note; two-note count equality here is unproved.
+Original expression:
+  QCOMPARE(copied.size(), source.size());
+
+A066 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:196
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration for one note; per-index tick equality for two notes here is unproved.
+Original expression:
+  QCOMPARE(copied[index].tick, source[index].tick);
+
+A067 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:197
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration for one note; per-index key equality for two notes here is unproved.
+Original expression:
+  QCOMPARE(copied[index].key, source[index].key);
+
+A068 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:198
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration for one note; per-index duration equality for two notes here is unproved.
+Original expression:
+  QCOMPARE(copied[index].duration, source[index].duration);
+
+A069 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:199
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration for one note; per-index velocity equality here is unproved.
+Original expression:
+  QCOMPARE(copied[index].velocity, source[index].velocity);
+
+A070 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:201
+Disposition: MATCHED
+Swift: S055 | src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift S055 asserts duplicate remints note identities under the same cppID.
+Original expression:
+  QVERIFY(copied[index].noteId != original.noteId);
+
+A071 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:207
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: No Swift predicate undoes and redoes a track duplication; the redone count is unproved.
+Original expression:
+  QCOMPARE(redone.size(), minted.size());
+
+A072 | EditCheckTest::documentDuplicateIdentities | src/checks/editcheck/tst_songdocument_document.cpp:209
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The "undo and redo restore stable note identity" predicate asserts identity stability on the move path under this same cppID; duplication-path stability here is unproved.
+Original expression:
+  QCOMPARE(redone[index].noteId, minted[index].noteId);
+
+A073 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:224
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("remaps")), qPrintable(fixture.error));
+
+A074 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:237
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift reorders with survival predicates implying success; the boolean move result is unasserted.
+Original expression:
+  QVERIFY(document.moveTrack(0, 1));
+
+A075 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:238
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no exact move remap maps; the {0,2,1}/{1,0} maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 2, 1}, {1, 0}, 3, 2));
+
+A076 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:242
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no exact move-undo remap maps; the inverse maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 2, 1}, {1, 0}, 3, 2));
+
+A077 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:246
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no exact move-redo remap maps; the forward maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 2, 1}, {1, 0}, 3, 2));
+
+A078 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:249
+Disposition: MATCHED
+Swift: S048 | src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift S048 asserts a new track occupies the next engine slot (value 2) under cppID trackCreateDelete; same returned-slot observation.
+Original expression:
+  QCOMPARE(document.addTrack(3), 2);
+
+A079 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:250
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts add/undo/redo remap publication with engine maps and new counts; the exact smf-plus-engine maps here are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+
+A080 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:254
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The "undo publishes the inverse track remap" predicate asserts the inverse new count; the exact tombstone maps here are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+
+A081 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:258
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The "redo republishes the forward track remap" predicate asserts the forward new count; the exact maps here are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+
+A082 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:262
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift delete predicates assert rescue and chunk retention, never exact remap maps.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+
+A083 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:266
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no delete-undo remap maps; the restored maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+
+A084 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:270
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no delete-redo remap maps; the tombstone maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+
+A085 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:273
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift guards duplicateTrack success with suite failure on nil; the returned slot index itself is unasserted.
+Original expression:
+  QCOMPARE(document.duplicateTrack(0), 2);
+
+A086 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:274
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no duplication remap maps; the exact maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+
+A087 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:278
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no duplication-undo remap maps; the tombstone maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, -1}, {0, 1, -1}, 3, 2));
+
+A088 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:282
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift asserts no duplication-redo remap maps; the forward maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2}, {0, 1}, 4, 3));
+
+A089 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:286
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation; the exact changed-only order after a meta insert is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A090 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:287
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The "note-only mutations publish without a track remap" predicate covers note mutations; the meta-insert instance here is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A091 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:291
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate inserts a program event promoting a conductor track; the promotion maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, 3}, {1, 2, 3}, 4, 4));
+
+A092 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:295
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate undoes a program-event promotion; the inverse maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3));
+
+A093 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:299
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate redoes a program-event promotion; the forward maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, 3}, {1, 2, 3}, 4, 4));
+
+A094 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:306
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate scans for the inserted program event; the index lookup is unproved.
+Original expression:
+  QVERIFY(programIndex != SIZE_MAX);
+
+A095 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:310
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate deletes a program event demoting a track; the demotion maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3));
+
+A096 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:314
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate undoes a program-event deletion; the restored maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, 3}, {1, 2, 3}, 4, 4));
+
+A097 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:318
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate redoes a program-event deletion; the demotion maps are unproved.
+Original expression:
+  QVERIFY(expectRemap({0, 1, 2, 3}, {-1, 0, 1, 2}, 4, 3));
+
+A098 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:321
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate rejects a no-op track move; only note zero-movement has a Swift predicate.
+Original expression:
+  QVERIFY(!document.moveTrack(0, 0));
+
+A099 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:322
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts revision stability for a rejected track move.
+Original expression:
+  QCOMPARE(document.revision(), revision);
+
+A100 | EditCheckTest::documentRemapsAndRaw | src/checks/editcheck/tst_songdocument_document.cpp:323
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts publication silence for a rejected track move.
+Original expression:
+  QVERIFY(order.empty());
+
+A101 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:329
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY2(fixture.stage(twoTrackFile(), QStringLiteral("saved")), qPrintable(fixture.error));
+
+A102 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:332
+Disposition: MATCHED
+Swift: S042 | src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift S042 asserts a matching save snapshot marks its identity clean under the same cppID.
+Original expression:
+  QVERIFY(!document.isDirty());
+
+A103 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:335
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: The "older completion cannot mark newer edits clean" predicate asserts dirty-after-edit on the move path; the tempo-edit path here is unproved.
+Original expression:
+  QVERIFY(document.isDirty());
+
+A104 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:336
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: No Swift predicate compares snapshot state inequality after an edit.
+Original expression:
+  QVERIFY(document.captureSaveSnapshot().documentState != saved.documentState);
+
+A105 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:338
+Disposition: MATCHED
+Swift: S044 | src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: Swift S044 asserts undo returns to sealed saved identity (clean) under cppID formatZeroSaveRoundTrip; same clean-after-undo-to-save observation.
+Original expression:
+  QVERIFY(!document.isDirty());
+
+A106 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:340
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: No Swift predicate asserts dirty-after-redo past a save.
+Original expression:
+  QVERIFY(document.isDirty());
+
+A107 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:343
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: No Swift predicate asserts dirty-after-undo-away-from-save.
+Original expression:
+  QVERIFY(document.isDirty());
+
+A108 | EditCheckTest::documentSavedIdentity | src/checks/editcheck/tst_songdocument_document.cpp:345
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
+Mapping/reason: No Swift predicate asserts clean-after-redo-to-save.
+Original expression:
+  QVERIFY(!document.isDirty());
+
+A109 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:367
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(fixture);
+
+A110 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:376
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts per-track channel routing of this fixture.
+Original expression:
+  QCOMPARE(document.channelFor(0), uint8_t(1));
+
+A111 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:377
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts this fixture's single-note projection count.
+Original expression:
+  QCOMPARE(notes.size(), size_t(1));
+
+A112 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:378
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts this fixture's projected tick.
+Original expression:
+  QCOMPARE(notes.front().tick, uint64_t(0));
+
+A113 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:379
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts this fixture's projected key.
+Original expression:
+  QCOMPARE(notes.front().key, uint8_t(60));
+
+A114 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:380
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts this fixture's projected duration.
+Original expression:
+  QCOMPARE(notes.front().duration, uint32_t(24));
+
+A115 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:381
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts this fixture's projected velocity.
+Original expression:
+  QCOMPARE(notes.front().velocity, uint8_t(100));
+
+A116 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:382
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The "adoption remints unique document identities" predicate asserts assignedness within its own fixture; bare assignedness of this note is unproved.
+Original expression:
+  QVERIFY(notes.front().noteId.isAssigned());
+
+A117 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:383
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts assignedness of a foreign (non-note-on) identity.
+Original expression:
+  QVERIFY(foreign.noteId.isAssigned());
+
+A118 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:384
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate compares a foreign identity against an adopted one.
+Original expression:
+  QVERIFY(foreign.noteId != notes.front().noteId);
+
+A119 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:385
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(notes.front().noteId, &visible));
+
+A120 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:386
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts lookup failure for a foreign identity.
+Original expression:
+  QVERIFY(!document.findNote(foreign.noteId, &hidden));
+
+A121 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:388
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift guards duplicateTrack success with suite failure on nil; the nonnegative slot index itself is unasserted.
+Original expression:
+  QVERIFY(copy >= 0);
+
+A122 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:389
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's reminted channel.
+Original expression:
+  QCOMPARE(document.channelFor(copy), uint8_t(0));
+
+A123 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:391
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The "duplicate preserves the fixture's literal note" predicate asserts one preserved note shape; the single-note count here is unproved.
+Original expression:
+  QCOMPARE(copied.size(), size_t(1));
+
+A124 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:392
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration strings; the copied tick here is unproved.
+Original expression:
+  QCOMPARE(copied.front().tick, notes.front().tick);
+
+A125 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:393
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration strings; the copied key here is unproved.
+Original expression:
+  QCOMPARE(copied.front().key, notes.front().key);
+
+A126 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:394
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration strings; the copied duration here is unproved.
+Original expression:
+  QCOMPARE(copied.front().duration, notes.front().duration);
+
+A127 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:395
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The duplicate-shape predicate asserts tick:pitch:duration strings; copied velocity is never asserted in Swift.
+Original expression:
+  QCOMPARE(copied.front().velocity, notes.front().velocity);
+
+A128 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:396
+Disposition: MATCHED
+Swift: S055 | src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift S055 asserts duplicate remints note identities (cppID documentDuplicateIdentities); same copied-vs-original identity observation on the duplicate path.
+Original expression:
+  QVERIFY(copied.front().noteId != notes.front().noteId);
+
+A129 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:397
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift appends remap observations on track ops without counting them; the single-remap count here is unproved.
+Original expression:
+  QCOMPARE(remaps.size(), size_t(1));
+
+A130 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:398
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts full-hardware SMF map sizes.
+Original expression:
+  QCOMPARE(remaps.front().smfTrackMap.size(), size_t(16));
+
+A131 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:399
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts full-hardware engine map sizes.
+Original expression:
+  QCOMPARE(remaps.front().engineTrackMap.size(), size_t(15));
+
+A132 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:400
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts full-hardware SMF counts.
+Original expression:
+  QCOMPARE(remaps.front().newSmfTrackCount, 17);
+
+A133 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:401
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts full-hardware engine counts.
+Original expression:
+  QCOMPARE(remaps.front().newEngineTrackCount, 16);
+
+A134 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:403
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts identity SMF maps at hardware scale.
+Original expression:
+  QCOMPARE(remaps.front().smfTrackMap[size_t(index)], index);
+
+A135 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:405
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts identity engine maps at hardware scale.
+Original expression:
+  QCOMPARE(remaps.front().engineTrackMap[size_t(index)], index);
+
+A136 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:407
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's rewritten event count.
+Original expression:
+  QCOMPARE(events.size(), size_t(3));
+
+A137 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:408
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's reminted program event.
+Original expression:
+  QCOMPARE(events[0], songdocument_test::channel(0xC0, 0, 7, 0));
+
+A138 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:409
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's copied note-on bytes.
+Original expression:
+  QCOMPARE(events[1], songdocument_test::channel(0x90, 0, 60, 100));
+
+A139 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:410
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's copied note-off bytes.
+Original expression:
+  QCOMPARE(events[2], songdocument_test::channel(0x80, 24, 60, 0));
+
+A140 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:411
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The "hardware track ceiling rejects a seventeenth track" predicate asserts ceiling enforcement; the exact at-capacity count here is unproved.
+Original expression:
+  QCOMPARE(document.engineTrackCount(), track_limits::kHardwareCapacity);
+
+A141 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:412
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Rejection at the ceiling is asserted via addTrack returning nil; the canAddTrack gate itself is unproved.
+Original expression:
+  QVERIFY(!document.canAddTrack());
+
+A142 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:413
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: The ceiling rejects an added track in Swift; duplicate-at-ceiling rejection here is unproved.
+Original expression:
+  QCOMPARE(document.duplicateTrack(0), -1);
+
+A143 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:418
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity stability across undo/redo is asserted on the move path and ownership across history crossing; findability after duplication undo/redo here is unproved.
+Original expression:
+  QVERIFY(document.findNote(copiedId, &redone));
+
+A144 | EditCheckTest::documentDuplicationOwnership | src/checks/editcheck/tst_songdocument_document.cpp:419
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: No Swift predicate asserts the redone duplicate's tick.
+Original expression:
+  QCOMPARE(redone.tick, notes.front().tick);
+
+A145 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:441
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(fixture);
+
+A146 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:461
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Typed-tempo extraction and raw-tempo removal are asserted ("valid conductor tempo becomes typed state", "typed tempo is removed from raw chunks"); the signature/loop/marker-count conjuncts are unproved.
+Original expression:
+  QVERIFY(globalsOriginal());
+
+A147 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:463
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift guards duplicateTrack success with suite failure on nil; the nonnegative slot index itself is unasserted.
+Original expression:
+  QVERIFY(copy >= 0);
+
+A148 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:464
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's channel.
+Original expression:
+  QCOMPARE(document.channelFor(copy), uint8_t(2));
+
+A149 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:466
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the globals-stripped duplicate event count.
+Original expression:
+  QCOMPARE(events.size(), size_t(3));
+
+A150 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:467
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's reminted program event.
+Original expression:
+  QCOMPARE(events[0], songdocument_test::channel(0xC2, 0, 6, 0));
+
+A151 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:468
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's reminted note-on event.
+Original expression:
+  QCOMPARE(events[1], songdocument_test::channel(0x92, 0, 60, 100));
+
+A152 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:469
+Disposition: GAP
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: No Swift predicate asserts the duplicate's reminted note-off event.
+Original expression:
+  QCOMPARE(events[2], songdocument_test::channel(0x82, 24, 60, 0));
+
+A153 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:470
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Same globals conjunct as A146; global preservation across duplication is unproved.
+Original expression:
+  QVERIFY(globalsOriginal());
+
+A154 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:471
+Disposition: PARTIAL
+Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
+Mapping/reason: Swift reorders with survival predicates implying success; global preservation across the move here is unproved.
+Original expression:
+  QVERIFY(document.moveTrack(copy, 0));
+
+A155 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:472
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Same globals conjunct as A146; global preservation across the move is unproved.
+Original expression:
+  QVERIFY(globalsOriginal());
+
+A156 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:474
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Same globals conjunct as A146; global preservation across the delete is unproved.
+Original expression:
+  QVERIFY(globalsOriginal());
+
+A157 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:477
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: History traversal restoring state is asserted on other paths; the globals conjunct per undo step here is unproved.
+Original expression:
+  QVERIFY(globalsOriginal());
+
+A158 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:481
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: History traversal restoring state is asserted on other paths; the globals conjunct per redo step here is unproved.
+Original expression:
+  QVERIFY(globalsOriginal());
+
+A159 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:495
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(fixture);
+
+A160 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:499
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 60, &first));
+
+A161 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:500
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 61, &second));
+
+A162 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:501
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Unterminated-note handling is asserted ("moving an unterminated note does not invent an end", "unterminated note is preserved"); the initial unterminated classification here is unproved.
+Original expression:
+  QVERIFY(first.unterminated());
+
+A163 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:502
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Unterminated-note handling is asserted ("moving an unterminated note does not invent an end", "unterminated note is preserved"); the initial unterminated classification here is unproved.
+Original expression:
+  QVERIFY(second.unterminated());
+
+A164 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:507
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift has no undo-count accessor; the single-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before + 1);
+
+A165 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:508
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift asserts no revision predicates for note moves; the move revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), initial + 1);
+
+A166 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:509
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity stability across moves and history is asserted ("stationary trim preserves identity", stable identity across undo/redo); crossing-scenario stability here is unproved.
+Original expression:
+  QVERIFY(document.findNote(firstId, &first));
+
+A167 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:510
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity stability across moves and history is asserted ("stationary trim preserves identity", stable identity across undo/redo); crossing-scenario stability here is unproved.
+Original expression:
+  QVERIFY(document.findNote(secondId, &second));
+
+A168 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:511
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing-merge key outcomes; the edited key here is unproved.
+Original expression:
+  QCOMPARE(first.key, uint8_t(61));
+
+A169 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:512
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing-merge key outcomes; the stationary key here is unproved.
+Original expression:
+  QCOMPARE(second.key, uint8_t(61));
+
+A170 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:515
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift has no undo-count accessor; the second-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before + 2);
+
+A171 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:516
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift asserts no revision predicates for note moves; the second move revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), secondRevision + 1);
+
+A172 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:517
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity stability across moves and history is asserted on other paths; crossing-scenario stability here is unproved.
+Original expression:
+  QVERIFY(document.findNote(firstId, &first));
+
+A173 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:518
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity stability across moves and history is asserted on other paths; crossing-scenario stability here is unproved.
+Original expression:
+  QVERIFY(document.findNote(secondId, &second));
+
+A174 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:519
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing-merge key outcomes after the inverse move.
+Original expression:
+  QCOMPARE(first.key, uint8_t(61));
+
+A175 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:520
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing-merge key outcomes after the inverse move.
+Original expression:
+  QCOMPARE(second.key, uint8_t(60));
+
+A176 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:523
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift asserts no revision predicates for undo; the undo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), undo + 1);
+
+A177 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:524
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity restoration on undo is asserted on other paths ("one undo restores collision victim"); crossing-scenario restoration here is unproved.
+Original expression:
+  QVERIFY(document.findNote(firstId, &first));
+
+A178 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:525
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity restoration on undo is asserted on other paths ("one undo restores collision victim"); crossing-scenario restoration here is unproved.
+Original expression:
+  QVERIFY(document.findNote(secondId, &second));
+
+A179 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:526
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing key outcomes after undo.
+Original expression:
+  QCOMPARE(first.key, uint8_t(61));
+
+A180 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:527
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing key outcomes after undo.
+Original expression:
+  QCOMPARE(second.key, uint8_t(61));
+
+A181 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:530
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift asserts no revision predicates for undo; the second undo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), secondUndo + 1);
+
+A182 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:531
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity restoration on undo is asserted on other paths; crossing-scenario restoration here is unproved.
+Original expression:
+  QVERIFY(document.findNote(firstId, &first));
+
+A183 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:532
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity restoration on undo is asserted on other paths; crossing-scenario restoration here is unproved.
+Original expression:
+  QVERIFY(document.findNote(secondId, &second));
+
+A184 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:533
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing key outcomes after the second undo.
+Original expression:
+  QCOMPARE(first.key, uint8_t(60));
+
+A185 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:534
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing key outcomes after the second undo.
+Original expression:
+  QCOMPARE(second.key, uint8_t(61));
+
+A186 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:537
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift asserts no revision predicates for redo; the redo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), redo + 1);
+
+A187 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:540
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift asserts no revision predicates for redo; the second redo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), secondRedo + 1);
+
+A188 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:541
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity restoration on redo is asserted on other paths ("redo restores edited pitch"); crossing-scenario restoration here is unproved.
+Original expression:
+  QVERIFY(document.findNote(firstId, &first));
+
+A189 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:542
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Identity restoration on redo is asserted on other paths ("redo restores edited pitch"); crossing-scenario restoration here is unproved.
+Original expression:
+  QVERIFY(document.findNote(secondId, &second));
+
+A190 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:543
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing key outcomes after redo.
+Original expression:
+  QCOMPARE(first.key, uint8_t(61));
+
+A191 | EditCheckTest::documentCrossingIdentities | src/checks/editcheck/tst_songdocument_document.cpp:544
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: No Swift predicate asserts crossing key outcomes after redo.
+Original expression:
+  QCOMPARE(second.key, uint8_t(60));
+
+A192 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:559
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(fixture);
+
+A193 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:567
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 69, &moving));
+
+A194 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:572
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift has no undo-count accessor; the single-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before + 1);
+
+A195 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:573
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for note moves; the move revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), initial + 1);
+
+A196 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:574
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation (changes == 4); the single-move publish count here is unproved.
+Original expression:
+  QCOMPARE(changeCount, 1);
+
+A197 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:575
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift S041 asserts note-only mutations publish without a track remap (cppID documentRemapsAndRaw); same nil-remap observation on move paths.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A198 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:576
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 70, &moving));
+
+A199 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:579
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for note moves; the inverse-move revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), inverse + 1);
+
+A200 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:580
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation (changes == 4); the two-move publish count here is unproved.
+Original expression:
+  QCOMPARE(changeCount, 2);
+
+A201 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:581
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift has no undo-count accessor; merge-removal restoring the base count is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before);
+
+A202 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:582
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift never observes empty-stack undo availability.
+Original expression:
+  QVERIFY(!document.undoStack()->canUndo());
+
+A203 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:583
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift never observes empty-stack redo availability.
+Original expression:
+  QVERIFY(!document.undoStack()->canRedo());
+
+A204 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:584
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The "return to group origin restores state" predicate asserts state restoration on inverse moves; exact byte equality here is unproved.
+Original expression:
+  QCOMPARE(document.smf().write(), baseline);
+
+A205 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:589
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift never undoes or redoes with an empty stack; byte stability there is unproved.
+Original expression:
+  QCOMPARE(document.smf().write(), baseline);
+
+A206 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:590
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift never undoes or redoes with an empty stack; revision stability there is unproved.
+Original expression:
+  QCOMPARE(document.revision(), frozenRevision);
+
+A207 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:591
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift never undoes or redoes with an empty stack and never counts emissions; change-count stability there is unproved.
+Original expression:
+  QCOMPARE(changeCount, frozenChanges);
+
+A208 | EditCheckTest::documentPublicationNetZero | src/checks/editcheck/tst_songdocument_document.cpp:592
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift never undoes or redoes with an empty stack; remap silence there is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A209 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:607
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(fixture);
+
+A210 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:620
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Note-handle lookup plumbing has no Swift equivalent.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 69, &moved));
+
+A211 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:626
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift has no undo-count accessor; the merged-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), countBefore + 1);
+
+A212 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:627
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for merged moves; the revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A213 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:628
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift S041 asserts note-only mutations publish without a track remap (cppID documentRemapsAndRaw); same nil-remap observation on move paths.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A214 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:629
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The "group rebuilds from origin and restores passed neighbor" predicate is the grouped-path analogue under this same cppID; the exact changed-only order on the mergeable path here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A215 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:630
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the edited note's position; the per-round moved position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 70, &moved));
+
+A216 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:631
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the restored neighbor; the per-round survivor position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 2, 70, &survivor));
+
+A217 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:632
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Tail-trim duration outcomes are asserted on a different fixture ("tail trim preserves surviving duration"); the survivor duration 2 here is unproved.
+Original expression:
+  QCOMPARE(survivor.duration, uint32_t(2));
+
+A218 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:638
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift has no undo-count accessor; the merged-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), countBefore + 1);
+
+A219 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:639
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for merged moves; the revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A220 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:640
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift S041 asserts note-only mutations publish without a track remap (cppID documentRemapsAndRaw); same nil-remap observation on move paths.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A221 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:641
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue under this same cppID covers the scenario shape; the exact changed-only order here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A222 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:642
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the edited note's position; the per-round moved position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 71, &moved));
+
+A223 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:643
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the restored neighbor; the per-round survivor position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 70, &survivor));
+
+A224 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:644
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Tail-trim duration outcomes are asserted on a different fixture; the survivor duration 4 here is unproved.
+Original expression:
+  QCOMPARE(survivor.duration, uint32_t(4));
+
+A225 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:650
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift has no undo-count accessor; the merged-entry increment is unproved.
+Original expression:
+  QCOMPARE(document.undoStack()->count(), countBefore + 1);
+
+A226 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:651
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for merged moves; the revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A227 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:652
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift S041 asserts note-only mutations publish without a track remap (cppID documentRemapsAndRaw); same nil-remap observation on move paths.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A228 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:653
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue under this same cppID covers the scenario shape; the exact changed-only order here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A229 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:654
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the edited note's position; the per-round moved position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 72, &moved));
+
+A230 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:655
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the restored neighbor; the per-round survivor position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 70, &survivor));
+
+A231 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:656
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Tail-trim duration outcomes are asserted on a different fixture; the survivor duration 4 here is unproved.
+Original expression:
+  QCOMPARE(survivor.duration, uint32_t(4));
+
+A232 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:662
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for undo; the undo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A233 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:663
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Remap-nil publication is asserted for note mutations; remap silence across undo here is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A234 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:664
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation; the exact changed-only order on undo here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A235 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:665
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The "one undo restores collision victim" predicate asserts undo restoration on another path; the undone moved position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 69, &moved));
+
+A236 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:666
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The grouped-path analogue asserts the restored neighbor; the undone survivor position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 70, &survivor));
+
+A237 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:667
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Tail-trim duration outcomes are asserted on a different fixture; the undone survivor duration 4 here is unproved.
+Original expression:
+  QCOMPARE(survivor.duration, uint32_t(4));
+
+A238 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:673
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for redo; the redo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A239 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:674
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Remap-nil publication is asserted for note mutations; remap silence across redo here is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A240 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:675
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation; the exact changed-only order on redo here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A241 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:676
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: The "redo restores edited pitch" predicate asserts redo restoration on another path; the redone moved position here is unproved.
+Original expression:
+  QVERIFY(document.findNote(0, 0, 72, &moved));
+
+A242 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:682
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for unmerged moves; the revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A243 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:683
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Remap-nil publication is asserted for note mutations; the unmerged-move instance here is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A244 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:684
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation; the exact changed-only order on the unmerged move here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A245 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:690
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for undo; the second undo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A246 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:691
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Remap-nil publication is asserted for note mutations; remap silence across this undo here is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A247 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:692
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation; the exact changed-only order on this undo here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+A248 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:698
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift asserts no revision predicates for redo; the second redo revision increment is unproved.
+Original expression:
+  QCOMPARE(document.revision(), before + 1);
+
+A249 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:699
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Remap-nil publication is asserted for note mutations; remap silence across this redo here is unproved.
+Original expression:
+  QVERIFY(remaps.empty());
+
+A250 | EditCheckTest::documentMergedOverlapPublication | src/checks/editcheck/tst_songdocument_document.cpp:700
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: Swift counts change publications per mutation; the exact changed-only order on this redo here is unproved.
+Original expression:
+  QVERIFY((order == std::vector<QString>{QStringLiteral("changed")}));
+
+Swift assertion predicates
+Every report.expect/expectEqual/fail call in the mapped Swift functions:
+
+S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:35
+  report.expectEqual(3, notes.count,
+                       cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+                       what: "all note-ons projected")
+
+S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:38
+  report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
+                       cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+                       what: "first following matching ends pair exactly")
+
+S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:41
+  report.expect(notes[2].isUnterminated,
+                  cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+                  message: "unterminated note is preserved")
+
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:44
+  report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
+                  cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
+                  message: "adoption remints unique document identities")
+
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:47
+  report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
+                  cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
+                  message: "typed tempo is removed from raw chunks")
+
+S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:50
+  report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
+                       document.state.tempo,
+                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                       what: "valid conductor tempo becomes typed state")
+
+S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:56
+  report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
+        .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
+        cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
+        message: "serialized MIDI carries no note identity")
+
+S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
+  report.expect(document.state.file.chunks[1].events[3].status == 0x80,
+                  cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
+                  message: "note-end status is retained during adoption")
+
+S009 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:77
+  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
+                    "overlapping edited participants were accepted")
+
+S010 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:80
+  report.expectEqual(initialRevision, document.revision,
+                           cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
+                           what: "rejected batch leaves revision unchanged")
+
+S011 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:84
+  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
+                    "unexpected rejection: \(error)")
+
+S012 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:92
+  report.expect(duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
+                  cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
+                  message: "exact duplicate insertions receive distinct identities")
+
+S013 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:95
+  report.expectEqual(2, document.notes(in: 0).filter {
+        $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
+    }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
+    what: "exact duplicate insertions remain distinct notes")
+
+S014 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:102
+  report.expectEqual(revisionBeforeNoOp, document.revision,
+                       cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
+                       what: "empty delete is a no-op")
+
+S015 | movementAndResize | src/checks/editcheck/NoteChecks.swift:115
+  report.fail(noteEditsBasicID, "fixture insertion failed")
+
+S016 | movementAndResize | src/checks/editcheck/NoteChecks.swift:120
+  report.expectEqual(Tick(2), trimmed?.tick,
+                       cppID: "editcheck/EditCheckTest::noteMoveOverlap",
+                       what: "edited note wins and stationary tail survives")
+
+S017 | movementAndResize | src/checks/editcheck/NoteChecks.swift:123
+  report.expectEqual(Tick(2), trimmed?.duration,
+                       cppID: "editcheck/EditCheckTest::noteMoveCollision",
+                       what: "tail trim preserves surviving duration")
+
+S018 | movementAndResize | src/checks/editcheck/NoteChecks.swift:126
+  report.expectEqual(ids[0], trimmed?.id,
+                       cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
+                       what: "stationary trim preserves identity")
+
+S019 | movementAndResize | src/checks/editcheck/NoteChecks.swift:130
+  report.expectEqual(Tick(0), document.note(ids[0])?.tick,
+                       cppID: "editcheck/EditCheckTest::noteMoveBatch",
+                       what: "one undo restores collision victim")
+
+S020 | movementAndResize | src/checks/editcheck/NoteChecks.swift:134
+  report.expectEqual(UInt8(70), document.note(ids[1])?.pitch,
+                       cppID: "editcheck/EditCheckTest::noteMoveMerge",
+                       what: "redo restores edited pitch")
+
+S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:143
+  report.fail("editcheck/EditCheckTest::noteMoveCollisionRejects",
+                    "rejection fixture insertion failed")
+
+S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:149
+  report.expectEqual(revision, rejectionDocument.revision,
+                       cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
+                       what: "conflicting pitch destinations reject whole operation")
+
+S023 | movementAndResize | src/checks/editcheck/NoteChecks.swift:153
+  report.expectEqual(revision, rejectionDocument.revision,
+                       cppID: "editcheck/EditCheckTest::noteMoveRejects",
+                       what: "zero movement creates no entry")
+
+S024 | movementAndResize | src/checks/editcheck/NoteChecks.swift:158
+  report.expectEqual(Tick(29), document.note(ids[2])?.tick,
+                       cppID: noteEditsBasicID,
+                       what: "leading resize clamps to one tick")
+
+S025 | movementAndResize | src/checks/editcheck/NoteChecks.swift:161
+  report.expectEqual(Tick(1), document.note(ids[2])?.duration,
+                       cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
+                       what: "resize enforces minimum duration")
+
+S026 | movementAndResize | src/checks/editcheck/NoteChecks.swift:165
+  report.expectEqual(UInt64(30), document.note(ids[2])?.endTick,
+                       cppID: noteEditsBasicID,
+                       what: "leading resize preserves note end")
+
+S027 | movementAndResize | src/checks/editcheck/NoteChecks.swift:173
+  report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+                    "unterminated fixture was not projected")
+
+S028 | movementAndResize | src/checks/editcheck/NoteChecks.swift:178
+  report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
+                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+                    message: "moving an unterminated note does not invent an end")
+
+S029 | velocityEditing | src/checks/editcheck/NoteChecks.swift:191
+  report.expectEqual(UInt8(1), document.note(ids[2])?.velocity,
+                       cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
+                       what: "inserted velocity zero shares the domain floor")
+
+S030 | velocityEditing | src/checks/editcheck/NoteChecks.swift:200
+  report.expect(changed == revision + 1 && document.note(ids[0])?.velocity == 99 &&
+        document.note(ids[1])?.velocity == 127,
+        cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
+        message: "batch velocity is atomic, clamped, and last-write-wins")
+
+S031 | velocityEditing | src/checks/editcheck/NoteChecks.swift:205
+  report.expect(document.setVelocities([NoteVelocity(noteID: ids[0], velocity: 20)],
+                                         expectedRevision: revision) == nil &&
+        document.state == beforeStale,
+        cppID: "editcheck/EditCheckTest::documentVelocityRejects",
+        message: "stale velocity revision rejects without mutation")
+
+S032 | velocityEditing | src/checks/editcheck/NoteChecks.swift:212
+  report.expect(document.note(ids[0])?.velocity == 1 && document.note(ids[1])?.velocity == 1,
+                  cppID: "velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation",
+                  message: "relative velocity clamps each note")
+
+S033 | velocityEditing | src/checks/editcheck/NoteChecks.swift:220
+  report.expect(invalid == nil && document.revision == beforeInvalid,
+                  cppID: "velocity-model/VelocityModelTest::gestureAtomicity",
+                  message: "one invalid participant rejects the whole batch")
+
+S034 | velocityEditing | src/checks/editcheck/NoteChecks.swift:223
+  report.expectEqual(beforeNudge + 1, beforeInvalid,
+                       cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
+                       what: "one relative batch publishes one revision")
+
+S035 | velocityEditing | src/checks/editcheck/NoteChecks.swift:230
+  report.expect(restored && document.note(ids[0])?.velocity == 1,
+                  cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
+                  message: "velocity batch participates in undo and redo")
+
+S036 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:332
+  report.expect(document.note(ids[0])?.tick == 0 && document.note(ids[1])?.pitch == 71,
+                  cppID: "editcheck/EditCheckTest::documentMergedOverlapPublication",
+                  message: "group rebuilds from origin and restores passed neighbor")
+
+S037 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:336
+  report.expect(document.note(ids[1])?.pitch == 69 && document.note(ids[0])?.duration == 4,
+                  cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
+                  message: "return to group origin restores state")
+
+S038 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:339
+  report.expect(changes == 4,
+                  cppID: "editcheck/EditCheckTest::documentLoadPublication",
+                  message: "each real call including return-to-origin publishes once")
+
+S039 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:347
+  report.expectEqual(beforeUndo, document.note(ids[0])?.id,
+                       cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
+                       what: "undo and redo restore stable note identity")
+
+S040 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:350
+  report.expect(document.note(ids[0])?.id == ids[0] && document.note(ids[1])?.id == ids[1],
+                  cppID: "editcheck/EditCheckTest::documentDuplicationOwnership",
+                  message: "document-scoped identities remain owned after history crossing")
+
+S041 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:353
+  report.expect(remaps.allSatisfy { $0 == nil },
+                  cppID: "editcheck/EditCheckTest::documentRemapsAndRaw",
+                  message: "note-only mutations publish without a track remap")
+
+S042 | saveIdentity | src/checks/editcheck/NoteChecks.swift:433
+  report.expect(!document.isDirty,
+                  cppID: "editcheck/EditCheckTest::documentSavedIdentity",
+                  message: "matching save snapshot marks its identity clean")
+
+S043 | saveIdentity | src/checks/editcheck/NoteChecks.swift:441
+  report.expect(document.isDirty,
+                  cppID: "editcheck/EditCheckTest::documentSavedIdentity",
+                  message: "older completion cannot mark newer edits clean")
+
+S044 | saveIdentity | src/checks/editcheck/NoteChecks.swift:445
+  report.expect(!document.isDirty,
+                  cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                  message: "undo returns to sealed saved identity")
+
+S045 | saveIdentity | src/checks/editcheck/NoteChecks.swift:450
+  report.expect(canonicalFile?.wasFormat0 == false,
+                  cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                  message: "save capture owns canonical format-one MIDI bytes")
+
+S046 | saveIdentity | src/checks/editcheck/NoteChecks.swift:453
+  report.expectEqual(0, document.state.tempo.count,
+                       cppID: "editcheck/EditCheckTest::documentTempoEmpty",
+                       what: "empty typed tempo remains empty in live state")
+
+S047 | saveIdentity | src/checks/editcheck/NoteChecks.swift:459
+  report.expectEqual("[", markerDocument.trackName(0),
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "first track-name meta remains a name even with marker text")
+
+S048 | trackEditing | src/checks/editcheck/EventChecks.swift:54
+  report.expectEqual(2, added,
+                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                       what: "new track occupies the next engine slot")
+
+S049 | trackEditing | src/checks/editcheck/EventChecks.swift:57
+  report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
+                       cppID: "editcheck/EditCheckTest::voiceLanePoint",
+                       what: "new track voice is clamped and seeded")
+
+S050 | trackEditing | src/checks/editcheck/EventChecks.swift:60
+  report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
+                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
+                       what: "add publishes old engine-track identities")
+
+S051 | trackEditing | src/checks/editcheck/EventChecks.swift:64
+  report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
+                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
+                       what: "undo publishes the inverse track remap")
+
+S052 | trackEditing | src/checks/editcheck/EventChecks.swift:68
+  report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
+                       cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
+                       what: "redo republishes the forward track remap")
+
+S053 | trackEditing | src/checks/editcheck/EventChecks.swift:73
+  report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
+
+S054 | trackEditing | src/checks/editcheck/EventChecks.swift:76
+  report.expectEqual(["8:60:4"],
+                       document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
+                       cppID: "editcheck/EditCheckTest::trackDuplicate",
+                       what: "duplicate preserves the fixture's literal note")
+
+S055 | trackEditing | src/checks/editcheck/EventChecks.swift:80
+  report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
+                  cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
+                  message: "duplicate remints note identities")
+
+S056 | trackEditing | src/checks/editcheck/EventChecks.swift:85
+  report.expect(document.timeSignatures.contains { $0.tick == 2 },
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "conductor time signature survives reorder")
+
+S057 | trackEditing | src/checks/editcheck/EventChecks.swift:88
+  report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
+                  cppID: "editcheck/EditCheckTest::trackMarkerName",
+                  message: "conductor marker remains in chunk zero")
+
+S058 | trackEditing | src/checks/editcheck/EventChecks.swift:93
+  report.expect(document.rawChunks[0].events.contains { event in
+        event.metaType == 0x58 && event.tick == 2
+    }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
+    message: "global signature is rescued before chunk deletion")
+
+S059 | trackEditing | src/checks/editcheck/EventChecks.swift:97
+  report.expect(document.rawChunks[0].events.contains { event in
+        event.tick == 16 && MidiFile.metaIsMarker(event)
+    }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
+    message: "winning loop marker is rescued")
+
+S060 | trackEditing | src/checks/editcheck/EventChecks.swift:101
+  report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
+                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                       what: "deleting the chunk-zero track retains the conductor chunk")
+
+S061 | trackEditing | src/checks/editcheck/EventChecks.swift:107
+  report.expectEqual("Bass", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "rename trims the stored display name")
+
+S062 | trackEditing | src/checks/editcheck/EventChecks.swift:111
+  report.expectEqual(revision + 1, document.revision,
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "loop-marker-shaped name is rejected")
+
+S063 | trackEditing | src/checks/editcheck/EventChecks.swift:116
+  report.expect(budgetLimited.addTrack(voice: 1) == nil,
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "configured track budget rejects an added track")
+
+S064 | trackEditing | src/checks/editcheck/EventChecks.swift:123
+  report.expect(ceiling.addTrack(voice: 1) == nil,
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "hardware track ceiling rejects a seventeenth track")
+
+S065 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:173
+  report.expectEqual(beforeTempoRaw, document.revision,
+                       cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
+                       what: "raw tempo meta is rejected")
+
+S066 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:181
+  report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
+                       document.state.tempo,
+                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
+                       what: "tempo normalization keeps the last same-tick value")
+
+S067 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:189
+  report.expectEqual(rawCount, document.rawChunks[0].events.count,
+                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
+                       what: "mixed raw and tempo replacement is atomic")
+
+S068 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:193
+  report.expectEqual(1, document.state.tempo.count,
+                       cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
+                       what: "one undo restores both domains")
+
+S069 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:199
+  report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "same-tick signature is replaced")
+
+S070 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
+  report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "signature moves with its payload")
+
+S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
+  report.expect(!document.timeSignatures.contains { $0.tick == 24 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "signature deletion removes destination")
+
+S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:220
+  report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
+        .map { Int($0.numerator) }.sorted(),
+        cppID: "editcheck/EditCheckTest::songTimeSignature",
+        what: "move preserves every cross-chunk source signature")

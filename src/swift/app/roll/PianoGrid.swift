@@ -47,6 +47,7 @@ public final class PianoGrid {
     /// like the shared playhead's policy entries: no QML surface sees it.
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
     @QtIgnored private var lastCommandAvailability: [Bool] = []
+    @QtIgnored private var lastCommandGestureActive = false
     @QtIgnored private var keyboardAuditionKey: Int?
     @QtIgnored var onAudition: ((Int, Int, Int) -> Void)?
     @QtIgnored private var didApplyInitialHome = false
@@ -795,8 +796,9 @@ public final class PianoGrid {
             statusText = "\(notes.count) notes, \(session.selectedNotes.count) selected"
         }
         let availability = EditCommand.allCases.map { commands.isAvailable($0) }
-        if availability != lastCommandAvailability {
+        if availability != lastCommandAvailability || interactionActive != lastCommandGestureActive {
             lastCommandAvailability = availability
+            lastCommandGestureActive = interactionActive
             onCommandAvailabilityChanged?()
         }
         publishGeometry()

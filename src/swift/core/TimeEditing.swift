@@ -188,7 +188,9 @@ extension SongDocument {
         for insertion in xcmdInsertions {
             mutation.insert(insertion.event, chunk: insertion.chunk)
         }
-        installLaneWrites(ordinaryWrites, in: &mutation)
+        for write in ordinaryWrites {
+            mutation.insert(write.event, chunk: write.chunk)
+        }
 
         let editedIDs = Set(edit.removeNotes.map(\.id))
         let spans = edit.addNotes.map {
@@ -796,6 +798,14 @@ private extension SongDocument {
         let ordered = spans.sorted {
             ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick)
         }
+        guard ordered.allSatisfy({ $0.end > UInt64($0.tick) }) else { return false }
+        if ordered.count > 1 {
+            for index in 1..<ordered.count where ordered[index - 1].track == ordered[index].track &&
+                ordered[index - 1].pitch == ordered[index].pitch &&
+                ordered[index - 1].end > UInt64(ordered[index].tick) {
+                return false
+            }
+        }
         let map = reference.file.engineTracks()
         var firstSpan = 0
         while firstSpan < ordered.count {
@@ -845,6 +855,7 @@ private extension SongDocument {
     func resolveCollisions(spans: [TimeNoteSpan], editedIDs: Set<NoteID>,
                            reference: SongState, mutation: inout DocumentMutation) -> Bool {
         let sorted = spans.sorted { ($0.track, $0.pitch, $0.tick) < ($1.track, $1.pitch, $1.tick) }
+        guard sorted.allSatisfy({ $0.end > UInt64($0.tick) }) else { return false }
         if sorted.count > 1 {
             for index in 1..<sorted.count where sorted[index - 1].track == sorted[index].track &&
                 sorted[index - 1].pitch == sorted[index].pitch &&
@@ -939,33 +950,6 @@ private extension SongDocument {
                           engineTrackMap: Array(0..<oldMap.usedTrackCount).map(Optional.some),
                           newChunkCount: after.chunks.count,
                           newEngineTrackCount: newMap.usedTrackCount)
-    }
-
-    func installLaneWrites(_ writes: [(chunk: Int, event: MidiEvent)],
-                           in mutation: inout DocumentMutation) {
-        var order: [LaneEventKey] = []
-        var winner: [LaneEventKey: MidiEvent] = [:]
-        for write in writes {
-            guard let key = laneEventKey(chunk: write.chunk, event: write.event) else {
-                mutation.insert(write.event, chunk: write.chunk)
-                continue
-            }
-            if winner[key] == nil { order.append(key) }
-            winner[key] = write.event
-        }
-        let keys = Set(order)
-        for chunk in mutation.state.file.chunks.indices {
-            for index in mutation.state.file.chunks[chunk].events.indices.reversed() {
-                guard let key = laneEventKey(
-                    chunk: chunk,
-                    event: mutation.state.file.chunks[chunk].events[index]),
-                      keys.contains(key) else { continue }
-                mutation.remove(chunk: chunk, offset: index)
-            }
-        }
-        for key in order {
-            if let event = winner[key] { mutation.insert(event, chunk: key.chunk) }
-        }
     }
 
     func normalizeMovedLaneDestinations(points: [LanePoint], delta: Int64,
@@ -1127,8 +1111,9 @@ private func lane(of event: MidiEvent) -> Lane? {
 private func makeLaneEvent(lane: Lane, channel: UInt8, tick: Tick, value: Int) -> MidiEvent {
     switch lane {
     case let .controller(controller):
+        let domain = TimeDefaults.laneDomain(for: controller)
         return .channel(tick: tick, status: 0xB0 | channel, data0: controller,
-                        data1: UInt8(min(max(value, 0), 127)))
+                        data1: UInt8(min(max(value, domain.minimum), domain.maximum)))
     case .pitchBend:
         let raw = min(max(value, -8192), 8191) + 8192
         return .channel(tick: tick, status: 0xE0 | channel,

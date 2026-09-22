@@ -1,0 +1,665 @@
+Assertion correspondence: midi/tst_midiexport.cpp
+
+Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
+Original: src/checks/midi/tst_midiexport.cpp
+Original SHA-256: 972cf0f8297f45898df36e79d018d6cc6da2a315298804749a989298b93c8f5a
+Swift counterpart: src/checks/midi/MidiChecks.swift
+Swift SHA-256: 3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute for the same
+logical observation; execution must still be verified.
+PARTIAL identifies a related Swift predicate with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter exportcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The exportcheck lanes (exportcheck-loop on mus_route101, exportcheck-tail on
+mus_route102) are native-only Qt checks. Their C++ sources are reference
+inventories for the offline-render contract below, never Swift execution
+evidence.
+
+Execution ownership
+No Swift entry point executes this export contract. runMidiCodecSuite and
+runMidiExportEquivalence decode MIDI bytes and compare mid2agb assembly only;
+no Swift predicate loads an export fixture, computes WavExportTotals, calls
+exportWav, inspects RIFF headers or PCM samples, or cancels an export. All
+paired observations remain native-only.
+
+Fixture, sequence and row constraints
+loadExportFixture opens the staged project service, leases the song bank, and
+loads the Swift playback timeline at 44100 Hz with loopCount 1 and 1.0 s
+fadeout/tail. durationCalculationMatchesRenderParity compares wavExportTotals
+against expectedTotalSamples. offlineExportProducesValidRiffPcm asserts a
+strictly monotonic 0-to-1.0 progress callback, 44-byte RIFF header fields, an
+audible peak (>= 256), and a fade-to-silence tail when the timeline loops.
+resonanceSuppressionChangesPcmWithoutChangingFrames compares baseline and
+suppressed renders byte-wise. cancelledExportRemovesPartialFile rejects the
+progress callback at once and requires no partial file. Original setup, helper
+implementations, and song-label routing at the reference revision remain
+authoritative.
+
+Original assertion inventory and source sequence
+
+A001 | MidiExportTest::initTestCase | src/checks/midi/tst_midiexport.cpp:194
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  #include "checks/midi/tst_midiexport.h"
+
+  #include <QByteArray>
+  #include <QFile>
+  #include <QFileInfo>
+  #include <QSemaphore>
+  #include <QTemporaryDir>
+  #include <QtTest>
+
+  #include <algorithm>
+  #include <array>
+  #include <cstddef>
+  #include <cstdint>
+  #include <cstdlib>
+  #include <memory>
+  #include <utility>
+
+  #include "audio/swift_playback.h"
+  #include "audio/wavexport.h"
+  #include "project/swift_project_service.h"
+
+  namespace {
+
+  struct ProjectServiceDeleter {
+      void operator()(PdProjectService *service) const { pd_service_destroy(service); }
+  };
+
+  struct BankLeaseDeleter {
+      void operator()(PdBankLease *lease) const { pd_bank_lease_release(lease); }
+  };
+
+  struct OpenWait {
+      QSemaphore done;
+      bool ok = false;
+      QString error;
+  };
+
+  struct SongWait {
+      QSemaphore done;
+      bool ok = false;
+      QString error;
+      QString midiPath;
+      int masterVolume = 127;
+      int reverb = 0;
+      PdBankLease *lease = nullptr;
+  };
+
+  struct ExportFixture {
+      std::unique_ptr<PdProjectService, ProjectServiceDeleter> service;
+      std::unique_ptr<PdBankLease, BankLeaseDeleter> bank;
+      std::shared_ptr<const PdPlaybackData> timeline;
+      SongSettings settings;
+      WavExportOptions options;
+  };
+
+  void openCompletion(void *context, bool ok, const char *error)
+  {
+      auto &wait = *static_cast<OpenWait *>(context);
+      wait.ok = ok;
+      wait.error = error ? QString::fromUtf8(error) : QString{};
+      wait.done.release();
+  }
+
+  void songCompletion(void *context, bool ok, const uint8_t *, size_t, const PdSongMeta *meta,
+                      const PdBankView *bank, PdBankLease *lease, const char *error)
+  {
+      auto &wait = *static_cast<SongWait *>(context);
+      wait.ok = ok && meta && bank && lease;
+      wait.error = error ? QString::fromUtf8(error) : QString{};
+      if (wait.ok) {
+          wait.midiPath = QString::fromUtf8(meta->midiPath);
+          wait.masterVolume = meta->cfg.masterVolume;
+          wait.reverb = meta->cfg.reverb;
+          wait.lease = lease;
+      } else {
+          if (lease)
+              pd_bank_lease_release(lease);
+          if (wait.error.isEmpty())
+              wait.error = QStringLiteral("project service returned an incomplete song");
+      }
+      wait.done.release();
+  }
+
+  uint32_t littleEndianU32(const QByteArray &bytes, qsizetype offset)
+  {
+      return uint32_t(uint8_t(bytes[offset])) | uint32_t(uint8_t(bytes[offset + 1])) << 8 |
+             uint32_t(uint8_t(bytes[offset + 2])) << 16 | uint32_t(uint8_t(bytes[offset + 3])) << 24;
+  }
+
+  uint16_t littleEndianU16(const QByteArray &bytes, qsizetype offset)
+  {
+      return uint16_t(uint8_t(bytes[offset])) | uint16_t(uint8_t(bytes[offset + 1])) << 8;
+  }
+
+  int16_t sampleAt(const QByteArray &bytes, uint64_t index)
+  {
+      const qsizetype offset = 44 + static_cast<qsizetype>(index * 2);
+      return static_cast<int16_t>(littleEndianU16(bytes, offset));
+  }
+
+  bool readFile(const QString &path, QByteArray &bytes, QString &error)
+  {
+      auto file = QFile{path};
+      if (!file.open(QIODevice::ReadOnly)) {
+          error = QStringLiteral("cannot read %1: %2").arg(path, file.errorString());
+          return false;
+      }
+      bytes = file.readAll();
+      return true;
+  }
+
+  std::unique_ptr<ExportFixture> loadExportFixture(const QString &projectRoot,
+                                                   const QString &songLabel, QString &error)
+  {
+      auto fixture = std::make_unique<ExportFixture>();
+      fixture->service.reset(pd_service_create());
+      if (!fixture->service) {
+          error = QStringLiteral("cannot allocate project service");
+          return nullptr;
+      }
+
+      OpenWait opened;
+      const QByteArray root = projectRoot.toUtf8();
+      pd_service_open(fixture->service.get(), root.constData(), &opened, openCompletion);
+      opened.done.acquire();
+      if (!opened.ok) {
+          error = opened.error;
+          return nullptr;
+      }
+
+      SongWait song;
+      const QByteArray label = songLabel.toUtf8();
+      pd_service_open_song(fixture->service.get(), label.constData(), &song, songCompletion);
+      song.done.acquire();
+      if (!song.ok) {
+          error = song.error;
+          return nullptr;
+      }
+      fixture->bank.reset(song.lease);
+
+      fixture->settings.songVolume = static_cast<uint8_t>(song.masterVolume);
+      fixture->settings.reverb = static_cast<uint8_t>(song.reverb > 0 ? song.reverb : 0);
+      fixture->options.sampleRate = 44100;
+      fixture->options.loopCount = 1;
+      fixture->options.fadeoutSeconds = 1.0;
+      fixture->options.tailSeconds = 1.0;
+
+      PdPlaybackData *publication = nullptr;
+      std::array<char, 1024> diagnostic{};
+      const QByteArray midiPath = song.midiPath.toUtf8();
+      if (!pd_playback_data_load_file(midiPath.constData(), double(fixture->options.sampleRate),
+                                      &publication, diagnostic.data(), diagnostic.size())) {
+          if (publication)
+              pd_playback_data_release(publication);
+          error = QString::fromUtf8(diagnostic.data());
+          if (error.isEmpty())
+              error = QStringLiteral("could not load Swift playback timeline for %1").arg(songLabel);
+          return nullptr;
+      }
+      if (!publication) {
+          error = QStringLiteral("Swift playback loader returned no timeline for %1").arg(songLabel);
+          return nullptr;
+      }
+      fixture->timeline =
+          std::shared_ptr<const PdPlaybackData>{publication, pd_playback_data_release};
+      error.clear();
+      return fixture;
+  }
+
+  bool hasLoop(const PdPlaybackData &timeline)
+  {
+      return timeline.loopStartSample != UINT64_MAX && timeline.loopEndSample != UINT64_MAX &&
+             timeline.loopEndSample > timeline.loopStartSample;
+  }
+
+  uint64_t expectedTotalSamples(const PdPlaybackData &timeline, const WavExportOptions &options)
+  {
+      if (hasLoop(timeline)) {
+          const uint64_t loopDuration = timeline.loopEndSample - timeline.loopStartSample;
+          return timeline.loopStartSample + loopDuration + uint64_t(options.sampleRate);
+      }
+      return timeline.lengthSamples + uint64_t(options.sampleRate);
+  }
+
+  } // namespace
+
+  MidiExportTest::MidiExportTest(QString projectRoot, QString songLabel)
+      : m_projectRoot(std::move(projectRoot))
+      , m_songLabel(std::move(songLabel))
+  {}
+
+  void MidiExportTest::initTestCase()
+  {
+
+Original expression:
+  QVERIFY2(
+          QFileInfo{m_projectRoot}.isDir(),
+          qPrintable(
+              QStringLiteral("exportcheck project root is not a directory: %1").arg(m_projectRoot)))
+
+A002 | MidiExportTest::initTestCase | src/checks/midi/tst_midiexport.cpp:198
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!m_songLabel.isEmpty(), "exportcheck requires a song label")
+
+A003 | MidiExportTest::durationCalculationMatchesRenderParity | src/checks/midi/tst_midiexport.cpp:205
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void MidiExportTest::durationCalculationMatchesRenderParity()
+  {
+      auto error = QString{};
+      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error))
+
+A004 | MidiExportTest::durationCalculationMatchesRenderParity | src/checks/midi/tst_midiexport.cpp:208
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+      const WavExportTotals totals = wavExportTotals(*fixture->timeline, fixture->options);
+
+Original expression:
+  QCOMPARE(qulonglong(totals.totalSamples),
+               qulonglong(expectedTotalSamples(*fixture->timeline, fixture->options)))
+
+A005 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:216
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void MidiExportTest::offlineExportProducesValidRiffPcm()
+  {
+      auto error = QString{};
+      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error))
+
+A006 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:220
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      const WavExportTotals totals = wavExportTotals(*fixture->timeline, fixture->options);
+
+      auto scratch = QTemporaryDir{};
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "could not create WAV export scratch directory")
+
+A007 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:224
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+      const QString path = scratch.filePath(QStringLiteral("export.wav"));
+      double lastFraction = -1.0;
+      bool strictlyMonotonic = true;
+
+Original expression:
+  QVERIFY2(exportWav(
+                   path, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()),
+                   fixture->settings, fixture->options,
+                   [&](double fraction) {
+                       strictlyMonotonic = strictlyMonotonic && fraction > lastFraction;
+                       lastFraction = fraction;
+                       return true;
+                   },
+                   &error),
+               qPrintable(error))
+
+A008 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:234
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(strictlyMonotonic && lastFraction == 1.0,
+               "WAV export progress was not strictly monotonic through 1.0")
+
+A009 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:238
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+      auto wav = QByteArray{};
+
+Original expression:
+  QVERIFY2(readFile(path, wav, error), qPrintable(error))
+
+A010 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:240
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+      const uint64_t dataSize = totals.totalSamples * 4;
+
+Original expression:
+  QVERIFY2(uint64_t(wav.size()) == 44 + dataSize,
+               "WAV byte count does not match the rendered frame count")
+
+A011 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:242
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(wav.size() >= 44)
+
+A012 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:243
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(wav.left(4), QByteArray("RIFF"))
+
+A013 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:244
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(wav.mid(8, 4), QByteArray("WAVE"))
+
+A014 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:245
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(wav.mid(12, 4), QByteArray("fmt "))
+
+A015 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:246
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(wav.mid(36, 4), QByteArray("data"))
+
+A016 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:247
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(int(littleEndianU16(wav, 20)), 1)
+
+A017 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:248
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(int(littleEndianU16(wav, 22)), 2)
+
+A018 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:249
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(int(littleEndianU16(wav, 34)), 16)
+
+A019 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:250
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(qulonglong(littleEndianU32(wav, 24)), qulonglong(fixture->options.sampleRate))
+
+A020 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:251
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(qulonglong(littleEndianU32(wav, 40)), qulonglong(dataSize))
+
+A021 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:256
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+      int peak = 0;
+      for (uint64_t sampleIndex = 0; sampleIndex < totals.totalSamples * 2; ++sampleIndex)
+          peak = std::max(peak, std::abs(int(sampleAt(wav, sampleIndex))));
+
+Original expression:
+  QVERIFY2(peak >= 256, "offline WAV render is nearly silent")
+
+A022 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:259
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+      if (hasLoop(*fixture->timeline)) {
+
+Original expression:
+  QVERIFY2(totals.totalSamples >= 16, "looping export is too short for tail verification")
+
+A023 | MidiExportTest::offlineExportProducesValidRiffPcm | src/checks/midi/tst_midiexport.cpp:265
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+          int tailPeak = 0;
+          for (uint64_t sampleIndex = (totals.totalSamples - 16) * 2;
+               sampleIndex < totals.totalSamples * 2; ++sampleIndex) {
+              tailPeak = std::max(tailPeak, std::abs(int(sampleAt(wav, sampleIndex))));
+          }
+
+Original expression:
+  QVERIFY2(tailPeak <= peak / 16, "looping WAV export did not fade to silence")
+
+A024 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:273
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames()
+  {
+      auto error = QString{};
+      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error))
+
+A025 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:276
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+      auto scratch = QTemporaryDir{};
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "could not create resonance-export scratch directory")
+
+A026 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:279
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+      const QString baselinePath = scratch.filePath(QStringLiteral("baseline.wav"));
+      const QString suppressedPath = scratch.filePath(QStringLiteral("suppressed.wav"));
+
+Original expression:
+  QVERIFY2(exportWav(baselinePath, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()),
+                         fixture->settings, fixture->options, {}, &error),
+               qPrintable(error))
+
+A027 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:283
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+      auto baseline = QByteArray{};
+
+Original expression:
+  QVERIFY2(readFile(baselinePath, baseline, error), qPrintable(error))
+
+A028 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:286
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+      fixture->options.resonanceSuppression = true;
+
+Original expression:
+  QVERIFY2(exportWav(suppressedPath, *fixture->timeline,
+                         pd_bank_lease_native(fixture->bank.get()), fixture->settings,
+                         fixture->options, {}, &error),
+               qPrintable(error))
+
+A029 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:291
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+      auto suppressed = QByteArray{};
+
+Original expression:
+  QVERIFY2(readFile(suppressedPath, suppressed, error), qPrintable(error))
+
+A030 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:292
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(suppressed.size(), baseline.size())
+
+A031 | MidiExportTest::resonanceSuppressionChangesPcmWithoutChangingFrames | src/checks/midi/tst_midiexport.cpp:293
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(suppressed != baseline, "resonance suppression did not alter exported PCM bytes")
+
+A032 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:300
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void MidiExportTest::cancelledExportRemovesPartialFile()
+  {
+      auto error = QString{};
+      const auto fixture = loadExportFixture(m_projectRoot, m_songLabel, error);
+
+Original expression:
+  QVERIFY2(fixture, qPrintable(error))
+
+A033 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:303
+Disposition: GAP
+Mapping/reason: Harness/fixture precondition with no Swift counterpart. The Swift suite never loads this export fixture, creates these scratch directories, or renders WAV output; the guard below remains an open obligation.
+Source context since previous assertion:
+  ;
+
+      auto scratch = QTemporaryDir{};
+
+Original expression:
+  QVERIFY2(scratch.isValid(), "could not create cancellation-export scratch directory")
+
+A034 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:306
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+      const QString path = scratch.filePath(QStringLiteral("cancelled.wav"));
+      fixture->options.resonanceSuppression = true;
+
+Original expression:
+  QVERIFY(!exportWav(
+          path, *fixture->timeline, pd_bank_lease_native(fixture->bank.get()), fixture->settings,
+          fixture->options, [](double) { return false; }, &error))
+
+A035 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:309
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(error.isEmpty(), qPrintable(error))
+
+A036 | MidiExportTest::cancelledExportRemovesPartialFile | src/checks/midi/tst_midiexport.cpp:310
+Disposition: GAP
+Mapping/reason: No equivalent Swift assertion established. The Swift suite covers MIDI codec decoding, musical semantics, and mid2agb assembly equivalence only; render totals, RIFF structure, PCM content, progress monotonicity, resonance suppression audibility, and cancellation behavior below remain open obligations.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(!QFile::exists(path), "cancelled WAV export left a partial file")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  int runExportCheck(const QString &projectRoot, const QString &songLabel,
+                     const QStringList &qtArguments)
+  {
+      auto test = MidiExportTest{projectRoot, songLabel};
+      auto arguments = QStringList{QStringLiteral("exportcheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+Swift assertion predicates
+
+None identified: no report.expect*/expectEqual call in src/checks/midi/MidiChecks.swift carries an
+exportcheck cppID or observes WAV render output. All 36 original sites above
+are GAP.

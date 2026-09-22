@@ -237,9 +237,7 @@ qt_add_resources(porydaw_app "swift_roll_qml"
     PREFIX "/porydaw/swiftroll"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick/swiftroll"
     FILES
-        src/ui/songview/quick/swiftroll/PianoRollCanvas.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
-        src/ui/songview/quick/swiftroll/TrackHeaderBand.qml
         src/ui/songview/quick/swiftroll/SharedPlayhead.qml
         src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
         src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
@@ -251,8 +249,12 @@ qt_add_resources(porydaw_app "drawer_shared_qml"
     PREFIX "/porydaw"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/src/ui/songview/quick"
     FILES
+        src/ui/songview/quick/PianoRollCanvas.qml
+        src/ui/songview/quick/TrackHeaderBand.qml
         src/ui/songview/quick/PromptCard.qml
         src/ui/songview/quick/PromptButton.qml
+        src/ui/songview/quick/VelocityPrompt.qml
+        src/ui/songview/quick/VoicePickerPrompt.qml
         src/ui/songview/quick/DragInput.qml
         src/ui/songview/quick/HoverHint.qml
         src/ui/songview/quick/HintProfiles.qml
@@ -268,9 +270,7 @@ qt_add_resources(porydaw_app "drawer_qml"
     FILES
         src/ui/songview/quick/drawer/EditorDrawer.qml
         src/ui/songview/quick/drawer/VelocityPage.qml
-        src/ui/songview/quick/drawer/VelocityPrompt.qml
         src/ui/songview/quick/drawer/VoiceChangesPage.qml
-        src/ui/songview/quick/drawer/VoicePicker.qml
         src/ui/songview/quick/drawer/VoiceChangeMenu.qml
         src/ui/songview/quick/drawer/AutomationPage.qml
         src/ui/songview/quick/drawer/AutomationPrompt.qml

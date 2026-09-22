@@ -1,0 +1,423 @@
+Assertion correspondence: audio/tst_clicktransport.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/audio/tst_clicktransport.cpp
+Original SHA-256: 3e33a180385effc7d7260a24542264c62f53eb3a105b0311eb9ad236d40569bb
+Swift counterpart: src/checks/audio/tst_clicktransport.swift
+Swift SHA-256: 91f2909300044171411451b4da4075341d4fb3f64904f25982fb15214df60817
+
+Purpose and status
+Each numbered entry records one original assertion/failure site, not one test
+method or one runtime execution. Loops/data rows reuse a site; their instances
+are described below. QFAIL/qFail guards and helper calls are part of the contract.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way;
+GAP means an equivalent Swift assertion is not established;
+NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
+only by the retained native path. None of these labels authorizes deletion or
+claims whole-case equivalence. Native passes do not prove the Swift replacement.
+
+Execution and ownership
+checkControllerCuts; shared AudioControllerCheckFixture/audioControllerCheckPeak/audioControllerCheckStep in audio/controllerfixture.swift. runAudioControllerChecks calls this before publication and control cases.
+
+Fixture, sequence and row constraints
+Original DC and square PCM fixtures are present, including three-second steady silence and separate max-amplitude/max-step assertions. The audition duration and post-cut window are exact; timed-preview and reload cases use fresh constant-DC fixtures and original render counts. Swift sustain adds CC7 at tick4800, after all inspected capture windows. The direct-engine negative control still differs as documented at A008.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Verification evidence
+Reconciled 2026-09-21 against worktree HEAD 59f48ea0e432c14a0da6f93684cc729d8b3c587b.
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected harnesses (22 unselected); swiftcore and clickcheck.
+Swift execution ownership: swiftcore -> runAudioControllerChecks -> paired functions.
+Native harness results support only retained native obligations, not Swift parity.
+MATCHED closes only the listed assertion and stated sequence; PARTIAL and
+NATIVE-SETUP remain open for whole-case Swift equivalence. No native check removal
+or full migration sign-off is authorized by this evidence.
+
+Shared Swift sources used by this refactor (SHA-256)
+src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
+src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
+src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
+src/checks/playback/PlaybackChecks.swift: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
+src/checks/playback/ResonanceSuppressionChecks.swift: a20761efc254f055672862b355aa7467985de554458814847905d2926dfeebb1
+
+Original assertion inventory
+
+A001 | ClickTest::startRig | src/checks/audio/tst_clicktransport.cpp:57
+Disposition: NATIVE-SETUP
+Mapping/reason: Original forced-null device initialization. Swift AudioControllerCheckFixture constructs AudioRenderEngine directly; thrown initialization errors reach runAudioControllerChecks. Device initialization is not exercised by this replacement.
+Original expression:
+  QTest::qFail(
+              qUtf8Printable(QStringLiteral("forced null audio init failed: %1").arg(rig.error)),
+              __FILE__, __LINE__)
+
+A002 | ClickTest::startRig | src/checks/audio/tst_clicktransport.cpp:66
+Disposition: NATIVE-SETUP
+Mapping/reason: Original device stop before manual rendering; Swift AudioControllerCheckFixture has no device to park. Native device lifecycle remains separately required.
+Original expression:
+  QTest::qFail("could not stop the audio device for deterministic rendering", __FILE__,
+                       __LINE__)
+
+A003 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:77
+Disposition: NATIVE-SETUP
+Mapping/reason: Original fixture MIDI encoding; Swift builds PlaybackTimeline in memory. The serialized-fixture precondition is not exercised.
+Original expression:
+  QTest::qFail("synthesized sustain MIDI failed to encode", __FILE__, __LINE__)
+
+A004 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:83
+Disposition: NATIVE-SETUP
+Mapping/reason: Original temporary fixture write/flush; Swift builds its fixture in memory.
+Original expression:
+  QTest::qFail("could not write synthesized sustain MIDI", __FILE__, __LINE__)
+
+A005 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:94
+Disposition: NATIVE-SETUP
+Mapping/reason: Original pd_playback_data_load_file error check; Swift builds its fixture directly. This does not prove loader/ABI coverage.
+Original expression:
+  QTest::qFail(qUtf8Printable(QStringLiteral("Swift playback loader failed: %1")
+                                          .arg(QString::fromUtf8(diagnostic.data()))),
+                       __FILE__, __LINE__)
+
+A006 | ClickTest::loadSustainSong | src/checks/audio/tst_clicktransport.cpp:100
+Disposition: NATIVE-SETUP
+Mapping/reason: Original nonnull playback publication from loader; Swift constructs a value timeline directly.
+Original expression:
+  QTest::qFail("Swift playback loader returned no publication", __FILE__, __LINE__)
+
+A007 | ClickTest::verifyTransition | src/checks/audio/tst_clicktransport.cpp:168
+Disposition: MATCHED
+Mapping/reason: S007 and S028 execute the original constant-100 DC and square rows and require the 64/32768 measurable-signal floor for every smooth and hard-cut row. The sine row's stronger 0.01 floor is supplementary. A008 separately retains the negative-control path difference.
+Original expression:
+  QVERIFY2(probe.amp >= kMeasurableSignalFloor,
+               qUtf8Printable(QStringLiteral("%1: sustain amplitude %2 too low to measure")
+                                  .arg(QLatin1String(what))
+                                  .arg(probe.amp, 0, 'f', 4)))
+
+A008 | ClickTest::verifyTransition | src/checks/audio/tst_clicktransport.cpp:175
+Disposition: PARTIAL
+Mapping/reason: S029 executes pause/stop/play-over-audition-labelled rows and asserts step > max(0.02*amplitude,1.5*natural+0.001). It drives a bare M4A engine and multiplies output by a calculated ramp, rather than invoking the original AudioEngine hard-cut/transport sequence. This proves detector sensitivity for those signals, not the original production-control path.
+Original expression:
+  QVERIFY2(
+              clickDetected,
+              qUtf8Printable(QStringLiteral("%1 hard-cut control produced no detectable click "
+                                            "(step %2, sustain %3, natural step %4, threshold %5)")
+                                 .arg(QLatin1String(what))
+                                 .arg(probe.step, 0, 'f', 4)
+                                 .arg(probe.amp, 0, 'f', 4)
+                                 .arg(probe.naturalStep, 0, 'f', 5)
+                                 .arg(probe.allowed, 0, 'f', 6)))
+
+A009 | ClickTest::verifyTransition | src/checks/audio/tst_clicktransport.cpp:186
+Disposition: MATCHED
+Mapping/reason: S008 uses the original stereo sustain/step windows and calibrated threshold for constant-DC pause/stop/play-over-audition and square pause. The audition row renders the original half-second before play and 3*ramp+4096 frames afterward.
+Original expression:
+  QVERIFY2(!clickDetected,
+               qUtf8Printable(QStringLiteral("%1: output stepped %2 in one sample at the transition "
+                                             "(sustain %3, natural step %4, allowed %5)")
+                                  .arg(QLatin1String(what))
+                                  .arg(probe.step, 0, 'f', 4)
+                                  .arg(probe.amp, 0, 'f', 4)
+                                  .arg(probe.naturalStep, 0, 'f', 5)
+                                  .arg(probe.allowed, 0, 'f', 6)))
+
+A010 | ClickTest::pauseFadesSilently | src/checks/audio/tst_clicktransport.cpp:231
+Disposition: MATCHED
+Mapping/reason: S009 covers checkControllerCuts scenarios (0,true) and (1,false): original constant-100 DC and 64-sample +/-100 square fixtures, key60 velocity100, one-second sustain then pause. audioControllerCheckPeak over both channels from at+2*ramp to capture end is <=0.01. The capture includes the original entire pause-tail interval. The extra sine row is supplementary, not replacement evidence.
+Original expression:
+  QVERIFY2(tail <= 0.01,
+               qUtf8Printable(QStringLiteral("%1: pause did not fall silent (tail level %2)")
+                                  .arg(QLatin1String(what))
+                                  .arg(tail, 0, 'f', 4)))
+
+A011 | ClickTest::pauseFadesSilently | src/checks/audio/tst_clicktransport.cpp:240
+Disposition: MATCHED
+Mapping/reason: S010 and S011 cover checkControllerCuts scenarios (0,true) and (1,false): separate amplitude and same-channel step predicates are both <=1/32768 over exactly three seconds beginning at at+settle+3*ramp. audioControllerCheckStep starts at steadyStart+1, matching scanSteadySilence exclusion of the preceding sample. Both original DC/square rows execute; shared fixture and rendered hold lengths match the inspected contract.
+Original expression:
+  QVERIFY2(steady.maxAbs <= kOutputLsb && steady.maxStep <= kOutputLsb,
+               qUtf8Printable(QStringLiteral("%1: steady Paused tail was not silent (max abs %2 at "
+                                             "sample %3, max step %4 at sample %5; evidence:%6)")
+                                  .arg(QLatin1String(what))
+                                  .arg(steady.maxAbs)
+                                  .arg(steady.absAt)
+                                  .arg(steady.maxStep)
+                                  .arg(steady.stepAt)
+                                  .arg(evidenceText(steady))))
+
+A012 | ClickTest::stopFadesSilently | src/checks/audio/tst_clicktransport.cpp:272
+Disposition: MATCHED
+Mapping/reason: S009 covers checkControllerCuts scenario (2,true): original constant-100 DC, key60 velocity100 and one-second sustain before stop; stereo peak <=0.01 from at+2*ramp. Swift observes a longer tail that contains the original 3*ramp+2048-frame capture, so the original interval is covered without weakening the threshold.
+Original expression:
+  QVERIFY2(
+          tail <= 0.01,
+          qUtf8Printable(
+              QStringLiteral("DC stop did not fall silent (tail level %1)").arg(tail, 0, 'f', 4)))
+
+A013 | ClickTest::playOverAuditionFadesSilently | src/checks/audio/tst_clicktransport.cpp:291
+Disposition: MATCHED
+Mapping/reason: S006 uses a fresh constant-100 DC fixture, previews key62 at velocity100, renders the original half-second, and observes key62 still on before play.
+Original expression:
+  QVERIFY2(sounding(rig.engine, 62), "the audition must ring before playback starts")
+
+A014 | ClickTest::playOverAuditionFadesSilently | src/checks/audio/tst_clicktransport.cpp:298
+Disposition: MATCHED
+Mapping/reason: S012 uses the same constant-DC fixture and observes no on key62 after the original 3*ramp+4096-frame post-play render.
+Original expression:
+  QVERIFY2(!sounding(rig.engine, 62), "play did not halt the ringing audition")
+
+A015 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:313
+Disposition: MATCHED
+Mapping/reason: S001 uses a fresh constant-100 DC fixture with original key60/velocity100. It renders one frame at a time for ramp+settle (less than one second) and asserts applied Playing. Native loader/device setup is separately retained.
+Original expression:
+  QVERIFY2(spinUntilApplied(rig.engine, Transport::Playing, capture, &onset),
+               "Playing was not applied within one second")
+
+A016 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:315
+Disposition: MATCHED
+Mapping/reason: S001 uses the same original fixture and onset boundary and requires cutGain>=0.999.
+Original expression:
+  QVERIFY2(rig.engine.m_cutFadeGain >= 0.999f, "song start applied below full output gain")
+
+A017 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:316
+Disposition: MATCHED
+Mapping/reason: S002 observes playheadSamples==0 at the same unity-onset boundary; zero establishes that the first Playing sample has not been consumed.
+Original expression:
+  QCOMPARE(pd_player_position(rig.engine.m_player), uint64_t(0))
+
+A018 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:322
+Disposition: MATCHED
+Mapping/reason: S003 renders settle+1024 frames after the unity-onset observation, equal to original settle+2*512, and checks stereo peak>=64/32768. The extra CC7 event at tick4800 occurs outside this capture.
+Original expression:
+  QVERIFY2(level >= kMeasurableSignalFloor,
+               qUtf8Printable(QStringLiteral("Playing transition cut the first sequenced note "
+                                             "(level %1)")
+                                  .arg(level, 0, 'f', 4)))
+
+A019 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:326
+Disposition: MATCHED
+Mapping/reason: S003 checks sustaining key60 after the same settle+1024-frame onset capture.
+Original expression:
+  QVERIFY2(sustaining(rig.engine, 60), "first sequenced note did not sustain after Playing")
+
+A020 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:327
+Disposition: MATCHED
+Mapping/reason: S004 repeats applied Playing after the original settle+1024-frame onset capture on the same fixture.
+Original expression:
+  QCOMPARE(rig.engine.m_appliedTransport, Transport::Playing)
+
+A021 | ClickTest::songStartReachesFullGain | src/checks/audio/tst_clicktransport.cpp:328
+Disposition: MATCHED
+Mapping/reason: S005 observes !cutting and cutGain>=0.99 after the original settle+1024-frame onset capture on the same fixture.
+Original expression:
+  QVERIFY2(!rig.engine.m_cutFadeActive && rig.engine.m_cutFadeGain >= 0.99f,
+               "Playing transition left stale transport/fade state")
+
+A022 | ClickTest::rapidRetargetKeepsNewestTransport | src/checks/audio/tst_clicktransport.cpp:345
+Disposition: MATCHED
+Mapping/reason: S023 uses a fresh constant-100 DC fixture and the original play, ramp/2, pause, play sequence, then asserts cutting.
+Original expression:
+  QVERIFY2(rig.engine.m_cutFadeActive, "rapid retarget did not keep a cut in flight")
+
+A023 | ClickTest::rapidRetargetKeepsNewestTransport | src/checks/audio/tst_clicktransport.cpp:346
+Disposition: MATCHED
+Mapping/reason: S024 asserts target Playing at the same original retarget boundary.
+Original expression:
+  QCOMPARE(rig.engine.m_cutFadeTargetTransport, Transport::Playing)
+
+A024 | ClickTest::rapidRetargetKeepsNewestTransport | src/checks/audio/tst_clicktransport.cpp:349
+Disposition: MATCHED
+Mapping/reason: S025 renders the original 3*ramp+settle+1024 frames and asserts applied Playing.
+Original expression:
+  QCOMPARE(rig.engine.m_appliedTransport, Transport::Playing)
+
+A025 | ClickTest::rapidRetargetKeepsNewestTransport | src/checks/audio/tst_clicktransport.cpp:350
+Disposition: MATCHED
+Mapping/reason: S026 observes !cutting and gain>=0.99 after the original retarget render.
+Original expression:
+  QVERIFY2(!rig.engine.m_cutFadeActive && rig.engine.m_cutFadeGain >= 0.99f,
+               "rapid retarget left stale transport/fade state")
+
+A026 | ClickTest::rapidRetargetKeepsNewestTransport | src/checks/audio/tst_clicktransport.cpp:352
+Disposition: MATCHED
+Mapping/reason: S027 observes sustaining key60 after the original retarget render.
+Original expression:
+  QVERIFY2(sustaining(rig.engine, 60), "rapid retarget lost the sequenced note")
+
+A027 | ClickTest::timedPreviewCutDefersCommands | src/checks/audio/tst_clicktransport.cpp:369
+Disposition: MATCHED
+Mapping/reason: S013 uses a fresh constant-100 DC fixture and the original timed-preview durations; after the first 512-frame cut it observes active count==0.
+Original expression:
+  QCOMPARE(rig.engine.m_timedActiveCount, 0)
+
+A028 | ClickTest::timedPreviewCutDefersCommands | src/checks/audio/tst_clicktransport.cpp:370
+Disposition: MATCHED
+Mapping/reason: S014 observes read==write at the same original first-cut boundary.
+Original expression:
+  QCOMPARE(rig.engine.m_timedRead.load(), rig.engine.m_timedWrite.load())
+
+A029 | ClickTest::timedPreviewCutDefersCommands | src/checks/audio/tst_clicktransport.cpp:378
+Disposition: MATCHED
+Mapping/reason: S015 renders the original 3*ramp+settle+1024 frames and observes sustaining key60 on the constant-DC fixture.
+Original expression:
+  QVERIFY2(sustaining(rig.engine, 60), "timed preview note-off stopped the Playing song note")
+
+A030 | ClickTest::timedPreviewCutDefersCommands | src/checks/audio/tst_clicktransport.cpp:379
+Disposition: MATCHED
+Mapping/reason: S015 observes sustaining key61 at the same original boundary.
+Original expression:
+  QVERIFY2(sustaining(rig.engine, 61), "later timed preview was not deferred cleanly")
+
+A031 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:396
+Disposition: MATCHED
+Mapping/reason: S016 uses a fresh constant-100 DC fixture, renders one second before pause and ramp/2 after it, unloads, and observes !cutting.
+Original expression:
+  QVERIFY2(!rig.engine.m_cutFadeActive, "unload must clear an interrupted fade")
+
+A032 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:397
+Disposition: MATCHED
+Mapping/reason: S017 observes cutGain==1 at the same original unload boundary.
+Original expression:
+  QCOMPARE(rig.engine.m_cutFadeGain, 1.0f)
+
+A033 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:403
+Disposition: MATCHED
+Mapping/reason: S018 renders one frame at a time until applied Playing, with the original one-second bound.
+Original expression:
+  QVERIFY2(spinUntilApplied(rig.engine, Transport::Playing, capture, &onset),
+               "Playing was not applied within one second after reload")
+
+A034 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:405
+Disposition: MATCHED
+Mapping/reason: S019 observes cutGain>=0.9 at the applied-Playing boundary.
+Original expression:
+  QVERIFY2(rig.engine.m_cutFadeGain >= 0.9f, "load after interrupted fade reused stale cut gain")
+
+A035 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:406
+Disposition: MATCHED
+Mapping/reason: S020 observes playheadSamples==0 at the same boundary.
+Original expression:
+  QCOMPARE(pd_player_position(rig.engine.m_player), uint64_t(0))
+
+A036 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:412
+Disposition: MATCHED
+Mapping/reason: S021 renders the original settle+1024 frames after onset and observes the constant-DC signal above 64/32768.
+Original expression:
+  QVERIFY2(level >= kMeasurableSignalFloor,
+               qUtf8Printable(QStringLiteral("loaded song started below the measurable floor (level "
+                                             "%1)")
+                                  .arg(level, 0, 'f', 4)))
+
+A037 | ClickTest::reloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.cpp:416
+Disposition: MATCHED
+Mapping/reason: S022 observes sustaining key60 after the same original restart capture.
+Original expression:
+  QVERIFY2(sustaining(rig.engine, 60), "loaded song did not sustain after interrupted fade")
+
+Swift predicate index
+
+S001 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:13
+`applied == .playing && cutGain >= 0.999` after the one-frame startup sweep.
+
+S002 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:17
+`playheadSamples == 0` at the unity-onset boundary.
+
+S003 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:20
+Onset peak is at least 64/32768 and key60 is sustaining after settle+1024 frames.
+
+S004 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:23
+Applied transport remains Playing after the onset capture.
+
+S005 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:26
+No cut remains active and cut gain remains at least 0.99 after the onset capture.
+
+S006 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:44
+The audition snapshot contains an on key62 after the original half-second render.
+
+S007 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:51
+Each smooth row meets the original measurable-signal floor.
+
+S008 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:53
+Each smooth row stays below the calibrated transition-step threshold.
+
+S009 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:56
+Pause and stop tails stay at or below 0.01 from two ramps after the transition.
+
+S010 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:58
+The three-second settled pause tail stays within one output LSB of amplitude.
+
+S011 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:60
+The three-second settled pause tail stays within one output LSB of same-channel step.
+
+S012 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:64
+No on key62 remains after the original play-over-audition cut window.
+
+S013 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:75
+The first timed-preview cut drains the active timed count.
+
+S014 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:77
+The first timed-preview cut advances the timed read cursor to the write cursor.
+
+S015 | checkControllerCuts | src/checks/audio/tst_clicktransport.swift:82
+Keys60 and 61 sustain after the original deferred-command render.
+
+S016 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:108
+Unload clears the interrupted cut.
+
+S017 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:109
+Unload restores cut gain to one.
+
+S018 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:118
+Playing applies during the preceding one-frame loop bounded by one second.
+
+S019 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:120
+Reloaded startup reaches cut gain at least 0.9.
+
+S020 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:122
+Reloaded startup leaves the player at sample zero.
+
+S021 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:125
+Reloaded constant-DC output reaches the original measurable floor after settle+1024 frames.
+
+S022 | checkReloadAfterInterruptedFadeStartsLoud | src/checks/audio/tst_clicktransport.swift:127
+Reloaded key60 sustains after the original restart capture.
+
+S023 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:139
+The rapid startup retarget keeps a cut in flight.
+
+S024 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:140
+The in-flight cut targets the newest Playing request.
+
+S025 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:142
+Applied transport is Playing after the original retarget render.
+
+S026 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:143
+The retarget completes with no cut and gain at least 0.99.
+
+S027 | checkRapidStartupRetarget | src/checks/audio/tst_clicktransport.swift:145
+Key60 sustains after the retarget completes.
+
+S028 | checkHardCutDetectionControls | src/checks/audio/tst_clicktransport.swift:193
+Each hard-cut control meets the original 64/32768 measurable-signal floor.
+
+S029 | checkHardCutDetectionControls | src/checks/audio/tst_clicktransport.swift:194
+Each direct-engine hard-cut control exceeds the calibrated click threshold.
+
+Reconciled dependency snapshot (SHA-256)
+src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
+src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
+src/checks/playback/PlaybackChecks.swift: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
+src/checks/checkcatalog.cpp: d49e751c9d41936250ecf27df8b0989845a990031407975e4e2a0da6ac967cf1
+src/checks/CMakeLists.txt: aef061200fa3ede5ed7604f1bdb2fc2a6b3c9e0a815b67f0cbba0f149da0b47b
+src/swift/app/NativeAudio.swift: 5cef2f88fc12f9cc0da03dea828691e091504bb50f10d7cb4ea46b23e42fb2e2
+src/swift/app/audio/AudioAudition.swift: 8e21d0edfbec6aba57d11ae6cb1ae1f21e2c60106a69b5c061b1b77c61a869a8
+src/swift/app/audio/AudioDevice.swift: a8d1bc48e7ee54994d5a4d6ef441d641da9e631b0fda81fbd2336e5b5555ad0e
+src/swift/app/audio/AudioRenderEngine.swift: e26acec389dfba967da6ad4c81b9c47f7e1339d2ef8ebd0bb9de4b2068dd5776
+src/swift/app/audio/AudioSampleAudition.swift: 857bad9298751346b349bd4f4dee6be0bb404ed67ff0e0ff94ec306715bcc369
+src/swift/app/audio/AudioTelemetry.swift: c4dd3ee85d0c1a73c31e8c1f1a4beb165ae9c687f079012a3a1072f82e536f02
+src/swift/app/audio/AudioTimelineHandoff.swift: 270ca150e27b60fa438f4b9ee7a91b8a84c6aac8ef5b5c940adbb7ebcac3021e
+src/swift/app/audio/AudioTransport.swift: 822b7e37e8790bbe9e50c2358169acaa9e9c1c9f74b952e9ea810f00d56d393a
+src/swift/app/audio/ResonanceSuppression.swift: 2f98febc6b954cb81cedeb9e182af02eecc0bda3d8ee7c0de761072e80129b16
+src/swift/playback/PlaybackBridge.swift: b8a19b9707128161ee8d7315f9c1943ec4a0a5bc7abb47a691ba098b47b090cd
+src/swift/playback/Sequencer.swift: 8392421562e4aa97abc8a30b675f41af833bd7a4dbea8d2a94e72ec6c0dc570a

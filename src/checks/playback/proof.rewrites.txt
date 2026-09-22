@@ -1,0 +1,136 @@
+Assertion correspondence: playback/rewrites.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/playback/rewrites.cpp
+Original SHA-256: 40e719fbeca1f58f5afa7f1c10d398845f82e4b68dbc2302a2221a678a3d06e8
+Swift counterpart: src/checks/playback/rewrites.swift
+Swift SHA-256: b21baffc211cbc4b877d2cd238d627aaad7defd94e6b9f159d23d33d67129c63
+
+Purpose and status
+Each entry is one original assertion/failure site. MATCHED records an exact
+source-level predicate, fixture and action sequence; execution is tracked below.
+No assertion is accepted by cppID name alone. Short-circuit ordering is retained.
+No original has data-driven QTest rows or assertion-bearing shared helper calls.
+All functions use their original literal event index/tick/stream/controller/value/
+channel inputs, write/remove/relocation inputs, and action ordering. Missing
+original scenario predicates were added before advancing to the next file.
+Additional pre-existing Swift fixture variants remain executable and are not
+substitutes for the original cases enumerated here.
+
+Execution and ownership
+runXcmdEditsSuite executes the paired scenarios. The same-stem file contains
+the actual Swift assertions; playback/tst_xcmd.swift constructs event values
+with the original ev helper argument order, including default channel zero.
+The production Xcmd projection/rewrite/reconciliation/export APIs are exercised.
+
+Verification evidence
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
+This records the completed checkpoint before the subsequent shared corpus-loader
+extraction/range additions; updated combined verification is pending.
+The current build does not register the old xcmdcheck native harness; no native
+execution or live differential parity is claimed.
+
+Original assertion inventory
+
+A001 | XcmdTest::addOnEmptyTrackEmitsCanonicalPair | src/checks/playback/rewrites.cpp:14
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:44 :: xcmdPairAddOnEmptyTrackEmitsCanonicalPair; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->removeEvents.empty() && patch->inserts.size() == 2 &&
+                   patch->inserts[0].tick == 5 &&
+                   patch->inserts[0].controller == xcmd::kSelectorController &&
+                   patch->inserts[0].value == 0x08 && patch->inserts[0].channel == 7 &&
+                   patch->inserts[1].controller == xcmd::kPayloadController &&
+                   patch->inserts[1].value == 40,
+               "add did not emit canonical selector+payload")
+
+A002 | XcmdTest::addUnderActiveStateEmitsFullPair | src/checks/playback/rewrites.cpp:31
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:57 :: xcmdPairAddUnderActiveStateEmitsFullPair; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->inserts.size() == 2 &&
+                   patch->inserts[0].controller == xcmd::kSelectorController &&
+                   patch->inserts[0].value == 0x08 &&
+                   patch->inserts[1].controller == xcmd::kPayloadController &&
+                   patch->removeEvents.empty(),
+               "write did not emit a self-contained pair under active state")
+
+A003 | XcmdTest::replaceRebuildsEpochWithExplicitPair | src/checks/playback/rewrites.cpp:47
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:71 :: xcmdPairReplaceRebuildsEpochWithExplicitPair; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->removeEvents == std::vector<uint64_t>({0, 1}) &&
+                   patch->inserts.size() == 2 && patch->inserts[0].value == 0x08 &&
+                   patch->inserts[1].value == 40,
+               "replace did not rebuild the epoch with an explicit pair")
+
+A004 | XcmdTest::deleteSharedPointRebuildsSurvivorAsPair | src/checks/playback/rewrites.cpp:64
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:83 :: xcmdPairDeleteSharedPointRebuildsSurvivorAsPair; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->removeEvents == std::vector<uint64_t>({0, 1, 2}) &&
+                   patch->inserts.size() == 2 && patch->inserts[0].tick == 3 &&
+                   patch->inserts[0].value == 0x08 && patch->inserts[1].value == 35,
+               "deleting one shared point did not rebuild the survivor as a pair")
+
+A005 | XcmdTest::deleteLastPointRemovesDeadEpoch | src/checks/playback/rewrites.cpp:79
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:97 :: xcmdPairDeleteLastPointRemovesDeadEpoch; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->removeEvents == std::vector<uint64_t>({0, 1}) &&
+                   patch->inserts.empty(),
+               "deleting the last point left the dead epoch behind")
+
+A006 | XcmdTest::inSpanWriteRebuildsAffectedEpoch | src/checks/playback/rewrites.cpp:96
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:109 :: xcmdPairInSpanWriteRebuildsAffectedEpoch; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->removeEvents == std::vector<uint64_t>({2, 3}) &&
+                   patch->inserts.size() == 4 && patch->inserts[0].tick == 12 &&
+                   patch->inserts[0].value == 0x08 && patch->inserts[1].value == 40 &&
+                   patch->inserts[2].tick == 13 && patch->inserts[2].value == 0x09 &&
+                   patch->inserts[3].value == 17,
+               "in-span write did not rebuild the epoch canonically")
+
+A007 | XcmdTest::laneWriteClampsToDescriptorMaximum | src/checks/playback/rewrites.cpp:109
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:125 :: xcmdPairLaneWriteClampsToDescriptorMaximum; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->inserts[1].value == 127,
+               "lane write did not clamp to the descriptor maximum")
+
+A008 | XcmdTest::unknownLaneRejectedAndDuplicatesCollapse | src/checks/playback/rewrites.cpp:117
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:133 :: xcmdPairUnknownLaneRejectedAndDuplicatesCollapse; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(!xcmd::rewritePoints({}, {}, unknownLane),
+               "write on an unknown lane was not rejected")
+
+A009 | XcmdTest::unknownLaneRejectedAndDuplicatesCollapse | src/checks/playback/rewrites.cpp:122
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:133 :: xcmdPairUnknownLaneRejectedAndDuplicatesCollapse; report.expect assertion 2
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->inserts.size() == 2 && patch->inserts[1].value == 55,
+               "duplicate same-slot write did not collapse to the later value")
+
+A010 | XcmdTest::sameTickPairsRetainActiveWriteOrder | src/checks/playback/rewrites.cpp:135
+Disposition: MATCHED
+Swift: src/checks/playback/rewrites.swift:146 :: xcmdPairSameTickPairsRetainActiveWriteOrder; report.expect assertion 1
+Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
+Original expression:
+  QVERIFY2(patch && patch->inserts.size() == 4 && patch->inserts[0].value == 0x08 &&
+                   patch->inserts[0].channel == 4 && patch->inserts[1].value == 40 &&
+                   patch->inserts[1].channel == 4 && patch->inserts[2].value == 0x09 &&
+                   patch->inserts[2].channel == 5 && patch->inserts[3].value == 55 &&
+                   patch->inserts[3].channel == 5,
+               "same-tick writes did not retain canonical pair order")

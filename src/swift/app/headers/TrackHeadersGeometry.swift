@@ -47,6 +47,8 @@ struct TrackHeaderSnapshot: Equatable {
     var addPressed = false
     var activityDimColor = "#00000000"
     var activityActiveColor = "#00000000"
+    var activityLeftHeight: Double = 0
+    var activityRightHeight: Double = 0
 }
 
 extension GridFontSpec: Equatable {
@@ -207,6 +209,9 @@ extension TrackHeadersPresenter {
         row.titleRect = rects.0
         row.subtitleRect = rects.1
         row.baseColor = primary ? palette.selectionRing : palette.windowBackground
+        if !primary && session.selectedTracks.contains(track) {
+            row.overlayColor = "#63\(palette.selectionRing.suffix(6))"
+        }
         row.titleColor = primary ? palette.windowText : palette.primaryText
         row.subtitleColor = primary ? palette.windowText : palette.secondaryText
         row.muteChecked = session.mutedTracks.contains(track)
@@ -222,6 +227,9 @@ extension TrackHeadersPresenter {
         let identity = PaletteMath.trackIdentityOklab(track)
         row.activityActiveColor = PaletteMath.trackIdentityFills[PaletteMath.trackIdentityIndex(track)]
         row.activityDimColor = headerActivityDim(identity)
+        let intensity = activity.intensity(track: track)
+        row.activityLeftHeight = activityHeight(intensity.left)
+        row.activityRightHeight = activityHeight(intensity.right)
         return row
     }
 }

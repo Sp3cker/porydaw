@@ -28,6 +28,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import ".." as Shared
 import "../swiftroll"
 import ".." as Shared
 
@@ -519,7 +520,8 @@ FocusScope {
     Component {
         id: pickerComponent
 
-        VoicePicker {
+        Shared.VoicePickerPrompt {
+            promptPalette: page.gridPalette
             hintService: page.hintService
             onClosed: page.focusOrigin()
         }

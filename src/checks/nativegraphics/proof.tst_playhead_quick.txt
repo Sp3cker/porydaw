@@ -1,0 +1,865 @@
+Assertion correspondence: nativegraphics/tst_playhead_quick.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/nativegraphics/tst_playhead_quick.cpp
+Original SHA-256: bb4014781911075574b88f62822d47dd1fe75bb7df46cb336d0a9e98c5b6d00a
+Swift counterpart: src/checks/nativegraphics/tst_playhead_quick.swift
+Swift SHA-256: 65999594c79fdf7013a07d04b3bd111cb4a05428b54d9d2eb063b682497604ab
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+checkPublicationAndReprojection remains between presenter attachment and aggregate
+suspension in SharedPlayheadChecks, sharing the same presenter and session.
+
+Original assertion inventory and source sequence
+
+A001 | quickRig | src/checks/nativegraphics/tst_playhead_quick.cpp:45
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  #include "checks/nativegraphics/tst_renderingplayhead.h"
+
+  #include <QtTest>
+
+  #include <QImage>
+  #include <QQuickWindow>
+
+  #include <memory>
+  #include <optional>
+
+  #include "checks/nativegraphics/nativegraphics_fixture.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "checks/support/songfixture.h"
+  #include "core/miditimeline.h"
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/editorviewstate.h"
+  #include "ui/layout.h"
+  #include "ui/playheadoverlay.h"
+  #include "ui/songview.h"
+  #include "ui/songview/pianoroll.h"
+  #include "ui/songview/quick/playheadquick.h"
+  #include "ui/songview/quick/timelinequickscene.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/songview/timelinebandlayout.h"
+  #include "ui/theme/themeruntime.h"
+
+  namespace {
+
+  #ifdef __APPLE__
+  constexpr bool kQuickCarriesPlayhead = false;
+  #else
+  constexpr bool kQuickCarriesPlayhead = true;
+  #endif
+
+  std::unique_ptr<checks::nativegraphics::Rig> quickRig(const QString &projectRoot,
+                                                        const QString &songLabel)
+  {
+      QString error;
+      // This case opens all three drawer pages at once; the window must leave
+      // the roll pane room above their font-derived minimum bodies. Matches the
+      // sibling native playhead rigs.
+      std::unique_ptr<checks::nativegraphics::Rig> rig =
+          checks::nativegraphics::makeRig(projectRoot, songLabel, QSize{1280, 800}, error);
+      if (!rig)
+Original expression:
+  QTest::qFail(qPrintable(error), __FILE__, __LINE__)
+
+A002 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:74
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      return rig;
+  }
+
+  bool frameHasPlayhead(const QImage &frame, const QColor &color)
+  {
+      // At tick zero the core is centered on the left clip boundary. Backends
+      // may rasterize that half-covered pixel below the solid-alpha threshold.
+      return !frame.isNull() && checks::support::hasPlayheadPixel(frame, frame.rect(), color);
+  }
+
+  bool polarityMatches(bool present)
+  {
+      return kQuickCarriesPlayhead ? present : !present;
+  }
+
+  } // namespace
+
+  void RenderingPlayheadTest::quickPolarityAndEdges_data()
+  {
+      QTest::addColumn<bool>("playing");
+      QTest::newRow("paused") << false;
+      QTest::newRow("playing") << true;
+  }
+
+  void RenderingPlayheadTest::quickPolarityAndEdges()
+  {
+      QFETCH(bool, playing);
+      std::unique_ptr<checks::nativegraphics::Rig> rig = quickRig(m_projectRoot, m_songLabel);
+Original expression:
+  QVERIFY(rig)
+
+A003 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:79
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      SongView &view = rig->song->view();
+      const MidiTimeline &timeline = rig->song->timeline();
+      auto *quick = view.quickView();
+      auto *overlay = view.findChild<songview::PlayheadOverlay *>();
+Original expression:
+  QVERIFY(quick && quick->rootObject() && quick->quickWindow())
+
+A004 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:80
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(overlay)
+
+A005 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:85
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      // This case exercises every plot; other cases retain their own drawer state.
+      const std::optional<songview::TimelineBandGeometry> &headers =
+          view.timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
+      auto *drawer = view.editorDrawer();
+Original expression:
+  QVERIFY(headers && drawer)
+
+A006 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:102
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const int fixedViewportHeight = quick->quickWindow()->height() - headers->rect.height();
+      for (const EditorDrawerPage page : {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+                                          EditorDrawerPage::VoiceChanges}) {
+          view.setDrawerSectionVisible(page, true);
+          view.setDrawerSectionHeight(page, drawer->minimumSectionHeight());
+      }
+      const int minimumRollHeight =
+          songview::pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth())
+              .minimumVisiblePianoRollHeight;
+      quick->quickWindow()->resize(quick->quickWindow()->width(),
+                                   fixedViewportHeight + drawer->overlayHeight() + minimumRollHeight);
+      checks::support::pumpQuick();
+      const std::optional<songview::TimelineBandGeometry> &ruler =
+          view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+      const std::optional<songview::TimelineBandGeometry> &roll =
+          view.timelineBandLayout().geometry(songview::TimelineBand::Roll);
+Original expression:
+  QVERIFY(ruler && roll)
+
+A007 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:105
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      QQuickItem *body =
+          quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineQuickRollPlayhead"));
+Original expression:
+  QVERIFY(body)
+
+A008 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:115
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+
+      SongView::ViewState parked = view.viewState();
+      parked.scrollPx = 0.0;
+      view.applyViewState(parked);
+      view.setFollowPlayhead(false);
+      view.setPlayheadSample(timeline.sampleForTick(0), playing);
+      checks::support::pumpQuick();
+      const QColor color = themes::color(themes::Role::song_view_playhead);
+      if (kQuickCarriesPlayhead) {
+Original expression:
+  QVERIFY(body->isVisible())
+
+A009 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:116
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(body->width() >= 1.0 && body->height() >= 1.0)
+
+A010 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:117
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(qAbs(body->x() - quick->rulerPlotOrigin()) <= 0.01)
+
+A011 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:118
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(quick->playheadVisible())
+
+A012 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:120
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      } else {
+Original expression:
+  QVERIFY(!body->isVisible())
+
+A013 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:121
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!quick->playheadVisible())
+
+A014 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:131
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      }
+
+      QString captureError;
+      const qreal initialTimelineX = view.camera().contentX(0.0);
+      // Keep the body core one pixel inside the left clip. A core centered
+      // exactly on the clip edge can have no covered sample at DPR 1.
+      const qreal bodyTimelineX = initialTimelineX + layout::singlePixel();
+      overlay->setPlayhead(bodyTimelineX, false, playing);
+      checks::support::pumpQuick();
+Original expression:
+  QVERIFY(headers)
+
+A015 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:134
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QImage headerWithoutPlayhead =
+          checks::support::captureQuickBand(view, headers->rect, &captureError);
+Original expression:
+  QVERIFY2(!headerWithoutPlayhead.isNull(), qPrintable(captureError))
+
+A016 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:140
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+
+      overlay->setPlayhead(bodyTimelineX, true, playing);
+      checks::support::pumpQuick();
+      const QImage headerFrame =
+          checks::support::captureQuickBand(view, headers->rect, &captureError);
+Original expression:
+  QVERIFY2(!headerFrame.isNull(), qPrintable(captureError))
+
+A017 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:162
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const auto firstDifferingPixel = [](const QImage &a, const QImage &b) -> QString {
+          if (a.size() != b.size())
+              return QStringLiteral("size %1x%2 vs %3x%4")
+                  .arg(a.width())
+                  .arg(a.height())
+                  .arg(b.width())
+                  .arg(b.height());
+          for (int y = 0; y < a.height(); ++y) {
+              for (int x = 0; x < a.width(); ++x) {
+                  if (a.pixel(x, y) != b.pixel(x, y))
+                      return QStringLiteral("pixel (%1, %2) #%3 vs #%4")
+                          .arg(x)
+                          .arg(y)
+                          .arg(QString::number(a.pixel(x, y), 16),
+                               QString::number(b.pixel(x, y), 16));
+              }
+          }
+          return QStringLiteral("identical images");
+      };
+      // Header content can legitimately use hues near the playhead color. Its
+      // pixels must nevertheless be unchanged when the playhead is shown.
+Original expression:
+  QVERIFY2(headerFrame == headerWithoutPlayhead,
+               qPrintable(QStringLiteral("playhead changed header pixels; first difference at %1")
+                              .arg(firstDifferingPixel(headerFrame, headerWithoutPlayhead))))
+
+A018 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:167
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+
+      const QImage rollFrame = checks::support::captureQuickBand(view, roll->rect, &captureError);
+Original expression:
+  QVERIFY2(!rollFrame.isNull(), qPrintable(captureError))
+
+A019 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:168
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(polarityMatches(frameHasPlayhead(rollFrame, color)))
+
+A020 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:173
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+
+      const auto assertBand = [&](songview::TimelineBand band, const char *name) {
+          const std::optional<songview::TimelineBandGeometry> &geometry =
+              view.timelineBandLayout().geometry(band);
+Original expression:
+  QVERIFY2(geometry, name)
+
+A021 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:177
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          if (!geometry)
+              return;
+          const QImage frame = checks::support::captureQuickBand(view, geometry->rect, &captureError);
+Original expression:
+  QVERIFY2(!frame.isNull(), qPrintable(captureError))
+
+A022 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:187
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          const QRect plot =
+              geometry->plotRect.translated(-geometry->rect.topLeft()).intersected(frame.rect());
+          const QRect gutter{0, 0, (std::max)(0, plot.left()), frame.height()};
+          // Controls may share the playhead hue. Compare pixels against the
+          // hidden playhead instead of treating that color as unique to it.
+          overlay->setPlayhead(bodyTimelineX, false, playing);
+          checks::support::pumpQuick();
+          const QImage hiddenFrame =
+              checks::support::captureQuickBand(view, geometry->rect, &captureError);
+Original expression:
+  QVERIFY2(!hiddenFrame.isNull(), qPrintable(captureError))
+
+A023 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:192
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          overlay->setPlayhead(bodyTimelineX, true, playing);
+          checks::support::pumpQuick();
+          if (kQuickCarriesPlayhead) {
+              const QRect gutterPixels = checks::support::devicePixelRect(frame, gutter);
+Original expression:
+  QVERIFY2(frame.copy(gutterPixels) == hiddenFrame.copy(gutterPixels), name)
+
+A024 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:193
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(checks::support::hasPlayheadPixel(frame, plot, color), name)
+
+A025 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:196
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+          } else {
+              // Native-only movement must leave its Quick pixels unchanged.
+Original expression:
+  QVERIFY2(frame == hiddenFrame, name)
+
+A026 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:209
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+          }
+      };
+      assertBand(songview::TimelineBand::Roll, "roll");
+      assertBand(songview::TimelineBand::Automation, "automation");
+      assertBand(songview::TimelineBand::Velocity, "velocity");
+      assertBand(songview::TimelineBand::VoiceChanges, "voice changes");
+      assertBand(songview::TimelineBand::OtherEvents, "other events");
+
+      // The ruler triangle deliberately exercises the exact tick-zero edge.
+      overlay->setPlayhead(initialTimelineX, true, playing);
+      checks::support::pumpQuick();
+      const QImage rulerFrame = checks::support::captureQuickBand(view, ruler->rect, &captureError);
+Original expression:
+  QVERIFY2(!rulerFrame.isNull(), qPrintable(captureError))
+
+A027 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:218
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const QRect rulerPlot =
+          ruler->plotRect.translated(-ruler->rect.topLeft()).intersected(rulerFrame.rect());
+      const int forbiddenWidth =
+          (std::max)(0, rulerPlot.left() - songview::playheadTriangleHalfWidth());
+      const QRect forbidden{0, 0, forbiddenWidth, rulerFrame.height()};
+      const QRect permitted{forbiddenWidth, 0, rulerPlot.left() - forbiddenWidth,
+                            rulerFrame.height()};
+      if (kQuickCarriesPlayhead) {
+Original expression:
+  QVERIFY(!checks::support::hasPlayheadPixel(rulerFrame, forbidden, color))
+
+A028 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:219
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(checks::support::hasPlayheadPixel(rulerFrame, permitted, color))
+
+A029 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:220
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(frameHasPlayhead(rulerFrame, color))
+
+A030 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:222
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      } else {
+Original expression:
+  QVERIFY(!frameHasPlayhead(rulerFrame, color))
+
+A031 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:228
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      }
+
+      const qreal columnWidth = (std::max)(0, quick->quickWindow()->width() - view.timelineSplitX());
+      overlay->setPlayhead(columnWidth, true, playing);
+      checks::support::pumpQuick();
+Original expression:
+  QVERIFY(!quick->playheadVisible())
+
+A032 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:231
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QImage edgeRuler = checks::support::captureQuickBand(view, ruler->rect, &captureError);
+      const QImage edgeRoll = checks::support::captureQuickBand(view, roll->rect, &captureError);
+Original expression:
+  QVERIFY2(!edgeRuler.isNull() && !edgeRoll.isNull(), qPrintable(captureError))
+
+A033 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:232
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!frameHasPlayhead(edgeRuler, color))
+
+A034 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:233
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!frameHasPlayhead(edgeRoll, color))
+
+A035 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:241
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+
+      const songview::TimelineBandLayout originalLayout = view.timelineBandLayout();
+      songview::TimelineBandLayout rulerless = originalLayout;
+      rulerless.geometry(songview::TimelineBand::Ruler).reset();
+      overlay->updateBands(rulerless);
+      overlay->setPlayhead(0.0, true, playing);
+      checks::support::pumpQuick();
+Original expression:
+  QVERIFY(!quick->playheadVisible())
+
+A036 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:249
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      overlay->updateBands(originalLayout);
+
+      SongView::ViewState negative = parked;
+      negative.scrollPx = layout::singlePixel();
+      view.applyViewState(negative);
+      view.setPlayheadSample(timeline.sampleForTick(0), playing);
+      checks::support::pumpQuick();
+Original expression:
+  QVERIFY(view.camera().contentX(view.playheadTick()) < 0.0)
+
+A037 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:250
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!quick->playheadVisible())
+
+A038 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:254
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QImage negativeRuler =
+          checks::support::captureQuickBand(view, ruler->rect, &captureError);
+      const QImage negativeRoll = checks::support::captureQuickBand(view, roll->rect, &captureError);
+Original expression:
+  QVERIFY2(!negativeRuler.isNull() && !negativeRoll.isNull(), qPrintable(captureError))
+
+A039 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:255
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!frameHasPlayhead(negativeRuler, color))
+
+A040 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:256
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!frameHasPlayhead(negativeRoll, color))
+
+A041 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:260
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+
+      overlay->setPlayhead(0.0, false, false);
+      checks::support::pumpQuick();
+Original expression:
+  QVERIFY(!quick->playheadVisible())
+
+A042 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:262
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+      const QImage hiddenRoll = checks::support::captureQuickBand(view, roll->rect, &captureError);
+Original expression:
+  QVERIFY2(!hiddenRoll.isNull(), qPrintable(captureError))
+
+A043 | RenderingPlayheadTest::quickPolarityAndEdges | src/checks/nativegraphics/tst_playhead_quick.cpp:263
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!frameHasPlayhead(hiddenRoll, color))
+
+A044 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:269
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void RenderingPlayheadTest::positionOnlyDoesNotRebuild()
+  {
+      std::unique_ptr<checks::nativegraphics::Rig> rig = quickRig(m_projectRoot, m_songLabel);
+Original expression:
+  QVERIFY(rig)
+
+A045 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:276
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      SongView &view = rig->song->view();
+      const MidiTimeline &timeline = rig->song->timeline();
+      auto *quick = view.quickView();
+      auto *scene = quick ? quick->findChild<songview::TimelineQuickScene *>() : nullptr;
+      const std::optional<songview::TimelineBandGeometry> &ruler =
+          view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+Original expression:
+  QVERIFY(quick && scene && ruler)
+
+A046 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:279
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      QQuickItem *body =
+          quick->rootObject()->findChild<QQuickItem *>(QStringLiteral("timelineQuickRollPlayhead"));
+Original expression:
+  QVERIFY(body)
+
+A047 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:281
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      auto *playhead = qobject_cast<songview::TimelinePlayheadItem *>(body);
+Original expression:
+  QVERIFY(playhead)
+
+A048 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:291
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  ;
+
+      view.setFollowPlayhead(false);
+      view.setPlayheadSample(timeline.sampleForTick(0), false);
+      checks::support::pumpQuick();
+      QString error;
+      const QImage paused = checks::support::captureQuickBand(view, ruler->rect, &error);
+      view.setPlayheadSample(timeline.sampleForTick(0), true);
+      checks::support::pumpQuick();
+      const QImage playing = checks::support::captureQuickBand(view, ruler->rect, &error);
+Original expression:
+  QVERIFY2(!paused.isNull() && !playing.isNull(), qPrintable(error))
+
+A049 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:293
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const QColor color = themes::color(themes::Role::song_view_playhead);
+Original expression:
+  QVERIFY(polarityMatches(frameHasPlayhead(paused, color)))
+
+A050 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:294
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(polarityMatches(frameHasPlayhead(playing, color)))
+
+A051 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:304
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+      const QRectF staticSurface{body->x(), body->y(), body->width(), body->height()};
+      const qreal quickLocalXBefore = quick->playheadLocalX();
+      const bool quickVisibleBefore = quick->playheadVisible();
+      const bool quickPlayingBefore = quick->playheadPlaying();
+      const bool quickTrianglePointsUpBefore = quick->playheadTrianglePointsUp();
+      const qreal itemLocalXBefore = playhead->localX();
+
+  #ifdef __APPLE__
+      QQuickWindow *window = quick->quickWindow();
+Original expression:
+  QVERIFY(window)
+
+A052 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:312
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+      int renderedFrames = 0;
+      QObject frameProbe;
+      QObject::connect(
+          window, &QQuickWindow::frameSwapped, &frameProbe, [&renderedFrames] { ++renderedFrames; },
+          Qt::QueuedConnection);
+      // Prove the probe observes a requested frame before testing silence.
+      window->update();
+Original expression:
+  QTRY_VERIFY(renderedFrames > 0)
+
+A053 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:322
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      checks::support::pumpQuick();
+      renderedFrames = 0;
+  #endif
+
+      const checks::support::TimelineQuickLayerRevisions before =
+          checks::support::timelineQuickLayerRevisions(*scene);
+      for (uint64_t move = 1; move <= 128; ++move)
+          view.setPlayheadSample(timeline.sampleForTick(move), true);
+      checks::support::pumpQuick();
+Original expression:
+  QCOMPARE(checks::support::timelineQuickLayerRevisions(*scene), before)
+
+A054 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:324
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+      const QRectF movedSurface{body->x(), body->y(), body->width(), body->height()};
+Original expression:
+  QCOMPARE(movedSurface, staticSurface)
+
+A055 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:328
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+
+      if (kQuickCarriesPlayhead) {
+          const qreal expectedLocalX = view.camera().contentX(view.playheadTick());
+Original expression:
+  QCOMPARE(quick->playheadLocalX(), expectedLocalX)
+
+A056 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:329
+Disposition: PARTIAL
+Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(playhead->localX(), expectedLocalX)
+
+A057 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:333
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+      } else {
+          // Playback reaches the native Core Animation overlay on macOS; it
+          // must leave the Quick playhead model and its QML-bound item inert.
+Original expression:
+  QCOMPARE(quick->playheadLocalX(), quickLocalXBefore)
+
+A058 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:334
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(quick->playheadVisible(), quickVisibleBefore)
+
+A059 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:335
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(quick->playheadPlaying(), quickPlayingBefore)
+
+A060 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:336
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(quick->playheadTrianglePointsUp(), quickTrianglePointsUpBefore)
+
+A061 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:337
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(playhead->localX(), itemLocalXBefore)
+
+A062 | RenderingPlayheadTest::positionOnlyDoesNotRebuild | src/checks/nativegraphics/tst_playhead_quick.cpp:340
+Disposition: RETIRED-BACKEND-MECHANISM
+Mapping/reason: This assertion specifically requires the former macOS CoreAnimation overlay to leave the Quick playhead model inert and produce zero Quick frames. The converted production SharedPlayhead.qml intentionally renders the shared Swift position in Qt Quick. Neither model inertia nor zero rendered frames is equivalent to or executed by the Swift replacement. Preserve the externally observable moving segment geometry/pixels, coherent shared guides, and unchanged static content across 128 updates instead; do not reintroduce the retired native overlay to meet this backend-only constraint. Lines 304/312 are setup/probe calibration exclusively for that retired zero-frame assertion.
+Source context since previous assertion:
+  ;
+      }
+  #ifdef __APPLE__
+Original expression:
+  QVERIFY2(!QTest::qWaitFor([&renderedFrames] { return renderedFrames != 0; }, 100),
+               "Position-only native playhead movement rendered a Quick frame")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  #endif
+  }
+
+
+Swift assertion predicates
+
+S001 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:10
+  report.expect(presenter.observe(sample: sample, transport: 0), cppID: sharedPlayheadPublicationID,
+                    message: "a changed observation publishes")
+
+S002 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:14
+  report.expect(gridCameraNear(presenter.tick, 48, tolerance: 0.5) && presenter.timelineAttached
+                        && presenter.playing == false,
+                    cppID: sharedPlayheadPublicationID,
+                    message: "the published tick is the authoritative sample's timeline position")
+
+S003 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:18
+  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: presenter.tick)),
+                    cppID: sharedPlayheadPublicationID,
+                    message: "the published projection is the session camera's contentX")
+
+S004 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:21
+  report.expect(presenter.visible == (presenter.contentX >= 0 && presenter.contentX < width),
+                    cppID: sharedPlayheadPublicationID,
+                    message: "published visibility follows the projected position and viewport")
+
+S005 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:24
+  report.expect(presenter.observe(sample: sample, transport: 0) == false
+                        && presenter.presentationCount == count,
+                    cppID: sharedPlayheadPublicationID,
+                    message: "a repeated identical observation publishes nothing")
+
+S006 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:29
+  report.expect(presenter.presentationCount == count, cppID: sharedPlayheadPublicationID,
+                    message: "reprojecting an unchanged camera publishes nothing")
+
+S007 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:34
+  report.expect(gridCameraNear(presenter.tick, tick), cppID: sharedPlayheadReprojectionID,
+                    message: "a camera publication keeps the authoritative tick")
+
+S008 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:36
+  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)), cppID: sharedPlayheadReprojectionID,
+                    message: "a camera publication reprojects through the new camera")
+
+S009 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:38
+  report.expect(presenter.presentationCount == count + 1, cppID: sharedPlayheadReprojectionID,
+                    message: "one camera publication presents exactly once")
+
+S010 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:41
+  report.expect(!presenter.visible && presenter.contentX < 0, cppID: sharedPlayheadReprojectionID,
+                    message: "a camera scrolled past the position hides the segment")
+
+S011 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:44
+  report.expect(presenter.visible && gridCameraNear(presenter.tick, tick)
+                        && gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)),
+                    cppID: sharedPlayheadReprojectionID,
+                    message: "scrolling back re-renders the same retained position")

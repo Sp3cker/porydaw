@@ -1,0 +1,1125 @@
+Assertion correspondence: voicegroupsave/presentation.cpp
+
+Reference revision: 4346c26abdcab317ccf97e178c959a82301081c9
+Original: src/checks/voicegroupsave/presentation.cpp
+Original SHA-256: 38a84965f0a2d2def240dbcbdb8dbe875bd95d4e042fd8efcadb19f4b92389c8
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below (80 sites). Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way;
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of a converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+No Swift counterpart was identified for this file, so every site below is GAP:
+no equivalent Swift assertion is established, and each original predicate and
+its setup remain an open obligation. None of these labels authorizes deletion
+or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter voicegroup-save --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The "voicegroup-save" filter selects the retained native harness; it provides
+no Swift parity evidence.
+
+Execution ownership
+The retained native harness owns this file. runVoicegroupSaveCheck in
+src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
+it under the "voicegroup-save" application id; init()/cleanup() bracket every
+test method. revealsTrackProgramsAndUsedMarks, quickHeaderPressSurvivesVoicegroupRebuild, newVoicegroupCreatesAndAssignsUndoably, and typeColumnMapsEveryFamily execute the checks inventoried below.
+Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
+m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
+is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
+song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
+No Swift entry point executes these checks; there are no S entries and no
+shared-helper expects for this file.
+
+Fixture, sequence and row constraints
+No data rows expand these sites. Loops expand the type-column sites: the thirteen-row expected table reuses its five per-row sites (type, accessible type, icon presence, text width, icon-column leak) once per family row; the eight-glyph pairwise loop reuses its distinct-glyph site once per slot pair (28 pairs); the four-row alt-chip table reuses its four per-row sites once per alt family. The alt-voicegroup search loop skips non-alt catalog entries with continue. The New Voicegroup dialog interception runs once via single-shot timer; the synth minting block inside typeColumnMapsEveryFamily mirrors the synth flow's setup.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:64
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+#include "checks/voicegroupsave/tst_voicegroupsave.h"
+
+#include <QComboBox>
+#include <QCoreApplication>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QDir>
+#include <QFile>
+#include <QFormLayout>
+#include <QHeaderView>
+#include <QImage>
+#include <QLabel>
+#include <QLineEdit>
+#include <QPointer>
+#include <QPushButton>
+#include <QQuickItem>
+#include <QTimer>
+#include <QTreeWidget>
+#include <QtTest>
+
+#include <algorithm>
+#include <array>
+
+#include "checks/support/eventsynth.h"
+#include "checks/support/songfixture.h"
+#include "checks/support/voicegroupbrowserdriver.h"
+#include "core/songdocument.h"
+#include "mainwindow.h"
+#include "ui/layout.h"
+#include "ui/songtab.h"
+#include "ui/songview.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/quick/timelinequickview.h"
+#include "ui/songview/trackheadermodel.h"
+#include "ui/voicegroupbrowser.h"
+#include "ui/workspaceui.h"
+
+namespace checks {
+namespace {
+
+int rowForTrack(const songview::TrackHeaderModel &model, int track)
+{
+    for (int row = 0; row < model.rowCount(); ++row) {
+        if (model.data(model.index(row, 0), songview::TrackHeaderModel::TrackRole).toInt() == track)
+            return row;
+    }
+    return -1;
+}
+
+QPointF trackHeaderPoint(songview::TrackHeaderModel &model, songview::TimelineInputItem &input,
+                         int row)
+{
+    const qreal centered = row * model.rowHeight() - (input.height() - model.rowHeight()) / 2.0;
+    model.setScrollY(std::clamp(centered, qreal(0.0), model.maximumScrollY()));
+    return QPointF(model.activityWidth() / 2.0,
+                   row * model.rowHeight() - model.scrollY() + model.rowHeight() / 2.0);
+}
+
+} // namespace
+
+void VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks()
+{
+    SongView &view = m_tab->view();
+
+Original expression:
+QVERIFY(!m_browser->slotRowText(0).isEmpty())
+
+A002 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:66
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QSet<int> used = view.usedVoices();
+
+Original expression:
+QVERIFY(!used.isEmpty())
+
+A003 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:72
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    int unused = -1;
+    for (int slot = 0; slot < VOICEGROUP_SIZE && unused < 0; ++slot) {
+        if (!used.contains(slot))
+            unused = slot;
+    }
+
+Original expression:
+QVERIFY(std::all_of(used.cbegin(), used.cend(),
+                        [this](int slot) { return m_browser->slotIsMarkedUsed(slot); }))
+
+A004 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:74
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(unused < 0 || !m_browser->slotIsMarkedUsed(unused))
+
+A005 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:78
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    m_browser->hideDock();
+    const int program = view.currentProgram(m_track);
+
+Original expression:
+QVERIFY(program >= 0)
+
+A006 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:80
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    view.revealTrackVoice(m_track);
+
+Original expression:
+QVERIFY(!m_browser->dockIsHidden())
+
+A007 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:81
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(m_browser->currentSlot(), program)
+
+A008 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:82
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(unused >= 0, "fixture must provide an unused program for the mark transition")
+
+A009 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:84
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    view.revealVoice(unused);
+
+Original expression:
+QCOMPARE(m_browser->currentSlot(), unused)
+
+A010 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:86
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    m_document->addLanePoint(m_track, DOC_CC_VOICE, 480, unused);
+
+Original expression:
+QVERIFY(m_browser->slotIsMarkedUsed(unused))
+
+A011 | VoicegroupSaveTest::revealsTrackProgramsAndUsedMarks | src/checks/voicegroupsave/presentation.cpp:88
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    requestUndo();
+
+Original expression:
+QVERIFY2(settle([this, unused] { return !m_browser->slotIsMarkedUsed(unused); }),
+             "voice-lane undo did not clear the used mark")
+
+A012 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:95
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild()
+{
+    const QString other = otherVoicegroupArg();
+
+Original expression:
+QVERIFY2(m_window->m_workspace->projectState().catalog.groupArgs.size() >= 2 &&
+                 !other.isEmpty(),
+             "required staged voicegroups missing: >=2 groupArgs via sound/voice_groups.inc and "
+             "sound/voicegroups/fixture_alt.inc")
+
+A013 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:118
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    m_window->show();
+    m_window->activateWindow();
+    QCoreApplication::processEvents();
+    SongView &view = m_tab->view();
+    QComboBox *const selector = m_browser->voicegroupSelector();
+    auto *const quick =
+        view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+    auto *const headers =
+        view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
+    QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+    auto *const input = root ? root->findChild<songview::TimelineInputItem *>(
+                                   QStringLiteral("timelineTrackHeadersInput"))
+                             : nullptr;
+    int otherTrack = -1;
+    const MidiTimeline *const timeline = view.timeline();
+    for (int track = 0; timeline && track < 16 && otherTrack < 0; ++track) {
+        if (track != view.selectionModel().primaryTrack() && timeline->tracks[track].used)
+            otherTrack = track;
+    }
+
+Original expression:
+QVERIFY(selector && selector->lineEdit())
+
+A014 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:119
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(quick && headers && input)
+
+A015 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:120
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(input->width() > 0.0 && input->height() > 0.0 && input->interaction() == headers)
+
+A016 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:121
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(otherTrack >= 0)
+
+A017 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:123
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int otherRow = rowForTrack(*headers, otherTrack);
+
+Original expression:
+QVERIFY(otherRow >= 0)
+
+A018 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:127
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QLineEdit *const edit = selector->lineEdit();
+    edit->setFocus();
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY(edit->hasFocus())
+
+A019 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:131
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    edit->setText(other);
+    edit->setModified(true);
+    const QPointF point = trackHeaderPoint(*headers, *input, otherRow);
+
+Original expression:
+QVERIFY(input->bounds().contains(point))
+
+A020 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:137
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QPointer<songview::TrackHeaderModel> retainedModel(headers);
+    QPointer<songview::TimelineInputItem> retainedInput(input);
+    QPointer<songview::TimelineQuickView> retainedQuick(quick);
+    events::sendMouse(*input, QEvent::MouseButtonPress, point, Qt::LeftButton, Qt::LeftButton,
+                      Qt::NoModifier);
+
+Original expression:
+QVERIFY(!retainedInput.isNull())
+
+A021 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:138
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!retainedModel.isNull())
+
+A022 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:139
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(view.selectionModel().primaryTrack(), otherTrack)
+
+A023 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:140
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(m_document->cfg().voicegroupArg, other)
+
+A024 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:143
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    events::sendMouse(*retainedInput, QEvent::MouseButtonRelease, point, Qt::LeftButton,
+                      Qt::NoButton, Qt::NoModifier);
+
+Original expression:
+QVERIFY2(settle([this, &other] {
+                 return m_document->cfg().voicegroupArg == other && m_tab->voicegroupId() &&
+                        *m_tab->voicegroupId() != *m_homeId;
+             }),
+             "mid-press -G commit did not complete voicegroup binding")
+
+A025 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:148
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!retainedQuick.isNull())
+
+A026 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:149
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!retainedModel.isNull())
+
+A027 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:155
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    QQuickItem *const rebuiltRoot = retainedQuick->rootObject();
+    auto *const rebuiltInput = rebuiltRoot ? rebuiltRoot->findChild<songview::TimelineInputItem *>(
+                                                 QStringLiteral("timelineTrackHeadersInput"))
+                                           : nullptr;
+    const int rebuiltRow = rowForTrack(*retainedModel, m_track);
+
+Original expression:
+QVERIFY(rebuiltInput && rebuiltInput->interaction() == retainedModel)
+
+A028 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:156
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(rebuiltInput->width() > 0.0 && rebuiltInput->height() > 0.0 && rebuiltRow >= 0)
+
+A029 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:158
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QPointF next = trackHeaderPoint(*retainedModel, *rebuiltInput, rebuiltRow);
+
+Original expression:
+QVERIFY(rebuiltInput->bounds().contains(next))
+
+A030 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:163
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    events::sendMouse(*rebuiltInput, QEvent::MouseButtonPress, next, Qt::LeftButton, Qt::LeftButton,
+                      Qt::NoModifier);
+    events::sendMouse(*rebuiltInput, QEvent::MouseButtonRelease, next, Qt::LeftButton, Qt::NoButton,
+                      Qt::NoModifier);
+
+Original expression:
+QCOMPARE(view.selectionModel().primaryTrack(), m_track)
+
+A031 | VoicegroupSaveTest::quickHeaderPressSurvivesVoicegroupRebuild | src/checks/voicegroupsave/presentation.cpp:166
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    requestUndo();
+
+Original expression:
+QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId),
+             "mid-press -G undo did not restore home binding")
+
+A032 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:239
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably()
+{
+    const QString name = QStringLiteral("vgsavecheck_created");
+    bool intercepted = false;
+    QString interceptionError;
+    QTimer::singleShot(0, m_window.get(), [this, &intercepted, &interceptionError, name] {
+        const QList<QDialog *> dialogs = m_window->findChildren<QDialog *>();
+        QList<QDialog *> visible;
+        for (QDialog *const dialog : dialogs) {
+            if (dialog->isVisible())
+                visible.append(dialog);
+        }
+        if (visible.size() != 1) {
+            interceptionError = QStringLiteral("expected exactly one New Voicegroup dialog");
+            for (QDialog *const dialog : visible)
+                dialog->reject();
+            return;
+        }
+        QDialog *const dialog = visible.constFirst();
+        auto *const form = dialog->findChild<QFormLayout *>();
+        auto *const edit = dialog->findChild<QLineEdit *>();
+        auto *const source = dialog->findChild<QComboBox *>();
+        auto *const buttons = dialog->findChild<QDialogButtonBox *>();
+        QPushButton *const accept = buttons ? buttons->button(QDialogButtonBox::Ok) : nullptr;
+        QPushButton *const cancel = buttons ? buttons->button(QDialogButtonBox::Cancel) : nullptr;
+        if (!form || !edit || !source || !buttons || !accept || !cancel) {
+            interceptionError =
+                QStringLiteral("New Voicegroup dialog lacks its structural form controls");
+            dialog->reject();
+            return;
+        }
+        auto *const sourceLabel = qobject_cast<QLabel *>(form->labelForField(source));
+        int nameRow = -1;
+        int sourceRow = -1;
+        int buttonsRow = -1;
+        QFormLayout::ItemRole nameRole = QFormLayout::LabelRole;
+        QFormLayout::ItemRole sourceRole = QFormLayout::LabelRole;
+        QFormLayout::ItemRole buttonsRole = QFormLayout::LabelRole;
+        form->getWidgetPosition(edit, &nameRow, &nameRole);
+        form->getWidgetPosition(source, &sourceRow, &sourceRole);
+        form->getWidgetPosition(buttons, &buttonsRow, &buttonsRole);
+        if (!sourceLabel || !sourceLabel->isVisible() || nameRow < 0 || sourceRow < 0 ||
+            buttonsRow < 0 || nameRole != QFormLayout::FieldRole ||
+            sourceRole != QFormLayout::FieldRole || buttonsRole != QFormLayout::SpanningRole ||
+            !(nameRow < sourceRow && sourceRow < buttonsRow) || !edit->isVisible() ||
+            !source->isVisible() || !buttons->isVisible() || !accept->isVisible() ||
+            !cancel->isVisible()) {
+            interceptionError =
+                QStringLiteral("New Voicegroup dialog form is not structurally usable");
+            dialog->reject();
+            return;
+        }
+        const QString sourceArg = source->itemData(0).toString();
+        if (sourceArg.isEmpty()) {
+            interceptionError = QStringLiteral("New Voicegroup dialog has no copy source");
+            dialog->reject();
+            return;
+        }
+        source->setCurrentIndex(0);
+        edit->setText(name);
+        if (!edit->hasAcceptableInput()) {
+            interceptionError = QStringLiteral("New Voicegroup dialog rejects valid fixture name");
+            dialog->reject();
+            return;
+        }
+        intercepted = true;
+        accept->click();
+    });
+    m_window->m_workspace->runCreateVoicegroupFlow();
+
+Original expression:
+QVERIFY2(interceptionError.isEmpty(), qPrintable(interceptionError))
+
+A033 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:240
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(intercepted)
+
+A034 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:244
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QString createdArg = QStringLiteral("_") + name;
+    const QString createdPath =
+        m_project->root() + QStringLiteral("/sound/voicegroups/") + name + QStringLiteral(".inc");
+
+Original expression:
+QVERIFY2(settle([this, &createdArg, &createdPath, &name] {
+                 return m_document->cfg().voicegroupArg == createdArg &&
+                        QFile::exists(createdPath) && m_tab->voicegroupId() &&
+                        m_tab->voicegroupId()->sourceRelativePath().endsWith(
+                            name + QStringLiteral(".inc"));
+             }),
+             "New Voicegroup did not create and bind the source")
+
+A035 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:251
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_document->isDirty())
+
+A036 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:253
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    requestUndo();
+
+Original expression:
+QVERIFY2(waitForVoicegroup(m_homeArg, *m_homeId),
+             "New Voicegroup undo did not restore home binding")
+
+A037 | VoicegroupSaveTest::newVoicegroupCreatesAndAssignsUndoably | src/checks/voicegroupsave/presentation.cpp:255
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->loadName == m_loadName;
+             }),
+             "New Voicegroup undo did not restore the original loaded bank")
+
+A038 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:265
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+}
+
+void VoicegroupSaveTest::typeColumnMapsEveryFamily()
+{
+    auto *browser = m_window->findChild<VoicegroupBrowser *>();
+
+Original expression:
+QVERIFY(browser)
+
+A039 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:267
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    auto *tree = browser->findChild<QTreeWidget *>();
+
+Original expression:
+QVERIFY(tree)
+
+A040 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:268
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(tree->columnWidth(1) >= tree->header()->sectionSizeHint(1))
+
+A041 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:269
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(tree->columnWidth(1) >=
+            tree->iconSize().width() + 2 * layout::space(layout::Space::Two))
+
+A042 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:276
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    // The Type column is icon-only: every family publishes its name through
+    // the column-1 tooltip and accessible text, and its glyph through the
+    // icon. fixture_rich covers the plain families plus keysplit, drumkit,
+    // and a read-only cry line; the alt chips live in fixture_alt.
+    const LoadedBankView *const home = m_browser->selectedBankView();
+
+Original expression:
+QVERIFY(home)
+
+A043 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:294
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const struct {
+        int slot;
+        const char *type;
+    } expected[] = {{0, "Sample"},
+                    {1, "Sample"},
+                    {2, "Sample (fixed pitch)"},
+                    {3, "Sample (reverse)"},
+                    {4, "Square 1"},
+                    {5, "Square 2"},
+                    {6, "Wave"},
+                    {7, "Noise"},
+                    {8, "Keysplit"},
+                    {9, "Keysplit"},
+                    {10, "Drumkit"},
+                    {11, "Drumkit"},
+                    {12, "Sample"}}; // cry renders as a sample
+    for (const auto &row : expected) {
+
+Original expression:
+QCOMPARE(m_browser->slotRowType(row.slot), QLatin1String(row.type))
+
+A044 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:295
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(m_browser->slotRowAccessibleType(row.slot), QLatin1String(row.type))
+
+A045 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:296
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(m_browser->hasTypeIcon(row.slot),
+                 qPrintable(QStringLiteral("slot %1 lost its type icon").arg(row.slot)))
+
+A046 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:299
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+        const QStringList text = m_browser->slotRowText(row.slot);
+
+Original expression:
+QCOMPARE(text.size(), 3)
+
+A047 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:300
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(
+            text.at(1).isEmpty(),
+            qPrintable(QStringLiteral("slot %1 leaked text into the icon column").arg(row.slot)))
+
+A048 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:305
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+    const int blank = firstBlankSlot();
+
+Original expression:
+QVERIFY2(blank >= 0, "fixture must provide a blank slot for the no-type contract")
+
+A049 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:306
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!m_browser->hasTypeIcon(blank))
+
+A050 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:307
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->slotRowType(blank).isEmpty())
+
+A051 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:308
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->slotRowAccessibleType(blank).isEmpty())
+
+A052 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:315
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // Distinct families carry distinct glyphs; cry shares the plain sample
+    // waveform, and the reverse sample is the same waveform rotated 180°.
+    const std::array<int, 8> glyphSlots = {0, 3, 4, 5, 6, 7, 8, 10};
+    for (size_t i = 0; i < glyphSlots.size(); ++i) {
+        const QImage a = m_browser->slotTypeIcon(glyphSlots.at(i));
+
+Original expression:
+QVERIFY(!a.isNull())
+
+A053 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:317
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+        for (size_t j = i + 1; j < glyphSlots.size(); ++j)
+
+Original expression:
+QVERIFY2(a != m_browser->slotTypeIcon(glyphSlots.at(j)),
+                     qPrintable(QStringLiteral("slots %1 and %2 share a type glyph")
+                                    .arg(glyphSlots.at(i))
+                                    .arg(glyphSlots.at(j))))
+
+A054 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:322
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+
+Original expression:
+QCOMPARE(m_browser->slotTypeIcon(12), m_browser->slotTypeIcon(0))
+
+A055 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:329
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // A synth voice is memory-only until save: mint the definition the way
+    // synthDefinitionsStayMemoryOnlyUntilSave does, then adopt the type.
+    const QString synthPath =
+        m_project->root() + QStringLiteral("/sound/direct_sound_synth_data.inc");
+    const QString macroDir = m_project->root() + QStringLiteral("/asm/macros");
+
+Original expression:
+QVERIFY(QDir().mkpath(macroDir))
+
+A056 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:332
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    {
+        QFile macros(macroDir + QStringLiteral("/vgtypecheck_synth.inc"));
+
+Original expression:
+QVERIFY(macros.open(QIODevice::WriteOnly))
+
+A057 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:333
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(macros.write("\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, "
+                              "mod_depth=0x00, duty_phase=0x00\n\t.endm\n") > 0,
+                 true)
+
+A058 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:339
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+    {
+        QFile data(synthPath);
+
+Original expression:
+QVERIFY(data.open(QIODevice::WriteOnly | QIODevice::Append))
+
+A059 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:340
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(data.write("\n\t.align 2\nVgTypeCheckPulse::\n\tset_synth_pulse\n") > 0, true)
+
+A060 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:342
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+
+Original expression:
+QVERIFY2(refreshCatalog(), "synth catalog refresh did not settle")
+
+A061 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:343
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this] {
+                 return m_window->m_workspace->projectState().catalog.synths.find(
+                            QStringLiteral("VgTypeCheckPulse")) != nullptr;
+             }),
+             "synth definition did not reach the published catalog")
+
+A062 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:349
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const int synthSlot = firstSynthableSlot();
+
+Original expression:
+QVERIFY2(synthSlot >= 0, "fixture must provide a non-synth DirectSound voice")
+
+A063 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:353
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QString originalSymbol =
+        m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol;
+    m_browser->selectSlot(synthSlot);
+
+Original expression:
+QVERIFY(m_browser->hasSynthEditorControls())
+
+A064 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:354
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->activateSynthType())
+
+A065 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:355
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &originalSymbol] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        bank->slotViews.at(synthSlot).voice->symbol != originalSymbol;
+             }),
+             "synth type did not create a memory-only tone")
+
+A066 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:361
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->activateSynthWave(0))
+
+A067 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:362
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, synthSlot] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        m_browser->slotRowType(synthSlot) == QStringLiteral("Synth (Golden Sun)");
+             }),
+             "synth adoption did not publish the Synth (Golden Sun) type")
+
+A068 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:368
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(m_browser->slotRowAccessibleType(synthSlot), QStringLiteral("Synth (Golden Sun)"))
+
+A069 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:369
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->hasTypeIcon(synthSlot))
+
+A070 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:370
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(m_browser->slotTypeIcon(synthSlot), m_browser->slotTypeIcon(0))
+
+A071 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:392
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    // The alt-chip families live in fixture_alt: same family names, grey-chip
+    // glyphs that must differ from the plain chip of the same family.
+    QString altArg;
+    for (const QString &arg : m_window->m_workspace->projectState().catalog.groupArgs) {
+        if (arg == m_homeArg)
+            continue;
+        const VoicegroupId previous = *m_tab->voicegroupId();
+        SongCfg cfg = m_document->cfg();
+        cfg.voicegroupArg = arg;
+        m_document->setCfg(cfg);
+        if (!settle([this, &previous] {
+                return m_tab->voicegroupId() && *m_tab->voicegroupId() != previous;
+            }))
+            continue;
+        if (m_tab->voicegroupId()->sourceRelativePath().endsWith(
+                QStringLiteral("fixture_alt.inc"))) {
+            altArg = arg;
+            break;
+        }
+    }
+
+Original expression:
+QVERIFY2(!altArg.isEmpty(),
+             "catalog must offer the fixture_alt voicegroup for alt-chip coverage")
+
+A072 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:394
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(2).voice &&
+                        bank->slotViews.at(2).voice->macro == VgMacro::Square1Alt;
+             }),
+             "fixture_alt bank view did not publish its alt voices")
+
+A073 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:409
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const struct {
+        int slot;
+        const char *type;
+        int plainSlot;
+    } altExpected[] = {{2, "Square 1 (Alt)", 4},
+                       {3, "Square 2 (Alt)", 5},
+                       {4, "Wave (Alt)", 6},
+                       {5, "Noise (Alt)", 7}};
+    for (const auto &row : altExpected) {
+
+Original expression:
+QCOMPARE(m_browser->slotRowType(row.slot), QLatin1String(row.type))
+
+A074 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:410
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(m_browser->slotRowAccessibleType(row.slot), QLatin1String(row.type))
+
+A075 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:411
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(m_browser->hasTypeIcon(row.slot),
+                 qPrintable(QStringLiteral("alt slot %1 lost its type icon").arg(row.slot)))
+
+A076 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:413
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(m_browser->slotTypeIcon(row.slot) != m_browser->slotTypeIcon(row.plainSlot),
+                 qPrintable(QStringLiteral("slot %1 lost its alt chip").arg(row.slot)))
+
+A077 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:417
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+    const int altBlank = firstBlankSlot();
+
+Original expression:
+QVERIFY2(altBlank >= 0, "fixture_alt must provide a blank slot")
+
+A078 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:418
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!m_browser->hasTypeIcon(altBlank))
+
+A079 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:419
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->slotRowType(altBlank).isEmpty())
+
+A080 | VoicegroupSaveTest::typeColumnMapsEveryFamily | src/checks/voicegroupsave/presentation.cpp:420
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->slotRowAccessibleType(altBlank).isEmpty())
+
+Remaining original source (closing sequence and helper bodies):
+;
+}
+
+} // namespace checks
+
+
+Swift assertion predicates
+No Swift counterpart identified for this file: no same-dir presentation.swift
+exists and no Swift check covers the voicegroup browser/save suite, so no
+report.expect*/expectEqual predicates pair with these sites. There are no S
+entries and no shared-helper expects for this file.
+
+Swift sources inspected (SHA-256)
+No file src/checks/voicegroupsave/presentation.swift exists. A repo-wide search
+for Swift voicegroup-browser coverage finds only project-io voicegroup
+references in src/checks/workspace/SessionChecks.swift
+(SHA-256 ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845), which exercise project open/save plumbing,
+not the browser/editor/picker/save flows inventoried here.

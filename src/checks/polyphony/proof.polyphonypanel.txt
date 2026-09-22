@@ -1,0 +1,552 @@
+Assertion correspondence: polyphony/polyphonypanel.cpp
+
+Reference revision: 3f830ceb349b6f5dd6e7fc76b035a83ec0cbd3d9
+Original: src/checks/polyphony/polyphonypanel.cpp
+Original SHA-256: abf46ceceb9c32a53043fc6bff7f71eb62d9f747dc6674c3e3fdcf55ad305769
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site in polyphonypanel.cpp appears below: 32 sites
+across five panel slots. The QSignalSpy construction is fixture setup, not a
+site; its QVERIFY(isValid) is inventoried. The screenshot-save QVERIFYs are
+conditional on m_screenshotPath but remain sites. Loop bodies reuse their
+sites: the logCapIs500 burst loop feeds the single A023 site. No Swift file
+covers the polyphony panel: the suite has no counterpart in
+src/checks/polyphony or the swiftcore suite, and the adjacent Swift
+polySnapshot/invert reads (tails.swift, AudioControllerChecks.swift) assert
+transport/audition predicates, never log formatting, jump signals, rebase
+semantics, the 500-row cap, or panel layout. Every entry below is therefore
+GAP: no equivalent Swift assertion is established, including for the native
+panel/rendering observations, which remain open obligations with no
+converted-window evidence path claimed.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way; GAP means an
+equivalent Swift assertion is not established; NATIVE observes native
+window/rendering/harness state a presenter-level Swift check cannot establish.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter polycheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runPolyCheck executes the PolyphonyGateTest slots under the polycheck lane.
+PanelFixture builds a signature timeline (division 24 at 48 kHz, tempo plus
+time-signature events, one program-0 note on key 60) and a PolyphonyPanel
+sized 380x760 with track name "Brass" on track 2 and voice name
+"voice_piano" on voice 5. No Swift entry point executes these panel checks;
+no Swift counterpart file was identified.
+
+Fixture, sequence and row constraints
+richSnapshot replays three ring events (stolen key 60 by track 4 at tick 96,
+tail-cut key 72 at tick 216, live dropped key 67) with steal/tailCut/drop
+counters, invert set, and two PCM channel states. resetRebasesLog replaces
+that with a single dropped event at tick 48. logCapIs500 starts from one
+dropped event then applies ten 60-event bursts against the ring capacity and
+requires the 500-row cap. responsiveLayout settles the shown panel, then
+walks 180x980 (stacked), 900x600 (wide) and 380x240/380x980 geometries with
+QTRY polling; screenshot saves execute only when m_screenshotPath is set.
+No data rows expand these sites.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:133
+Disposition: GAP
+Mapping/reason: No Swift predicate builds the panel fixture; the signature
+timeline observation below remains an open obligation.
+Source context since previous assertion:
+  #include "checks/polyphony/tst_polyphonycheck.h"
+
+  #include <QByteArray>
+  #include <QCoreApplication>
+  #include <QFileInfo>
+  #include <QPixmap>
+  #include <QStringList>
+  #include <QtTest>
+
+  #include <memory>
+
+  #include "audio/audioengine.h"
+  #include "core/miditimeline.h"
+  #include "core/smf.h"
+  #include "ui/polyphonypanel.h"
+
+  extern "C" {
+  #include "m4a_engine.h"
+  }
+
+  namespace {
+
+  constexpr uint32_t kDivision = 24;
+  constexpr double kSampleRate = 48000.0;
+
+  SmfEvent event(uint64_t tick, uint8_t status, uint8_t data0, uint8_t data1)
+  {
+      SmfEvent result;
+      result.tick = tick;
+      result.status = status;
+      result.data0 = data0;
+      result.data1 = data1;
+      return result;
+  }
+
+  SmfEvent meta(uint64_t tick, uint8_t type, const QByteArray &blob)
+  {
+      SmfEvent result;
+      result.tick = tick;
+      result.status = 0xFF;
+      result.metaType = type;
+      result.blob = blob;
+      return result;
+  }
+
+  std::unique_ptr<MidiTimeline> signatureTimeline()
+  {
+      SmfFile smf;
+      smf.format = 1;
+      smf.division = kDivision;
+      smf.tracks.resize(2);
+      smf.tracks[0].events = {meta(0, 0x51, QByteArray("\x07\xA1\x20", 3)),
+                              meta(0, 0x58, QByteArray("\x04\x02\x18\x08", 4)),
+                              meta(192, 0x58, QByteArray("\x03\x02\x18\x08", 4))};
+      smf.tracks[0].endTick = 384;
+      smf.tracks[1].events = {event(0, 0xC0, 0, 0), event(0, 0x90, 60, 100), event(24, 0x80, 60, 0)};
+      smf.tracks[1].endTick = 384;
+      return MidiTimeline::build(smf, kSampleRate);
+  }
+
+  AudioEngine::PolySnapshot snapshotWithEvents(std::initializer_list<M4APolyEvent> events,
+                                               uint32_t startTotal = 0)
+  {
+      AudioEngine::PolySnapshot snapshot;
+      snapshot.maxPcmChannels = 5;
+      uint32_t total = startTotal;
+      for (const M4APolyEvent &event : events)
+          snapshot.events[total++ % M4A_POLY_EVENT_CAPACITY] = event;
+      snapshot.eventTotal = total;
+      return snapshot;
+  }
+
+  AudioEngine::PolySnapshot richSnapshot()
+  {
+      AudioEngine::PolySnapshot snapshot = snapshotWithEvents({
+          {M4A_POLY_STOLEN, 2, 60, 4, 5, 96},
+          {M4A_POLY_TAIL_CUT, 2, 72, 0, 5, 216},
+          {M4A_POLY_DROPPED, 1, 67, 1, 0, M4A_POLY_TICK_NONE},
+      });
+      snapshot.steal[2] = 1;
+      snapshot.tailCut[2] = 1;
+      snapshot.drop[1] = 1;
+      snapshot.invert = true;
+      snapshot.pcm[0] = {true, false, 2, 60};
+      snapshot.pcm[MAX_PCM_CHANNELS] = {true, false, 4, 72};
+      return snapshot;
+  }
+
+  struct PanelFixture {
+      std::unique_ptr<MidiTimeline> timeline = signatureTimeline();
+      std::unique_ptr<PolyphonyPanel> panel = std::make_unique<PolyphonyPanel>();
+
+      PanelFixture()
+      {
+          panel->resize(380, 760);
+          panel->setTimeline(timeline.get());
+          QStringList trackNames;
+          trackNames.reserve(16);
+          for (int track = 0; track < 16; ++track)
+              trackNames.append(QString());
+          trackNames[2] = QStringLiteral("Brass");
+          panel->setTrackNames(trackNames);
+          QStringList voiceNames;
+          voiceNames.reserve(128);
+          for (int voice = 0; voice < 128; ++voice)
+              voiceNames.append(QString());
+          voiceNames[5] = QStringLiteral("voice_piano");
+          panel->setVoiceNames(voiceNames);
+      }
+
+      void showAndSettle()
+      {
+          panel->show();
+          for (int pass = 0; pass < 3; ++pass)
+              QCoreApplication::processEvents();
+      }
+  };
+
+  QString derivedScreenshotPath(const QString &path, const QString &suffix)
+  {
+      const QFileInfo info(path);
+      return info.path() + QLatin1Char('/') + info.completeBaseName() + suffix + QLatin1Char('.') +
+             info.suffix();
+  }
+
+  } // namespace
+
+  namespace checks {
+
+  void PolyphonyGateTest::logOrderAndFormatting()
+  {
+      PanelFixture fixture;
+Original expression:
+  QVERIFY(fixture.timeline);
+
+A002 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:136
+Disposition: GAP
+Mapping/reason: No Swift predicate renders the panel log; the three-row
+count below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(fixture.timeline);
+      fixture.panel->updateSnapshot(richSnapshot());
+Original expression:
+  QCOMPARE(fixture.panel->logRowCount(), 3);
+
+A003 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:140
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the live row; the "live" text
+below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(fixture.panel->logRowCount(), 3);
+      const QString newest = fixture.panel->logRowText(0);
+      const QString middle = fixture.panel->logRowText(1);
+      const QString oldest = fixture.panel->logRowText(2);
+Original expression:
+  QVERIFY(newest.contains(QStringLiteral("live")));
+
+A004 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:141
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the live row; the "dropped" text
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(newest.contains(QStringLiteral("dropped")));
+
+A005 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:142
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the middle row; the position text
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(middle.contains(QStringLiteral("3:2.0")));
+
+A006 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:143
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the middle row; the "tail cut"
+text below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(middle.contains(QStringLiteral("tail cut")));
+
+A007 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:144
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the oldest row; the position text
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(oldest.contains(QStringLiteral("2:1.0")));
+
+A008 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:145
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the oldest row; the track text
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(oldest.contains(QStringLiteral("Trk 3")));
+
+A009 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:146
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the oldest row; the pitch text
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(oldest.contains(QStringLiteral("C4")));
+
+A010 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:147
+Disposition: GAP
+Mapping/reason: No Swift predicate resolves voice names in the log; the
+voice text below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(oldest.contains(QStringLiteral("voice_piano")));
+
+A011 | PolyphonyGateTest::logOrderAndFormatting | src/checks/polyphony/polyphonypanel.cpp:148
+Disposition: GAP
+Mapping/reason: No Swift predicate formats the steal attribution; the
+cut-off text below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QVERIFY(oldest.contains(QStringLiteral("cut off by Trk 5")));
+
+A012 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:155
+Disposition: GAP
+Mapping/reason: No Swift predicate wires the log jump signal; the spy
+validity below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(oldest.contains(QStringLiteral("cut off by Trk 5")));
+  }
+
+  void PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot()
+  {
+      PanelFixture fixture;
+      QSignalSpy jumped(fixture.panel.get(), &PolyphonyPanel::jumpToEvent);
+Original expression:
+  QVERIFY(jumped.isValid());
+
+A013 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:159
+Disposition: GAP
+Mapping/reason: No Swift predicate activates a positioned log row; the jump
+emission below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(jumped.isValid());
+      fixture.panel->updateSnapshot(richSnapshot());
+
+      fixture.panel->activateLogRow(2);
+Original expression:
+  QCOMPARE(jumped.count(), 1);
+
+A014 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:161
+Disposition: GAP
+Mapping/reason: No Swift predicate carries the jump tick; the tick argument
+below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(jumped.count(), 1);
+      const QList<QVariant> jump = jumped.takeFirst();
+Original expression:
+  QCOMPARE(jump[0].toULongLong(), uint64_t(96));
+
+A015 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:162
+Disposition: GAP
+Mapping/reason: No Swift predicate carries the jump track; the track argument
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(jump[1].toInt(), 2);
+
+A016 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:163
+Disposition: GAP
+Mapping/reason: No Swift predicate carries the jump key; the key argument
+below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QCOMPARE(jump[2].toInt(), 60);
+
+A017 | PolyphonyGateTest::positionedLogRowJumpsAndLiveDoesNot | src/checks/polyphony/polyphonypanel.cpp:165
+Disposition: GAP
+Mapping/reason: No Swift predicate activates the live row; the no-jump
+observation below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(jump[2].toInt(), 60);
+      fixture.panel->activateLogRow(0);
+Original expression:
+  QCOMPARE(jumped.count(), 0);
+
+A018 | PolyphonyGateTest::resetRebasesLog | src/checks/polyphony/polyphonypanel.cpp:175
+Disposition: GAP
+Mapping/reason: No Swift predicate rebases the panel log on reset; the
+single-row count below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(jumped.count(), 0);
+  }
+
+  void PolyphonyGateTest::resetRebasesLog()
+  {
+      PanelFixture fixture;
+      fixture.panel->updateSnapshot(richSnapshot());
+      AudioEngine::PolySnapshot reset = snapshotWithEvents({{M4A_POLY_DROPPED, 0, 60, 0, 0, 48}});
+      reset.drop[0] = 1;
+      fixture.panel->updateSnapshot(reset);
+Original expression:
+  QCOMPARE(fixture.panel->logRowCount(), 1);
+
+A019 | PolyphonyGateTest::logCapIs500 | src/checks/polyphony/polyphonypanel.cpp:194
+Disposition: GAP
+Mapping/reason: No Swift predicate caps the panel log; the 500-row count
+below remains an open obligation (the ten-burst loop feeds this one site).
+Source context since previous assertion:
+  QCOMPARE(fixture.panel->logRowCount(), 1);
+  }
+
+  void PolyphonyGateTest::logCapIs500()
+  {
+      PanelFixture fixture;
+      AudioEngine::PolySnapshot snapshot = snapshotWithEvents({{M4A_POLY_DROPPED, 0, 60, 0, 0, 48}});
+      snapshot.drop[0] = 1;
+      fixture.panel->updateSnapshot(snapshot);
+      uint32_t total = snapshot.eventTotal;
+      for (int poll = 0; poll < 10; ++poll) {
+          AudioEngine::PolySnapshot burst;
+          burst.maxPcmChannels = 5;
+          for (int index = 0; index < 60; ++index)
+              burst.events[total++ % M4A_POLY_EVENT_CAPACITY] = {M4A_POLY_DROPPED, 0, 60, 0, 0,
+                                                                 uint32_t(total)};
+          burst.eventTotal = total;
+          fixture.panel->updateSnapshot(burst);
+      }
+Original expression:
+  QCOMPARE(fixture.panel->logRowCount(), 500);
+
+A020 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:204
+Disposition: GAP
+Mapping/reason: No Swift predicate grabs the panel; the conditional
+screenshot-save observation below remains an open obligation.
+Source context since previous assertion:
+  QCOMPARE(fixture.panel->logRowCount(), 500);
+  }
+
+  void PolyphonyGateTest::responsiveLayout()
+  {
+      PanelFixture fixture;
+      fixture.panel->updateSnapshot(snapshotWithEvents({}));
+      fixture.panel->updateSnapshot(richSnapshot());
+      fixture.showAndSettle();
+      if (!m_screenshotPath.isEmpty())
+Original expression:
+  QVERIFY(fixture.panel->grab().save(m_screenshotPath));
+
+A021 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:208
+Disposition: GAP
+Mapping/reason: No Swift predicate lays out the narrow panel; the visibility
+observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(fixture.panel->grab().save(m_screenshotPath));
+
+      fixture.panel->resize(180, 980);
+      QCoreApplication::processEvents();
+Original expression:
+  QTRY_VERIFY(fixture.panel->isVisible());
+
+A022 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:209
+Disposition: GAP
+Mapping/reason: No Swift predicate lays out the narrow panel; the stacked
+(no-wide) observation below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QTRY_VERIFY(!fixture.panel->wideLayoutActive());
+
+A023 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:210
+Disposition: GAP
+Mapping/reason: No Swift predicate stacks the panel sections; the section
+order below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QTRY_VERIFY(fixture.panel->overflowSectionRect().top() >=
+                  fixture.panel->usageSectionRect().bottom());
+
+A024 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:212
+Disposition: GAP
+Mapping/reason: No Swift predicate lays out the panel grid; the
+fully-visible observation below remains an open obligation.
+Source context since previous assertion:
+  QTRY_VERIFY(fixture.panel->overflowSectionRect().top() >=
+                  fixture.panel->usageSectionRect().bottom());
+Original expression:
+  QTRY_VERIFY(fixture.panel->gridFullyVisible());
+
+A025 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:216
+Disposition: GAP
+Mapping/reason: No Swift predicate lays out the wide panel; the wide-layout
+observation below remains an open obligation.
+Source context since previous assertion:
+  QTRY_VERIFY(fixture.panel->gridFullyVisible());
+
+      fixture.panel->resize(900, 600);
+      QCoreApplication::processEvents();
+Original expression:
+  QTRY_VERIFY(fixture.panel->wideLayoutActive());
+
+A026 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:217
+Disposition: GAP
+Mapping/reason: No Swift predicate places the wide sections side by side;
+the section order below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QTRY_VERIFY(fixture.panel->overflowSectionRect().left() >=
+                  fixture.panel->usageSectionRect().right());
+
+A027 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:219
+Disposition: GAP
+Mapping/reason: No Swift predicate lays out the wide panel grid; the
+fully-visible observation below remains an open obligation.
+Source context since previous assertion:
+  QTRY_VERIFY(fixture.panel->overflowSectionRect().left() >=
+                  fixture.panel->usageSectionRect().right());
+Original expression:
+  QTRY_VERIFY(fixture.panel->gridFullyVisible());
+
+A028 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:221
+Disposition: GAP
+Mapping/reason: No Swift predicate grabs the wide panel; the conditional
+screenshot-save observation below remains an open obligation.
+Source context since previous assertion:
+  QTRY_VERIFY(fixture.panel->gridFullyVisible());
+      if (!m_screenshotPath.isEmpty())
+Original expression:
+  QVERIFY(fixture.panel->grab().save(
+              derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
+
+A029 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:226
+Disposition: GAP
+Mapping/reason: No Swift predicate lays out the short panel grid; the
+fully-visible observation below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(fixture.panel->grab().save(
+              derivedScreenshotPath(m_screenshotPath, QStringLiteral("-wide"))));
+
+      fixture.panel->resize(380, 240);
+      QCoreApplication::processEvents();
+Original expression:
+  QTRY_VERIFY(fixture.panel->gridFullyVisible());
+
+A030 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:227
+Disposition: GAP
+Mapping/reason: No Swift predicate scrolls the short panel; the scrollbar
+range below remains an open obligation.
+Source context since previous assertion:
+  (none: consecutive assertion lines)
+Original expression:
+  QTRY_VERIFY(fixture.panel->vScrollRange() > 0);
+
+A031 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:229
+Disposition: GAP
+Mapping/reason: No Swift predicate grabs the short panel; the conditional
+screenshot-save observation below remains an open obligation.
+Source context since previous assertion:
+  QTRY_VERIFY(fixture.panel->vScrollRange() > 0);
+      if (!m_screenshotPath.isEmpty())
+Original expression:
+  QVERIFY(fixture.panel->grab().save(
+              derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
+
+A032 | PolyphonyGateTest::responsiveLayout | src/checks/polyphony/polyphonypanel.cpp:234
+Disposition: GAP
+Mapping/reason: No Swift predicate restores the tall panel; the zero
+scroll-range below remains an open obligation.
+Source context since previous assertion:
+  QVERIFY(fixture.panel->grab().save(
+              derivedScreenshotPath(m_screenshotPath, QStringLiteral("-short"))));
+
+      fixture.panel->resize(380, 980);
+      QCoreApplication::processEvents();
+Original expression:
+  QTRY_COMPARE(fixture.panel->vScrollRange(), 0);
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+  } // namespace checks

@@ -1,0 +1,1040 @@
+Assertion correspondence: rollcheck/static/geometry.cpp
+
+Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
+Original: src/checks/rollcheck/static/geometry.cpp
+Original SHA-256: 9c3dcb0a9fdbab901eaeac2d1271951e0d6c7b648564b15a53175d989e465979
+Swift counterpart: src/checks/rollcheck/static/camera.swift
+Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+No MATCHED site is claimed. The fallback lead-pad/home camera numerics are
+PARTIAL against the related Swift transform/bound predicates. Grid lines,
+segments, tick ceilings, default pxPerBeat values, bind-stability numerics,
+and layout metrics have no related Swift predicate and are GAP. Window backing,
+raster captures, and every pixel-derived observation (shade, stems, captions,
+bar/beat lines, moved bars) are NATIVE.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution and ownership
+runEditorCameraChecks is called in its previous suite position, and
+checkGridCameraWheel runs between checkViewport and checkProjection under
+EditorGridCameraChecks (see proof.camera.txt); those execute the 41 S
+predicates below. No Swift function executes the geometry slots. The original
+slots run under PianoRollStaticTest (static/tst_pianorollstatic.h) on the
+file-local BareView fixture (a bare SongView with default44/t48/t34 songs, no
+tab), the fixtures.h Raster/captureRuler/rulerBandHeight/rulerPlotOffset
+helpers, and file-local pixel probers (channelDelta, detectedLine, lineAt).
+
+Fixture, sequence and row constraints
+fallbackCamera_data expands the camera slot into 1280/1000/1500 width rows.
+Grid loops walk 16 fallback lines, 6 bar columns plus content geometry, and 8
+beats; setSong binds (default44, then t48 or t34) bracket the stability
+comparisons. Raster valid guards precede every pixel read; bar/beat detection
+scans fixed fractional bands of the captured ruler image.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:117
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  #include "checks/rollcheck/static/tst_pianorollstatic.h"
+
+  #include <QCoreApplication>
+  #include <QGuiApplication>
+  #include <QPalette>
+  #include <QSize>
+  #include <QtTest>
+
+  #include <array>
+  #include <cmath>
+  #include <cstdint>
+  #include <vector>
+
+  #include "checks/rollcheck/static/fixtures.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "checks/support/support.h"
+  #include "core/miditimeline.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/theme/themeruntime.h"
+
+  namespace checks::rollcheck::staticcheck {
+  namespace {
+  constexpr Tick kTicksPerBeat = 24;
+  constexpr int kBeatsPerBar = 4;
+
+  struct BareView {
+      MidiTimeline default44;
+      MidiTimeline t48;
+      MidiTimeline t34;
+      SongDocument document;
+      SongView view{document};
+
+      BareView()
+      {
+          checks::support::bindEditActionsForTest(view);
+          if (!checks::support::showQuickViewport(view, QSize(1280, 800)))
+              qFatal("static geometry fixture could not expose the Quick window");
+          default44 = {.events = {},
+                       .tracks = {},
+                       .ticksPerBeat = kTicksPerBeat,
+                       .lengthTicks = 16 * kBeatsPerBar * kTicksPerBeat,
+                       .tempoMap = {},
+                       .timeSigs = {},
+                       .otherEvents = {}};
+          t48 = {.events = {},
+                 .tracks = {},
+                 .ticksPerBeat = 48,
+                 .lengthTicks = 16 * kBeatsPerBar * 48,
+                 .tempoMap = {},
+                 .timeSigs = {},
+                 .otherEvents = {}};
+          t34 = {.events = {},
+                 .tracks = {},
+                 .ticksPerBeat = kTicksPerBeat,
+                 .lengthTicks = 16 * kBeatsPerBar * kTicksPerBeat,
+                 .tempoMap = {},
+                 .timeSigs = {{0, 3, 2}},
+                 .otherEvents = {}};
+      }
+
+      ~BareView()
+      {
+          view.setSong(nullptr, nullptr);
+          QCoreApplication::processEvents();
+      }
+  };
+
+  int channelDelta(QRgb left, QRgb right)
+  {
+      return (std::max)({std::abs(qRed(left) - qRed(right)), std::abs(qGreen(left) - qGreen(right)),
+                         std::abs(qBlue(left) - qBlue(right))});
+  }
+
+  bool hasPaintedColumn(const Raster &raster, int column, int first, int last, QRgb backdrop,
+                        int threshold, int minimum)
+  {
+      if (column < 0 || column >= raster.image.width())
+          return false;
+      int changed = 0;
+      for (int y = std::max(0, first); y <= std::min(last, raster.image.height() - 1); ++y)
+          if (channelDelta(raster.image.pixel(column, y), backdrop) > threshold &&
+              ++changed >= minimum)
+              return true;
+      return false;
+  }
+
+  bool lineAt(const Raster &raster, int expected, int first, int last, QRgb backdrop, int threshold,
+              int minimum)
+  {
+      return hasPaintedColumn(raster, expected - 1, first, last, backdrop, threshold, minimum) ||
+             hasPaintedColumn(raster, expected, first, last, backdrop, threshold, minimum) ||
+             hasPaintedColumn(raster, expected + 1, first, last, backdrop, threshold, minimum);
+  }
+
+  int detectedLine(const Raster &raster, int expected, int first, int last, QRgb backdrop)
+  {
+      for (int x = expected - 1; x <= expected + 1; ++x)
+          if (hasPaintedColumn(raster, x, first, last, backdrop, 6, 2))
+              return x;
+      return -1;
+  }
+  } // namespace
+
+  void PianoRollStaticTest::fallbackCamera_data()
+  {
+      QTest::addColumn<int>("width");
+      QTest::newRow("1280") << 1280;
+      QTest::newRow("1000") << 1000;
+      QTest::newRow("1500") << 1500;
+  }
+
+  void PianoRollStaticTest::fallbackCamera()
+  {
+      QFETCH(int, width);
+      BareView fixture;
+Original expression:
+  QVERIFY(fixture.view.quickView() && fixture.view.quickView()->quickWindow())
+
+A002 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:121
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005, S015 in src/checks/rollcheck/static/camera.swift; the Swift pre-roll/lead-pad predicates use synthetic EditorCamera inputs, so they do not establish the native fallback-camera lead pad below.
+Source context since previous assertion:
+  ;
+      fixture.view.quickView()->quickWindow()->resize(QSize(width, 800));
+      QCoreApplication::processEvents();
+      const double leadPad = fixture.view.camera().leadPadPx();
+Original expression:
+  QVERIFY2(leadPad > 0.0, "fallback lead pad is not positive")
+
+A003 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:122
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002, S004 in src/checks/rollcheck/static/camera.swift; the Swift tick/content and display-projection predicates use synthetic inputs, so they do not establish the native tick-zero lead-pad home below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(std::abs(fixture.view.camera().contentX(0.0) - leadPad) <= 0.5,
+               "fresh view camera is not at the pre-roll home")
+
+A004 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:124
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(fixture.view.camera().pxPerBeat(), SongView::ViewState{}.pxPerBeat)
+
+A005 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:131
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::opaqueResizeBacking()
+  {
+      BareView fixture;
+      QQuickWindow *const window = fixture.view.quickView()->quickWindow();
+Original expression:
+  QVERIFY(window)
+
+A006 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:133
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const QColor background = themes::color(themes::Role::window_background);
+Original expression:
+  QCOMPARE(window->color(), background)
+
+A007 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:134
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(window->color().alpha(), 255)
+
+A008 | PianoRollStaticTest::opaqueResizeBacking | src/checks/rollcheck/static/geometry.cpp:138
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+      window->resize(QSize(1000, 700));
+      QCoreApplication::processEvents();
+Original expression:
+  QCOMPARE(window->color(), background)
+
+A009 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:155
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::fallbackGrid()
+  {
+      BareView fixture;
+      struct Line {
+          Tick tick;
+          bool bar;
+          int barNumber;
+          int beatNumber;
+      };
+      std::vector<Line> lines;
+      fixture.view.forEachGridLine(0, 4 * kBeatsPerBar * kTicksPerBeat,
+                                   [&lines](Tick tick, bool bar, int barNumber, int beatNumber) {
+                                       lines.push_back({tick, bar, barNumber, beatNumber});
+                                   });
+Original expression:
+  QCOMPARE(lines.size(), size_t(16))
+
+A010 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:158
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      for (int index = 0; index < 16; ++index) {
+          const Line line = lines[size_t(index)];
+Original expression:
+  QCOMPARE(line.tick, uint64_t(index) * kTicksPerBeat)
+
+A011 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:159
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(line.bar, index % 4 == 0)
+
+A012 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:160
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(line.barNumber, index / 4 + 1)
+
+A013 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:161
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(line.beatNumber, index % 4 + 1)
+
+A014 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:164
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      const songview::Grid::Segment segment = fixture.view.grid().segmentAt(0);
+Original expression:
+  QCOMPARE(segment.start, uint64_t(0))
+
+A015 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:165
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(segment.next, CoreTimeDefaults::kNoTick)
+
+A016 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:166
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(segment.beatTicks, kTicksPerBeat)
+
+A017 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:167
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(segment.beatsPerBar, kBeatsPerBar)
+
+A018 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:177
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::tickCeilingDoesNotWrap()
+  {
+      BareView fixture;
+      std::vector<Tick> ticks;
+      fixture.view.forEachGridLine(CoreTimeDefaults::kMaxTick - kTicksPerBeat,
+                                   CoreTimeDefaults::kNoTick,
+                                   [&ticks](Tick tick, bool, int, int) { ticks.push_back(tick); });
+Original expression:
+  QVERIFY(ticks.size() <= 1)
+
+A019 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:178
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(ticks.empty() || ticks.front() >= CoreTimeDefaults::kMaxTick - kTicksPerBeat)
+
+A020 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:185
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::preRollRulerShade()
+  {
+      BareView fixture;
+      const Raster raster = captureRuler(fixture.view);
+Original expression:
+  QVERIFY2(raster.valid(), "fresh ruler raster could not be captured")
+
+A021 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:192
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const qreal plotOffset = rulerPlotOffset(fixture.view);
+      const qreal tickZero = plotOffset + fixture.view.camera().contentX(0.0);
+      const QRgb padUpper = raster.at(plotOffset + 4.0, raster.image.height() / raster.dpr * 0.5);
+      const QRgb padLower = raster.at(plotOffset + 4.0 + (tickZero - plotOffset) * 0.5,
+                                      raster.image.height() / raster.dpr - 4.0);
+      const QRgb chrome = raster.at(tickZero + 80.0, 2.0);
+Original expression:
+  QVERIFY(channelDelta(padUpper, padLower) <= 2)
+
+A022 | PianoRollStaticTest::preRollRulerShade | src/checks/rollcheck/static/geometry.cpp:193
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(channelDelta(padUpper, chrome) > 1)
+
+A023 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:200
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::fallbackRulerStemAndBars()
+  {
+      BareView fixture;
+      const Raster raster = captureRuler(fixture.view);
+Original expression:
+  QVERIFY2(raster.valid(), "fresh ruler raster could not be captured")
+
+A024 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:214
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const qreal offset = rulerPlotOffset(fixture.view);
+      const int tickZero = raster.deviceX(offset + fixture.view.camera().contentX(0.0));
+      const QRgb placeholder = QGuiApplication::palette().color(QPalette::PlaceholderText).rgb();
+      const int top = int(raster.image.height() * 0.05);
+      const int bottom = int(raster.image.height() * 0.45);
+      int longestStem = 0;
+      for (int x = tickZero - 1; x <= tickZero + 1; ++x) {
+          int matching = 0;
+          for (int y = top; y <= bottom; ++y)
+              if (channelDelta(raster.image.pixel(x, y), placeholder) <= 12)
+                  ++matching;
+          longestStem = std::max(longestStem, matching);
+      }
+Original expression:
+  QVERIFY(longestStem >= (bottom - top) * 7 / 10)
+
+A025 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:218
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const int captionLeft = std::clamp(raster.deviceX(offset + 4.0), 0, raster.image.width());
+      const int captionRight =
+          std::clamp(tickZero - qRound(4.0 * raster.dpr), 0, raster.image.width());
+Original expression:
+  QVERIFY(captionRight > captionLeft)
+
+A026 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:224
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      int captionPixels = 0;
+      for (int y = 0; y < raster.image.height(); ++y)
+          for (int x = captionLeft; x < captionRight; ++x)
+              if (channelDelta(raster.image.pixel(x, y), placeholder) <= 12)
+                  ++captionPixels;
+Original expression:
+  QCOMPARE(captionPixels, 0)
+
+A027 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:233
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const QRgb backdrop = raster.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
+      int paintedBars = 0;
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
+          const int expected =
+              raster.deviceX(fixture.view.camera().displayX(double(tick), offset, raster.dpr));
+          const int line = detectedLine(raster, expected, int(raster.image.height() * 0.55),
+                                        raster.image.height() - 3, backdrop);
+Original expression:
+  QVERIFY2(line >= 0, "fresh ruler is missing a fallback bar line")
+
+A028 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:240
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          ++paintedBars;
+          int labelPixels = 0;
+          for (int x = expected + 3; x <= expected + int(34 * raster.dpr); ++x)
+              for (int y = int(raster.image.height() * 0.55); y < raster.image.height() - 3; ++y)
+                  if (channelDelta(raster.image.pixel(x, y), backdrop) > 30)
+                      ++labelPixels;
+Original expression:
+  QVERIFY(labelPixels >= 2)
+
+A029 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:242
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+Original expression:
+  QVERIFY(paintedBars >= 2)
+
+A030 | PianoRollStaticTest::fallbackRulerStemAndBars | src/checks/rollcheck/static/geometry.cpp:246
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      for (int beat = 1; beat <= 3; ++beat) {
+          const int expected = raster.deviceX(
+              fixture.view.camera().displayX(double(beat * kTicksPerBeat), offset, raster.dpr));
+Original expression:
+  QVERIFY(lineAt(raster, expected, int(raster.image.height() * 0.72),
+                         raster.image.height() - 3, backdrop, 6, 1))
+
+A031 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:255
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void PianoRollStaticTest::defaultBindKeepsGeometry()
+  {
+      BareView fixture;
+      const Raster before = captureRuler(fixture.view);
+Original expression:
+  QVERIFY(before.valid())
+
+A032 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:270
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const qreal offset = rulerPlotOffset(fixture.view);
+      const QRgb backdrop = before.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
+      std::array<int, 6> columns{};
+      std::array<double, 6> geometry{};
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
+          columns[size_t(bar)] = detectedLine(
+              before,
+              before.deviceX(fixture.view.camera().displayX(double(tick), offset, before.dpr)),
+              int(before.image.height() * 0.55), before.image.height() - 3, backdrop);
+          geometry[size_t(bar)] = fixture.view.camera().contentX(double(tick));
+      }
+      fixture.view.setSong(&fixture.default44, nullptr);
+      QCoreApplication::processEvents();
+Original expression:
+  QCOMPARE(fixture.view.camera().pxPerBeat(), SongView::ViewState{}.pxPerBeat)
+
+A033 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:272
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Raster after = captureRuler(fixture.view);
+Original expression:
+  QVERIFY(after.valid())
+
+A034 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:277
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
+          const int expected =
+              after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
+Original expression:
+  QCOMPARE(detectedLine(after, expected, int(after.image.height() * 0.55),
+                                after.image.height() - 3, backdrop),
+                   columns[size_t(bar)])
+
+A035 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:280
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(fixture.view.camera().contentX(double(tick)) - geometry[size_t(bar)]) <=
+                  1e-9)
+
+A036 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:291
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void PianoRollStaticTest::ticksPerBeatKeepsGeometry()
+  {
+      BareView fixture;
+      fixture.view.setSong(&fixture.default44, nullptr);
+      QCoreApplication::processEvents();
+      const Raster before = captureRuler(fixture.view);
+Original expression:
+  QVERIFY(before.valid())
+
+A037 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:312
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const qreal offset = rulerPlotOffset(fixture.view);
+      const QRgb backdrop = before.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
+      std::array<int, 6> barColumns{};
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
+          const int expected =
+              before.deviceX(fixture.view.camera().displayX(double(tick), offset, before.dpr));
+          barColumns[size_t(bar)] = detectedLine(before, expected, int(before.image.height() * .55),
+                                                 before.image.height() - 3, backdrop);
+      }
+      std::array<int, 3> beatColumns{};
+      std::array<double, 8> beatGeometry{};
+      for (int beat = 1; beat <= 3; ++beat)
+          beatColumns[size_t(beat - 1)] = before.deviceX(
+              fixture.view.camera().displayX(double(beat * kTicksPerBeat), offset, before.dpr));
+      for (int beat = 1; beat <= 8; ++beat)
+          beatGeometry[size_t(beat - 1)] =
+              fixture.view.camera().contentX(double(beat * kTicksPerBeat));
+      fixture.view.setSong(&fixture.t48, nullptr);
+      QCoreApplication::processEvents();
+Original expression:
+  QCOMPARE(fixture.view.camera().pxPerBeat(), SongView::ViewState{}.pxPerBeat)
+
+A038 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:314
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Raster after = captureRuler(fixture.view);
+Original expression:
+  QVERIFY(after.valid())
+
+A039 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:318
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      for (int beat = 1; beat <= 3; ++beat) {
+          const int expected =
+              after.deviceX(fixture.view.camera().displayX(double(beat * 48), offset, after.dpr));
+Original expression:
+  QVERIFY(std::abs(expected - beatColumns[size_t(beat - 1)]) <= 1)
+
+A040 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:319
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(lineAt(after, expected, int(after.image.height() * .72), after.image.height() - 3,
+                         backdrop, 6, 1))
+
+A041 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:326
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * kBeatsPerBar * 48;
+          const int expected =
+              after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
+Original expression:
+  QCOMPARE(detectedLine(after, expected, int(after.image.height() * .55),
+                                after.image.height() - 3, backdrop),
+                   barColumns[size_t(bar)])
+
+A042 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:331
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      for (int beat = 1; beat <= 8; ++beat)
+Original expression:
+  QVERIFY(std::abs(fixture.view.camera().contentX(double(beat * 48)) -
+                           beatGeometry[size_t(beat - 1)]) <= 1e-6)
+
+A043 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:341
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars()
+  {
+      BareView fixture;
+      fixture.view.setSong(&fixture.default44, nullptr);
+      QCoreApplication::processEvents();
+      const Raster before = captureRuler(fixture.view);
+Original expression:
+  QVERIFY(before.valid())
+
+A044 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:359
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const qreal offset = rulerPlotOffset(fixture.view);
+      const QRgb backdrop = before.at(offset + fixture.view.camera().leadPadPx() + 80.0, 2.0);
+      std::array<int, 6> fallbackBars{};
+      std::array<double, 8> beats{};
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * kBeatsPerBar * kTicksPerBeat;
+          fallbackBars[size_t(bar)] = detectedLine(
+              before,
+              before.deviceX(fixture.view.camera().displayX(double(tick), offset, before.dpr)),
+              int(before.image.height() * .55), before.image.height() - 3, backdrop);
+      }
+      for (int beat = 1; beat <= 8; ++beat)
+          beats[size_t(beat - 1)] = fixture.view.camera().contentX(double(beat * kTicksPerBeat));
+      const int height = rulerBandHeight(fixture.view);
+      fixture.view.setSong(&fixture.t34, nullptr);
+      QCoreApplication::processEvents();
+      const songview::Grid::Segment segment = fixture.view.grid().segmentAt(0);
+Original expression:
+  QCOMPARE(segment.start, uint64_t(0))
+
+A045 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:360
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(segment.next, CoreTimeDefaults::kNoTick)
+
+A046 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:361
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(segment.beatTicks, kTicksPerBeat)
+
+A047 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:362
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(segment.beatsPerBar, 3)
+
+A048 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:363
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(rulerBandHeight(fixture.view), height)
+
+A049 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:364
+Disposition: PARTIAL
+Mapping/reason: Related predicate S015 in src/checks/rollcheck/static/camera.swift; the Swift unbound-home predicate uses synthetic inputs, so it does not establish the 3/4-bound native lead pad below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view.camera().leadPadPx() > 0.0)
+
+A050 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:366
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      for (int beat = 1; beat <= 8; ++beat)
+Original expression:
+  QVERIFY(std::abs(fixture.view.camera().contentX(double(beat * kTicksPerBeat)) -
+                           beats[size_t(beat - 1)]) <= 1e-6)
+
+A051 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:369
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Raster after = captureRuler(fixture.view);
+Original expression:
+  QVERIFY(after.valid())
+
+A052 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:377
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      bool moved = false;
+      for (int bar = 0; bar < 6; ++bar) {
+          const Tick tick = Tick(bar) * 3 * kTicksPerBeat;
+          const int expected =
+              after.deviceX(fixture.view.camera().displayX(double(tick), offset, after.dpr));
+          const int line = detectedLine(after, expected, int(after.image.height() * .55),
+                                        after.image.height() - 3, backdrop);
+Original expression:
+  QVERIFY(line >= 0)
+
+A053 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:378
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(line - expected) <= 1)
+
+A054 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:381
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          moved = moved || line != fallbackBars[size_t(bar)];
+      }
+Original expression:
+  QVERIFY2(moved, "3/4 binding did not move the signature-dependent bar lines")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace checks::rollcheck::staticcheck
+
+
+Swift assertion predicates
+
+S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
+  report.expect(near(compact.snapshot.viewportWidth, 50) &&
+                    near(compact.snapshot.minHScroll, -48) &&
+                    near(compact.snapshot.maxHScroll, 0),
+                    cppID: cameraTransformID,
+                    message: "caller-resolved minimum viewport produces observable camera bounds")
+
+S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
+  report.expect(near(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
+                    message: "tick/content transforms round-trip with a fractional offset")
+
+S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
+  report.expect(near(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
+                    message: "horizontal restoration preserves fractional offsets")
+
+S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
+  report.expect(near(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+                    cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
+
+S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
+  report.expect(near(camera.snapshot.scrollX, -48) && near(camera.snapshot.minHScroll, -48),
+                    cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
+
+S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
+  report.expect(near(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
+                    message: "bound timeline end reaches the plot origin")
+
+S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
+  report.expect(near(viewportCamera.snapshot.scrollX, -48),
+                    cppID: cameraTransformID,
+                    message: "bound viewport shrink reclamps the changed pre-roll floor")
+
+S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
+  report.expect(near(viewportCamera.snapshot.scrollX, 10.25),
+                    cppID: cameraTransformID,
+                    message: "bound viewport updates preserve a legal fractional offset")
+
+S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
+  report.expect(zoom.zoomChanged && zoom.scrollChanged &&
+                    near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
+                    message: "interactive time zoom preserves its tick anchor")
+
+S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
+  report.expect(near(clampedTimeZoom.snapshot.scrollX, 64) &&
+                    !near(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
+                    cppID: cameraZoomID,
+                    message: "time zoom reaches its bound when the pointer anchor is unreachable")
+
+S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
+  report.expect(near(camera.snapshot.pixelsPerBeat, 48) &&
+                    near(camera.snapshot.keyHeight, 16) && near(camera.snapshot.scrollX, 10.5) &&
+                    near(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
+                    message: "unanchored restoration keeps valid fractional camera state")
+
+S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
+  report.expect(near(sanitized.snapshot.pixelsPerBeat, 32) &&
+                    near(sanitized.snapshot.keyHeight, 12) &&
+                    near(sanitized.snapshot.scrollX, 0) && near(sanitized.snapshot.scrollY, 0),
+                    cppID: cameraZoomID,
+                    message: "restoration sanitizes non-finite transient view-state values independently")
+
+S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
+  report.expect(near(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
+                    message: "content shrink reclamps the horizontal offset")
+
+S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
+  report.expect(near(camera.snapshot.viewportWidth, 800) && near(camera.snapshot.scrollY, 0),
+                    cppID: cameraTransformID,
+                    message: "viewport growth reclamps vertical content")
+
+S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
+  report.expect(near(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
+                    message: "an unbound timeline homes to its lead pad")
+
+S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
+  report.expect(near(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
+                    message: "unbound viewport updates follow the resolved home")
+
+S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
+  report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
+          chromatic.row(forPitch: pitch) == 127 - pitch &&
+              chromatic.visiblePitch(at: 127 - pitch) == pitch
+      }, cppID: cameraPitchID,
+      message: "chromatic pitch mapping remains bijective across the full MIDI range")
+
+S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:108
+  report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
+                    folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
+                    folded.nearestVisiblePitch(to: 62) == 60 &&
+                    folded.nearestVisiblePitch(to: 100) == 67 &&
+                    folded.nearestVisiblePitch(to: -5) == 60 &&
+                    emptyProjection.nearestVisiblePitch(to: 60) == nil,
+                    cppID: cameraPitchID,
+                    message: "pitch rows and nearest lookup preserve production ordering")
+
+S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:116
+  report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
+                    folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
+                    cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
+
+S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
+  report.expect(near(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
+                         10) &&
+                    folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
+                    folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
+                    cppID: cameraPitchID,
+                    message: "fractional DPR snapping defines the inverse row boundary")
+
+S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
+  report.expect(near(projectedContent.snapshot.scrollY, 15),
+                    cppID: cameraPitchID,
+                    message: "pitch projection shrink reclamps the vertical offset")
+
+S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
+  report.expect(near(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
+                    message: "vertical bounds derive from projected row height")
+
+S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
+  report.expect(near(anchoredRow, resultingRow), cppID: cameraZoomID,
+                    message: "pitch zoom preserves its row anchor when bounds permit")
+
+S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
+  report.expect(near(clampedPitchZoom.snapshot.scrollY, 0) &&
+                    near(clampedPitchZoom.snapshot.maxVScroll, 0) &&
+                    !near(rowAfterBoundedZoom, rowBeforeBoundedZoom),
+                    cppID: cameraZoomID,
+                    message: "pitch zoom reaches its bound when the row anchor is unreachable")
+
+S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
+  report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
+                    cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
+
+S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
+  report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
+                    message: "hidden pitches do not move the camera")
+
+S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:173
+  report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
+                    near(reveal.snapshot.scrollX, 573.3333333333),
+                    cppID: cameraTransformID,
+                    message: "tick reveal uses the production one-third anchor")
+
+S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:178
+  report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
+                                               preferEnd: false, dpr: 1) &&
+                    near(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
+                    message: "a fitting range on the physical right boundary stays visible")
+
+S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:182
+  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                              preferEnd: false, dpr: 1) &&
+                    near(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
+                    message: "wide range reveal prefers its requested leading edge")
+
+S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:187
+  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                              preferEnd: true, dpr: 1) &&
+                    near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
+                    message: "wide range reveal honors the requested trailing edge")
+
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:220
+  report.expect(
+              after.pixelsPerBeat > before.pixelsPerBeat
+                  && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
+                  && counters.camera == publications + 1,
+              cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
+
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:233
+  report.expect(
+          session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
+          cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
+
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:248
+  report.expect(
+          gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
+              && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
+                      angleZoom * pow(1.0015, 120), tolerance: 1e-7),
+          cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
+
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:253
+  report.expect(
+          counters.camera == 2,
+          cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
+
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:263
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
+
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:278
+  report.expect(
+          gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
+              && minimumPublications == 1 && counters.camera == minimumPublications,
+          cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
+
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:295
+  report.expect(
+          gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
+              && maximumPublications == 1 && counters.camera == maximumPublications,
+          cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
+
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:306
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
+
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:318
+  report.expect(
+          pitchAfter.keyHeight > pitchBefore.keyHeight
+              && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
+              && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
+
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:329
+  report.expect(
+          session.camera.snapshot == pitchMomentum && counters.camera == 0,
+          cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
+
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")

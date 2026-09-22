@@ -1,0 +1,115 @@
+Assertion correspondence: playback/tst_prime.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/playback/tst_prime.cpp
+Original SHA-256: 844a887eaeee582e6b963993cfe349bb3d84ffea8eb6c72bd7131a5c03689a70
+Swift counterpart: src/checks/playback/tst_prime.swift
+Swift SHA-256: 12e76bc6d94a691f0cafc4b44721f04e0d6816e5a8bea41c85b4c543ee4c70bf
+
+Purpose and status
+One entry per original assertion or failure site, including initialization.
+MATCHED means the listed predicate and its scenario are represented in Swift;
+execution evidence is recorded separately below. This is source correspondence,
+not a live C++/Swift differential comparison or permission to delete native checks.
+There are no omitted original assertion sites in this file.
+
+Execution and ownership
+runPlaybackSuite calls runPairedPrimeChecks in the same position as before.
+Shared loader and writer: swiftcore/PlaybackChecks.swift. Shared engine and channel
+inspection: playback/transportfixture.swift. Engine uses the retained native M4A
+backend while timeline generation and chase/prime/render operations use Swift.
+
+Fixture, sequence and rows
+Division 24; 48000 Hz; 120 BPM; 1000 samples per tick; end 192. Track 0 program 5 at tick 0 then 9 at 96, note 60 ticks 0..24. Track 1 first program 7 at tick 48, note 62 ticks 48..72. Track 2 no program, note 64 ticks 0..24. All notes velocity 100. Each data row and audition case uses a fresh engine.
+Program rows: chase-applied-voice-not-overridden=(track0,program5,wave present); later-voice-primed-at-load=(track1,program7,wave present); voiceless-track-never-primed=(track2,no program assertion,wave absent). Audibility helper examines both channels for any nonzero sample across up to eight 512-frame blocks, exactly the original 4096-frame maximum. Mid-song case chases then primes at sample 100000, asserting program and wave on tracks 0 and 1.
+
+Verification evidence
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
+This records the completed checkpoint before the subsequent shared corpus-loader
+extraction/range additions; updated combined verification is pending.
+Legacy native source suites are not registered in the current checkcatalog;
+no native loopcheck/primecheck execution is claimed.
+
+Shared fixture provenance
+The engine bridge uses checks::SustainVoicegroup from playback/sustainvoicegroup.h.
+Its program 2 override is unused by these fixtures (loop program 0; prime 5/7/9).
+src/checks/playback/transportfixture.swift SHA-256: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
+src/checks/playback/PlaybackChecks.swift SHA-256: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
+src/checks/playback/sustainvoicegroup.h SHA-256: 2605285c630cfa4cf37212ac02a59140adb17d5fcaa5567ac48fd0c55abbffe5
+src/checks/support/corecheck/native_check.cpp SHA-256: 5093b74731d2bc0c64ee6793df3649d97b280b6146cc97844ea6a54704c75815
+
+Original assertion inventory
+
+A001 | PrimeTest::init | src/checks/playback/tst_prime.cpp:96
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / runPairedPrimeChecks
+Mapping/reason: Loader guard requires a timeline; report.expectEqual(3, timeline.usedTrackCount) and early guard enforce the three-track fixture.
+Original expression:
+  QVERIFY2(timeline && timeline->usedTrackCount == 3, "synthesized song built wrong")
+
+A002 | PrimeTest::unprimedTrackAuditionIsSilent | src/checks/playback/tst_prime.cpp:133
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior
+Mapping/reason: After fresh-engine chase at zero and note_on(track 1, key 60, velocity 127), expectEqual(false, rendersAudibly) requires silence.
+Original expression:
+  QVERIFY2(!rendersAudibly(),
+               "unprimed track 1 audition was audible (control expectation changed?)")
+
+A003 | PrimeTest::primeVoicesApplyTrackPrograms | src/checks/playback/tst_prime.cpp:159
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / programRows
+Mapping/reason: For track 0/1 rows expectEqual(expectedProgram, track.currentProgram) checks 5 and 7 respectively.
+Original expression:
+  QCOMPARE(t.currentProgram, uint8_t(expectedProgram))
+
+A004 | PrimeTest::primeVoicesApplyTrackPrograms | src/checks/playback/tst_prime.cpp:160
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / programRows
+Mapping/reason: The same rows expectEqual(true, track.currentVoice.wav != nil).
+Original expression:
+  QVERIFY2(t.currentVoice.wav != nullptr, "primed track has no wave")
+
+A005 | PrimeTest::primeVoicesApplyTrackPrograms | src/checks/playback/tst_prime.cpp:162
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / programRows
+Mapping/reason: The voiceless-track-never-primed row checks expectEqual(false, track.currentVoice.wav != nil) on track 2.
+Original expression:
+  QVERIFY2(t.currentVoice.wav == nullptr, "track with no voice event was primed anyway")
+
+A006 | PrimeTest::primedTrackAuditionIsAudible | src/checks/playback/tst_prime.cpp:171
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior
+Mapping/reason: A separate fresh engine is chased/primed at zero before note_on(track 1,60,127); expectEqual(true, rendersAudibly) requires audible samples.
+Original expression:
+  QVERIFY2(rendersAudibly(), "primed track 1 audition was silent")
+
+A007 | PrimeTest::midSongChaseSuppliesAllPrograms | src/checks/playback/tst_prime.cpp:180
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / expectedPrograms
+Mapping/reason: At position 100 * 1000, expectedPrograms[0] == 9 is compared to track 0 currentProgram.
+Original expression:
+  QCOMPARE(m_engine->tracks[0].currentProgram, kProgLater)
+
+A008 | PrimeTest::midSongChaseSuppliesAllPrograms | src/checks/playback/tst_prime.cpp:181
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / expectedPrograms
+Mapping/reason: The trackIndex == 0 iteration requires track.currentVoice.wav != nil.
+Original expression:
+  QVERIFY2(m_engine->tracks[0].currentVoice.wav != nullptr,
+               "mid-song chase left track 0 without a wave")
+
+A009 | PrimeTest::midSongChaseSuppliesAllPrograms | src/checks/playback/tst_prime.cpp:183
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / expectedPrograms
+Mapping/reason: At position 100 * 1000, expectedPrograms[1] == 7 is compared to track 1 currentProgram.
+Original expression:
+  QCOMPARE(m_engine->tracks[1].currentProgram, kProgTrack1)
+
+A010 | PrimeTest::midSongChaseSuppliesAllPrograms | src/checks/playback/tst_prime.cpp:184
+Disposition: MATCHED
+Swift: src/checks/playback/tst_prime.swift :: checkPrimeBehavior / expectedPrograms
+Mapping/reason: The trackIndex == 1 iteration requires track.currentVoice.wav != nil.
+Original expression:
+  QVERIFY2(m_engine->tracks[1].currentVoice.wav != nullptr,
+               "mid-song chase left track 1 without a wave")

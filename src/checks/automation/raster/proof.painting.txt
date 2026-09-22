@@ -1,0 +1,1049 @@
+Assertion correspondence: automation/raster/painting.cpp
+
+Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+Original: src/checks/automation/raster/painting.cpp
+Original SHA-256: 4ef6ea6953fe9b60e0ed3654a0645dd5ce99f7f1f1ea9a869c9e9cca59b4365a
+Swift counterpart: src/checks/automation/presentation/painting.swift
+Swift SHA-256: 591fb9b3c5dc1551c3f2a2ec4caa3b32529389f161b8b09a83841c4625d69aaa
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+All 44 sites in this file are NATIVE: curvesNodesAndSelectedRingsRender and halfOpenTrackSelectionRendersOnlyIncludedNodes capture rendered raster viewports and verify non-empty curve lines, node diamond pixels, and selection ring pixels across themes and DPI scales. While presentation/painting.swift verifies the model side of curve and row stack composition, direct pixel inspection is a retained native obligation.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
+Their sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+AutomationRasterTest in raster/painting.cpp captured raster framebuffers to inspect rendered curve geometry and node pixels. In the converted Swift suite, presentation/painting.swift exercises scale labels and row stack composition at the presenter level.
+
+Fixture, sequence and row constraints
+Data rows expand curvesNodesAndSelectedRingsRender (1x-scale, 2x-scale, dark-theme) and halfOpenTrackSelectionRendersOnlyIncludedNodes across selection intervals. Loops inspect pixel scanlines for curve stroke continuity and node reticle pixels.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | AutomationRasterTest::init | src/checks/automation/raster/painting.cpp:218
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+  #include "checks/automation/raster/tst_automationraster.h"
+
+  #include <algorithm>
+  #include <cmath>
+  #include <cstdint>
+  #include <limits>
+  #include <utility>
+  #include <vector>
+
+  #include <QColor>
+  #include <QImage>
+  #include <QQuickItem>
+  #include <QRectF>
+
+  #include <QtTest>
+
+  #include "core/timedefaults.h"
+  #include "ui/editordrawer/automationcanvas.h"
+  #include "ui/editordrawer/automationpage.h"
+  #include "ui/editordrawer/cclanes.h"
+  #include "ui/editordrawer/nodelane/nodelane.h"
+  #include "ui/editordrawer/tempolane.h"
+  #include "ui/layout.h"
+  #include "ui/songview.h"
+  #include "ui/songview/editorselectionmodel.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickscene.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/theme/themeruntime.h"
+  #include "ui/theme/trackidentitycolors.h"
+
+  namespace {
+
+  enum class LaneKind { Tempo, Cc };
+
+  struct LaneGeometry {
+      LaneHandle handle;
+      QRect body;
+      QColor curveColor;
+  };
+
+  constexpr Tick kHeldTick = 0;
+  constexpr Tick kNodeTick = 96;
+  constexpr Tick kSecondTick = 144;
+  constexpr int kTempoHeld = 80;
+  constexpr int kTempoNode = 200;
+  constexpr int kTempoSecond = 160;
+  constexpr int kCcHeld = 24;
+  constexpr int kCcNode = 96;
+  constexpr int kCcSecond = 72;
+
+  QRectF triangleBounds(const songview::TimelineQuickTriangle &triangle)
+  {
+      const qreal left = std::min({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+      const qreal right = std::max({triangle.first.x(), triangle.second.x(), triangle.third.x()});
+      const qreal top = std::min({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+      const qreal bottom = std::max({triangle.first.y(), triangle.second.y(), triangle.third.y()});
+      return QRectF(QPointF(left, top), QPointF(right, bottom));
+  }
+
+  bool layerHasColorIn(const songview::TimelineQuickLayerData &layer, const QRectF &contentProbe,
+                       const QColor &color)
+  {
+      for (const songview::TimelineQuickRect &rect : layer.rects) {
+          if (rect.rect.intersects(contentProbe) &&
+              (rect.topLeft == color || rect.topRight == color || rect.bottomRight == color ||
+               rect.bottomLeft == color)) {
+              return true;
+          }
+      }
+      for (const songview::TimelineQuickTriangle &triangle : layer.triangles) {
+          if (triangleBounds(triangle).intersects(contentProbe) &&
+              (triangle.firstColor == color || triangle.secondColor == color ||
+               triangle.thirdColor == color)) {
+              return true;
+          }
+      }
+      return false;
+  }
+
+  QRectF nodeProbe(qreal x, qreal y, qreal radius)
+  {
+      return {x - radius, y - radius, 2 * radius, 2 * radius};
+  }
+
+  QRectF lineProbe(qreal x, qreal y, qreal halfWidth, qreal halfHeight)
+  {
+      return {x - halfWidth, y - halfHeight, 2 * halfWidth, 2 * halfHeight};
+  }
+
+  bool framebufferHasColorNear(const QImage &framebuffer, const QPointF &point,
+                               const QColor &expected)
+  {
+      if (framebuffer.isNull() || framebuffer.devicePixelRatio() <= 0.0)
+          return false;
+
+      constexpr int kColorTolerance = 64;
+      const qreal dpr = framebuffer.devicePixelRatio();
+      const int radius = qCeil(2 * dpr);
+      const int centerX = qRound(point.x() * dpr);
+      const int centerY = qRound(point.y() * dpr);
+      for (int y = std::max(0, centerY - radius);
+           y <= std::min(framebuffer.height() - 1, centerY + radius); ++y) {
+          for (int x = std::max(0, centerX - radius);
+               x <= std::min(framebuffer.width() - 1, centerX + radius); ++x) {
+              const QColor pixel = framebuffer.pixelColor(x, y);
+              if (pixel.alpha() >= 32 && std::abs(pixel.red() - expected.red()) <= kColorTolerance &&
+                  std::abs(pixel.green() - expected.green()) <= kColorTolerance &&
+                  std::abs(pixel.blue() - expected.blue()) <= kColorTolerance) {
+                  return true;
+              }
+          }
+      }
+      return false;
+  }
+
+  bool layerHasSelectionRing(const songview::TimelineQuickLayerData &layer,
+                             const QPoint &contentPoint, qreal ringRadius, qreal ringWidth,
+                             const QColor &selectionColor)
+  {
+      const QPointF center = QPointF(contentPoint);
+      const qreal tolerance = layout::singlePixel();
+      const qreal inner = std::max<qreal>(0.0, ringRadius - ringWidth / 2.0 - tolerance);
+      const qreal outer = ringRadius + ringWidth / 2.0 + tolerance;
+      const qreal innerSquared = inner * inner;
+      const qreal outerSquared = outer * outer;
+      return std::count_if(
+                 layer.triangles.cbegin(), layer.triangles.cend(),
+                 [&](const songview::TimelineQuickTriangle &triangle) {
+                     const auto onRing = [&](const QPointF &point) {
+                         const QPointF delta = point - center;
+                         const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+                         return distanceSquared >= innerSquared && distanceSquared <= outerSquared;
+                     };
+                     return triangle.firstColor == selectionColor &&
+                            triangle.secondColor == selectionColor &&
+                            triangle.thirdColor == selectionColor && onRing(triangle.first) &&
+                            onRing(triangle.second) && onRing(triangle.third);
+                 }) >= 4;
+  }
+
+  bool framebufferHasSelectionRing(const QImage &baseline, const QImage &framebuffer,
+                                   const QPoint &contentPoint, int gutterWidth, qreal nodeOuterRadius,
+                                   qreal ringRadius, qreal ringWidth, const QColor &selectionColor)
+  {
+      if (baseline.isNull() || framebuffer.isNull() || baseline.size() != framebuffer.size() ||
+          framebuffer.devicePixelRatio() <= 0.0 ||
+          !qFuzzyCompare(baseline.devicePixelRatio(), framebuffer.devicePixelRatio())) {
+          return false;
+      }
+
+      const qreal dpr = framebuffer.devicePixelRatio();
+      const QPointF center = QPointF(contentPoint) + QPointF(gutterWidth, 0);
+      const qreal selectedOuterRadius = ringRadius + ringWidth / 2.0;
+      const qreal inner = (nodeOuterRadius + selectedOuterRadius) / 2.0;
+      const qreal outer = selectedOuterRadius + layout::singlePixel();
+      const qreal innerSquared = inner * inner;
+      const qreal outerSquared = outer * outer;
+      const int left = std::max(0, qFloor((center.x() - outer) * dpr));
+      const int top = std::max(0, qFloor((center.y() - outer) * dpr));
+      const int right = std::min(framebuffer.width() - 1, qCeil((center.x() + outer) * dpr));
+      const int bottom = std::min(framebuffer.height() - 1, qCeil((center.y() + outer) * dpr));
+      unsigned changedQuadrants = 0;
+      for (int y = top; y <= bottom; ++y) {
+          for (int x = left; x <= right; ++x) {
+              const QPointF delta((x + 0.5) / dpr - center.x(), (y + 0.5) / dpr - center.y());
+              const qreal distanceSquared = delta.x() * delta.x() + delta.y() * delta.y();
+              const QColor pixel = framebuffer.pixelColor(x, y);
+              const QColor oldPixel = baseline.pixelColor(x, y);
+              const int difference = std::abs(pixel.alpha() - oldPixel.alpha()) +
+                                     std::abs(pixel.red() - oldPixel.red()) +
+                                     std::abs(pixel.green() - oldPixel.green()) +
+                                     std::abs(pixel.blue() - oldPixel.blue());
+              if (distanceSquared >= innerSquared && distanceSquared <= outerSquared &&
+                  difference >= 32 && pixel.alpha() >= 32 &&
+                  std::abs(pixel.red() - selectionColor.red()) <= 64 &&
+                  std::abs(pixel.green() - selectionColor.green()) <= 64 &&
+                  std::abs(pixel.blue() - selectionColor.blue()) <= 64) {
+                  const unsigned quadrant =
+                      (delta.x() >= 0.0 ? 1U : 0U) | (delta.y() >= 0.0 ? 2U : 0U);
+                  changedQuadrants |= 1U << quadrant;
+              }
+          }
+      }
+      return changedQuadrants == 0xFU;
+  }
+
+  // Stable production row identities for the fixture's two lane kinds; the
+  // parameter index itself comes only from AutomationCanvas::parameterIndex.
+  EditorAutomationRowId laneRow(LaneKind kind)
+  {
+      if (kind == LaneKind::Tempo)
+          return {EditorAutomationRowKind::Tempo, 0, 0};
+      return {EditorAutomationRowKind::ControlChange, 0, 10};
+  }
+
+  LaneGeometry laneGeometry(const AutomationRasterFixture &fixture, LaneKind kind)
+  {
+      LaneGeometry geometry;
+      geometry.handle = kind == LaneKind::Tempo ? AutomationRasterFixture::kTempoHandle
+                                                : fixture.handleFor(fixture.pan);
+      geometry.curveColor = themes::color(themes::Role::song_view_automation_node_ink);
+      geometry.body = fixture.bodyFor(geometry.handle);
+      return geometry;
+  }
+
+  } // namespace
+
+  AutomationRasterTest::AutomationRasterTest(QString project, QString song)
+      : m_projectPath(std::move(project))
+      , m_song(std::move(song))
+  {}
+
+  void AutomationRasterTest::init()
+  {
+      QString error;
+      m_project = checks::ProjectFixture::copyOf(m_projectPath, error);
+
+Original expression:
+  QVERIFY2(m_project, qPrintable(error));
+
+A002 | AutomationRasterTest::init | src/checks/automation/raster/painting.cpp:220
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      m_fixture = AutomationRasterFixture::create(m_project->root(), m_song, error);
+
+Original expression:
+  QVERIFY2(m_fixture, qPrintable(error));
+
+A003 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:268
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+  }
+
+  void AutomationRasterTest::cleanup()
+  {
+      if (m_fixture) {
+          m_fixture->shutdown();
+          m_fixture.reset();
+      }
+      m_project.reset();
+  }
+
+  bool AutomationRasterTest::configurePainting()
+  {
+      fixture().configurePainting();
+      return fixture().page().canvas() && !fixture().automationGutterInput().bounds().isEmpty();
+  }
+
+  bool AutomationRasterTest::configureInteraction()
+  {
+      fixture().configureInteraction();
+      return fixture().page().canvas() && !fixture().voiceInput().bounds().isEmpty();
+  }
+
+  AutomationRasterFixture &AutomationRasterTest::fixture() noexcept
+  {
+      return *m_fixture;
+  }
+
+  const AutomationRasterFixture &AutomationRasterTest::fixture() const noexcept
+  {
+      return *m_fixture;
+  }
+
+  void AutomationRasterTest::curvesNodesAndSelectedRingsRender_data()
+  {
+      QTest::addColumn<int>("laneKind");
+      QTest::addColumn<bool>("logicalDpr");
+      QTest::newRow("tempo-native-dpr") << int(LaneKind::Tempo) << false;
+      QTest::newRow("cc-native-dpr") << int(LaneKind::Cc) << false;
+      // This row exercises the logical-DPR projection path separately from the native window DPR.
+      QTest::newRow("tempo-one-dpr") << int(LaneKind::Tempo) << true;
+  }
+
+  void AutomationRasterTest::curvesNodesAndSelectedRingsRender()
+  {
+      QFETCH(int, laneKind);
+      QFETCH(bool, logicalDpr);
+
+Original expression:
+  QVERIFY(configurePainting());
+
+A004 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:273
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      if (logicalDpr)
+          fixture().setAutomationDpr(1.0);
+      else
+          fixture().setAutomationDpr(fixture().nativeAutomationDpr());
+
+Original expression:
+  QVERIFY(fixture().automationDpr() > 0.0);
+
+A005 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:278
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      const auto kind = static_cast<LaneKind>(laneKind);
+      // Each parameter owns the shared plot only while active: activate before
+      // writing and observing its own image and layer geometry.
+
+Original expression:
+  QVERIFY(fixture().activateParameter(laneRow(kind)));
+
+A006 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:305
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      SongDocument &document = fixture().document();
+      TempoLane tempoLane(document);
+      CCLaneAdapter ccLane(document, 0, uint8_t{10});
+      NodeLane &lane = kind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
+                                               : static_cast<NodeLane &>(ccLane);
+      // Seed both parameters so the away activation below repaints written
+      // content rather than a slot with no curve at all.
+      TempoEdit edit;
+      edit.remove = document.tempoPoints();
+      edit.add = {{kHeldTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoHeld)},
+                  {kNodeTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoNode)},
+                  {kSecondTick, CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(kTempoSecond)}};
+      document.applyTempoEdit(edit);
+      document.writeLanePoints(
+          0, uint8_t{10}, 0, CoreTimeDefaults::kNoTick,
+          {{kHeldTick, kCcHeld}, {kNodeTick, kCcNode}, {kSecondTick, kCcSecond}});
+
+      const quint64 curvesBefore =
+          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationCurves).revision;
+      const quint64 nodesBefore =
+          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+      fixture().documentChanged();
+      fixture().automationPointerLeave();
+      fixture().pump();
+
+      const LaneGeometry geometry = laneGeometry(fixture(), kind);
+
+Original expression:
+  QVERIFY(geometry.handle.valid());
+
+A007 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:306
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!geometry.body.isEmpty());
+
+A008 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:317
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      const int held = kind == LaneKind::Tempo ? kTempoHeld : kCcHeld;
+      const int node = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
+      const qreal heldY = nodelane::valueY(lane, geometry.body, fixture().geometry(), held);
+      const qreal nodeY = nodelane::valueY(lane, geometry.body, fixture().geometry(), node);
+      const qreal nodeX = fixture().projection().displayX(kNodeTick, fixture().automationDpr());
+      const qreal midX = fixture().projection().displayX(48, fixture().automationDpr());
+      const qreal nodeRadius = nodelane::hoverRingRadius(fixture().geometry());
+      const qreal lineHalf =
+          std::max(qreal(layout::singlePixel()), qreal(fixture().geometry().hoverPaintPadding + 1));
+      const auto &scene = fixture().quickScene();
+
+Original expression:
+  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision > curvesBefore);
+
+A009 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:318
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > nodesBefore);
+
+A010 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:319
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationCurves),
+                              lineProbe(midX, heldY, 8, lineHalf), geometry.curveColor));
+
+A011 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:321
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                              nodeProbe(nodeX, nodeY, nodeRadius), geometry.curveColor));
+
+A012 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:326
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      QString error;
+      const QImage normal = fixture().renderAutomationViewport(&error);
+
+Original expression:
+  QVERIFY2(error.isEmpty() && !normal.isNull(), qPrintable(error));
+
+A013 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:328
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      const QPointF framebufferOrigin(fixture().automationGutterInput().bounds().width(), 0.0);
+
+Original expression:
+  QVERIFY(framebufferHasColorNear(normal, framebufferOrigin + QPointF(midX, heldY),
+                                      geometry.curveColor));
+
+A014 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:330
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(framebufferHasColorNear(normal, framebufferOrigin + QPointF(nodeX, nodeY),
+                                      geometry.curveColor));
+
+A015 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:352
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      const quint64 selectionBefore =
+          scene.layer(songview::TimelineQuickLayer::AutomationSelection).revision;
+      const quint64 selectedNodesBefore =
+          scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+      songview::EditorSelectionModel::TimeSelection selection;
+      selection.startTick = kNodeTick;
+      selection.endTick = kNodeTick + 1;
+      selection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+      if (kind == LaneKind::Tempo)
+          selection.tempo = true;
+      else
+          selection.lanes = {{0, 10}};
+      fixture().view().selectionModel().setTimeSelection(selection);
+      fixture().documentChanged();
+      fixture().automationPointerLeave();
+      fixture().pump();
+
+      const QColor highlight = fixture().automationGutterInput().palette().highlight().color();
+      const qreal ringOuter = fixture().geometry().selectedNodeRingRadius + layout::singlePixel();
+
+Original expression:
+  QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                              nodeProbe(nodeX, nodeY, ringOuter), highlight));
+
+A016 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:355
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      const QImage selected = fixture().renderAutomationViewport(&error);
+
+Original expression:
+  QVERIFY2(error.isEmpty() && !selected.isNull(), qPrintable(error));
+
+A017 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:356
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(framebufferHasColorNear(
+          selected,
+          framebufferOrigin + QPointF(nodeX, nodeY - fixture().geometry().selectedNodeRingRadius),
+          highlight));
+
+A018 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:360
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationSelection).revision >
+              selectionBefore);
+
+A019 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:362
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision >
+              selectedNodesBefore);
+
+A020 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:374
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      // Activating the away parameter must clear the inactive plot's stale QSG
+      // geometry and repaint the away curve while the logical selection stays
+      // untouched and available for subsequent edits.
+      const auto awayKind = kind == LaneKind::Tempo ? LaneKind::Cc : LaneKind::Tempo;
+      const LaneGeometry awayGeometry = laneGeometry(fixture(), awayKind);
+      const quint64 awayCurvesBefore =
+          scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision;
+      const quint64 awayNodesBefore =
+          scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+
+Original expression:
+  QVERIFY(fixture().activateParameter(laneRow(awayKind)));
+
+A021 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:377
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      fixture().automationPointerLeave();
+      fixture().pump();
+
+Original expression:
+  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationCurves).revision >
+              awayCurvesBefore);
+
+A022 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:379
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(scene.layer(songview::TimelineQuickLayer::AutomationNodes).revision > awayNodesBefore);
+
+A023 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:388
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      NodeLane &awayLane = awayKind == LaneKind::Tempo ? static_cast<NodeLane &>(tempoLane)
+                                                       : static_cast<NodeLane &>(ccLane);
+      const int awayNode = awayKind == LaneKind::Tempo ? kTempoNode : kCcNode;
+      const qreal awayNodeY =
+          nodelane::valueY(awayLane, geometry.body, fixture().geometry(), awayNode);
+      const int second = kind == LaneKind::Tempo ? kTempoSecond : kCcSecond;
+      const qreal secondY = nodelane::valueY(lane, geometry.body, fixture().geometry(), second);
+      const qreal secondX = fixture().projection().displayX(kSecondTick, fixture().automationDpr());
+
+Original expression:
+  QVERIFY(!layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                               nodeProbe(secondX, secondY, nodeRadius), geometry.curveColor));
+
+A024 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:390
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                              nodeProbe(nodeX, awayNodeY, nodeRadius), awayGeometry.curveColor));
+
+A025 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:393
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      const QImage away = fixture().renderAutomationViewport(&error);
+
+Original expression:
+  QVERIFY2(error.isEmpty() && !away.isNull(), qPrintable(error));
+
+A026 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:394
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(framebufferHasColorNear(away, framebufferOrigin + QPointF(nodeX, awayNodeY),
+                                      awayGeometry.curveColor));
+
+A027 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:397
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      const auto retained = fixture().view().selectionModel().timeSelection();
+
+Original expression:
+  QVERIFY(retained.startTick == selection.startTick && retained.endTick == selection.endTick &&
+              retained.scope == selection.scope && retained.tempo == selection.tempo &&
+              retained.lanes == selection.lanes);
+
+A028 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:403
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      // Switching back re-renders the original parameter's selected rings from
+      // the retained logical selection.
+
+Original expression:
+  QVERIFY(fixture().activateParameter(laneRow(kind)));
+
+A029 | AutomationRasterTest::curvesNodesAndSelectedRingsRender | src/checks/automation/raster/painting.cpp:406
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      fixture().automationPointerLeave();
+      fixture().pump();
+
+Original expression:
+  QVERIFY(layerHasColorIn(scene.layer(songview::TimelineQuickLayer::AutomationNodes),
+                              nodeProbe(nodeX, nodeY, ringOuter), highlight));
+
+A030 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:420
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+  }
+
+  void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes_data()
+  {
+      QTest::addColumn<bool>("includeEnd");
+      QTest::newRow("end-at-group-b-excludes-b") << false;
+      QTest::newRow("end-after-group-b-includes-b") << true;
+  }
+
+  void AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes()
+  {
+      QFETCH(bool, includeEnd);
+
+Original expression:
+  QVERIFY(configurePainting());
+
+A031 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:421
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(fixture().activateParameter(fixture().pan.row));
+
+A032 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:438
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      fixture().setAutomationDpr(fixture().nativeAutomationDpr());
+
+      SongView &view = fixture().view();
+      const Tick groupA = view.grid().snapTick(48.0, false);
+      const Tick groupB = view.grid().snapTick(72.0, false);
+      const Tick groupC = view.grid().snapTick(120.0, false);
+      constexpr int kGroupAValue = 40;
+      constexpr int kGroupBValue = 80;
+      constexpr int kGroupCValue = 55;
+      fixture().document().writeLanePoints(
+          0, fixture().pan.controller, 0, CoreTimeDefaults::kNoTick,
+          {{Tick(groupA), kGroupAValue}, {Tick(groupB), kGroupBValue}, {Tick(groupC), kGroupCValue}});
+      fixture().documentChanged();
+
+      const LaneHandle panHandle = fixture().handleFor(fixture().pan);
+      const QRect body = fixture().bodyFor(panHandle);
+
+Original expression:
+  QVERIFY(panHandle.valid());
+
+A033 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:439
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!body.isEmpty());
+
+A034 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:451
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      CCLaneAdapter panLane(fixture().document(), fixture().pan.track, fixture().pan.controller);
+      const auto pointAt = [&](Tick tick, int value) {
+          return QPoint(qRound(fixture().projection().displayX(tick, fixture().automationDpr())),
+                        qRound(nodelane::valueY(panLane, body, fixture().geometry(), value)));
+      };
+      const QPoint groupAPoint = pointAt(groupA, kGroupAValue);
+      const QPoint groupBPoint = pointAt(groupB, kGroupBValue);
+      const QPoint groupCPoint = pointAt(groupC, kGroupCValue);
+
+      QString error;
+      const QImage baseline = fixture().renderAutomationViewport(&error);
+
+Original expression:
+  QVERIFY2(error.isEmpty() && !baseline.isNull(), qPrintable(error));
+
+A035 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:468
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      const quint64 nodesBefore =
+          fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes).revision;
+      songview::EditorSelectionModel::TimeSelection selection;
+      selection.startTick = groupA;
+      selection.endTick = includeEnd ? groupB + 1 : groupB;
+      view.selectionModel().setTimeSelection(selection);
+      fixture().documentChanged();
+      fixture().pump();
+
+      const auto &nodes = fixture().quickScene().layer(songview::TimelineQuickLayer::AutomationNodes);
+      const QColor selectionColor = fixture().automationGutterInput().palette().highlight().color();
+      const qreal ringRadius = fixture().geometry().selectedNodeRingRadius;
+      const qreal ringWidth = fixture().geometry().selectedNodeRingDipWidth;
+      const qreal nodeOuterRadius =
+          fixture().geometry().nodePaintRadius + fixture().geometry().nodeOutlineDipWidth;
+
+Original expression:
+  QVERIFY(ringRadius + ringWidth / 2.0 > nodeOuterRadius);
+
+A036 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:469
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(nodes.revision > nodesBefore);
+
+A037 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:470
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(layerHasSelectionRing(nodes, groupAPoint, ringRadius, ringWidth, selectionColor));
+
+A038 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:471
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(layerHasSelectionRing(nodes, groupBPoint, ringRadius, ringWidth, selectionColor),
+               includeEnd);
+
+A039 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:473
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!layerHasSelectionRing(nodes, groupCPoint, ringRadius, ringWidth, selectionColor));
+
+A040 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:482
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+      auto *quickCanvas =
+          view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+      QQuickItem *const quickRoot = quickCanvas ? quickCanvas->rootObject() : nullptr;
+      QQuickItem *const selectionLayer =
+          quickRoot
+              ? quickRoot->findChild<QQuickItem *>(QStringLiteral("timelineQuickAutomationSelection"))
+              : nullptr;
+
+Original expression:
+  QVERIFY(selectionLayer);
+
+A041 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:489
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      // A track-range selection also dims unselected nodes and paints a reticle up to the
+      // half-open endpoint. Hide the reticle so this framebuffer probe isolates the node layer;
+      // its outer annulus excludes the smaller normal/dimmed marker.
+      selectionLayer->setVisible(false);
+      fixture().pump();
+      const QImage framebuffer = fixture().renderAutomationViewport(&error);
+
+Original expression:
+  QVERIFY2(error.isEmpty() && !framebuffer.isNull(), qPrintable(error));
+
+A042 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:491
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+      const int gutterWidth = qRound(fixture().automationGutterInput().bounds().width());
+
+Original expression:
+  QVERIFY(framebufferHasSelectionRing(baseline, framebuffer, groupAPoint, gutterWidth,
+                                          nodeOuterRadius, ringRadius, ringWidth, selectionColor));
+
+A043 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:493
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(framebufferHasSelectionRing(baseline, framebuffer, groupBPoint, gutterWidth,
+                                           nodeOuterRadius, ringRadius, ringWidth, selectionColor),
+               includeEnd);
+
+A044 | AutomationRasterTest::halfOpenTrackSelectionRendersOnlyIncludedNodes | src/checks/automation/raster/painting.cpp:496
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!framebufferHasSelectionRing(baseline, framebuffer, groupCPoint, gutterWidth,
+                                           nodeOuterRadius, ringRadius, ringWidth, selectionColor));
+
+Remaining original source (closing sequence and helper bodies):
+
+  }
+
+
+Swift assertion predicates
+The S entries are exact predicates called by the paired Swift suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:15
+  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum, .neutral],
+                         pan.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
+                         what: "a centered parameter emits maximum, minimum and neutral labels")
+
+S002 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:18
+  report.expectEqual(["c_v+63", "c_v-64", "c_v+0"], pan.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
+                         what: "the scale labels use the parameter's own formatting")
+
+S003 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:20
+  report.expectEqual(64, pan.scaleLabels[2].value, cppID: drawerAutomationLabelsID,
+                         what: "the neutral label names the neutral value")
+
+S004 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:22
+  report.expect(pan.scaleLabels[0].y < pan.scaleLabels[2].y
+                        && pan.scaleLabels[2].y < pan.scaleLabels[1].y,
+                    cppID: drawerAutomationLabelsID,
+                    message: "maximum, neutral and minimum sit at their curve-true heights")
+
+S005 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:28
+  report.expectEqual([AutomationScaleLabel.Role.maximum, .minimum],
+                         volume.scaleLabels.map(\.role), cppID: drawerAutomationLabelsID,
+                         what: "a parameter without a neutral emits only its extremes")
+
+S006 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:31
+  report.expectEqual(["127", "0"], volume.scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
+                         what: "Volume's scale labels are its raw values")
+
+S007 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:33
+  report.expectEqual(["255", "20"], fixture.projection(.tempo).scaleLabels.map(\.text),
+                         cppID: drawerAutomationLabelsID,
+                         what: "Tempo's scale labels are its BPM bounds with no neutral")
+
+S008 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:36
+  report.expectEqual(["+8191", "-8192", "0"], fixture.projection(fixture.bendLane)
+          .scaleLabels.map(\.text), cppID: drawerAutomationLabelsID,
+                         what: "Bend's scale labels take the bend format path")
+
+S009 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:43
+  report.expectEqual(AutomationCatalog.count, stack.rows.count, cppID: drawerAutomationLabelsID,
+                         what: "the row stack carries one row per catalog parameter")
+
+S010 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:45
+  report.expectEqual(AutomationParameter.tempo, stack.rows[0].parameter, cppID: drawerAutomationLabelsID,
+                         what: "the Tempo row leads the stack")
+
+S011 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:47
+  report.expectEqual(2, stack.row(for: fixture.volumeLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
+                         what: "a row counts the lane's written events")
+
+S012 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:49
+  report.expectEqual(0, stack.row(for: fixture.modulationLane)?.eventCount ?? 0, cppID: drawerAutomationLabelsID,
+                         what: "a lane the document never wrote counts no event")
+
+S013 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:51
+  report.expectEqual(AutomationCatalog.count, stack.visibleRowCount, cppID: drawerAutomationLabelsID,
+                         what: "a ready stack shows every row")
+
+S014 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:53
+  report.expectEqual(4, stack.laneCount, cppID: drawerAutomationLabelsID,
+                         what: "the lane count sums the written events, Tempo included")
+
+S015 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:55
+  report.expectEqual([1, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0], stack.eventCounts(track: 0),
+                         cppID: drawerAutomationLabelsID,
+                         what: "the selector's counts follow the catalog order, Tempo first")
+
+S016 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:61
+  report.expectEqual(1, hidden.visibleRowCount, cppID: drawerAutomationLabelsID,
+                         what: "without a track only the Tempo row is visible")
+
+S017 | drawerAutomationScaleLabelsAndLaneCounts | src/checks/automation/presentation/painting.swift:63
+  report.expectEqual([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], hidden.eventCounts(track: 0),
+                         cppID: drawerAutomationLabelsID,
+                         what: "without a track the selector counts only Tempo")
+
+S018 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:80
+  report.expectEqual(range, stack.activeTickRange, cppID: drawerAutomationRowsID,
+                         what: "an active selection publishes its tick range")
+
+S019 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:83
+  report.expect(panRow?.coversNodes == true && panRow?.coversLane == true
+                        && panRow?.selectionHasEvents == true,
+                    cppID: drawerAutomationRowsID,
+                    message: "a covered lane with events inside the range carries both indicators")
+
+S020 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:88
+  report.expect(volumeRow?.coversNodes == false && volumeRow?.selectionHasEvents == false,
+                    cppID: drawerAutomationRowsID, message: "an uncovered lane carries no scope indicator")
+
+S021 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:90
+  report.expectEqual([fixture.panLane, .tempo], stack.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
+                         what: "the selected parameters are the covered lanes with events")
+
+S022 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:99
+  report.expect(empty.row(for: fixture.panLane)?.coversNodes == true
+                        && empty.row(for: fixture.panLane)?.selectionHasEvents == false,
+                    cppID: drawerAutomationRowsID, message: "scope coverage alone never marks a row selected")
+
+S023 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:102
+  report.expectEqual([AutomationParameter](), empty.selectedParameters(track: 0), cppID: drawerAutomationRowsID,
+                         what: "a covered but empty range selects no parameter")
+
+S024 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:108
+  report.expect(trackScoped.covers(fixture.panLane, usedTracks: [0]), cppID: drawerAutomationRowsID,
+                    message: "a track-scoped selection covers the selected track's lanes")
+
+S025 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:110
+  report.expect(!trackScoped.covers(.controlChange(track: 1, controller: TimeDefaults.ccPan),
+                                        usedTracks: [0, 1]),
+                    cppID: drawerAutomationRowsID,
+                    message: "a track-scoped selection leaves another track's lanes alone")
+
+S026 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:114
+  report.expect(trackScoped.coversTempo(usedTracks: [0]), cppID: drawerAutomationRowsID,
+                    message: "Tempo is covered when the whole used set is selected")
+
+S027 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:116
+  report.expect(!trackScoped.coversTempo(usedTracks: [0, 1]), cppID: drawerAutomationRowsID,
+                    message: "Tempo is uncovered when part of the used set is selected")
+
+S028 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:118
+  report.expect(!AutomationTimeSelection(range: TimeRange(startTick: 20, endTick: 20),
+                                             scope: .lanes).isActive,
+                    cppID: drawerAutomationRowsID, message: "a zero-width range is no selection")
+
+S029 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:126
+  report.expectEqual([fixture.panLane, .tempo], fixture.page.selectedParameters, cppID: drawerAutomationRowsID,
+                         what: "the page publishes the selected inactive parameters")
+
+S030 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:128
+  report.expectEqual(fixture.volumeLane, fixture.page.activeParameter, cppID: drawerAutomationRowsID,
+                         what: "the active parameter is not the selected one")
+
+S031 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:131
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
+                    message: "a covered lane with events pins as a ghost")
+
+S032 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:133
+  report.expectEqual(["Pan (PAN) · 2 Events"], fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
+                         what: "the ghost label names the curve and its event count")
+
+S033 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:135
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex), cppID: drawerAutomationRowsID,
+                    message: "the pin toggles off again")
+
+S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/presentation/painting.swift:137
+  report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
+                         what: "unpinning drops the ghost label")
+
+Shared helper: src/checks/automation/AutomationPageChecks.swift
+SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+src/checks/automation/AutomationPageChecks.swift:381
+  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

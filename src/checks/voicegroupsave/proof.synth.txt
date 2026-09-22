@@ -1,0 +1,579 @@
+Assertion correspondence: voicegroupsave/synth.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/voicegroupsave/synth.cpp
+Original SHA-256: 1ec6f97e682d2012325782b9f9dbb405970e109cbe08bd23d9f96a7fe37290a5
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below (42 sites). Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way;
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of a converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+No Swift counterpart was identified for this file, so every site below is GAP:
+no equivalent Swift assertion is established, and each original predicate and
+its setup remain an open obligation. None of these labels authorizes deletion
+or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter voicegroup-save --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The "voicegroup-save" filter selects the retained native harness; it provides
+no Swift parity evidence.
+
+Execution ownership
+The retained native harness owns this file. runVoicegroupSaveCheck in
+src/checks/voicegroupsave/fixture.cpp constructs VoicegroupSaveTest and qExecs
+it under the "voicegroup-save" application id; init()/cleanup() bracket every
+test method. synthDefinitionsStayMemoryOnlyUntilSave execute the checks inventoried below.
+Shared per-test state (m_window, m_document, m_tab, m_browser, m_dsSlot,
+m_originalVoice, m_homeId/m_homeArg, voicegroup/MIDI baselines, save receipts)
+is built by VoicegroupSaveTest::openSong with VoicegroupBrowserDriver and the
+song/project fixtures declared in src/checks/voicegroupsave/tst_voicegroupsave.h.
+No Swift entry point executes these checks; there are no S entries and no
+shared-helper expects for this file.
+
+Fixture, sequence and row constraints
+No data rows expand these sites. The four-entry Param script loop (baseDuty, dutyStep, modDepth, phase) reuses its two per-iteration sites (parameter field presence, param-named definition settle) once per parameter. The macro/stub setup, catalog refreshes, saw/pulse waveform flips, and the two undo chains (waveform flips, then the full synth edit) each execute once per run in the order sequenced below.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:25
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+#include "checks/voicegroupsave/tst_voicegroupsave.h"
+
+#include <QDir>
+#include <QDirIterator>
+#include <QFile>
+#include <QSpinBox>
+#include <QUndoStack>
+#include <QtTest>
+
+#include <array>
+
+#include "checks/support/songfixture.h"
+#include "checks/support/voicegroupbrowserdriver.h"
+#include "core/songdocument.h"
+#include "mainwindow.h"
+#include "ui/workspaceui.h"
+
+namespace checks {
+
+void VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave()
+{
+    const QString synthPath =
+        m_project->root() + QStringLiteral("/sound/direct_sound_synth_data.inc");
+    const QString macroDir = m_project->root() + QStringLiteral("/asm/macros");
+
+Original expression:
+QVERIFY(QDir().mkpath(macroDir))
+
+A002 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:28
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    {
+        QFile macros(macroDir + QStringLiteral("/vgsavecheck_synth.inc"));
+
+Original expression:
+QVERIFY(macros.open(QIODevice::WriteOnly))
+
+A003 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:29
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(macros.write("\t.macro set_synth_pulse base_duty=0x80, duty_step=0x00, "
+                              "mod_depth=0x00, duty_phase=0x00\n\t.endm\n"
+                              "\t.macro set_synth_saw\n\t.endm\n"
+                              "\t.macro set_synth_triangle\n\t.endm\n") > 0,
+                 true)
+
+A004 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:37
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+    {
+        QFile data(synthPath);
+
+Original expression:
+QVERIFY(data.open(QIODevice::WriteOnly | QIODevice::Append))
+
+A005 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:38
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(data.write("\n\t.align 2\nVgSaveCheckSaw::\n\tset_synth_saw\n") > 0, true)
+
+A006 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:40
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+
+Original expression:
+QVERIFY2(refreshCatalog(), "synth catalog refresh did not settle")
+
+A007 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:41
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this] {
+                 return m_window->m_workspace->projectState().catalog.synths.find(
+                            QStringLiteral("VgSaveCheckSaw")) != nullptr;
+             }),
+             "synth setup definition did not reach the published catalog")
+
+A008 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:52
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const VgSynthCatalog setupCatalog = VoicegroupSource::synthInstruments(m_project->root());
+    const int definitionsAfterSetup = setupCatalog.defs.size();
+    const QByteArray synthBytesSetup = readFileBytes(synthPath);
+    const int undoIndexBeforeSynth = m_document->undoStack()->index();
+
+    const int synthSlot = firstSynthableSlot();
+
+Original expression:
+QVERIFY2(synthSlot >= 0, "fixture must provide a non-synth DirectSound voice for synth flow")
+
+A009 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:55
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const VgVoice original = *m_browser->selectedBankView()->slotViews.at(synthSlot).voice;
+    m_browser->selectSlot(synthSlot);
+
+Original expression:
+QVERIFY(m_browser->hasSynthEditorControls())
+
+A010 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:56
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->activateSynthType())
+
+A011 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:57
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &original] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 const LoadedVoiceGroup *const engine = m_window->m_audio.voicegroup();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        bank->slotViews.at(synthSlot).voice->symbol != original.symbol && engine &&
+                        engine->voices[synthSlot].wav && engine->voices[synthSlot].wav->size == 0;
+             }),
+             "synth type did not create a memory-only tone")
+
+A012 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:65
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->activateSynthWave(0))
+
+A013 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:67
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QString defaultPulse = vgSynthSymbolName(VgSynthDesc{});
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &defaultPulse] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        bank->slotViews.at(synthSlot).voice->symbol == defaultPulse;
+             }),
+             "pulse selection did not adopt the 50 percent default")
+
+A014 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:85
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    struct Param final {
+        int value;
+        int VgSynthDesc::*field;
+    };
+    const std::array<Param, 4> script = {{{0x21, &VgSynthDesc::baseDuty},
+                                          {0x43, &VgSynthDesc::dutyStep},
+                                          {0x65, &VgSynthDesc::modDepth},
+                                          {0x87, &VgSynthDesc::phase}}};
+    VgSynthDesc soFar{};
+    for (int index = 0; index < int(script.size()); ++index) {
+        QSpinBox *const field = m_browser->synthParameterField(index);
+
+Original expression:
+QVERIFY(field)
+
+A015 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:89
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+        soFar.*script.at(size_t(index)).field = script.at(size_t(index)).value;
+        field->setValue(script.at(size_t(index)).value);
+        const QString expected = vgSynthSymbolName(soFar);
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &expected] {
+                     const LoadedBankView *const bank = m_browser->selectedBankView();
+                     return bank && bank->slotViews.at(synthSlot).voice &&
+                            bank->slotViews.at(synthSlot).voice->symbol == expected;
+                 }),
+                 "synth parameter did not apply as a param-named definition")
+
+A016 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:97
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+    const QString wanted = vgSynthSymbolName(VgSynthDesc{0, 0x21, 0x43, 0x65, 0x87});
+
+Original expression:
+QCOMPARE(m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol, wanted)
+
+A017 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:98
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(readFileBytes(synthPath), synthBytesSetup)
+
+A018 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:99
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!m_browser->visibleSymbolComboContains(wanted))
+
+A019 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:100
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &wanted] {
+                 const LoadedVoiceGroup *const engine = m_window->m_audio.voicegroup();
+                 return engine && engine->voices[synthSlot].wav &&
+                        engine->voices[synthSlot].wav->size == 0 &&
+                        uint8_t(engine->voices[synthSlot].wav->data[1]) == 0 &&
+                        uint8_t(engine->voices[synthSlot].wav->data[2]) == 0x21 &&
+                        uint8_t(engine->voices[synthSlot].wav->data[5]) == 0x87 &&
+                        QString::fromUtf8(engine->voiceNames[synthSlot]) == wanted;
+             }),
+             "loaded synth tone did not carry the edited waveform bytes")
+
+A020 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:112
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const int saveReceipt = m_savedReceipts;
+
+Original expression:
+QVERIFY(saveSelectedSong())
+
+A021 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:113
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(waitForCleanSave(saveReceipt), "synth save did not settle")
+
+A022 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:114
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(readFileBytes(synthPath).contains(wanted.toUtf8() + "::"))
+
+A023 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:122
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    bool wired = false;
+    for (const QString &directory :
+         {m_project->root() + QStringLiteral("/data"), m_project->root()}) {
+        QDirIterator files(directory, {QStringLiteral("*.s")}, QDir::Files);
+        while (files.hasNext() && !wired)
+            wired = readFileBytes(files.next()).contains("direct_sound_synth_data.inc");
+    }
+
+Original expression:
+QVERIFY(wired)
+
+A024 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:123
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(VoicegroupSource::synthInstruments(m_project->root()).defs.size(),
+             definitionsAfterSetup + 1)
+
+A025 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:125
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(refreshCatalog(), "saved synth catalog refresh did not settle")
+
+A026 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:126
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, &wanted] {
+                 return m_window->m_workspace->projectState().catalog.synths.find(wanted) !=
+                        nullptr;
+             }),
+             "saved synth definition did not enter the published catalog")
+
+A027 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:131
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->visibleSymbolComboContains(wanted))
+
+A028 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:134
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const int undoIndexBeforeFlips = m_document->undoStack()->index();
+
+Original expression:
+QVERIFY(m_browser->activateSynthWave(1))
+
+A029 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:135
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &wanted] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        bank->slotViews.at(synthSlot).voice->symbol != wanted;
+             }),
+             "saw waveform selection did not land")
+
+A030 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:142
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QString sawSymbol = m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol;
+
+Original expression:
+QCOMPARE(sawSymbol, QStringLiteral("VgSaveCheckSaw"))
+
+A031 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:145
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const VgSynthCatalog sawCatalog = VoicegroupSource::synthInstruments(m_project->root());
+    const VgSynthDesc *const saw = sawCatalog.find(sawSymbol);
+
+Original expression:
+QVERIFY(saw)
+
+A032 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:146
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(saw->waveform, 1)
+
+A033 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:147
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(m_browser->activateSynthWave(0))
+
+A034 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:148
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(settle([this, synthSlot, &sawSymbol] {
+                 const LoadedBankView *const bank = m_browser->selectedBankView();
+                 return bank && bank->slotViews.at(synthSlot).voice &&
+                        bank->slotViews.at(synthSlot).voice->symbol != sawSymbol;
+             }),
+             "return to pulse did not land")
+
+A035 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:158
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    const QString pulseSymbol =
+        m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol;
+    const VgSynthCatalog pulseCatalog = VoicegroupSource::synthInstruments(m_project->root());
+    const VgSynthDesc *const pulse = pulseCatalog.find(pulseSymbol);
+
+Original expression:
+QVERIFY((pulse && *pulse == VgSynthDesc{}) || pulseSymbol == defaultPulse)
+
+A036 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:162
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    while (m_document->undoStack()->index() > undoIndexBeforeFlips) {
+        const int before = m_document->undoStack()->index();
+        requestUndo();
+
+Original expression:
+QVERIFY2(settle([this, before] { return m_document->undoStack()->index() == before - 1; }),
+                 "waveform undo did not apply exactly one history command")
+
+A037 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:165
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+
+Original expression:
+QCOMPARE(m_browser->selectedBankView()->slotViews.at(synthSlot).voice->symbol, wanted)
+
+A038 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:171
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+    const QByteArray synthBytesSaved = readFileBytes(synthPath);
+    while (m_document->undoStack()->index() > undoIndexBeforeSynth) {
+        const int before = m_document->undoStack()->index();
+        requestUndo();
+
+Original expression:
+QVERIFY2(settle([this, before] { return m_document->undoStack()->index() == before - 1; }),
+                 "synth undo did not apply exactly one history command")
+
+A039 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:175
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+    }
+    const int postUndoSave = m_savedReceipts;
+
+Original expression:
+QVERIFY(saveSelectedSong())
+
+A040 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:176
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY2(waitForCleanSave(postUndoSave), "post-undo synth save did not settle")
+
+A041 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:177
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(readFileBytes(m_voicegroupPath), m_voicegroupBytes)
+
+A042 | VoicegroupSaveTest::synthDefinitionsStayMemoryOnlyUntilSave | src/checks/voicegroupsave/synth.cpp:178
+Disposition: GAP
+Mapping/reason: No Swift counterpart identified and no equivalent Swift assertion established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(readFileBytes(synthPath), synthBytesSaved)
+
+Remaining original source (closing sequence and helper bodies):
+;
+}
+
+} // namespace checks
+
+
+Swift assertion predicates
+No Swift counterpart identified for this file: no same-dir synth.swift
+exists and no Swift check covers the voicegroup browser/save suite, so no
+report.expect*/expectEqual predicates pair with these sites. There are no S
+entries and no shared-helper expects for this file.
+
+Swift sources inspected (SHA-256)
+No file src/checks/voicegroupsave/synth.swift exists. A repo-wide search
+for Swift voicegroup-browser coverage finds only project-io voicegroup
+references in src/checks/workspace/SessionChecks.swift
+(SHA-256 ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845), which exercise project open/save plumbing,
+not the browser/editor/picker/save flows inventoried here.

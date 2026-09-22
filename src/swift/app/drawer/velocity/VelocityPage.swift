@@ -173,6 +173,8 @@ public final class VelocityPage: EditorDrawerPage {
     public var rampSlopeY: Double = 0
     public var rampColor: String = ""
     public var promptOpen: Bool = false
+    public var promptAppearance: [String: QVariantSettable] = [:]
+    public var promptFont: [String: QVariantSettable] = [:]
     public var promptDraft: String = ""
     public var promptError: String = ""
     public var promptTitle: String = "Note velocity"
@@ -282,6 +284,8 @@ public final class VelocityPage: EditorDrawerPage {
             return Int(min(max(preferred, minimum), maximum))
         }
         geometry = VelocityNodeGeometry(baseFontPx: base, devicePixelRatio: 1)
+        promptAppearance = PromptAppearance.metrics(base: base)
+        promptFont = PromptAppearance.font(base: base)
     }
 
     /// Installs the document and palette owners. Called before the container
@@ -334,7 +338,11 @@ public final class VelocityPage: EditorDrawerPage {
         if plotHeight != nextHeight { plotHeight = nextHeight }
         if self.rulerWidth != nextRuler { self.rulerWidth = nextRuler }
         if self.devicePixelRatio != nextDpr { self.devicePixelRatio = nextDpr }
-        if self.baseFontPx != nextFont { self.baseFontPx = nextFont }
+        if self.baseFontPx != nextFont {
+            self.baseFontPx = nextFont
+            promptAppearance = PromptAppearance.metrics(base: nextFont)
+            promptFont = PromptAppearance.font(base: nextFont)
+        }
         if changed { rebuildContent() }
     }
 
@@ -809,4 +817,3 @@ public final class VelocityPage: EditorDrawerPage {
 /// The bridge-side spelling of a token, and the spelling published handles
 /// carry. `NoteID` is not a bridge type, so identity crosses as decimal text.
 func velocityNoteText(_ id: NoteID) -> String { "\(id.rawValue)" }
-

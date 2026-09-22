@@ -1,0 +1,1292 @@
+Assertion correspondence: rollcheck/timemenu.cpp
+
+Reference revision: 90446f5dbbb9f9d9f9000d7819c42c1b8b2c5389
+Original: src/checks/rollcheck/timemenu.cpp
+Original SHA-256: 6d55204de3dc8c173d5bcb80107ae20ee92bb20c9d63f2e9de77d9c89c74416f
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup, rows,
+loops, and guards between assertions verbatim. MATCHED identifies an equivalent
+Swift predicate with execution; PARTIAL a related predicate with an explicit
+unproved condition; NATIVE a retained native-window/rendering/input or harness
+obligation a presenter-level Swift check cannot establish; GAP an original
+predicate without a replacement assertion. No same-dir Swift counterpart exists
+and no Swift file covering this suite was identified, so this file lists no S
+predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
+or claims whole-case equivalence.
+Five slots cover the shared time-selection menu: paste enablement, rejected
+paste preservation, stale/cancel no-op, Insert Time, and sweep canonical
+enablement. Popup session open/close state, typed row presence/enablement,
+menu clicks, focus, seed guards, and spy validity need the native Quick session
+and are NATIVE. Clipboard payloads, note fields, selection/time-selection
+values, cursor, camera, revision, undo, and spy counts are document/model
+observations and therefore GAP.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry point executes these checks. The original slots run under
+PianoRollTest (checks/rollcheck/tst_pianoroll.h):
+timeSelectionMenuOpensWithPasteEnablement, rejectedNotePastePreservesViewState,
+timeSelectionMenuStaleAndCancelNoOp, timeSelectionMenuInsertTimeAndStaleNoOp,
+timeSelectionMenuSweepKeepsCanonicalEnablement. Slots run on the per-slot
+PianoRollFixture (checks/rollcheck/rollcheck.h, m_fixture) and open the menu
+through the file-local SharedTimeMenu/openSharedTimeMenu/timeMenuRow helpers
+(right-click an unoccupied row, wait for the rendered QuickMenuModel), act
+through quick_popup row clicks, and observe cursor/announcement QSignalSpies;
+seeds use checks/clipcheck_support.h.
+
+Fixture, sequence and row constraints
+Right-click sessions bracket every menu slot with open/close waits. The
+rejected-paste slot asserts a full preservation block (smf, revision, undo
+index/count/redo, note and time selection, track scope, cursor, camera, zero
+spy counts) before and after the accepted paste, which must advance the cursor,
+select the pasted note, and push exactly one command. The sweep slot holds the
+Shift+right-drag, reads canonical Copy/Duplicate/ClearTimeSelection enablement
+live, then re-checks the rendered rows; seed guards and smf/undo guards close
+the slots.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:105
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  #include "checks/rollcheck/tst_pianoroll.h"
+
+  #include "checks/clipcheck_support.h"
+  #include "checks/quickpopupguard.h"
+  #include "checks/rollcheck/rollcheck.h"
+  #include "checks/support/eventsynth.h"
+
+  #include <QByteArray>
+  #include <QCoreApplication>
+  #include <QEvent>
+  #include <QGuiApplication>
+  #include <QPoint>
+  #include <QPointer>
+  #include <QQuickWindow>
+  #include <QSignalSpy>
+  #include <QString>
+  #include <QtTest>
+  #include <algorithm>
+  #include <optional>
+
+  #include "core/songdocument.h"
+  #include "ui/songtab.h"
+  #include "ui/songview/clipmime.h"
+  #include "ui/songview/editactions.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+
+  using namespace checks::rollcheck;
+
+  namespace {
+
+  // One opened shared time-selection menu: the canvas session, the rendered
+  // panel's typed row model, and a diagnostic when the asynchronous open failed.
+  struct SharedTimeMenu {
+      songview::QuickPopupSession *session = nullptr;
+      songview::QuickMenuModel *model = nullptr;
+      QString diagnostic = QStringLiteral("the shared time menu did not open");
+  };
+
+  // First key row with no note covering midTick and a visible center inside
+  // the band, or -1 when every row is occupied there.
+  int emptyRollKey(PianoRollFixture &check, const SnappedRows &rows, Tick midTick)
+  {
+      for (int key = 0; key < 128; ++key) {
+          const int y = rows.centerY(key);
+          if (y < 0 || y >= check.rollInput().height())
+              continue;
+          const bool occupied = std::any_of(
+              check.view().model().notes.cbegin(), check.view().model().notes.cend(),
+              [midTick, key](const ViewNote &note) {
+                  return note.key == key && note.startTick <= midTick && midTick < note.endTick();
+              });
+          if (!occupied)
+              return key;
+      }
+      return -1;
+  }
+
+  // Right-clicks an unoccupied row inside the band and waits for the shared
+  // session to render its typed menu. The occupancy scan covers every track's
+  // notes so the click cannot open the note menu instead.
+  SharedTimeMenu openSharedTimeMenu(PianoRollFixture &check, const SnappedRows &rows, Tick startTick,
+                                    Tick endTick)
+  {
+      SharedTimeMenu menu;
+      const Tick midTick = startTick + (endTick - startTick) / 2;
+      const int emptyKey = emptyRollKey(check, rows, midTick);
+      if (emptyKey < 0) {
+          menu.diagnostic = QStringLiteral("could not find empty roll space inside the band");
+          return menu;
+      }
+      const QPoint inside(qRound(check.view().camera().displayX(double(midTick), 0.0, rows.dpr())),
+                          rows.centerY(emptyKey));
+      checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonPress, inside, Qt::RightButton,
+                                Qt::RightButton, Qt::NoModifier);
+      checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonRelease, inside,
+                                Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+      const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(check.view()));
+      if (!QTest::qWaitFor([&live] {
+              return live && live->isOpen() && quick_popup::menuPanel(*live) &&
+                     quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
+          })) {
+          menu.diagnostic =
+              QStringLiteral("right-click inside the band did not open the shared time menu");
+          return menu;
+      }
+      menu.session = live;
+      menu.model = quick_popup::menuModel(*quick_popup::menuPanel(*live));
+      menu.diagnostic.clear();
+      return menu;
+  }
+
+  // Typed row addressing through the model; callers read enablement from the row
+  // and act through the rendered surface, never on the model alone.
+  int timeMenuRow(songview::QuickMenuModel &model, songview::TimeSelectionAction action)
+  {
+      return model.rowForId(int(action));
+  }
+
+  } // namespace
+
+  void PianoRollTest::timeSelectionMenuOpensWithPasteEnablement()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A002 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:112
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const SnappedRows rows{view, check.rollInput()};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      DocNote moved;
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
+               "time menu seed note was not found")
+
+A003 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:125
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      doc.moveNotes({moved}, int64_t(snapCell), 0);
+      view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                              d.tick + 2 * snapCell,
+                                              songview::EditorSelectionModel::TimeSelection::Tracks,
+                                              {}});
+      // roll.copy writes the process-global clipboard; snapshot it and restore at
+      // scope exit so this row cannot seed another row's clipboard state.
+      const clipcheck_support::ClipboardStateGuard clipboardGuard;
+      view.copyTimeSelection();
+      const std::optional<songview::Clip> seeded =
+          songview::readClipboard(check.timeline().ticksPerBeat);
+Original expression:
+  QVERIFY2(seeded && !seeded->empty(),
+               "Copy did not seed a non-empty range clip on the clipboard")
+
+A004 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:128
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      // Native clipboard change notifications can arrive after setMimeData returns.
+Original expression:
+  QTRY_VERIFY(view.editActions()->pasteClipPresent())
+
+A005 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:133
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+      const quick_popup::PromptGuard guard(view);
+      const SharedTimeMenu opened =
+          openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
+Original expression:
+  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A006 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:138
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+      // Paste is enabled exactly when the clipboard holds a non-empty clip; the
+      // other action rows never pre-disable.
+      const int pasteRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Paste);
+Original expression:
+  QVERIFY2(pasteRow >= 0, "the shared time menu has no Paste row")
+
+A007 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:139
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(opened.model->itemAt(pasteRow)->enabled,
+               "Paste was disabled while the clipboard held a non-empty range clip")
+
+A008 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:142
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const int copyRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Copy);
+Original expression:
+  QVERIFY2(copyRow >= 0 && opened.model->itemAt(copyRow)->enabled,
+               "Copy was not unconditionally enabled")
+
+A009 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:144
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(timeMenuRow(*opened.model, songview::TimeSelectionAction::Clear) >= 0,
+               "the shared time menu has no Clear row")
+
+A010 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:157
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+      // A real click on the enabled Copy row must run the owner command. The
+      // clipboard is poisoned with an empty clip before the Copy phase opens:
+      // an eligibility flip retires an open menu now, so the poisoned state
+      // must already be in place. A no-op Copy cannot pass on stale identical
+      // contents: the row must restore the copied range payload itself while
+      // the document and undo stack stay untouched.
+      const QByteArray before = doc.smf().write();
+      const int undoIndex = doc.undoStack()->index();
+      const int undoCount = doc.undoStack()->count();
+      songview::writeClipboard(songview::Clip{}, check.timeline().ticksPerBeat);
+Original expression:
+  QTRY_VERIFY2(opened.session && !opened.session->isOpen(),
+                   "the Paste eligibility flip did not retire the open time menu")
+
+A011 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:161
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const SharedTimeMenu copyMenu =
+          openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
+Original expression:
+  QVERIFY2(copyMenu.session, qUtf8Printable(copyMenu.diagnostic))
+
+A012 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:163
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const int copyMenuRow = timeMenuRow(*copyMenu.model, songview::TimeSelectionAction::Copy);
+Original expression:
+  QVERIFY2(copyMenuRow >= 0 && copyMenu.model->itemAt(copyMenuRow)->enabled,
+               "the reopened shared time menu has no enabled Copy row")
+
+A013 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:165
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(quick_popup::clickMenuRow(*copyMenu.session, copyMenuRow),
+               "the Copy row did not receive a real click")
+
+A014 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:168
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(copyMenu.session && !copyMenu.session->isOpen(),
+               "the Copy activation left the menu open")
+
+A015 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:172
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const std::optional<songview::Clip> copied =
+          songview::readClipboard(check.timeline().ticksPerBeat);
+Original expression:
+  QVERIFY2(copied.has_value() && copied->span == snapCell,
+               "the menu Copy row did not restore the copied range span")
+
+A016 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const bool restoredNote =
+          copied &&
+          std::any_of(
+              copied->tracks.cbegin(), copied->tracks.cend(),
+              [track = check.track(), key = uint8_t(d.key)](const songview::ClipTrack &clipTrack) {
+                  return clipTrack.track == track &&
+                         std::any_of(clipTrack.notes.cbegin(), clipTrack.notes.cend(),
+                                     [key](const songview::ClipNote &note) {
+                                         return note.relTick == 0 && note.key == key;
+                                     });
+              });
+Original expression:
+  QVERIFY2(restoredNote, "the menu Copy row did not restore the copied note payload")
+
+A017 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
+                   doc.undoStack()->count() == undoCount,
+               "the menu Copy row mutated the document")
+
+A018 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:194
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      // With an empty clip on the clipboard the rebuilt menu disables Paste, and
+      // a real attempted click on the disabled row neither dispatches nor
+      // dismisses: the menu stays open until an explicit dismissal.
+      songview::writeClipboard(songview::Clip{}, check.timeline().ticksPerBeat);
+Original expression:
+  QTRY_VERIFY(!view.editActions()->pasteClipPresent())
+
+A019 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:197
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const SharedTimeMenu reopened =
+          openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
+Original expression:
+  QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
+
+A020 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:199
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const int disabledPasteRow = timeMenuRow(*reopened.model, songview::TimeSelectionAction::Paste);
+Original expression:
+  QVERIFY2(disabledPasteRow >= 0, "the reopened shared time menu has no Paste row")
+
+A021 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:200
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(!reopened.model->itemAt(disabledPasteRow)->enabled,
+               "Paste was enabled while the clipboard held an empty clip")
+
+A022 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:202
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(quick_popup::clickMenuRow(*reopened.session, disabledPasteRow),
+               "the disabled Paste row did not receive a real click")
+
+A023 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:205
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(reopened.session && reopened.session->isOpen(),
+               "a click on the disabled Paste row dismissed the menu")
+
+A024 | PianoRollTest::timeSelectionMenuOpensWithPasteEnablement | src/checks/rollcheck/timemenu.cpp:207
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
+                   doc.undoStack()->count() == undoCount,
+               "a click on the disabled Paste row mutated the document")
+
+A025 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:216
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::rejectedNotePastePreservesViewState()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A026 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const SnappedRows rows{view, check.rollInput()};
+      const Cell &cell = seed->cell;
+      const Tick snap = seed->snapCell;
+      DocNote original;
+Original expression:
+  QVERIFY(doc.findNote(check.track(), cell.tick, uint8_t(cell.key), &original))
+
+A027 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:228
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const clipcheck_support::ClipboardStateGuard clipboardGuard;
+      const quick_popup::PromptGuard popupGuard(view);
+      QSignalSpy announcements(&view, &SongView::statusMessage);
+      QSignalSpy cursorMoves(&view, &SongView::editCursorMoved);
+Original expression:
+  QVERIFY(announcements.isValid())
+
+A028 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:229
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(cursorMoves.isValid())
+
+A029 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:269
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+      // Exercise both clipboard consumers with explicit note selection, then
+      // with the time-band menu. Selection setup uses the public model; Paste
+      // itself always enters through the existing key/menu command routing.
+      for (const bool rangeClip : {false, true}) {
+          songview::Clip clip;
+          clip.span = rangeClip ? 3 * snap : 0;
+          clip.tracks.push_back(
+              {check.track(),
+               {{0, uint8_t(cell.key), 2 * snap, 90}, {snap, uint8_t(cell.key), 2 * snap, 100}}});
+          songview::writeClipboard(clip, check.timeline().ticksPerBeat);
+          for (const bool timeSelection : {false, true}) {
+              view.selectionModel().setNoteSelection({original.noteId});
+              if (timeSelection) {
+                  view.selectionModel().setTimeSelection(
+                      {cell.tick,
+                       cell.tick + snap,
+                       songview::EditorSelectionModel::TimeSelection::Tracks,
+                       {}});
+              }
+              // Keep the paste destination offscreen so a false reveal is
+              // observable independently from cursor and selection changes.
+              const Tick destination = check.timeline().lengthTicks + 16 * snap;
+              view.setEditCursorTick(destination);
+              const QByteArray before = doc.smf().write();
+              const uint64_t revision = doc.revision();
+              const int undoIndex = doc.undoStack()->index();
+              const int undoCount = doc.undoStack()->count();
+              const bool canRedo = doc.undoStack()->canRedo();
+              const auto selectedNotes = view.selectionModel().noteSelection();
+              const auto selectedTime = view.selectionModel().timeSelection();
+              const auto trackScope = view.selectionModel().storedTrackScope();
+              const double scrollX = view.camera().scrollX();
+              const double scrollY = view.camera().scrollY();
+              announcements.clear();
+              cursorMoves.clear();
+              if (timeSelection) {
+                  const SharedTimeMenu menu =
+                      openSharedTimeMenu(check, rows, cell.tick, cell.tick + snap);
+Original expression:
+  QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
+
+A030 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:271
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+                  const int pasteRow = timeMenuRow(*menu.model, songview::TimeSelectionAction::Paste);
+Original expression:
+  QVERIFY(pasteRow >= 0 && menu.model->itemAt(pasteRow)->enabled)
+
+A031 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:272
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(quick_popup::clickMenuRow(*menu.session, pasteRow))
+
+A032 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:273
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(!menu.session->isOpen())
+
+A033 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:278
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              } else {
+                  sendKeyStroke(check.rollInput(), Qt::Key_V, Qt::ControlModifier, false);
+              }
+              QCoreApplication::processEvents();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A034 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:279
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.revision(), revision)
+
+A035 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:280
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), undoIndex)
+
+A036 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:281
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.undoStack()->count(), undoCount)
+
+A037 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:282
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.undoStack()->canRedo(), canRedo)
+
+A038 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:283
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(view.selectionModel().noteSelection() == selectedNotes)
+
+A039 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:284
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.selectionModel().timeSelection().startTick, selectedTime.startTick)
+
+A040 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:285
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.selectionModel().timeSelection().endTick, selectedTime.endTick)
+
+A041 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:286
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.selectionModel().timeSelection().scope, selectedTime.scope)
+
+A042 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:287
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.selectionModel().storedTrackScope(), trackScope)
+
+A043 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.editCursorTick(), destination)
+
+A044 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:289
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.camera().scrollX(), scrollX)
+
+A045 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:290
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.camera().scrollY(), scrollY)
+
+A046 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:291
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(cursorMoves.count(), 0)
+
+A047 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:292
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(announcements.count(), 0)
+
+A048 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:305
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          }
+
+          // Removing the conflicting incoming span admits the same command.
+          clip.tracks.front().notes.pop_back();
+          songview::writeClipboard(clip, check.timeline().ticksPerBeat);
+          const Tick base = view.grid().snapTick(double(view.editCursorTick()));
+          const QByteArray before = doc.smf().write();
+          const int undoIndex = doc.undoStack()->index();
+          announcements.clear();
+          cursorMoves.clear();
+          sendKeyStroke(check.rollInput(), Qt::Key_V, Qt::ControlModifier, false);
+          DocNote pasted;
+Original expression:
+  QVERIFY(doc.findNote(check.track(), base, uint8_t(cell.key), &pasted))
+
+A049 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:306
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(pasted.duration, 2 * snap)
+
+A050 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:307
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(pasted.velocity, uint8_t(90))
+
+A051 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:308
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.editCursorTick(), base + (rangeClip ? clip.span : 2 * snap))
+
+A052 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:309
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!view.selectionModel().timeSelection().active())
+
+A053 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:311
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          if (!rangeClip)
+Original expression:
+  QVERIFY(view.selectionModel().isNoteSelected(pasted.noteId))
+
+A054 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:312
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(cursorMoves.count(), 1)
+
+A055 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:313
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(announcements.count(), 1)
+
+A056 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:314
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), undoIndex + 1)
+
+A057 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:317
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const QByteArray accepted = doc.smf().write();
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A058 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:319
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          doc.undoStack()->redo();
+Original expression:
+  QCOMPARE(doc.smf().write(), accepted)
+
+A059 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:335
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          doc.undoStack()->undo();
+          // Return the camera to the seed before opening the next band menu.
+          view.ensureTickVisible(cell.tick);
+      }
+
+      // Empty content intentionally moves its band without publishing an edit.
+      const Tick emptyStart = view.grid().snapTickUp(double(check.timeline().lengthTicks) + snap);
+      view.selectionModel().setTimeSelection(
+          {emptyStart, emptyStart + snap, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+      const QByteArray beforeNudge = doc.smf().write();
+      const uint64_t revision = doc.revision();
+      const int undoIndex = doc.undoStack()->index();
+      const int undoCount = doc.undoStack()->count();
+      const Tick next = view.grid().snapTickUp(double(emptyStart) + 1.0);
+      sendKeyStroke(check.rollInput(), Qt::Key_Right, Qt::NoModifier, false);
+Original expression:
+  QCOMPARE(view.selectionModel().timeSelection().startTick, next)
+
+A060 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:336
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(view.selectionModel().timeSelection().endTick, next + snap)
+
+A061 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:337
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.smf().write(), beforeNudge)
+
+A062 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:338
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.revision(), revision)
+
+A063 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:339
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), undoIndex)
+
+A064 | PianoRollTest::rejectedNotePastePreservesViewState | src/checks/rollcheck/timemenu.cpp:340
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(doc.undoStack()->count(), undoCount)
+
+A065 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:353
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::timeSelectionMenuStaleAndCancelNoOp()
+  {
+      PianoRollFixture &check = *m_fixture;
+      SongView &view = check.view();
+      // The automation drawer section is visible by default, and the escape
+      // focus contract routes to the visible drawer page first. Close it so this
+      // scenario exercises the no-drawer branch that returns focus to the roll
+      // band, then establish the band focus a real editing press carries.
+      view.setDrawerSectionVisible(EditorDrawerPage::Automations, false);
+      m_tab->raise();
+Original expression:
+  QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+               "the roll band could not take focus for the escape scenario")
+
+A066 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:359
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      QCoreApplication::sendPostedEvents();
+      QCoreApplication::processEvents();
+      QCoreApplication::sendPostedEvents();
+      QCoreApplication::processEvents();
+Original expression:
+  QTRY_VERIFY2(QGuiApplication::focusWindow() == check.rollInput().window() &&
+                       QGuiApplication::focusObject() == &check.rollInput() &&
+                       check.rollInput().hasActiveFocus(),
+                   "the roll band could not take focus for the escape scenario")
+
+A067 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:364
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A068 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:370
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SongDocument &doc = check.document();
+      const SnappedRows rows{view, check.rollInput()};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      DocNote moved;
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
+               "time menu seed note was not found")
+
+A069 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:388
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      doc.moveNotes({moved}, int64_t(snapCell), 0);
+      view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                              d.tick + 2 * snapCell,
+                                              songview::EditorSelectionModel::TimeSelection::Tracks,
+                                              {}});
+
+      const quick_popup::PromptGuard guard(view);
+      const QByteArray before = doc.smf().write();
+      const int undoIndex = doc.undoStack()->index();
+      const int undoCount = doc.undoStack()->count();
+      const uint64_t revision = doc.revision();
+
+      // Escape cancel: dismissal without a command, selection preserved, focus
+      // returned to the roll band.
+      const SharedTimeMenu opened =
+          openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
+Original expression:
+  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A070 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:391
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(opened.session->window(), Qt::Key_Escape);
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(opened.session && !opened.session->isOpen(),
+               "Escape did not dismiss the shared time menu")
+
+A071 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:393
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(view.selectionModel().timeSelection().active(),
+               "dismissing the menu cleared the time selection")
+
+A072 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:395
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
+                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
+               "dismissing the menu mutated the document")
+
+A073 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:398
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY2(check.rollInput().hasActiveFocus(),
+                   "dismissing the menu did not return focus to the roll band")
+
+A074 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:406
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+
+      // Stale target: clearing the selection while the menu is open retires it
+      // immediately — no stale row remains to click, and the document and undo
+      // stack stay untouched.
+      const SharedTimeMenu reopened =
+          openSharedTimeMenu(check, rows, d.tick + snapCell, d.tick + 2 * snapCell);
+Original expression:
+  QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
+
+A075 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:408
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      view.selectionModel().clearTimeSelection();
+Original expression:
+  QTRY_VERIFY2(reopened.session && !reopened.session->isOpen(),
+                   "clearing the selection did not retire the open time menu")
+
+A076 | PianoRollTest::timeSelectionMenuStaleAndCancelNoOp | src/checks/rollcheck/timemenu.cpp:410
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(doc.smf().write() == before && doc.undoStack()->index() == undoIndex &&
+                   doc.undoStack()->count() == undoCount && doc.revision() == revision,
+               "retiring the menu on selection loss mutated the document")
+
+A077 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:419
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A078 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:426
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const SnappedRows rows{view, check.rollInput()};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      DocNote moved;
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key), &moved),
+               "time menu seed note was not found")
+
+A079 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:442
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      doc.moveNotes({moved}, int64_t(snapCell), 0);
+
+      const Tick insertStart = d.tick + snapCell;
+      const Tick insertEnd = d.tick + 2 * snapCell;
+
+      const quick_popup::PromptGuard guard(view);
+      // Snapshot after fixture setup, open the menu from the real gesture, and
+      // click the rendered Insert Time row: the selected span supplies the
+      // insertion, and the edit cursor commits to the start seam.
+      view.selectionModel().setTimeSelection(
+          {insertStart, insertEnd, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+      const QByteArray before = doc.smf().write();
+      const int undoIndex = doc.undoStack()->index();
+      const SharedTimeMenu opened = openSharedTimeMenu(check, rows, insertStart, insertEnd);
+Original expression:
+  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A080 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:444
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const int insertRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::InsertBlank);
+Original expression:
+  QVERIFY2(insertRow >= 0, "the shared time menu has no Insert Time row")
+
+A081 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:445
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(opened.model->itemAt(insertRow)->enabled,
+               "the shared time menu rendered an enabled Insert Time row as disabled")
+
+A082 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:447
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(quick_popup::clickMenuRow(*opened.session, insertRow),
+               "the Insert Time row did not receive a real click")
+
+A083 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:450
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(opened.session && !opened.session->isOpen(),
+               "the Insert Time activation left the shared time menu open")
+
+A084 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:452
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(doc.undoStack()->index() == undoIndex + 1 &&
+                   doc.findNote(check.track(), insertEnd, moved.key, &moved),
+               "the Insert Time row did not shift the selected note by the span")
+
+A085 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:455
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(view.editCursorTick() == insertStart,
+               "the menu Insert Time row did not commit the edit cursor to the seam")
+
+A086 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:459
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const songview::EditorSelectionModel::TimeSelection insertedSelection =
+          view.selectionModel().timeSelection();
+Original expression:
+  QVERIFY2(insertedSelection.active() && insertedSelection.startTick == insertStart &&
+                   insertedSelection.endTick == insertEnd,
+               "the menu Insert Time row did not retain the selection over the blank span")
+
+A087 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:462
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
+               "the Insert Time row did not commit exactly one undo transaction")
+
+A088 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:465
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      doc.undoStack()->undo();
+Original expression:
+  QTRY_VERIFY2(doc.smf().write() == before,
+                   "one undo did not restore the bytes after the menu insertion")
+
+A089 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:473
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value())
+
+A090 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:488
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      SongView &view = check.view();
+      const SnappedRows rows{view, check.rollInput()};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+
+      // Sweep the selection with a real Shift+right-drag inside the band: every
+      // move commits through the selection model while the pointer gesture is
+      // live. The cached canonical actions must describe that committed
+      // selection, not the live gesture, or every menu snapshot taken after a
+      // sweep renders grey.
+      const Tick pressTick = d.tick + snapCell;
+      const Tick dragTick = d.tick + 3 * snapCell;
+      const Tick midTick = pressTick + (dragTick - pressTick) / 2;
+      const int emptyKey = emptyRollKey(check, rows, midTick);
+Original expression:
+  QVERIFY2(emptyKey >= 0, "could not find empty roll space for the sweep")
+
+A091 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:501
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const qreal pressX = check.view().camera().displayX(double(pressTick), 0.0, rows.dpr());
+      const qreal dragX = check.view().camera().displayX(double(dragTick), 0.0, rows.dpr());
+      const qreal sweepY = rows.centerY(emptyKey);
+      checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonPress, QPointF(pressX, sweepY),
+                                Qt::RightButton, Qt::RightButton, Qt::ShiftModifier);
+      for (int step = 1; step <= 4; ++step) {
+          const QPointF pos(pressX + (dragX - pressX) * double(step) / 4.0, sweepY);
+          checks::events::sendMouse(check.rollInput(), QEvent::MouseMove, pos, Qt::NoButton,
+                                    Qt::RightButton, Qt::ShiftModifier);
+      }
+      const songview::EditorSelectionModel::TimeSelection swept =
+          view.selectionModel().timeSelection();
+Original expression:
+  QVERIFY2(swept.active() && swept.endTick > swept.startTick,
+               "the Shift+right-drag did not sweep a time selection")
+
+A092 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:506
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      // Still holding the button: the gesture is live, but the cached actions
+      // must already carry the swept selection's eligibility.
+      const songview::EditActions *actions = view.editActions();
+Original expression:
+  QVERIFY2(actions, "the swept view has no bound canonical actions")
+
+A093 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:507
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(actions->action(SongView::EditCommand::Copy)->isEnabled(),
+               "the live sweep gesture left Copy cached as disabled")
+
+A094 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:509
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(actions->action(SongView::EditCommand::Duplicate)->isEnabled(),
+               "the live sweep gesture left Duplicate Time cached as disabled")
+
+A095 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:511
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(actions->action(SongView::EditCommand::ClearTimeSelection)->isEnabled(),
+               "the live sweep gesture left Clear cached as disabled")
+
+A096 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:520
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      checks::events::sendMouse(check.rollInput(), QEvent::MouseButtonRelease, QPointF(dragX, sweepY),
+                                Qt::RightButton, Qt::NoButton, Qt::ShiftModifier);
+
+      // A real second click over the swept span opens the shared menu with live
+      // rows: the regression is Copy/Duplicate Time disabled there.
+      const quick_popup::PromptGuard guard(view);
+      const SharedTimeMenu opened = openSharedTimeMenu(check, rows, swept.startTick, swept.endTick);
+Original expression:
+  QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
+
+A097 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:522
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const int copyRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Copy);
+Original expression:
+  QVERIFY2(copyRow >= 0 && opened.model->itemAt(copyRow)->enabled,
+               "Copy was greyed in the menu after a real sweep")
+
+A098 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:525
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering/input observation. A presenter-level Swift check cannot establish the event delivery, surface state, pixels, sounding preview, or harness precondition below.
+Source context since previous assertion:
+  ;
+      const int duplicateRow = timeMenuRow(*opened.model, songview::TimeSelectionAction::Duplicate);
+Original expression:
+  QVERIFY2(duplicateRow >= 0 && opened.model->itemAt(duplicateRow)->enabled,
+               "Duplicate Time was greyed in the menu after a real sweep")
+
+A099 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:531
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      // Note-only selection: the same canonical Duplicate command enables for
+      // the notes arm when no time selection is active.
+      view.selectionModel().clearTimeSelection();
+      DocNote seedNote;
+Original expression:
+  QVERIFY2(check.document().findNote(check.track(), d.tick, uint8_t(d.key), &seedNote),
+               "the sweep seed note was not found for the note-only Duplicate check")
+
+A100 | PianoRollTest::timeSelectionMenuSweepKeepsCanonicalEnablement | src/checks/rollcheck/timemenu.cpp:534
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      view.selectionModel().setNoteSelection({seedNote.noteId});
+Original expression:
+  QVERIFY2(actions->action(SongView::EditCommand::Duplicate)->isEnabled(),
+               "a note-only selection left Duplicate cached as disabled")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }

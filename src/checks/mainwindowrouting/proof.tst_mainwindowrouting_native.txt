@@ -1,0 +1,1847 @@
+Assertion correspondence: mainwindowrouting/tst_mainwindowrouting_native.cpp
+
+Reference revision: 39652ca375fc033fb930ad13291f551940a73581
+Original: src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp
+Original SHA-256: 5cff3396fa2e9a6835a0b390cc988163cc2131ae382b898cbd1f14b2fc762d13
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+Four test methods, every one gated on the Cocoa WindowSystem backend (QSKIP otherwise): native menu/window shortcut routing, foreign-window key isolation with Insert Time popup protection, bound-view teardown unbinding, and the failed-project modal dialog preserving the live tab.
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below (80 sites across 4 test methods),
+including fixture guards and platform gates. Source context preserves setup,
+loops, and guards between assertions verbatim. S identifiers identify exact
+Swift predicates in the counterpart, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native harness obligations;
+it does not establish coverage of a converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+Tally: MATCHED 0 / PARTIAL 7 / GAP 16 / NATIVE 57. No MATCHED site is claimed:
+no same-dir Swift counterpart exists for this suite, and none of the
+SessionChecks.swift predicates asserts the same Qt-routing observation.
+The Swift SHA-256 pins the worktree content inspected here, which is currently
+modified relative to its HEAD revision.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The swiftcore lane executes the Swift counterpart only. The Qt Widget/Quick
+delivery, Cocoa-gated, and harness-timing observations inventoried here execute
+only in the native Qt check harness, never in that lane.
+
+Execution and ownership
+The paired Swift checks execute under runProjectSessionSuite and
+runBankHistorySuite in src/checks/workspace/SessionChecks.swift. Within
+runProjectSessionSuite, mouseHintOwnershipChecks owns the MouseHints model
+predicates (S002–S009); editorSelectionCommandChecks owns the router
+availability/execution predicates (S010–S025); the remaining
+runProjectSessionSuite predicates cover project open, snapshot, save/dirty,
+session state publication including mute/solo (S047–S051), and bank-history
+regressions; runBankHistorySuite owns the bank-history mutation predicates.
+Related-but-outside suites invoked by the same file — runEditorDrawerChecks
+(EditorDrawerChecks.swift), runTrackHeadersInputChecks
+(TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
+carry their own predicates in their own files and are not inventoried here.
+Of these, the solo publication (S050–S051) and dirty-tracking (S030) predicates are the ones cited as PARTIAL mappings below.
+
+Fixture, sequence and row constraints
+Two-song MainWindow session opened per test after the Cocoa platform gate; no QTest _data rows. Loops expand single sites: per-track note-search loops seeding the copy/solo probes. waitUntil activation gates order MainWindow and foreign-window activity; the foreign-window case sequences clipboard, key, solo, popup, and Escape phases on one session; modal dismissal is driven through the active modal widget with a queued reject.
+
+Original assertion inventory and source sequence
+
+A001 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:29
+Disposition: NATIVE
+Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Source context since previous assertion:
+#include "mainwindowroutingfixture.h"
+
+#include "checks/clipcheck_support.h"
+#include "checks/quickpopupguard.h"
+#include "ui/songview/editactions.h"
+#include "ui/songview/timelinebandlayout.h"
+#include <QPoint>
+#include <QScopeGuard>
+
+#include <QtTest>
+namespace checks::mainwindowrouting {
+
+class MainWindowRoutingNativeTest final : public QObject, private MainWindowRoutingFixture
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(MainWindowRoutingNativeTest)
+
+  public:
+    MainWindowRoutingNativeTest(QString projectRoot, QString songA, QString songB)
+        : m_projectRoot(std::move(projectRoot))
+        , m_songA(std::move(songA))
+        , m_songB(std::move(songB))
+    {}
+
+  private slots:
+    void nativeMenuAndWindowShortcutRouting()
+    {
+        if (QApplication::platformName() != QLatin1String("cocoa"))
+Original expression:
+            QSKIP("requires the Cocoa WindowSystem backend")
+
+A002 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:31
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A003 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:40
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        const auto activated = checks::async_wait::waitUntil([] { return true; },
+                                                             [&window] {
+                                                                 window.activateWindow();
+                                                                 window.raise();
+                                                                 return window.isActiveWindow();
+                                                             },
+                                                             5000, 1);
+Original expression:
+        QVERIFY2(activated == checks::async_wait::Result::Ready,
+                 "Cocoa did not make MainWindow active after show()")
+
+A004 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:44
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        QMenu *menu = editMenu(window);
+Original expression:
+        QVERIFY(menu)
+
+A005 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:47
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QAction *copy = window.m_copyAction;
+        QAction *solo = window.m_soloAction;
+Original expression:
+        QVERIFY(copy)
+
+A006 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:48
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(solo)
+
+A007 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:50
+Disposition: NATIVE
+Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        menu->popup(window.mapToGlobal(QPoint(12, 12)));
+Original expression:
+        QTRY_VERIFY(menu->isVisible())
+
+A008 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:63
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        menu->hide();
+
+        SongView &view = session->b->view();
+        std::optional<DocNote> note;
+        for (int track = 0; track < session->b->document().engineTrackCount() && !note; ++track) {
+            const std::vector<DocNote> notes = session->b->document().notesForTrack(track);
+            if (!notes.empty()) {
+                view.selectTrack(track);
+                view.selectionModel().setNoteSelection({notes.front().noteId});
+                note = notes.front();
+            }
+        }
+Original expression:
+        QVERIFY(note.has_value())
+
+A009 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:68
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_workspace->selectSongTab(session->b);
+        view.focusActiveSurface();
+        QCoreApplication::processEvents();
+        QWidget *target = QApplication::focusWidget();
+Original expression:
+        QVERIFY(target && (target == session->b || session->b->isAncestorOf(target)))
+
+A010 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:70
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const QList<QKeySequence> copyBindings = copy->shortcuts();
+Original expression:
+        QVERIFY(!copyBindings.isEmpty())
+
+A011 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:73
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        QSignalSpy copyTriggered(copy, &QAction::triggered);
+        sendShortcut(*target, copyBindings.front());
+Original expression:
+        QCOMPARE(copyTriggered.count(), 1)
+
+A012 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:75
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const auto copied = clipcheck_support::checkClipboardClip();
+Original expression:
+        QVERIFY(copied.has_value())
+
+A013 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:76
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(copied->clip.tracks.size(), size_t{1})
+
+A014 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:77
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(copied->clip.tracks.front().notes.size(), size_t{1})
+
+A015 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:78
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(copied->clip.tracks.front().notes.front().key, note->key)
+
+A016 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:89
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        // Native QWidget text copy stays available with no musical selection:
+        // the real composed Copy key carries the focused field's own text.
+        view.selectionModel().clearNoteSelection();
+        QLineEdit text(&window);
+        text.setText(QStringLiteral("native copy text probe"));
+        text.selectAll();
+        text.show();
+        text.setFocus();
+        QCoreApplication::processEvents();
+Original expression:
+        QCOMPARE(QApplication::focusWidget(), &text)
+
+A017 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:92
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QApplication::clipboard()->clear();
+        sendShortcut(text, QKeySequence(QKeySequence::Copy));
+Original expression:
+        QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("native copy text probe"))
+
+A018 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:95
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        const QList<QKeySequence> soloBindings = solo->shortcuts();
+Original expression:
+        QVERIFY(!soloBindings.isEmpty())
+
+A019 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:106
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const int selectedTrack = view.selectionModel().primaryTrack();
+        view.setTrackSolo(selectedTrack, false);
+        QSignalSpy soloTriggered(solo, &QAction::triggered);
+        // Cocoa owns the visible menu bar natively, so QWidget focus can remain on
+        // the line edit above. Use an explicit non-text child for the window route.
+        QWidget shortcutTarget(&window);
+        shortcutTarget.setFocusPolicy(Qt::StrongFocus);
+        shortcutTarget.show();
+        shortcutTarget.setFocus(Qt::OtherFocusReason);
+        QCoreApplication::processEvents();
+Original expression:
+        QCOMPARE(QApplication::focusWidget(), &shortcutTarget)
+
+A020 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:108
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendShortcut(shortcutTarget, soloBindings.front());
+Original expression:
+        QVERIFY(view.trackSoloed(selectedTrack))
+
+A021 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:109
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(soloTriggered.count(), 1)
+
+A022 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:111
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendShortcut(shortcutTarget, soloBindings.front());
+Original expression:
+        QVERIFY(!view.trackSoloed(selectedTrack))
+
+A023 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:112
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(soloTriggered.count(), 2)
+
+A024 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:115
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        view.focusActiveSurface();
+        target = QApplication::focusWidget();
+Original expression:
+        QVERIFY(target && (target == session->b || session->b->isAncestorOf(target)))
+
+A025 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:117
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendShortcut(*target, soloBindings.front());
+Original expression:
+        QVERIFY(view.trackSoloed(selectedTrack))
+
+A026 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:118
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(soloTriggered.count(), 3)
+
+A027 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:120
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendShortcut(*target, soloBindings.front());
+Original expression:
+        QVERIFY(!view.trackSoloed(selectedTrack))
+
+A028 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:121
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(soloTriggered.count(), 4)
+
+A029 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:124
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        text.setFocus();
+        sendShortcut(text, soloBindings.front());
+Original expression:
+        QVERIFY(!view.trackSoloed(selectedTrack))
+
+A030 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:125
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(soloTriggered.count(), 4)
+
+A031 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:135
+Disposition: NATIVE
+Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Source context since previous assertion:
+    }
+
+    // A foreign non-modal window owns its ordinary keys: while it is active,
+    // the installed-but-closed native Edit menu and the window-scoped action
+    // set contribute nothing — no song edit, no activation. The modal-foreign
+    // case is vacuous: Cocoa disables the menu items for a modal session.
+    void nativeForeignWindowKeepsLocalKeys()
+    {
+        if (QApplication::platformName() != QLatin1String("cocoa"))
+Original expression:
+            QSKIP("requires the Cocoa WindowSystem backend")
+
+A032 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:137
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A033 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:146
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        const auto activated = checks::async_wait::waitUntil([] { return true; },
+                                                             [&window] {
+                                                                 window.activateWindow();
+                                                                 window.raise();
+                                                                 return window.isActiveWindow();
+                                                             },
+                                                             5000, 1);
+Original expression:
+        QVERIFY2(activated == checks::async_wait::Result::Ready,
+                 "Cocoa did not make MainWindow active after show()")
+
+A034 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:149
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QMenu *menu = editMenu(window);
+Original expression:
+        QVERIFY(menu)
+
+A035 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:150
+Disposition: NATIVE
+Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!menu->isVisible())
+
+A036 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:153
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QAction *copy = window.m_copyAction;
+        QAction *solo = window.m_soloAction;
+Original expression:
+        QVERIFY(copy && solo)
+
+A037 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:168
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        SongView &view = session->b->view();
+        // Copy has no standalone arm: it is only enabled with an eligible
+        // musical selection (correctly disabled at fresh open). Establish one
+        // so this slot exercises an enabled Editor action throughout.
+        std::optional<DocNote> seedNote;
+        for (int track = 0; track < session->b->document().engineTrackCount() && !seedNote;
+             ++track) {
+            const std::vector<DocNote> notes = session->b->document().notesForTrack(track);
+            if (!notes.empty()) {
+                view.selectTrack(track);
+                view.selectionModel().setNoteSelection({notes.front().noteId});
+                seedNote = notes.front();
+            }
+        }
+Original expression:
+        QVERIFY(seedNote.has_value())
+
+A038 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:169
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(copy->isEnabled() && solo->isEnabled())
+
+A039 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:172
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const QList<QKeySequence> copyBindings = copy->shortcuts();
+        const QList<QKeySequence> soloBindings = solo->shortcuts();
+Original expression:
+        QVERIFY(!copyBindings.isEmpty() && !soloBindings.isEmpty())
+
+A040 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:195
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const int track = view.selectionModel().primaryTrack();
+        view.setTrackSolo(track, false);
+        const QByteArray beforeB = session->b->document().smf().write();
+        const QByteArray beforeA = session->a->document().smf().write();
+        QSignalSpy copyTriggered(copy, &QAction::triggered);
+        QSignalSpy soloTriggered(solo, &QAction::triggered);
+
+        QWidget foreign;
+        foreign.setWindowTitle(QStringLiteral("foreign probe"));
+        QLineEdit foreignText(&foreign);
+        foreignText.setText(QStringLiteral("foreign draft"));
+        foreignText.selectAll();
+        foreign.show();
+        foreignText.setFocus(Qt::OtherFocusReason);
+        const auto foreignActive =
+            checks::async_wait::waitUntil([] { return true; },
+                                          [&foreign] {
+                                              foreign.activateWindow();
+                                              foreign.raise();
+                                              return foreign.isActiveWindow();
+                                          },
+                                          5000, 1);
+Original expression:
+        QVERIFY2(foreignActive == checks::async_wait::Result::Ready,
+                 "Cocoa did not activate the foreign window")
+
+A041 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:197
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(QApplication::focusWidget(), &foreignText)
+
+A042 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:203
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        // The Copy binding stays with the field's own text; the window Copy
+        // owner never sees the foreign delivery.
+        QApplication::clipboard()->clear();
+        sendShortcut(foreignText, copyBindings.front());
+Original expression:
+        QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("foreign draft"))
+
+A043 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:204
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(copyTriggered.count(), 0)
+
+A044 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:211
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        // Ordinary keys stay local to the field: typing replaces the selected
+        // field text while both songs stay untouched.
+        checks::events::sendKey(foreignText, QEvent::KeyPress, Qt::Key_X, Qt::NoModifier,
+                                QStringLiteral("x"), false, 1);
+        checks::events::sendKey(foreignText, QEvent::KeyRelease, Qt::Key_X, Qt::NoModifier,
+                                QStringLiteral("x"), false, 1);
+Original expression:
+        QCOMPARE(foreignText.text(), QStringLiteral("x"))
+
+A045 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:213
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(foreignText, soloBindings.front());
+Original expression:
+        QCOMPARE(soloTriggered.count(), 0)
+
+A046 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:214
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!view.trackSoloed(track))
+
+A047 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:215
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->b->document().smf().write(), beforeB)
+
+A048 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:216
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), beforeA)
+
+A049 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:228
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        // Protected popup input stays local on the same native shell: the
+        // Insert Time prompt owns its command bindings while it is open.
+        foreign.hide();
+        const auto reactivated = checks::async_wait::waitUntil([] { return true; },
+                                                               [&window] {
+                                                                   window.activateWindow();
+                                                                   window.raise();
+                                                                   return window.isActiveWindow();
+                                                               },
+                                                               5000, 1);
+Original expression:
+        QVERIFY2(reactivated == checks::async_wait::Result::Ready,
+                 "Cocoa did not reactivate MainWindow after the foreign window hid")
+
+A050 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:230
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(window.m_insertTimeAction && window.m_insertTimeAction->isEnabled())
+
+A051 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:231
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+                 "the Roll band could not take focus before the Insert Time prompt")
+
+A052 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:235
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_insertTimeAction->trigger();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+Original expression:
+        QTRY_VERIFY(popup && popup->isOpen() && popup->window())
+
+A053 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:236
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QTRY_VERIFY(
+            quick_popup::inputHasActiveFocus(*popup->window(), QLatin1String("insertTimeBars")))
+
+A054 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:239
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(*popup->window(), soloBindings.front());
+Original expression:
+        QVERIFY2(popup->isOpen() && soloTriggered.count() == 0 && !view.trackSoloed(track),
+                 "a window command fired while the Insert Time prompt owned the keys")
+
+A055 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:242
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(*popup->window(), copyBindings.front());
+Original expression:
+        QVERIFY2(popup->isOpen() && copyTriggered.count() == 0,
+                 "window Copy fired while the Insert Time prompt owned the keys")
+
+A056 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:245
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QTest::keyClick(popup->window(), Qt::Key_Escape);
+Original expression:
+        QTRY_VERIFY(!popup->isOpen())
+
+A057 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:246
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->b->document().smf().write(), beforeB)
+
+A058 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:247
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), beforeA)
+
+A059 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:258
+Disposition: NATIVE
+Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Source context since previous assertion:
+    }
+
+    // Destroying the bound SongView without an external unbind: the tab-hide
+    // cancels the prompt while the closing view is still bound, and the
+    // destructor's unbind follows in the same synchronous stack — no input
+    // can land between them. The durable contract is sole post-close
+    // ownership: the surviving tab is the only target and stays actionable.
+    void nativeBoundViewTeardownUnbindsActions()
+    {
+        if (QApplication::platformName() != QLatin1String("cocoa"))
+Original expression:
+            QSKIP("requires the Cocoa WindowSystem backend")
+
+A060 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:260
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A061 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:265
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongTab *closing = session->b;
+        const SongName closingName = closing->name();
+        SongView &view = closing->view();
+Original expression:
+        QCOMPARE(window.m_editActions->target(), &view)
+
+A062 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:267
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QAction *solo = window.m_soloAction;
+Original expression:
+        QVERIFY(solo && solo->isEnabled())
+
+A063 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:269
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_workspace->selectSongTab(closing);
+Original expression:
+        QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason),
+                 "the Roll band could not take focus before the Insert Time prompt")
+
+A064 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:271
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(window.m_insertTimeAction && window.m_insertTimeAction->isEnabled())
+
+A065 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:274
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_insertTimeAction->trigger();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+Original expression:
+        QTRY_VERIFY(popup && popup->isOpen())
+
+A066 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:281
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        bool observed = false;
+        QSignalSpy soloTriggered(solo, &QAction::triggered);
+        QObject::connect(popup, &songview::QuickPopupSession::cancelled, &window,
+                         [&] { observed = true; });
+        window.m_workspace->requestCloseSelectedTab();
+        QCoreApplication::processEvents();
+Original expression:
+        QVERIFY2(!QApplication::activeModalWidget(),
+                 "closing a clean tab produced an unexpected modal prompt")
+
+A067 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:283
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(observed, "the open popup was not cancelled during the bound view's teardown")
+
+A068 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:284
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(soloTriggered.count(), 0)
+
+A069 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:285
+Disposition: GAP
+Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(window.m_workspace->songTabFor(closingName) == nullptr,
+                 "the clean tab did not close")
+
+A070 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:287
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(window.m_editActions->target(), &session->a->view())
+
+A071 | MainWindowRoutingNativeTest::nativeBoundViewTeardownUnbindsActions | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:288
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(solo->isEnabled())
+
+A072 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:296
+Disposition: NATIVE
+Mapping/reason: Platform gate: this case runs only on the Cocoa WindowSystem backend (QSKIP otherwise). Presenter-level Swift checks execute platform-independent and cannot establish this path.
+Source context since previous assertion:
+    }
+
+    // Offscreen lifecycle owns byte and snapshot boundaries; this native case verifies
+    // the Cocoa modal delivery keeps the existing live tab interactive.
+    void nativeFailedProjectDialogPreservesLiveTab()
+    {
+        if (QApplication::platformName() != QLatin1String("cocoa"))
+Original expression:
+            QSKIP("requires the Cocoa WindowSystem backend")
+
+A073 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:298
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A074 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:303
+Disposition: PARTIAL
+Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/SessionChecks.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongTab *old = session->b;
+        const qsizetype count = window.m_workspace->openTabCount();
+        const QString label = old->document().label();
+Original expression:
+        QVERIFY(!old->document().isDirty())
+
+A075 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:316
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_workspace->requestSongOpen(old->name());
+        window.m_workspace->requestProjectOpenAt(session->fixture->root() +
+                                                 QStringLiteral("/missing-native-project"));
+        const auto failed = [&window] {
+            if (QPointer<QMessageBox> box =
+                    qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+                box && !box->property("dismissalQueued").toBool()) {
+                box->setProperty("dismissalQueued", true);
+                QTimer::singleShot(0, box, [box] { box->reject(); });
+            }
+            return window.m_workspace->projectState().state == ProjectOpenState::Failed;
+        };
+Original expression:
+        QCOMPARE(checks::async_wait::waitUntil([] { return true; }, failed, 30000, 1),
+                 checks::async_wait::Result::Ready)
+
+A076 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:318
+Disposition: GAP
+Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(window.m_workspace->selectedSongTab(), old)
+
+A077 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:319
+Disposition: GAP
+Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(window.m_workspace->openTabCount(), count)
+
+A078 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:320
+Disposition: GAP
+Mapping/reason: Fixture-root byte snapshot or project-snapshot-root observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(window.m_workspace->projectState().snapshot.root(), session->fixture->root())
+
+A079 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:321
+Disposition: GAP
+Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(waitForTabReady(*window.m_workspace, old))
+
+A080 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:322
+Disposition: GAP
+Mapping/reason: Document label or track-count observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(old->document().label(), label)
+
+Remaining original source (closing sequence and helper bodies):
+    }
+
+  private:
+    QString m_projectRoot;
+    QString m_songA;
+    QString m_songB;
+};
+
+int runMainWindowRoutingNativeCheck(const QString &projectRoot, const QString &songA,
+                                    const QString &songB, const QStringList &qtArguments)
+{
+    MainWindowRoutingNativeTest test(projectRoot, songA, songB);
+    QStringList arguments{QStringLiteral("mainwindow-routing-native")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+} // namespace checks::mainwindowrouting
+
+#include "tst_mainwindowrouting_native.moc"
+
+Swift assertion predicates
+
+S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/SessionChecks.swift:287
+    report.expectEqual(Int32(1), compileResult, cppID: cppID,
+                       what: "actual mid2agb exit result for the persisted edited MIDI and flags")
+
+S002 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:298
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "inactive windows reject hint claims")
+
+S003 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:305
+    report.expectEqual(nodeHint, hints.text, cppID: id,
+                       what: "replaced source cannot clear an identical-profile new owner")
+
+S004 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:308
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "empty profile replaces and clears prior visible hint")
+
+S005 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:312
+    report.expect(hints.text != nodeHint, cppID: id,
+                  message: "replacing the node profile changes the presented instructions")
+
+S006 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:315
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "current source lifecycle clear removes hint")
+
+S007 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:319
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "window deactivation clears an owned hint")
+
+S008 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:322
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "reactivation never resurrects cached ownership")
+
+S009 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:326
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "unknown profile clears rather than retaining unrelated instructions")
+
+S010 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:356
+    report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
+                  && router.isAvailable(.cut), cppID: id,
+                  message: "automation range owns semantic edit availability")
+
+S011 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:359
+    report.expectEqual(EditKeyDecision.execute.rawValue,
+                       router.route(.delete, autoRepeat: true).rawValue,
+                       cppID: id, what: "range Delete retains canonical repeat execution")
+
+S012 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:362
+    report.expectEqual(revision, document.revision, cppID: id,
+                       what: "availability and key arbitration never mutate the document")
+
+S013 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:364
+    report.expectEqual(EditKeyDecision.consume.rawValue,
+                       router.route(.transposeUp, autoRepeat: false).rawValue,
+                       cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
+
+S014 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:368
+    report.expectEqual(revision, document.revision, cppID: id,
+                       what: "lane transpose does not mutate a simultaneous note selection")
+
+S015 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:371
+    report.expectEqual([Tick(72)], document.lanePoints(
+        track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
+        cppID: id, what: "range Delete removes only points in the selected interval")
+
+S016 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:374
+    report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                  message: "time selection deletion leaves simultaneously selected notes intact")
+
+S017 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:378
+    report.expectEqual(afterDelete, document.revision, cppID: id,
+                       what: "empty selected range deletion never falls through to notes")
+
+S018 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:380
+    report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                  message: "empty range still owns the operation target")
+
+S019 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:383
+    report.expect(page.selection == nil, cppID: id,
+                  message: "canonical clear-selection command clears the automation range")
+
+S020 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:385
+    report.expectEqual(EditKeyDecision.execute.rawValue,
+                       router.route(.delete, autoRepeat: false).rawValue,
+                       cppID: id, what: "note selection becomes the target after range clear")
+
+S021 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:389
+    report.expect(document.note(selectedNote.id) == nil, cppID: id,
+                  message: "shared note deletion remains reachable after range clear")
+
+S022 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:396
+    report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
+                  && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
+                  cppID: id, message: "track range deletes both its notes and automation points")
+
+S023 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:399
+    report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
+                  message: "track range leaves outside notes intact")
+
+S024 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:410
+    report.expectEqual(EditKeyDecision.consume.rawValue,
+                       router.route(.delete, autoRepeat: false).rawValue,
+                       cppID: id, what: "a live pointer gesture consumes semantic deletion")
+
+S025 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:414
+    report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
+                       what: "direct activation cannot bypass pointer gesture arbitration")
+
+S026 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:450
+        report.expectEqual("mus_session_test", detached.source.label,
+                           cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+                           what: "published project snapshot survives source registry replacement")
+
+S027 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:471
+            report.expectEqual("mus_session_test", retained.source.label,
+                               cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+                               what: "failed replacement open retains the worker's prior project")
+
+S028 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:489
+        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                      cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
+                      message: "unknown label reaches the native playable-song rejection")
+
+S029 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:500
+        report.expectEqual("mus_session_test", session.document.source.label,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
+                           what: "DocumentSession adopts the requested song source")
+
+S030 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:509
+    report.expectEqual(false, session.document.isDirty,
+                       cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
+                       what: "opened session starts clean")
+
+S031 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:516
+    report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
+                       cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
+                       what: "initial timeline matches canonical state factory projection")
+
+S032 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:529
+    report.expect(chunkMetasStripped,
+                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                  message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
+
+S033 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:532
+    report.expectEqual(1, session.document.state.tempo.count,
+                       cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
+                       what: "authoritative tempo point count in state")
+
+S034 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:538
+    report.expectEqual(UInt64(24_000), initialSampleAt24,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
+                       what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
+
+S035 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:563
+    report.expect(publishedChangeCount > 0,
+                  cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
+                  message: "document mutation invokes session presenter callback")
+
+S036 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:566
+    report.expect(lastPublishedTimeline != nil,
+                  cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
+                  message: "immutable playback publication callback received updated timeline")
+
+S037 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:572
+    report.expectEqual(UInt64(19_200), editedSampleAt24,
+                       cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
+                       what: "state factory projection computes exact 19200 samples for edited tempo")
+
+S038 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:583
+    report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
+                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                       what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
+
+S039 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:586
+    report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
+                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                  message: "extended clocks change an observable note-release sample")
+
+S040 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:595
+    report.expectEqual(UInt64(20_000), configuredGate60,
+                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                       what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
+
+S041 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:598
+    report.expect(defaultGate60 != configuredGate60,
+                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                  message: "exact gate changes an observable note-release sample")
+
+S042 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:607
+        report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
+                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                           what: "undo config restores default gate release scheduling")
+
+S043 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:610
+        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                           what: "timeline remains at 150 BPM prior to tempo undo")
+
+S044 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:617
+        report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
+                           cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
+                           what: "undo tempo restores initial 120 BPM timing")
+
+S045 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:624
+        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                           cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
+                           what: "redo tempo restores 150 BPM timing")
+
+S046 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:630
+        report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
+                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                           what: "redo config reproduces exact-gate event timing")
+
+S047 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:649
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.cursor]
+            && publishedChanges.last?.revision == preRevision
+            && publishedChanges.last?.trackRemap == nil,
+        cppID: statePublicationID,
+        message: "cursor-only mutation publishes exactly the cursor domain")
+
+S048 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:658
+    report.expectEqual(publicationStart, publishedChangeCount,
+                       cppID: statePublicationID,
+                       what: "equal cursor assignment publishes nothing")
+
+S049 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:664
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.mixState],
+        cppID: statePublicationID,
+        message: "mute mutation publishes exactly the mix-state domain")
+
+S050 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:671
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.mixState],
+        cppID: statePublicationID,
+        message: "solo mutation publishes exactly the mix-state domain")
+
+S051 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:679
+    report.expectEqual(publicationStart, publishedChangeCount,
+                       cppID: statePublicationID,
+                       what: "equal mute and solo assignments publish nothing")
+
+S052 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:708
+    report.expect(publishedChangeCount == publicationStart + 1 && observedCompletedBatch,
+                  cppID: statePublicationID,
+                  message: "nested throwing batch publishes completed state exactly once")
+
+S053 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:713
+    report.expect(
+        session.document.revision == preRevision
+            && session.document.isDirty == preDirty
+            && session.document.history.currentIdentity == preIdentity
+            && session.document.history.canUndo == preCanUndo
+            && session.document.history.canRedo == preCanRedo
+            && publishedPlaybackCount == prePlaybackCount,
+        cppID: statePublicationID,
+        message: "session-only changes preserve revision, dirty/history, and playback publication")
+
+S054 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:728
+        report.expectEqual(false, session.selectedNotes.contains(note1),
+                           cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
+                           what: "selection reconciler prunes dead note IDs when notes are deleted")
+
+S055 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:737
+    report.expect(otherSongCfgBefore != nil,
+                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                  message: "fixture exposes the other song's midi.cfg line")
+
+S056 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:747
+    report.expectEqual(Tick(72), preSaveLoopStart,
+                       cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                       what: "the loop-start edit is present before save")
+
+S057 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:756
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "edited song save confirms clean state")
+
+S058 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:763
+    report.expectEqual(
+        otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
+        cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+        what: "save preserves the other song's complete midi.cfg line bytes")
+
+S059 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:772
+    report.expect(legacyContent?.contains("\"protected\": true") == true,
+                  cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
+                  message: "save leaves legacy sidecar JSON untouched")
+
+S060 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:783
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "edit after save is dirty")
+
+S061 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:787
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undo to the saved state is clean")
+
+S062 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:791
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "redo away from the saved state is dirty")
+
+S063 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:795
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "cleanup undo returns to the saved state")
+
+S064 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:811
+        report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
+                           what: "reopen reproduces saved authoritative 150 BPM timing")
+
+S065 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:814
+        report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                           what: "reopen reproduces settings-sensitive note-release timing")
+
+S066 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:817
+        report.expectEqual(preSaveFile, reopened.document.state.file,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "note and non-tempo metadata streams survive save/reopen")
+
+S067 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:820
+        report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "loop-start marker survives save/reopen")
+
+S068 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:823
+        report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "loop-end marker survives save/reopen")
+
+S069 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:827
+        report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "raw config flags survive save/reopen")
+
+S070 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:830
+        report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "voicegroup argument survives save/reopen")
+
+S071 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:833
+        report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "master volume survives save/reopen")
+
+S072 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:836
+        report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "reverb survives save/reopen")
+
+S073 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:839
+        report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "priority survives save/reopen")
+
+S074 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:842
+        report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                           what: "exact-gate setting survives save/reopen")
+
+S075 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:845
+        report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                           what: "extended-clock setting survives save/reopen")
+
+S076 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:854
+        report.expectEqual(false, reopenedHasTempoMeta,
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
+                           what: "tempo metas remain stripped while authoritative timing persists")
+
+S077 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:873
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "stale snapshot completion leaves the newer document dirty")
+
+S078 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:877
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undoing only the newer edit remains dirty")
+
+S079 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:881
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undoing both post-save edits returns to the saved state")
+
+S080 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:897
+        report.expect(song1.bank.bankToken != 0,
+                      cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+                      message: "opened song has non-zero bank token")
+
+S081 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:900
+        report.expectEqual(song1.bank.bankToken, song2.bank.bankToken,
+                           cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+                           what: "songs sharing the same voicegroup reuse the native bank lease")
+
+S082 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:933
+        report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
+                           what: "failed stage preserves MIDI file bytes")
+
+S083 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:935
+        report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
+                           what: "failed stage preserves voicegroup file bytes")
+
+S084 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:937
+        report.expectEqual(true, session.document.isDirty, cppID: cppID,
+                           what: "failed stage leaves document dirty")
+
+S085 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:939
+        report.expectEqual(true, session.bankDirty, cppID: cppID,
+                           what: "failed stage leaves bank dirty")
+
+S086 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:950
+        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                      cppID: reconcileID,
+                      message: "reconcile stage reports the native playable-song failure")
+
+S087 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:968
+            report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
+                          cppID: midiID,
+                          message: "MIDI stage reports its missing source file")
+
+S088 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:989
+            report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
+                          cppID: voicegroupID,
+                          message: "voicegroup stage reports its missing source file")
+
+S089 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1013
+        report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                      cppID: saveID,
+                      message: "save stage reports the unwritable destination")
+
+S090 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1029
+            report.expect(
+                operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
+                cppID: cppID,
+                message: "playable label reaches native voicegroup resolution and is rejected")
+
+S091 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1039
+        report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
+                           cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+                           what: "native service publishes a project-relative normalized bank identity")
+
+S092 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1042
+        report.expectEqual("mus_session_test", normalized.source.label,
+                           cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
+                           what: "native service round-trips the accepted playable song label")
+
+S093 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1065
+        report.expectEqual(true, firstDocumentClosed,
+                           cppID: lifetimeID,
+                           what: "first document closes cleanly")
+
+S094 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1071
+    report.expectEqual(true, session.isClosed,
+                       cppID: lifetimeID,
+                       what: "first document marks isClosed without closing its project service")
+
+S095 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1079
+        report.expect(labels.contains("mus_session_test") &&
+                      labels.contains("mus_session_test2"),
+                      cppID: lifetimeID,
+                      message: "project song labels remain available after document close")
+
+S096 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1096
+        report.expectEqual("mus_session_test2", secondLabel,
+                           cppID: lifetimeID,
+                           what: "same project service opens a second document without reopening")
+
+S097 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1099
+        report.expectEqual(true, secondDocumentClosed,
+                           cppID: lifetimeID,
+                           what: "second document closes cleanly")
+
+S098 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1120
+        report.expectEqual(ProjectServiceError.serviceClosed, error,
+                           cppID: lifetimeID,
+                           what: "explicit project service close owns worker shutdown")
+
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1165
+    report.expect(session.bankSlots.count >= 4,
+                  cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                  message: "published bank has slot views")
+
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1168
+    report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
+                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                       what: "slot 0 is editable square 1")
+
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1171
+    report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                       what: "slot 3 is initially blank")
+
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1195
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "bank edit dirties bank")
+
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1198
+        report.expectEqual(scalarEditedSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "scalar edit changes the requested voice and preserves every other slot")
+
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1201
+        report.expect(result.lease.bankToken != oldToken,
+                      cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                      message: "applied bank edit mints a fresh lease")
+
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1204
+        report.expectEqual(oldToken, oldLease.bankToken,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "superseded lease retains its bank token and stays valid")
+
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1207
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank edit publishes bank, dirty, and history exactly once")
+
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1218
+        report.expectEqual(originalSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "undo restores the complete original bank view")
+
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1221
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank undo publishes bank, dirty, and history exactly once")
+
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1232
+        report.expectEqual(scalarEditedSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "redo restores the scalar edit without changing other slots")
+
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1235
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank redo publishes bank, dirty, and history exactly once")
+
+S111 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1269
+            report.expect(operationFailureMessage(error) != nil,
+                          cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                          message: "preview filesystem failure reaches the public service error type")
+
+S112 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1277
+    report.expectEqual(previewSlots, session.bankSlots,
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure preserves every visible bank slot")
+
+S113 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1280
+    report.expectEqual(previewDirty, session.bankDirty,
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure preserves visible dirty state")
+
+S114 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1283
+    report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure leaves source file bytes unchanged")
+
+S115 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1298
+        report.expect(materialized.materializationToken != nil,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                      message: "blank slot materialization issues a single-shot token")
+
+S116 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1301
+        report.expectEqual(materializedSlots, session.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                           what: "blank materialization publishes the requested voice and preserves other slots")
+
+S117 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1309
+        report.expectEqual(beforeMaterializationSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+                           what: "undo restores the complete pre-materialization bank view")
+
+S118 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1317
+        report.expectEqual(materializedSlots, session.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                           what: "redo rematerializes the voice without changing other slots")
+
+S119 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1339
+        report.expectEqual(Int32(25), session.bankSlots[0].voice?.pan,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                           what: "second pan edit applied")
+
+S120 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1347
+        report.expectEqual(Int32(15), session.bankSlots[0].voice?.pan,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                           what: "undo reverts merged pan edits to origin in one step")
+
+S121 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1366
+        report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                      message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
+
+S122 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1388
+        report.expectEqual(ProjectServiceError.bankConflict, error,
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                           what: "stale expected voice triggers bankConflict")
+
+S123 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1395
+    report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                       what: "initial conflict leaves canUndo unchanged")
+
+S124 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1398
+    report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                       what: "initial conflict leaves canRedo unchanged")
+
+S125 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1411
+        report.expectEqual(ProjectServiceError.bankConflict, error,
+                           cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+                           what: "materializing occupied slot triggers bankConflict")
+
+S126 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1427
+        report.expectEqual(ProjectServiceError.bankConflict, error,
+                           cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                           what: "unknown token triggers bankConflict")
+
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1453
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "unified save marks the song clean")
+
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1456
+        report.expectEqual(false, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "unified save marks the bank clean")
+
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1459
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "unified bank save publishes bank, dirty, and history exactly once")
+
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1464
+        report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                      message: "unified save changes persisted MIDI bytes")
+
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1467
+        report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                      message: "unified save changes persisted bank bytes")
+
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1478
+        report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "fresh reopen reads the unified song edit from disk")
+
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1481
+        report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "fresh reopen reads the unified bank edits and preserved slots from disk")
+
+S134 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1525
+            report.expectEqual(Optional(Data(staleSnapshot.bytes)),
+                               bytes(at: session.document.source.midiPath),
+                               cppID: queuedSaveID,
+                               what: "queued save writes the captured stale MIDI snapshot")
+
+S135 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1529
+            report.expectEqual(newerIdentity, session.document.history.currentIdentity,
+                               cppID: queuedSaveID,
+                               what: "save completion preserves the newer document identity")
+
+S136 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1532
+            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                               what: "stale save completion cannot clean the newer edit")
+
+S137 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1534
+            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                               what: "queued native bank write publishes its clean receipt")
+
+S138 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1536
+            report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                               cppID: queuedSaveID,
+                               what: "queued bank save preserves the edited bank voice")
+
+S139 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1545
+            report.expectEqual(Optional(Data(newerSnapshot.bytes)),
+                               bytes(at: session.document.source.midiPath),
+                               cppID: queuedSaveID,
+                               what: "retry writes the newer MIDI snapshot")
+
+S140 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1549
+            report.expectEqual(false, session.document.isDirty, cppID: queuedSaveID,
+                               what: "newer-state retry marks the document clean")
+
+S141 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1553
+            report.expect(undidNewer && session.document.note(newerNote) == nil
+                && session.document.note(staleNote) != nil,
+                cppID: queuedSaveID,
+                message: "first undo removes only the newer note")
+
+S142 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1558
+            report.expect(undidStale && session.document.note(staleNote) == nil,
+                          cppID: queuedSaveID,
+                          message: "second undo removes the stale note")
+
+S143 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1561
+            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                               what: "undoing past the retry save point is dirty")
+
+S144 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1563
+            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                               what: "note undos leave the saved bank clean")
+
+S145 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1565
+            report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                               cppID: queuedSaveID,
+                               what: "note undos leave the saved bank edit applied")
+
+S146 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1568
+            report.expectEqual(savedBankBytes, bytes(at: bankPath), cppID: queuedSaveID,
+                               what: "note undos leave saved bank bytes intact")
+
+S147 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1586
+        report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit reaches the production bank view")
+
+S148 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1589
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit dirties the bank")
+
+S149 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1592
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit does not dirty the document")
+
+S150 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1602
+        report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower release bound reaches the production bank view")
+
+S151 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1605
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower-bound bank edit dirties the bank")
+
+S152 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1608
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower-bound bank edit does not dirty the document")
+
+S153 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1617
+        report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper release bound reaches the production bank view")
+
+S154 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1620
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper-bound bank edit dirties the bank")
+
+S155 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1623
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper-bound bank edit does not dirty the document")
+
+S156 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1630
+        report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "opening another song reuses the unsaved shared-bank record")
+
+S157 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1633
+        report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "another song publishes the unsaved shared-bank edit")
+
+S158 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1636
+        report.expectEqual(true, switched.bankDirty,
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "another song preserves shared-bank dirty state")
+
+S159 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1665
+            report.expect(operationFailureMessage(error) != nil,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                          message: "catalog outage reaches the native service error boundary")
+
+S160 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1673
+    report.expectEqual(retainedToken, session.bankLease.bankToken,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains the last valid bank lease")
+
+S161 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1676
+    report.expectEqual(retainedSlots, session.bankSlots,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains the last valid bank slots")
+
+S162 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1679
+    report.expectEqual(retainedDirty, session.bankDirty,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains bank dirty state")
+
+S163 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1706
+        report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "round-trip scalar edit preserves every other bank slot")
+
+S164 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1714
+        report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
+                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                      message: "successful bank save publishes a refreshed native bank")
+
+S165 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1717
+        report.expectEqual(false, roundtripSession.bankDirty,
+                           cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                           what: "successful bank save publishes a clean record")
+
+S166 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1720
+        report.expect(editedBytes != originalBytes,
+                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                      message: "successful bank save changes persisted bank bytes")
+
+S167 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1727
+        report.expectEqual(originalSlots, roundtripSession.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "undo after save restores the complete original bank")
+
+S168 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1733
+        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "saving the undo restores original voicegroup bytes")
+
+S169 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1740
+        report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "redo after saving the undo restores the edited bank and other slots")
+
+S170 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1746
+        report.expectEqual(editedBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "saving the redo reproduces edited voicegroup bytes")
+
+S171 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1756
+        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "final undo/save restores original voicegroup bytes")
+
+S172 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1785
+            report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                          cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                          message: "failed bank save reports its unwritable source")
+
+S173 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1788
+            report.expectEqual(true, roundtripSession.bankDirty,
+                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                               what: "failed bank save retains the dirty bank record")
+
+S174 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1791
+            report.expectEqual(true, roundtripSession.document.isDirty,
+                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                               what: "failed ordered save retains the dirty document record")
+
+S175 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1819
+            report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
+                          cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+                          message: "unknown identity is reported as a hard native error")
+
+S176 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1862
+        report.expectEqual(
+            ProjectServiceError.operationFailed("A bank transition is already in progress."),
+            result.1,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            what: "session gate refuses a second transition while the first is pending")
+
+S177 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1867
+        report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "coordinator publishes only the applied transition")
+
+S178 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1870
+        report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "coordinator adopts the applied transition lease")
+
+S179 | releaseEditorBankHistorySemantics | src/checks/workspace/SessionChecks.swift:1933
+            report.expect(appliedThroughBankPipeline && undone
+                && session.bankSlots[0].voice?.release == original.release
+                && !session.document.isDirty,
+                cppID: cppID,
+                message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
+
+S180 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2044
+        report.expect(result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
+
+S181 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2075
+        report.expect(result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
+
+S182 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2093
+    report.expect(staleRedoRemoved && !staleRedoDocument.history.canRedo &&
+        staleRedoDocument.state.config.priority == 6,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+        message: "stale bank redo entry is removed without mutating document state")
+
+S183 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2108
+    report.expect(staleRemoved && staleUndoDocument.state.config.priority == 0,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+        message: "stale bank undo entry is removed so the next undo reaches document history")
+
+S184 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2120
+    report.expect(hardAction.calls == 2 && hardDocument.state.config.priority == 4 &&
+        hardDocument.history.canUndo,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+        message: "hard bank failure keeps the entry available and does not cross it")
+
+S185 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2132
+    report.expect(cancelling.state.config.priority == 0,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+        message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
+
+No shared Swift fixture files carrying report.expect predicates are part of this
+counterpart: the SessionChecks.swift staging helpers (makeMidiFixture,
+stageTestProject, bytes/configLineBytes readers) assert nothing and are not
+inventoried. Predicates from related suites invoked by runProjectSessionSuite
+live in their own files and are likewise outside this inventory.

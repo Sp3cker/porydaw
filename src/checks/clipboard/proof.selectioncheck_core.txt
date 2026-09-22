@@ -1,0 +1,583 @@
+Assertion correspondence: clipboard/selectioncheck_core.cpp
+
+Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
+Original: src/checks/clipboard/selectioncheck_core.cpp
+Original SHA-256: 6ce29f432dbc1378d18cfbd24b1b4a03699ad616cd0781a4d16da021faa6f6a3
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below (52 sites across four test methods),
+including notification-transition guards. Source context preserves setup and
+guards between assertions verbatim. No Swift counterpart file was identified in
+this checkout (no .swift under src/checks/clipboard/; the Swift check tree (src/checks/**/*.swift, incl.
+src/checks/automation/automationclipboard.swift) was searched with no
+predicate covering EditorSelectionModel note/time selection, notification
+transitions, or reconciliation), so there are no Swift predicates to cite;
+every site below is GAP.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted check.
+GAP identifies an original predicate without a replacement assertion.
+Tally: MATCHED 0, PARTIAL 0, GAP 52, NATIVE 0.
+
+Verification
+Command: deno task verify --filter clipboard --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+No converted-check evidence is available for this suite in this checkout.
+
+Execution ownership
+No Swift entry point executes these checks. Native ownership:
+SelectionCheckTest methods noteSelectionSanitizesAndExcludesTime,
+timeSelectionAndScopeCommitAtomically, clearOperationsPreserveTheOtherSelection
+and reconciliationPreservesSelectionOrder, run by runSelectionCheck (see the
+closing sequence). The model under test is a plain C++ value/observer object
+(no window), so no site qualifies as NATIVE. Automation-page Swift checks
+(SessionChecks page-selection paths, automationselection.swift band selection
+over drawer rows) were inspected and assert a different selection surface over
+AutomationTimeSelection, not the EditorSelectionModel note/time/commit/clear/
+reconcile contract inventoried here.
+
+Fixture, sequence and row constraints
+Each method constructs a local EditorSelectionModel with an attached
+NotificationLog observer; received() and the size comparisons pin the exact
+notification transition sequence (changes bitmask and transition count). No
+_data rows and no loops expand sites in this file; every site executes once
+per method run. Equivalent-change operations must not notify; clearing an
+empty selection must not notify. Keep each method's note IDs, tick bounds,
+scope masks, and clear/reconcile order; they are the inputs the paired check
+must carry.
+
+Original assertion inventory and source sequence
+
+A001 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:36
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; the searched Swift suites assert no note-selection sanitization contract. Open obligation.
+Source context since previous assertion:
+  #include "checks/clipboard/selectioncheck_test.h"
+
+  #include <QtTest>
+
+  #include <span>
+  #include <vector>
+
+  #include "core/songdocument.h"
+
+  namespace checks::clipboard {
+
+  namespace {
+
+  using EditorSelectionModel = songview::EditorSelectionModel;
+  using SelectionChange = EditorSelectionModel::SelectionChange;
+
+  constexpr uint32_t kTrackScope = static_cast<uint32_t>(SelectionChange::TrackScope);
+  constexpr uint32_t kNoteSelection = static_cast<uint32_t>(SelectionChange::NoteSelection);
+  constexpr uint32_t kTimeSelection = static_cast<uint32_t>(SelectionChange::TimeSelection);
+
+  bool received(const NotificationLog &log, size_t before, uint32_t changes)
+  {
+      return log.transitions.size() == before + 1 &&
+             static_cast<uint32_t>(log.transitions.back().changes) == changes;
+  }
+
+  } // namespace
+
+  void SelectionCheckTest::noteSelectionSanitizesAndExcludesTime()
+  {
+      EditorSelectionModel model;
+      NotificationLog notifications;
+      notifications.attach(model);
+
+      model.setNoteSelection({NoteId{}, NoteId{7}, NoteId{7}, NoteId{8}});
+Original expression:
+  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{7}, NoteId{8}}));
+
+A002 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:37
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.isNoteSelected(NoteId{7}));
+
+A003 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:38
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.isNoteSelected(NoteId{8}));
+
+A004 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:39
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.isNoteSelected(NoteId{9}));
+
+A005 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:40
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.isNoteSelected(NoteId{}));
+
+A006 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:41
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the note-selection notification transition; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, 0, kNoteSelection));
+
+A007 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:45
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for equivalent-change notification suppression; see A001.
+Source context since previous assertion:
+      const size_t beforeEquivalent = notifications.transitions.size();
+      model.setNoteSelection({NoteId{}, NoteId{7}, NoteId{8}, NoteId{8}});
+Original expression:
+  QCOMPARE(notifications.transitions.size(), beforeEquivalent);
+
+A008 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:51
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for time selection clearing note selection; see A001.
+Source context since previous assertion:
+      EditorSelectionModel::TimeSelection time;
+      time.startTick = 10;
+      time.endTick = 20;
+      model.setTimeSelection(time);
+Original expression:
+  QVERIFY(model.noteSelection().empty());
+
+A009 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:52
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.timeSelection().active());
+
+A010 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:53
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the combined note/time notification transition; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, beforeEquivalent, kNoteSelection | kTimeSelection));
+
+A011 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:57
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the empty-note guard preserving an active time selection; see A001.
+Source context since previous assertion:
+      const size_t afterTime = notifications.transitions.size();
+      model.setNoteSelection({NoteId{}});
+Original expression:
+  QVERIFY(model.timeSelection().active());
+
+A012 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:58
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.noteSelection().empty());
+
+A013 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:59
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for no-notify on the empty-note guard; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(notifications.transitions.size(), afterTime);
+
+A014 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:62
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for note selection preempting time selection; see A001.
+Source context since previous assertion:
+      model.setNoteSelection({NoteId{19}});
+Original expression:
+  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{19}}));
+
+A015 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:63
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.timeSelection().active());
+
+A016 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:64
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, afterTime, kNoteSelection | kTimeSelection));
+
+A017 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:69
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the inactive-selection no-op; see A001.
+Source context since previous assertion:
+      EditorSelectionModel::TimeSelection inactive;
+      const size_t beforeInactive = notifications.transitions.size();
+      model.setTimeSelection(inactive);
+Original expression:
+  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{19}}));
+
+A018 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:70
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!model.timeSelection().active());
+
+A019 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:71
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(notifications.transitions.size(), beforeInactive);
+
+A020 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:74
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the clear-note notification; see A001.
+Source context since previous assertion:
+      model.clearNoteSelection();
+Original expression:
+  QVERIFY(received(notifications, beforeInactive, kNoteSelection));
+
+A021 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:77
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for clearing an already-empty time selection without notify; see A001.
+Source context since previous assertion:
+      const size_t beforeClearEmptyTime = notifications.transitions.size();
+      model.clearTimeSelection();
+Original expression:
+  QCOMPARE(notifications.transitions.size(), beforeClearEmptyTime);
+
+A022 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:82
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the clear-time notification; see A001.
+Source context since previous assertion:
+      model.setTimeSelection(time);
+      const size_t beforeClearTime = notifications.transitions.size();
+      model.clearTimeSelection();
+Original expression:
+  QVERIFY(!model.timeSelection().active());
+
+A023 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:83
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(model.noteSelection().empty());
+
+A024 | SelectionCheckTest::noteSelectionSanitizesAndExcludesTime | src/checks/clipboard/selectioncheck_core.cpp:84
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, beforeClearTime, kTimeSelection));
+
+A025 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:98
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for atomic time-selection plus track-scope commit; see A001.
+Source context since previous assertion:
+  ;
+  }
+
+  void SelectionCheckTest::timeSelectionAndScopeCommitAtomically()
+  {
+      EditorSelectionModel model;
+      model.applyPrimaryTrackTransition(3);
+      NotificationLog notifications;
+      notifications.attach(model);
+
+      EditorSelectionModel::TimeSelection selection;
+      selection.startTick = 40;
+      selection.endTick = 80;
+      model.setTimeSelectionAndTrackScope(selection, trackBit(1) | trackBit(20));
+Original expression:
+  QCOMPARE(model.timeSelection().startTick, uint64_t{40});
+
+A026 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:99
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.timeSelection().endTick, uint64_t{80});
+
+A027 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:100
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for out-of-range scope-bit sanitization (bit 20 dropped, primary track 3 retained); see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.storedTrackScope(), trackBit(1) | trackBit(3));
+
+A028 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:101
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, 0, kTrackScope | kTimeSelection));
+
+A029 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:103
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the committed transition payload; see A001.
+Source context since previous assertion:
+      const auto &first = notifications.transitions.back();
+Original expression:
+  QCOMPARE(first.previousTrackTime.trackScope, uint32_t{0});
+
+A030 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:104
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(first.trackTime.startTick, uint64_t{40});
+
+A031 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:105
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(first.trackTime.endTick, uint64_t{80});
+
+A032 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:106
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(first.trackTime.trackScope, trackBit(1) | trackBit(3));
+
+A033 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:113
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for time commit clearing note selection; see A001.
+Source context since previous assertion:
+      model.setNoteSelection({NoteId{23}});
+      notifications.clear();
+      selection.startTick = 50;
+      selection.endTick = 90;
+      model.setTimeSelectionAndTrackScope(selection, trackBit(2));
+Original expression:
+  QVERIFY(model.noteSelection().empty());
+
+A034 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:114
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.storedTrackScope(), trackBit(2) | trackBit(3));
+
+A035 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:115
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.timeSelection().startTick, uint64_t{50});
+
+A036 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:116
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(model.timeSelection().endTick, uint64_t{90});
+
+A037 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:117
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, 0, kTrackScope | kNoteSelection | kTimeSelection));
+
+A038 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+      const auto &second = notifications.transitions.back();
+Original expression:
+  QCOMPARE(second.previousTrackTime.trackScope, uint32_t{0});
+
+A039 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:120
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(second.trackTime.startTick, uint64_t{50});
+
+A040 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(second.trackTime.endTick, uint64_t{90});
+
+A041 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:122
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(second.trackTime.trackScope, trackBit(2) | trackBit(3));
+
+A042 | SelectionCheckTest::timeSelectionAndScopeCommitAtomically | src/checks/clipboard/selectioncheck_core.cpp:126
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for the equivalent-commit no-notify rule; see A001.
+Source context since previous assertion:
+      const size_t beforeNoOp = notifications.transitions.size();
+      model.setTimeSelectionAndTrackScope(selection, trackBit(2) | trackBit(3));
+Original expression:
+  QCOMPARE(notifications.transitions.size(), beforeNoOp);
+
+A043 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:141
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for clearing notes preserving an active time selection without notify; see A001.
+Source context since previous assertion:
+  ;
+  }
+
+  void SelectionCheckTest::clearOperationsPreserveTheOtherSelection()
+  {
+      EditorSelectionModel model;
+      NotificationLog notifications;
+      notifications.attach(model);
+
+      EditorSelectionModel::TimeSelection time;
+      time.startTick = 5;
+      time.endTick = 10;
+      model.setTimeSelection(time);
+      notifications.clear();
+      model.clearNoteSelection();
+Original expression:
+  QVERIFY(model.timeSelection().active());
+
+A044 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:142
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(notifications.transitions.empty());
+
+A045 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:148
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for clearing the note selection notification; see A001.
+Source context since previous assertion:
+      model.clearTimeSelection();
+      model.setNoteSelection({NoteId{81}});
+      notifications.clear();
+      model.clearNoteSelection();
+Original expression:
+  QVERIFY(model.noteSelection().empty());
+
+A046 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:149
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, 0, kNoteSelection));
+
+A047 | SelectionCheckTest::clearOperationsPreserveTheOtherSelection | src/checks/clipboard/selectioncheck_core.cpp:152
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for repeated-clear suppression; see A001.
+Source context since previous assertion:
+      const size_t beforeRepeatedClear = notifications.transitions.size();
+      model.clearNoteSelection();
+Original expression:
+  QCOMPARE(notifications.transitions.size(), beforeRepeatedClear);
+
+A048 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:165
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for order-preserving reconcile against the valid set; see A001.
+Source context since previous assertion:
+  ;
+  }
+
+  void SelectionCheckTest::reconciliationPreservesSelectionOrder()
+  {
+      EditorSelectionModel model;
+      NotificationLog notifications;
+      notifications.attach(model);
+      model.setNoteSelection({NoteId{1}, NoteId{2}, NoteId{3}});
+      notifications.clear();
+
+      const std::vector<NoteId> valid = {NoteId{3}, NoteId{1}, NoteId{4}, NoteId{1}};
+      model.reconcileNoteSelection(std::span<const NoteId>{valid});
+Original expression:
+  QVERIFY((model.noteSelection() == std::vector<NoteId>{NoteId{1}, NoteId{3}}));
+
+A049 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, 0, kNoteSelection));
+
+A050 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:171
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for equivalent-reconcile suppression; see A001.
+Source context since previous assertion:
+      const size_t beforeSame = notifications.transitions.size();
+      const std::vector<NoteId> sameValid = {NoteId{3}, NoteId{1}, NoteId{3}};
+      model.reconcileNoteSelection(std::span<const NoteId>{sameValid});
+Original expression:
+  QCOMPARE(notifications.transitions.size(), beforeSame);
+
+A051 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:174
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established for reconcile-to-empty; see A001.
+Source context since previous assertion:
+      model.reconcileNoteSelection(std::span<const NoteId>{});
+Original expression:
+  QVERIFY(model.noteSelection().empty());
+
+A052 | SelectionCheckTest::reconciliationPreservesSelectionOrder | src/checks/clipboard/selectioncheck_core.cpp:175
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; see A001.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(received(notifications, beforeSame, kNoteSelection));
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+  } // namespace checks::clipboard
+
+  int runSelectionCheck(const QStringList &qtArguments)
+  {
+      checks::clipboard::SelectionCheckTest test;
+      QStringList arguments{QStringLiteral("selectioncheck")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+Swift assertion predicates
+None identified: no Swift file in this checkout carries report.expect
+predicates covering this suite (see Execution ownership above).
+
+Shared helpers
+None: no Swift fixture file carries expects for this suite.

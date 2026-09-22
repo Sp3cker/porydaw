@@ -1,0 +1,202 @@
+Assertion correspondence: editcheck/tst_scale.cpp
+
+Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
+Original: src/checks/editcheck/tst_scale.cpp
+Original SHA-256: 07fd50abf49010fc921a3a0a99cdf56e1b5f41d919f29b19f017fe67f696c746
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Scope
+All 24 original assertion sites are listed below. No Swift scale predicate exists
+in this checkout: no Swift source references ScaleId, scaleDisplayName,
+rootDisplayName, isScalePitch, first/nextScalePitch, or diatonic destinations.
+GAP therefore marks every site below as having no equivalent Swift assertion;
+it does not mark a test failure. The native `scalecheck` lane remains registered
+in src/checks/checkcatalog.cpp (`--scalecheck`, compiled from this exact file),
+so the originals still execute natively; no live C++/Swift differential parity
+is claimed.
+
+Fixture and sequence
+table_data expands 28 rows (scale name to table index); table asserts count,
+display order, name, mask, and order position per row. rootsAndDefaults checks
+12 root names in a loop plus default scale and root. membershipAndNeighbors is
+fixed assertions on C-major membership, neighbors, boundaries, and steps.
+diatonicDestinations_data expands 7 rows (upward/downward/repeated/ordered plus
+high/low-boundary rejection sentinel 0xFF and mismatched-shape passthrough
+0x2A); diatonicDestinations asserts the accepted flag and destination bytes.
+
+Verification
+Command: deno task verify --filter scalecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Original assertion inventory
+
+A001 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:66
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift scale-table count predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(porydaw_scale::cScaleCount, int(expectedScales.size()));
+
+A002 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:68
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift display-order predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QVERIFY(order != nullptr);
+
+A003 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:70
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift scale-identity ordering predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(static_cast<int>(expected.id), index);
+
+A004 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:71
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift scale-name predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(std::strcmp(porydaw_scale::scaleDisplayName(expected.id), expected.name), 0);
+
+A005 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:72
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift scale-mask predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(porydaw_scale::scaleMask(expected.id), expected.mask);
+
+A006 | ScaleCheckTest::table | src/checks/editcheck/tst_scale.cpp:73
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift display-order predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(order[index], expected.id);
+
+A007 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_scale.cpp:80
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift root-count predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(porydaw_scale::cRootCount, int(rootNames.size()));
+
+A008 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_scale.cpp:82
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift root-name predicate exists; native scalecheck lane still executes this loop site for all 12 roots.
+Original expression:
+  QCOMPARE(std::strcmp(porydaw_scale::rootDisplayName(index), rootNames[size_t(index)]), 0);
+
+A009 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_scale.cpp:83
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift default-scale predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(porydaw_scale::defaultScale(), porydaw_scale::ScaleId::major);
+
+A010 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_scale.cpp:84
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift default-root predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(porydaw_scale::defaultRoot(), 0);
+
+A011 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:90
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift pitch-membership predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QVERIFY(isScalePitch(ScaleId::major, 0, 60));
+
+A012 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:91
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift pitch-membership predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QVERIFY(!isScalePitch(ScaleId::major, 0, 61));
+
+A013 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:92
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift transposed-membership predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QVERIFY(isScalePitch(ScaleId::major, 2, 62));
+
+A014 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:93
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift transposed-membership predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QVERIFY(!isScalePitch(ScaleId::major, 2, 60));
+
+A015 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:94
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift neighbor-pitch predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 61), 62);
+
+A016 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:95
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift neighbor-pitch predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 61), 60);
+
+A017 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:96
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift neighbor-boundary predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 127), -1);
+
+A018 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:97
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift neighbor-boundary predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 0), -1);
+
+A019 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:98
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift stepped-pitch predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 1), 62);
+
+A020 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:99
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift stepped-pitch predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 62, -1), 60);
+
+A021 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:100
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift stepped-pitch predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 3), 65);
+
+A022 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_scale.cpp:101
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift stepped-pitch predicate exists; native scalecheck lane still executes this site.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 67, -3), 62);
+
+A023 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_scale.cpp:149
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift diatonic-resolution predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(result, accepted);
+
+A024 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_scale.cpp:150
+Disposition: GAP
+Swift: none identified
+Mapping/reason: No Swift diatonic-destination predicate exists; native scalecheck lane still executes this per-row site.
+Original expression:
+  QCOMPARE(
+          QByteArray(reinterpret_cast<const char *>(destination.data()), int(destination.size())),
+          expected);

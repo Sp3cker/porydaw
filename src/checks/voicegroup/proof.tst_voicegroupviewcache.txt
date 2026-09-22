@@ -1,0 +1,934 @@
+Assertion correspondence: voicegroup/tst_voicegroupviewcache.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/voicegroup/tst_voicegroupviewcache.cpp
+Original SHA-256: d15a353f65745a70977fdbd756cd37e87e25d71940b5b6d5ac1267702e2dd693
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup, rows,
+loops, and guards between assertions verbatim. S identifiers would identify exact
+Swift predicates; none exist for this file, so every site below is GAP.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted Swift window. GAP identifies an
+original predicate without a replacement assertion. VoicegroupViewCacheTest proves SongHistory bank/undo/redo/merge rules and VoicegroupViewCache coordinator gating with a host-free FakeBank double; the no-host determinism is intentional and documented in-source. No Swift counterpart models these transitions, so every site is GAP.
+
+Verification
+Command: deno task verify --filter vgbankcheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+C++ entry point runVoicegroupViewCacheCheck (qExec name "voicegroup-view-cache") drives VoicegroupViewCacheTest with no project root and no staged fixture. FakeBank (put/rematerialize/apply) and CountCommand stand in for the bank worker and document commands; SongHistory, VoicegroupViewCache, VoicegroupId, and SongName come from core/project/ui headers. This suite is not on the vgbankcheck lane. No Swift entry point executes any paired check.
+
+Fixture, sequence and row constraints
+historyLifecycleAndStaleTransitions is one long sequential script: scalar edit, blank-slot materialize/revert/rematerialize, stale-undo conflict, stale-redo conflict; undo/redo drafts must be re-fetched through draft() after each transition. mergeRules runs four isolated QUndoStack/SongHistory pairs (merge, annihilate, five-command no-merge, sealBankMerge). coordinatorRoutesTransitionsAndGates scripts Initial/Undo/Redo begins against two tabs and two identities with resolveConflict/resolveApplied/resolveHardError/clear in order; stack count/index comparisons pin each step.
+
+Original assertion inventory and source sequence
+
+A001 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:126
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+#include <array>
+#include <optional>
+#include <variant>
+
+#include <QStringList>
+#include <QUndoCommand>
+#include <QUndoStack>
+#include <QtTest>
+
+#include "core/songhistory.h"
+#include "project/projectidentity.h"
+#include "project/voicegroupsource.h"
+#include "ui/voicegroupviewcache.h"
+
+namespace {
+constexpr int kScalarSlot = 3;
+constexpr int kBlankSlot = 4;
+constexpr int kStaleUndoSlot = 5;
+constexpr int kStaleRedoSlot = 6;
+constexpr int kMergeSlot = 2;
+
+VgVoice voice(int duty, int attack, const QString &symbol = QStringLiteral("snd_a"))
+{
+    VgVoice value;
+    value.duty = duty;
+    value.attack = attack;
+    value.symbol = symbol;
+    return value;
+}
+SetVoicegroupSlot setSlot(int slot, const VgVoice &value, const std::optional<VgVoice> &expected)
+{
+    return {slot, value, expected};
+}
+std::optional<VoicegroupEditInput> draft(HistoryRequest request)
+{
+    if (auto *const input = std::get_if<VoicegroupEditInput>(&request))
+        return std::move(*input);
+    return std::nullopt;
+}
+bool isSet(const VoicegroupEditInput &input, int slot, const VgVoice &value,
+           const std::optional<VgVoice> &expected)
+{
+    const auto *const set = std::get_if<SetVoicegroupSlot>(&input.operation);
+    return set && set->slot == slot && set->value == value && set->expected == expected;
+}
+
+// No-host worker double for coordinator/history state rules. The bank worker
+// Qt suite separately proves its materialization token against real source bytes.
+class FakeBank final
+{
+  public:
+    struct Outcome {
+        bool applied = false;
+        std::optional<VoicegroupSource::BlankSlotMaterialization> token;
+    };
+    void put(int slot, VgVoice value) { m_slots[slot] = std::move(value); }
+    void rematerialize(int slot, VgVoice value)
+    {
+        m_slots[slot] = std::move(value);
+        m_token = token(slot);
+    }
+    Outcome apply(const VoicegroupEditInput &input)
+    {
+        if (const auto *const set = std::get_if<SetVoicegroupSlot>(&input.operation)) {
+            if (set->slot < 0 || set->slot >= int(m_slots.size()) ||
+                m_slots[set->slot].has_value() != set->expected.has_value() ||
+                (set->expected && *set->expected != *m_slots[set->slot]))
+                return {};
+            m_slots[set->slot] = set->value;
+            if (set->expected)
+                return {true, {}};
+            m_token = token(set->slot);
+            return {true, m_token};
+        }
+        const auto *const revert = std::get_if<RevertBlankSlot>(&input.operation);
+        if (!revert || !m_token || revert->materialization.headerAfter != m_token->headerAfter)
+            return {};
+        m_slots[revert->materialization.firstAddedSlot].reset();
+        m_token.reset();
+        return {true, {}};
+    }
+
+  private:
+    VoicegroupSource::BlankSlotMaterialization token(int slot)
+    {
+        VoicegroupSource::BlankSlotMaterialization result;
+        result.firstAddedSlot = slot;
+        result.addedLines = {QByteArrayLiteral("generated")};
+        result.headerAfter = QByteArray::number(++m_counter);
+        return result;
+    }
+    std::array<std::optional<VgVoice>, 8> m_slots;
+    std::optional<VoicegroupSource::BlankSlotMaterialization> m_token;
+    int m_counter = 0;
+};
+
+class CountCommand final : public QUndoCommand
+{
+  public:
+    explicit CountCommand(int *value) : m_value(value) {}
+    int id() const override { return 0x6463; }
+    void redo() override { ++*m_value; }
+    void undo() override { --*m_value; }
+
+  private:
+    int *m_value;
+};
+
+class VoicegroupViewCacheTest final : public QObject
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(VoicegroupViewCacheTest)
+  public:
+    VoicegroupViewCacheTest() = default;
+
+  private slots:
+    void historyLifecycleAndStaleTransitions();
+    void mergeRules();
+    void coordinatorRoutesTransitionsAndGates();
+};
+
+void VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions()
+{
+    const auto identity =
+        VoicegroupId::create(QStringLiteral("sound/voicegroups/bank.inc"), QString());
+
+Original expression:
+    QVERIFY(identity);
+
+A002 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:131
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QUndoStack stack;
+    SongHistory history(stack);
+    int document = 0;
+    FakeBank bank;
+
+Original expression:
+    QVERIFY(!history.canUndo() && !history.canRedo());
+
+A003 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:135
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.pushDocument(std::make_unique<CountCommand>(&document));
+    const auto afterDocument = history.currentDocumentIdentity();
+    const auto savedDocument = history.savedDocumentIdentity();
+
+Original expression:
+    QVERIFY(std::holds_alternative<DocumentHistoryApplied>(history.requestUndo()));
+
+A004 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:136
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(document, 0);
+
+A005 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:137
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(history.currentDocumentIdentity(), history.savedDocumentIdentity());
+
+A006 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:138
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(std::holds_alternative<DocumentHistoryApplied>(history.requestRedo()));
+
+A007 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:139
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(document, 1);
+
+A008 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:145
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    const VgVoice before = voice(2, 0);
+    const VgVoice after = voice(5, 0);
+    bank.put(kScalarSlot, before);
+    const VoicegroupEditInput scalar{*identity, setSlot(kScalarSlot, after, before)};
+
+Original expression:
+    QVERIFY(bank.apply(scalar).applied);
+
+A009 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:147
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.pushConfirmedBank(scalar, {});
+
+Original expression:
+    QCOMPARE(stack.count(), 2);
+
+A010 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:148
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(history.currentDocumentIdentity(), afterDocument);
+
+A011 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    std::optional<VoicegroupEditInput> undo = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(undo && isSet(*undo, kScalarSlot, before, after));
+
+A012 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:151
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(bank.apply(*undo).applied);
+
+A013 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.crossConfirmedBankUndo({});
+
+Original expression:
+    QCOMPARE(stack.index(), 1);
+
+A014 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    std::optional<VoicegroupEditInput> redo = draft(history.requestRedo());
+
+Original expression:
+    QVERIFY(redo && isSet(*redo, kScalarSlot, after, before));
+
+A015 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(bank.apply(*redo).applied);
+
+A016 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:158
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.crossConfirmedBankRedo({});
+
+Original expression:
+    QCOMPARE(stack.index(), 2);
+
+A017 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:163
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    const VgVoice blank = voice(2, 0, QStringLiteral("snd_new"));
+    const VoicegroupEditInput blankInput{*identity, setSlot(kBlankSlot, blank, std::nullopt)};
+    const FakeBank::Outcome first = bank.apply(blankInput);
+
+Original expression:
+    QVERIFY(first.applied && first.token);
+
+A018 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.pushConfirmedBank(blankInput, *first.token);
+    undo = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(undo && std::holds_alternative<RevertBlankSlot>(undo->operation));
+
+A019 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:167
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(bank.apply(*undo).applied);
+
+A020 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:170
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.crossConfirmedBankUndo({});
+    redo = draft(history.requestRedo());
+
+Original expression:
+    QVERIFY(redo && isSet(*redo, kBlankSlot, blank, std::nullopt));
+
+A021 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:172
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const FakeBank::Outcome fresh = bank.apply(*redo);
+
+Original expression:
+    QVERIFY(fresh.applied && fresh.token && fresh.token->headerAfter != first.token->headerAfter);
+
+A022 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.crossConfirmedBankRedo(fresh.token);
+
+    const VoicegroupEditInput staleUndo{
+        *identity, setSlot(kStaleUndoSlot, voice(2, 0, QStringLiteral("stale")), std::nullopt)};
+    const FakeBank::Outcome staleApplied = bank.apply(staleUndo);
+
+Original expression:
+    QVERIFY(staleApplied.applied && staleApplied.token);
+
+A023 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:182
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.pushConfirmedBank(staleUndo, *staleApplied.token);
+    bank.rematerialize(kStaleUndoSlot, voice(2, 0, QStringLiteral("stale")));
+    undo = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(undo && !bank.apply(*undo).applied);
+
+A024 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const int undoCount = stack.count();
+    history.resolveBankUndoConflict();
+
+Original expression:
+    QCOMPARE(stack.count(), undoCount - 1);
+
+A025 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(history.canUndo() && !history.canRedo());
+
+A026 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:187
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(history.currentDocumentIdentity(), afterDocument);
+
+A027 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:188
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QCOMPARE(history.savedDocumentIdentity(), savedDocument);
+
+A028 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:193
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    const VoicegroupEditInput staleRedo{
+        *identity, setSlot(kStaleRedoSlot, voice(2, 0, QStringLiteral("redo")), std::nullopt)};
+    const FakeBank::Outcome redoApplied = bank.apply(staleRedo);
+
+Original expression:
+    QVERIFY(redoApplied.applied && redoApplied.token);
+
+A029 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:196
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.pushConfirmedBank(staleRedo, *redoApplied.token);
+    undo = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(undo && bank.apply(*undo).applied);
+
+A030 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:200
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.crossConfirmedBankUndo({});
+    bank.rematerialize(kStaleRedoSlot, voice(2, 0, QStringLiteral("redo")));
+    redo = draft(history.requestRedo());
+
+Original expression:
+    QVERIFY(redo && !bank.apply(*redo).applied);
+
+A031 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:203
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const int redoCount = stack.count();
+    history.resolveBankRedoConflict();
+
+Original expression:
+    QCOMPARE(stack.count(), redoCount - 1);
+
+A032 | VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions | src/checks/voicegroup/tst_voicegroupviewcache.cpp:204
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!history.canRedo());
+
+A033 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:211
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+}
+
+void VoicegroupViewCacheTest::mergeRules()
+{
+    const auto identity =
+        VoicegroupId::create(QStringLiteral("sound/voicegroups/bank.inc"), QString());
+
+Original expression:
+    QVERIFY(identity);
+
+A034 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:219
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const VgVoice first = voice(2, 0), second = voice(5, 0), third = voice(7, 0),
+                  attack = voice(2, 3), structural = voice(2, 0, QStringLiteral("snd_b"));
+    {
+        QUndoStack stack;
+        SongHistory history(stack);
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, second, first)}, {});
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, third, second)}, {});
+
+Original expression:
+        QCOMPARE(stack.count(), 1);
+
+A035 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:221
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+        const std::optional<VoicegroupEditInput> undo = draft(history.requestUndo());
+
+Original expression:
+        QVERIFY(undo && isSet(*undo, kMergeSlot, first, third));
+
+A036 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    }
+    {
+        QUndoStack stack;
+        SongHistory history(stack);
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, second, first)}, {});
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, first, second)}, {});
+
+Original expression:
+        QCOMPARE(stack.count(), 0);
+
+A037 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:239
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    }
+    {
+        QUndoStack stack;
+        SongHistory history(stack);
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, second, std::nullopt)},
+                                  VoicegroupSource::BlankSlotMaterialization{});
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, third, second)}, {});
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot + 1, third, first)}, {});
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, attack, first)}, {});
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, structural, first)}, {});
+
+Original expression:
+        QCOMPARE(stack.count(), 5);
+
+A038 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:247
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    }
+    {
+        QUndoStack stack;
+        SongHistory history(stack);
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, second, first)}, {});
+        history.markDocumentSaved(history.currentDocumentIdentity());
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, third, second)}, {});
+
+Original expression:
+        QCOMPARE(stack.count(), 1);
+
+A039 | VoicegroupViewCacheTest::mergeRules | src/checks/voicegroup/tst_voicegroupviewcache.cpp:250
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+        history.sealBankMerge();
+        history.pushConfirmedBank({*identity, setSlot(kMergeSlot, second, third)}, {});
+
+Original expression:
+        QCOMPARE(stack.count(), 2);
+
+A040 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:262
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    }
+}
+
+void VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates()
+{
+    const auto identity =
+        VoicegroupId::create(QStringLiteral("sound/voicegroups/bank.inc"), QString());
+    const auto other =
+        VoicegroupId::create(QStringLiteral("sound/voicegroups/other.inc"), QString());
+    const auto tab = SongName::create(QStringLiteral("banktab"));
+    const auto otherTab = SongName::create(QStringLiteral("othertab"));
+
+Original expression:
+    QVERIFY(identity && other && tab && otherTab);
+
+A041 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:268
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    QUndoStack stack;
+    SongHistory history(stack);
+    VoicegroupViewCache cache;
+    const VgVoice before = voice(2, 0), after = voice(5, 0);
+    const VoicegroupEditInput input{*identity, setSlot(kScalarSlot, after, before)};
+
+Original expression:
+    QVERIFY(cache.find(*identity) == nullptr && cache.bankActionsEnabled() &&
+            cache.closeEnabledFor(*tab));
+
+A042 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:272
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    LoadedBankView view{*identity, {}, QStringLiteral("bank"), true, {}};
+    cache.applyView(view);
+
+Original expression:
+    QVERIFY(cache.find(*identity) && cache.find(*identity)->dirty);
+
+A043 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:275
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    view.dirty = false;
+    cache.applyView(view);
+
+Original expression:
+    QVERIFY(!cache.find(*identity)->dirty);
+
+A044 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:276
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Initial, input}));
+
+A045 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:277
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!cache.begin({*identity, *otherTab, PendingBankTransition::Kind::Undo, input}));
+
+A046 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:278
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!cache.bankActionsEnabled() && cache.pendingOrigin() == *tab &&
+            !cache.closeEnabledFor(*tab) && cache.closeEnabledFor(*otherTab));
+
+A047 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:282
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveConflict({*other}, history);
+    cache.resolveApplied({*other, std::nullopt}, history);
+
+Original expression:
+    QVERIFY(cache.pendingOrigin());
+
+A048 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:284
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveApplied({*identity, std::nullopt}, history);
+
+Original expression:
+    QCOMPARE(stack.count(), 1);
+
+A049 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:285
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.bankActionsEnabled() && !cache.pendingOrigin());
+
+A050 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+    std::optional<VoicegroupEditInput> undo = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(undo);
+
+A051 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:289
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Undo, *undo}));
+
+A052 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:291
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveApplied({*identity, std::nullopt}, history);
+
+Original expression:
+    QCOMPARE(stack.index(), 0);
+
+A053 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:293
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    std::optional<VoicegroupEditInput> redo = draft(history.requestRedo());
+
+Original expression:
+    QVERIFY(redo);
+
+A054 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:294
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Redo, *redo}));
+
+A055 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:296
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveApplied({*identity, std::nullopt}, history);
+
+Original expression:
+    QCOMPARE(stack.index(), 1);
+
+A056 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:297
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Initial, input}));
+
+A057 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:299
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveConflict({*identity}, history);
+
+Original expression:
+    QCOMPARE(stack.index(), 1);
+
+A058 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:301
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    const std::optional<VoicegroupEditInput> staleUndo = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(staleUndo);
+
+A059 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:302
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Undo, *staleUndo}));
+
+A060 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:304
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveConflict({*identity}, history);
+
+Original expression:
+    QCOMPARE(stack.count(), 0);
+
+A061 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:305
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!history.canUndo());
+
+A062 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:308
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.pushConfirmedBank(input, {});
+    const std::optional<VoicegroupEditInput> revert = draft(history.requestUndo());
+
+Original expression:
+    QVERIFY(revert);
+
+A063 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:311
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    history.crossConfirmedBankUndo({});
+    const std::optional<VoicegroupEditInput> staleRedo = draft(history.requestRedo());
+
+Original expression:
+    QVERIFY(staleRedo);
+
+A064 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:312
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Redo, *staleRedo}));
+
+A065 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:314
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveConflict({*identity}, history);
+
+Original expression:
+    QCOMPARE(stack.count(), 0);
+
+A066 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:315
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(!history.canRedo());
+
+A067 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:316
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+
+Original expression:
+    QVERIFY(cache.begin({*identity, *tab, PendingBankTransition::Kind::Undo, input}));
+
+A068 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:318
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveHardError({*other, QStringLiteral("other")});
+
+Original expression:
+    QVERIFY(cache.pendingOrigin());
+
+A069 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:320
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.resolveHardError({*identity, QStringLiteral("boom")});
+
+Original expression:
+    QVERIFY(cache.bankActionsEnabled() && !cache.pendingOrigin());
+
+A070 | VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates | src/checks/voicegroup/tst_voicegroupviewcache.cpp:322
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the existing Swift checks has been established; no Swift counterpart covers this suite (src/checks/selectionkey/localinputtier_pitchbend.cpp is a C++ suite, not Swift; swiftcore/ and automation Swift cover only unrelated parameter metadata). Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+
+    cache.clear();
+
+Original expression:
+    QVERIFY(cache.find(*identity) == nullptr && cache.bankActionsEnabled() &&
+            cache.closeEnabledFor(*tab));
+
+Remaining original source (closing sequence and helper bodies):
+
+}
+} // namespace
+
+int runVoicegroupViewCacheCheck(const QStringList &qtArguments)
+{
+    VoicegroupViewCacheTest test;
+    QStringList arguments{QStringLiteral("voicegroup-view-cache")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+#include "tst_voicegroupviewcache.moc"
+
+
+Swift assertion predicates
+none: no Swift counterpart file exists, so there are no S entries.
+
+Shared helpers
+none: no Swift fixture files carry expects for this suite.

@@ -63,9 +63,14 @@ public final class DocumentSession {
     /// Both are session-only and never dirty the document or enter history.
     public private(set) var selectedNoteOrder: [NoteID] = []
     public private(set) var selectedNotes: Set<NoteID> = []
+    public private(set) var selectedTracks: Set<Int> = []
+    public enum TrackScopeAction { case plain, toggle, range }
     public var selectedTrack: Int? {
         didSet {
-            if selectedTrack != oldValue { publishChange([.selection]) }
+            if selectedTrack != oldValue {
+                selectedTracks = selectedTrack.map { [$0] } ?? []
+                publishChange([.selection])
+            }
         }
     }
     public var editCursor: Tick = 0 {
@@ -138,6 +143,37 @@ public final class DocumentSession {
         selectedNoteOrder = order
         selectedNotes = membership
         publishChange([.selection])
+    }
+
+    public func adjustTrackScope(track: Int, action: TrackScopeAction) {
+        guard (0..<document.engineTracks.usedTrackCount).contains(track) else { return }
+        var primary = selectedTrack ?? track
+        var scope = selectedTracks
+        var clearNotes = false
+        switch action {
+        case .plain:
+            primary = track
+            scope = [track]
+            clearNotes = true
+        case .toggle:
+            if scope.contains(track) { scope.remove(track) }
+            else { scope.insert(track) }
+            guard !scope.isEmpty else { return }
+            if !scope.contains(primary) {
+                primary = scope.min()!
+                clearNotes = true
+            }
+        case .range:
+            scope = Set(min(primary, track)...max(primary, track))
+        }
+        withStateChanges {
+            selectedTrack = primary
+            if selectedTracks != scope {
+                selectedTracks = scope
+                publishChange([.selection])
+            }
+            if clearNotes { clearSelectedNotes() }
+        }
     }
 
     public func addSelectedNote(_ id: NoteID) {
@@ -387,6 +423,8 @@ public final class DocumentSession {
     /// and the presenter is notified.
     private func handleDocumentChange(_ change: DocumentChange) {
         withStateChanges {
+            let priorScope = selectedTracks
+            let priorPrimary = selectedTrack
             let survivingSelection = selectedNoteOrder.filter { document.note($0) != nil }
             if survivingSelection.count != selectedNoteOrder.count {
                 selectedNoteOrder = survivingSelection
@@ -415,6 +453,17 @@ public final class DocumentSession {
             if let track = selectedTrack,
                !(0..<document.engineTracks.usedTrackCount).contains(track) {
                 selectedTrack = nil
+            }
+            if let remap = change.trackRemap {
+                if selectedTrack == nil, let priorPrimary,
+                   document.engineTracks.usedTrackCount > 0 {
+                    selectedTrack = min(priorPrimary, document.engineTracks.usedTrackCount - 1)
+                }
+                selectedTracks = Set(priorScope.compactMap { track in
+                    remap.engineTrackMap.indices.contains(track)
+                        ? remap.engineTrackMap[track] : nil
+                })
+                if let selectedTrack { selectedTracks.insert(selectedTrack) }
             }
             timeline = PlaybackTimeline.build(state: document.state, sampleRate: sampleRate)
             camera.updateTimeDomain(

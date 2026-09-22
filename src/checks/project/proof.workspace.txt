@@ -1,0 +1,1531 @@
+Assertion correspondence: project/workspace.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/project/workspace.cpp
+Original SHA-256: 0a6cdc0225c40a0fcc81df7eeef22ecdfeeffd7dad740d4fdfc1dc3b6a43a2e9
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute;
+PARTIAL identifies a related Swift predicate with an explicit unproved condition;
+GAP identifies an original predicate without an established equivalent;
+NATIVE identifies an observation only a native window/rendering/harness run can establish.
+100 assertion sites across ProjectWorkspace open/startup/catalog/plan/reload/edit publication ordering. Only the Conflict edit row has a related Swift predicate (same projectworkspacecheck/ lane prefix); everything else is GAP. No site is marked MATCHED.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runBankHistorySuite (SessionChecks.swift) owns the single related conflict predicate via ProjectService bank calls. No Swift suite models ProjectWorkspace publication (Loading/Ready/Failed states, catalog replacement, keyed plan events, reload staging, exact log-size counts).
+
+Fixture, sequence and row constraints
+QSettings are isolated per case with saved settings cleared; startup seeds lastOpenSongs order (mus_petalburg, mus_route101, porydaw_missing_song) with selected mus_route101; catalogReplaceVsUnkeyedFailure_data has 2 rows; editConflict_appliedReceipt_hardFailure_data has 3 rows; reload/edit cases assert exact m_log sizes (mark+1/+2/+3).
+
+Original assertion inventory
+
+A001 | ProjectWorkspaceTest::verifyStateErrorInvariant | src/checks/project/workspace.cpp:252
+Disposition: GAP
+Mapping/reason: C++ cleanup-called state/error invariant over the publication log; no Swift predicate establishes this condition.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <QDir>
+  #include <QSettings>
+  #include <QTemporaryDir>
+  #include <QTimer>
+
+  #include <algorithm>
+
+  #include <deque>
+  #include <memory>
+  #include <optional>
+  #include <utility>
+  #include <variant>
+
+  #include "project/projectidentity.h"
+  #include "project/projectworkspace.h"
+  #include "project/songregistry.h"
+  #include "project/voicegroupsource.h"
+
+  namespace {
+
+  using Entry = std::variant<ProjectState, ProjectEvent, SongUpdate>;
+
+  int stateCount(const std::deque<Entry> &log)
+  {
+      int count = 0;
+      for (const Entry &entry : log)
+          count += std::holds_alternative<ProjectState>(entry) ? 1 : 0;
+      return count;
+  }
+
+  const ProjectState *lastState(const std::deque<Entry> &log)
+  {
+      for (auto it = log.rbegin(); it != log.rend(); ++it)
+          if (const auto *const state = std::get_if<ProjectState>(&*it))
+              return state;
+      return nullptr;
+  }
+
+  bool lastStateIs(const std::deque<Entry> &log, ProjectOpenState state)
+  {
+      const ProjectState *const last = lastState(log);
+      return last && last->state == state;
+  }
+
+  template <typename Match>
+  int indexOf(const std::deque<Entry> &log, int begin, Match &&match)
+  {
+      for (int index = std::max(begin, 0); index < static_cast<int>(log.size()); ++index)
+          if (match(log[index]))
+              return index;
+      return -1;
+  }
+
+  int stateIndexOf(const std::deque<Entry> &log, ProjectOpenState state)
+  {
+      return indexOf(log, 0, [state](const Entry &entry) {
+          const auto *const candidate = std::get_if<ProjectState>(&entry);
+          return candidate && candidate->state == state;
+      });
+  }
+
+  bool isTerminal(const SongUpdate &update)
+  {
+      return std::holds_alternative<VoicegroupBound>(update.payload) ||
+             std::holds_alternative<SongFailed>(update.payload);
+  }
+
+  int terminalCount(const std::deque<Entry> &log, const SongName &song)
+  {
+      int count = 0;
+      for (const Entry &entry : log) {
+          const auto *const update = std::get_if<SongUpdate>(&entry);
+          count += update && update->song == song && isTerminal(*update) ? 1 : 0;
+      }
+      return count;
+  }
+
+  int terminalIndexOf(const std::deque<Entry> &log, const SongName &song)
+  {
+      return indexOf(log, 0, [&song](const Entry &entry) {
+          const auto *const update = std::get_if<SongUpdate>(&entry);
+          return update && update->song == song && isTerminal(*update);
+      });
+  }
+
+  bool hasPublishedCatalog(const Entry &entry)
+  {
+      const auto *const state = std::get_if<ProjectState>(&entry);
+      return state && !state->catalog.groupArgs.isEmpty();
+  }
+
+  template <typename Failure>
+  const Failure *mutationFailure(const Entry &entry)
+  {
+      const auto *const event = std::get_if<ProjectEvent>(&entry);
+      const auto *const failure = event ? std::get_if<ProjectMutationFailure>(event) : nullptr;
+      return failure ? std::get_if<Failure>(failure) : nullptr;
+  }
+
+  int firstFilledSlot(const LoadedBankView &view)
+  {
+      for (int index = 0; index < view.slotViews.size(); ++index)
+          if (view.slotViews[index].voice.has_value())
+              return index;
+      return -1;
+  }
+
+  enum class CatalogCase { Refresh, DuplicateVoicegroup };
+  enum class EditCase { Conflict, Applied, HardFailure };
+
+  class ProjectWorkspaceTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(ProjectWorkspaceTest)
+
+    public:
+      explicit ProjectWorkspaceTest(QString stagedRoot) : m_stagedRoot(std::move(stagedRoot)) {}
+
+    private slots:
+      void init();
+      void cleanup();
+      void openRefusedWhileLoading_errorPresent_pathNotWritten();
+      void successWritesLastPath_failedRetainsSnapshot();
+      void startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder();
+      void missingSavedNameReconcileFailure();
+      void autoCatalogExactlyOnceAfterAllTerminals();
+      void catalogReplaceVsUnkeyedFailure_data();
+      void catalogReplaceVsUnkeyedFailure();
+      void planEventsForwardKeyed();
+      void silentCompletionsAdvanceFifoWithoutPublication();
+      void reloadStagesMidiViewBound();
+      void editConflict_appliedReceipt_hardFailure_data();
+      void editConflict_appliedReceipt_hardFailure();
+
+    private:
+      template <typename Ready>
+      bool waitFor(Ready &&ready, QString &error);
+      void clearSavedProjectSettings();
+      void seedStartupSettings();
+      void startWorkspace();
+      bool openReady(QString &error);
+      bool startRestoredStartup(QString &error);
+      bool waitForStartupTerminals(const SongName &route101, const SongName &petalburg,
+                                   const SongName &missing, QString &error);
+      void verifyStateErrorInvariant();
+
+      QString m_stagedRoot;
+      std::unique_ptr<QTemporaryDir> m_settingsDirectory;
+      std::unique_ptr<ProjectWorkspace> m_workspace;
+      QEventLoop m_loop;
+      std::deque<Entry> m_log;
+  };
+
+  template <typename Ready>
+  bool ProjectWorkspaceTest::waitFor(Ready &&ready, QString &error)
+  {
+      bool timedOut = false;
+      QTimer timer;
+      timer.setSingleShot(true);
+      timer.setInterval(30000);
+      QObject::connect(&timer, &QTimer::timeout, &m_loop, [&] {
+          timedOut = true;
+          m_loop.quit();
+      });
+      while (!timedOut && !ready()) {
+          timer.start();
+          m_loop.exec();
+      }
+      timer.stop();
+      if (ready())
+          return true;
+      error = QStringLiteral("timed out waiting for ProjectWorkspace publication");
+      return false;
+  }
+
+  void ProjectWorkspaceTest::clearSavedProjectSettings()
+  {
+      QSettings settings;
+      settings.remove(QStringLiteral("lastProjectDir"));
+      settings.remove(QStringLiteral("lastOpenSongs"));
+      settings.remove(QStringLiteral("lastSongLabel"));
+      settings.sync();
+  }
+
+  void ProjectWorkspaceTest::seedStartupSettings()
+  {
+      QSettings settings;
+      settings.setValue(QStringLiteral("lastProjectDir"), m_stagedRoot);
+      settings.setValue(QStringLiteral("lastOpenSongs"),
+                        QStringList{QStringLiteral("mus_petalburg"), QStringLiteral("mus_route101"),
+                                    QStringLiteral("porydaw_missing_song")});
+      settings.setValue(QStringLiteral("lastSongLabel"), QStringLiteral("mus_route101"));
+      settings.sync();
+  }
+
+  void ProjectWorkspaceTest::startWorkspace()
+  {
+      m_log.clear();
+      m_workspace = std::make_unique<ProjectWorkspace>();
+      const auto record = [this](auto value) {
+          m_log.emplace_back(std::move(value));
+          m_loop.quit();
+      };
+      connect(m_workspace.get(), &ProjectWorkspace::projectStatePublished, m_workspace.get(),
+              [record](ProjectState state) { record(std::move(state)); });
+      connect(m_workspace.get(), &ProjectWorkspace::projectEventPublished, m_workspace.get(),
+              [record](ProjectEvent event) { record(std::move(event)); });
+      connect(m_workspace.get(), &ProjectWorkspace::songUpdatePublished, m_workspace.get(),
+              [record](SongUpdate update) { record(std::move(update)); });
+  }
+
+  bool ProjectWorkspaceTest::openReady(QString &error)
+  {
+      startWorkspace();
+      m_workspace->openProject(OpenProjectInput{m_stagedRoot});
+      return waitFor(
+          [this] {
+              const ProjectState *const state = lastState(m_log);
+              return state && state->state == ProjectOpenState::Ready &&
+                     !state->catalog.groupArgs.isEmpty();
+          },
+          error);
+  }
+
+  bool ProjectWorkspaceTest::startRestoredStartup(QString &error)
+  {
+      Q_UNUSED(error);
+      seedStartupSettings();
+      startWorkspace();
+      return true;
+  }
+
+  bool ProjectWorkspaceTest::waitForStartupTerminals(const SongName &route101,
+                                                     const SongName &petalburg,
+                                                     const SongName &missing, QString &error)
+  {
+      return waitFor(
+          [&] {
+              return terminalCount(m_log, route101) >= 1 && terminalCount(m_log, petalburg) >= 1 &&
+                     terminalCount(m_log, missing) >= 1;
+          },
+          error);
+  }
+
+  void ProjectWorkspaceTest::verifyStateErrorInvariant()
+  {
+      for (const Entry &entry : m_log) {
+          const auto *const state = std::get_if<ProjectState>(&entry);
+          if (state)
+
+Original expression:
+  QCOMPARE(state->error.has_value(), state->state == ProjectOpenState::Failed)
+
+A002 | ProjectWorkspaceTest::init | src/checks/project/workspace.cpp:259
+Disposition: GAP
+Mapping/reason: C++ harness setup guard (isolated QSettings directory); no Swift predicate establishes this fixture precondition.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void ProjectWorkspaceTest::init()
+  {
+      m_settingsDirectory = std::make_unique<QTemporaryDir>();
+
+Original expression:
+  QVERIFY2(m_settingsDirectory->isValid(), "could not create isolated QSettings directory")
+
+A003 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:280
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QSettings::setDefaultFormat(QSettings::IniFormat);
+      QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, m_settingsDirectory->path());
+      QSettings::setPath(QSettings::NativeFormat, QSettings::UserScope, m_settingsDirectory->path());
+      clearSavedProjectSettings();
+  }
+
+  void ProjectWorkspaceTest::cleanup()
+  {
+      verifyStateErrorInvariant();
+      m_workspace.reset();
+      clearSavedProjectSettings();
+      m_log.clear();
+      m_settingsDirectory.reset();
+  }
+
+  void ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten()
+  {
+      startWorkspace();
+      const QString goneRoot = m_stagedRoot + QStringLiteral("/gone");
+      m_workspace->openProject(OpenProjectInput{goneRoot});
+
+Original expression:
+  QCOMPARE(stateCount(m_log), 1)
+
+A004 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:282
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      m_workspace->openProject(OpenProjectInput{m_stagedRoot});
+
+Original expression:
+  QCOMPARE(stateCount(m_log), 1)
+
+A005 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:285
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      QString error;
+
+Original expression:
+  QVERIFY2(waitFor([this] { return lastStateIs(m_log, ProjectOpenState::Failed); }, error),
+               qPrintable(error))
+
+A006 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const ProjectState *const failed = lastState(m_log);
+
+Original expression:
+  QVERIFY(failed)
+
+A007 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:290
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (failed)
+
+Original expression:
+  QVERIFY(failed->error && !failed->error->isEmpty())
+
+A008 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:292
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QSettings settings;
+
+Original expression:
+  QVERIFY(!settings.contains(QStringLiteral("lastProjectDir")))
+
+A009 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:295
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      m_workspace->openProject(OpenProjectInput{m_stagedRoot});
+
+Original expression:
+  QVERIFY2(waitFor([this] { return lastStateIs(m_log, ProjectOpenState::Ready); }, error),
+               qPrintable(error))
+
+A010 | ProjectWorkspaceTest::openRefusedWhileLoading_errorPresent_pathNotWritten | src/checks/project/workspace.cpp:297
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(QSettings().value(QStringLiteral("lastProjectDir")).toString(),
+               QDir(m_stagedRoot).absolutePath())
+
+A011 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:304
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(openReady(error), qPrintable(error))
+
+A012 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:307
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString goneRoot = m_stagedRoot + QStringLiteral("/gone");
+      m_workspace->openProject(OpenProjectInput{goneRoot});
+
+Original expression:
+  QVERIFY2(waitFor([this] { return lastStateIs(m_log, ProjectOpenState::Failed); }, error),
+               qPrintable(error))
+
+A013 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:310
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const ProjectState *const failed = lastState(m_log);
+
+Original expression:
+  QVERIFY(failed)
+
+A014 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:312
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (failed) {
+
+Original expression:
+  QCOMPARE(failed->snapshot.root(), QDir(m_stagedRoot).absolutePath())
+
+A015 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:313
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(failed->snapshot.isOpen())
+
+A016 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:317
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+      m_workspace->openProject(OpenProjectInput{m_stagedRoot});
+
+Original expression:
+  QVERIFY2(waitFor(
+                   [this] {
+                       const ProjectState *const state = lastState(m_log);
+                       return state && state->state == ProjectOpenState::Ready &&
+                              !state->catalog.groupArgs.isEmpty();
+                   },
+                   error),
+               qPrintable(error))
+
+A017 | ProjectWorkspaceTest::successWritesLastPath_failedRetainsSnapshot | src/checks/project/workspace.cpp:325
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(QSettings().value(QStringLiteral("lastProjectDir")).toString(),
+               QDir(m_stagedRoot).absolutePath())
+
+A018 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:332
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(startRestoredStartup(error), qPrintable(error))
+
+A019 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:337
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
+      const std::optional<SongName> petalburg = SongName::create(QStringLiteral("mus_petalburg"));
+      const std::optional<SongName> missing =
+          SongName::create(QStringLiteral("porydaw_missing_song"));
+
+Original expression:
+  QVERIFY(route101)
+
+A020 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:338
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(petalburg)
+
+A021 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:339
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(missing)
+
+A022 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:342
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!(route101 && petalburg && missing))
+          return;
+
+Original expression:
+  QVERIFY2(waitForStartupTerminals(*route101, *petalburg, *missing, error), qPrintable(error))
+
+A023 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:349
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      const int loading = stateIndexOf(m_log, ProjectOpenState::Loading);
+      const int ready = stateIndexOf(m_log, ProjectOpenState::Ready);
+      const int selected = terminalIndexOf(m_log, *route101);
+      const int rest = terminalIndexOf(m_log, *petalburg);
+      const int failed = terminalIndexOf(m_log, *missing);
+
+Original expression:
+  QCOMPARE(loading, 0)
+
+A024 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:350
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(ready > loading)
+
+A025 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:351
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(selected > ready)
+
+A026 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:352
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rest > ready)
+
+A027 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:353
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(failed > ready)
+
+A028 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:354
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(selected < rest)
+
+A029 | ProjectWorkspaceTest::startupLoadingLeadsReadyLeadsSongs_selectedFirstInOrder | src/checks/project/workspace.cpp:355
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rest < failed)
+
+A030 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:361
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::missingSavedNameReconcileFailure()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(startRestoredStartup(error), qPrintable(error))
+
+A031 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:366
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
+      const std::optional<SongName> petalburg = SongName::create(QStringLiteral("mus_petalburg"));
+      const std::optional<SongName> missing =
+          SongName::create(QStringLiteral("porydaw_missing_song"));
+
+Original expression:
+  QVERIFY(route101)
+
+A032 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:367
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(petalburg)
+
+A033 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:368
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(missing)
+
+A034 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:371
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!(route101 && petalburg && missing))
+          return;
+
+Original expression:
+  QVERIFY2(waitForStartupTerminals(*route101, *petalburg, *missing, error), qPrintable(error))
+
+A035 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:382
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      bool found = false;
+      for (const Entry &entry : m_log) {
+          const auto *const update = std::get_if<SongUpdate>(&entry);
+          if (!update || update->song != *missing)
+              continue;
+          const auto *const failure = std::get_if<SongFailed>(&update->payload);
+          if (!failure)
+              continue;
+          found = true;
+
+Original expression:
+  QCOMPARE(failure->stage, SongStage::Reconcile)
+
+A036 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:383
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!failure->message.isEmpty())
+
+A037 | ProjectWorkspaceTest::missingSavedNameReconcileFailure | src/checks/project/workspace.cpp:385
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+Original expression:
+  QVERIFY(found)
+
+A038 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:391
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(startRestoredStartup(error), qPrintable(error))
+
+A039 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:397
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int startupMark = static_cast<int>(m_log.size());
+      const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
+      const std::optional<SongName> petalburg = SongName::create(QStringLiteral("mus_petalburg"));
+      const std::optional<SongName> missing =
+          SongName::create(QStringLiteral("porydaw_missing_song"));
+
+Original expression:
+  QVERIFY(route101)
+
+A040 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:398
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(petalburg)
+
+A041 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:399
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(missing)
+
+A042 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:402
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!(route101 && petalburg && missing))
+          return;
+
+Original expression:
+  QVERIFY2(waitForStartupTerminals(*route101, *petalburg, *missing, error), qPrintable(error))
+
+A043 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:408
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int ready = stateIndexOf(m_log, ProjectOpenState::Ready);
+      const int selected = terminalIndexOf(m_log, *route101);
+      const int rest = terminalIndexOf(m_log, *petalburg);
+      const int failed = terminalIndexOf(m_log, *missing);
+
+
+Original expression:
+  QVERIFY2(
+          waitFor(
+              [this, startupMark] { return indexOf(m_log, startupMark, hasPublishedCatalog) >= 0; },
+              error),
+          qPrintable(error))
+
+A044 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:414
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int catalogIndex = indexOf(m_log, startupMark, hasPublishedCatalog);
+
+Original expression:
+  QVERIFY(catalogIndex > ready)
+
+A045 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:415
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(catalogIndex > selected)
+
+A046 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:416
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(catalogIndex > rest)
+
+A047 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:417
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(catalogIndex > failed)
+
+A048 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:422
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      int catalogCount = 0;
+      for (int index = startupMark; index < static_cast<int>(m_log.size()); ++index) {
+          catalogCount += hasPublishedCatalog(m_log[index]) ? 1 : 0;
+
+Original expression:
+  QVERIFY(mutationFailure<CatalogMutationFailed>(m_log[index]) == nullptr)
+
+A049 | ProjectWorkspaceTest::autoCatalogExactlyOnceAfterAllTerminals | src/checks/project/workspace.cpp:424
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+
+Original expression:
+  QCOMPARE(catalogCount, 1)
+
+A050 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:439
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure_data()
+  {
+      QTest::addColumn<int>("catalogCase");
+      QTest::newRow("refresh-replaces-catalog") << static_cast<int>(CatalogCase::Refresh);
+      QTest::newRow("duplicate-voicegroup-is-unkeyed-failure")
+          << static_cast<int>(CatalogCase::DuplicateVoicegroup);
+  }
+
+  void ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure()
+  {
+      QFETCH(int, catalogCase);
+      QString error;
+
+Original expression:
+  QVERIFY2(openReady(error), qPrintable(error))
+
+A051 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:444
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int mark = static_cast<int>(m_log.size());
+
+      if (static_cast<CatalogCase>(catalogCase) == CatalogCase::Refresh) {
+          m_workspace->submit(ProjectOperation{RefreshCatalogInput{}});
+
+Original expression:
+  QVERIFY2(
+              waitFor([this, mark] { return indexOf(m_log, mark, hasPublishedCatalog) >= 0; }, error),
+              qPrintable(error))
+
+A052 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:447
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(m_log.size()), mark + 1)
+
+A053 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:452
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          return;
+      }
+
+      const ProjectState *const state = lastState(m_log);
+
+Original expression:
+  QVERIFY(state)
+
+A054 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:455
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!state)
+          return;
+
+Original expression:
+  QVERIFY(!state->catalog.groupArgs.isEmpty())
+
+A055 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:461
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (state->catalog.groupArgs.isEmpty())
+          return;
+      const QString duplicateName = state->catalog.groupArgs.first().mid(1);
+      m_workspace->submit(
+          ProjectOperation{CreateVoicegroupInput{duplicateName, QString{}, QString{}}});
+
+Original expression:
+  QVERIFY2(waitFor(
+                   [this, mark] {
+                       return indexOf(m_log, mark, [](const Entry &entry) {
+                                  return mutationFailure<CatalogMutationFailed>(entry) != nullptr;
+                              }) >= 0;
+                   },
+                   error),
+               qPrintable(error))
+
+A056 | ProjectWorkspaceTest::catalogReplaceVsUnkeyedFailure | src/checks/project/workspace.cpp:469
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(m_log.size()), mark + 1)
+
+A057 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:475
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::planEventsForwardKeyed()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(openReady(error), qPrintable(error))
+
+A058 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:477
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
+
+Original expression:
+  QVERIFY(route101)
+
+A059 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:485
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      if (!route101)
+          return;
+      const QString constant = SongRegistry::constantForLabel(route101->value());
+
+      int mark = static_cast<int>(m_log.size());
+      m_workspace->submit(ProjectOperation{
+          RegistrationPlanInput{route101->value(), constant, QStringLiteral("MUSIC_PLAYER_BGM")}});
+
+Original expression:
+  QVERIFY2(waitFor(
+                   [this, mark] {
+                       return indexOf(m_log, mark, [](const Entry &entry) {
+                                  const auto *const event = std::get_if<ProjectEvent>(&entry);
+                                  return event &&
+                                         std::holds_alternative<RegistrationPlanResult>(*event);
+                              }) >= 0;
+                   },
+                   error),
+               qPrintable(error))
+
+A060 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:496
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      const auto *const registrationEvent = std::get_if<ProjectEvent>(&m_log[mark]);
+
+Original expression:
+  QVERIFY(registrationEvent)
+
+A061 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:500
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      if (!registrationEvent)
+          return;
+      const auto *const registration = std::get_if<RegistrationPlanResult>(registrationEvent);
+
+Original expression:
+  QVERIFY(registration)
+
+A062 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:502
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      if (registration)
+
+Original expression:
+  QVERIFY(registration->song == *route101)
+
+A063 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:506
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+
+      mark = static_cast<int>(m_log.size());
+      m_workspace->submit(ProjectOperation{DeletionPlanInput{*route101, constant}});
+
+Original expression:
+  QVERIFY2(waitFor(
+                   [this, mark] {
+                       return indexOf(m_log, mark, [](const Entry &entry) {
+                                  const auto *const event = std::get_if<ProjectEvent>(&entry);
+                                  return event && std::holds_alternative<DeletionPlanResult>(*event);
+                              }) >= 0;
+                   },
+                   error),
+               qPrintable(error))
+
+A064 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:516
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      const auto *const deletionEvent = std::get_if<ProjectEvent>(&m_log[mark]);
+
+Original expression:
+  QVERIFY(deletionEvent)
+
+A065 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:520
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      if (!deletionEvent)
+          return;
+      const auto *const deletion = std::get_if<DeletionPlanResult>(deletionEvent);
+
+Original expression:
+  QVERIFY(deletion)
+
+A066 | ProjectWorkspaceTest::planEventsForwardKeyed | src/checks/project/workspace.cpp:522
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S001) observes a session presenter callback, not workspace keyed RegistrationPlan/DeletionPlan events.
+Source context since previous assertion:
+  ;
+      if (deletion)
+
+Original expression:
+  QVERIFY(deletion->song == *route101)
+
+A067 | ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication | src/checks/project/workspace.cpp:528
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(openReady(error), qPrintable(error))
+
+A068 | ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication | src/checks/project/workspace.cpp:533
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const int mark = static_cast<int>(m_log.size());
+      m_workspace->submit(ProjectOperation{CleanupPreviewInput{}});
+      m_workspace->submit(ProjectOperation{CleanupPreviewInput{}});
+      m_workspace->submit(ProjectOperation{ProbeSamplesInput{}});
+
+Original expression:
+  QVERIFY2(waitFor([this, mark] { return static_cast<int>(m_log.size()) > mark; }, error),
+               qPrintable(error))
+
+A069 | ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication | src/checks/project/workspace.cpp:535
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(m_log.size()), mark + 1)
+
+A070 | ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication | src/checks/project/workspace.cpp:537
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const auto *const event = std::get_if<ProjectEvent>(&m_log[mark]);
+
+Original expression:
+  QVERIFY(event)
+
+A071 | ProjectWorkspaceTest::silentCompletionsAdvanceFifoWithoutPublication | src/checks/project/workspace.cpp:539
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (event)
+
+Original expression:
+  QVERIFY(std::holds_alternative<SamplesProbed>(*event))
+
+A072 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:545
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectWorkspaceTest::reloadStagesMidiViewBound()
+  {
+      QString error;
+
+Original expression:
+  QVERIFY2(openReady(error), qPrintable(error))
+
+A073 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:547
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
+
+Original expression:
+  QVERIFY(route101)
+
+A074 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:553
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (!route101)
+          return;
+
+      const int mark = static_cast<int>(m_log.size());
+      m_workspace->submit(ProjectOperation{OpenSongInput{*route101}});
+
+Original expression:
+  QVERIFY2(waitFor([this, mark] { return static_cast<int>(m_log.size()) >= mark + 3; }, error),
+               qPrintable(error))
+
+A075 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:555
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(m_log.size()), mark + 3)
+
+A076 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:559
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const auto *const midi = std::get_if<SongUpdate>(&m_log[mark]);
+      const auto *const viewEvent = std::get_if<ProjectEvent>(&m_log[mark + 1]);
+      const auto *const bound = std::get_if<SongUpdate>(&m_log[mark + 2]);
+
+Original expression:
+  QVERIFY(midi)
+
+A077 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:560
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(viewEvent)
+
+A078 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:561
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(bound)
+
+A079 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:563
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (midi) {
+
+Original expression:
+  QVERIFY(std::holds_alternative<MidiStage>(midi->payload))
+
+A080 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:564
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(midi->song == *route101)
+
+A081 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:567
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      if (viewEvent)
+
+Original expression:
+  QVERIFY(std::holds_alternative<LoadedBankView>(*viewEvent))
+
+A082 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:569
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      if (bound) {
+
+Original expression:
+  QVERIFY(std::holds_alternative<VoicegroupBound>(bound->payload))
+
+A083 | ProjectWorkspaceTest::reloadStagesMidiViewBound | src/checks/project/workspace.cpp:570
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(bound->song == *route101)
+
+A084 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:586
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure_data()
+  {
+      QTest::addColumn<int>("editCase");
+      QTest::newRow("expected-blank-conflict") << static_cast<int>(EditCase::Conflict);
+      QTest::newRow("scalar-edit-view-and-receipt") << static_cast<int>(EditCase::Applied);
+      QTest::newRow("unknown-voicegroup-hard-failure") << static_cast<int>(EditCase::HardFailure);
+  }
+
+  void ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure()
+  {
+      QFETCH(int, editCase);
+      QString error;
+
+Original expression:
+  QVERIFY2(openReady(error), qPrintable(error))
+
+A085 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:588
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      const std::optional<SongName> route101 = SongName::create(QStringLiteral("mus_route101"));
+
+Original expression:
+  QVERIFY(route101)
+
+A086 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:594
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (!route101)
+          return;
+
+      int mark = static_cast<int>(m_log.size());
+      m_workspace->submit(ProjectOperation{OpenSongInput{*route101}});
+
+Original expression:
+  QVERIFY2(waitFor([this, mark] { return static_cast<int>(m_log.size()) >= mark + 3; }, error),
+               qPrintable(error))
+
+A087 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:596
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(m_log.size()), mark + 3)
+
+A088 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:598
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      const auto *const viewEvent = std::get_if<ProjectEvent>(&m_log[mark + 1]);
+
+Original expression:
+  QVERIFY(viewEvent)
+
+A089 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:602
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (!viewEvent)
+          return;
+      const auto *const view = std::get_if<LoadedBankView>(viewEvent);
+
+Original expression:
+  QVERIFY(view)
+
+A090 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:606
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (!view)
+          return;
+      const int filled = firstFilledSlot(*view);
+
+Original expression:
+  QVERIFY(filled >= 0)
+
+A091 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:619
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+      if (filled < 0)
+          return;
+
+      // Do not retain a pointer into the publication deque after an async submit.
+      const VoicegroupId bankId = view->id;
+      const VgVoice voice = *view->slotViews[filled].voice;
+      mark = static_cast<int>(m_log.size());
+
+      switch (static_cast<EditCase>(editCase)) {
+      case EditCase::Conflict:
+          m_workspace->submit(ProjectOperation{
+              VoicegroupEditInput{bankId, SetVoicegroupSlot{filled, voice, std::nullopt}}});
+
+Original expression:
+  QVERIFY2(waitFor(
+                       [this, mark] {
+                           return indexOf(m_log, mark, [](const Entry &entry) {
+                                      const auto *const event = std::get_if<ProjectEvent>(&entry);
+                                      return event &&
+                                             std::holds_alternative<VoicegroupEditConflict>(*event);
+                                  }) >= 0;
+                       },
+                       error),
+                   qPrintable(error))
+
+A092 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:635
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+          break;
+      case EditCase::Applied: {
+          VgVoice edited = voice;
+          ++edited.key;
+          m_workspace->submit(ProjectOperation{
+              VoicegroupEditInput{bankId, SetVoicegroupSlot{filled, edited, voice}}});
+
+Original expression:
+  QVERIFY2(
+              waitFor([this, mark] { return static_cast<int>(m_log.size()) >= mark + 2; }, error),
+              qPrintable(error))
+
+A093 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:638
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<int>(m_log.size()), mark + 2)
+
+A094 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:641
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+          const auto *const appliedView = std::get_if<ProjectEvent>(&m_log[mark]);
+          const auto *const receipt = std::get_if<ProjectEvent>(&m_log[mark + 1]);
+
+Original expression:
+  QVERIFY(appliedView)
+
+A095 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:642
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(receipt)
+
+A096 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:644
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (appliedView)
+
+Original expression:
+  QVERIFY(std::holds_alternative<LoadedBankView>(*appliedView))
+
+A097 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:647
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (receipt) {
+              const auto *const applied = std::get_if<VoicegroupEditApplied>(receipt);
+
+Original expression:
+  QVERIFY(applied)
+
+A098 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:649
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+              if (applied)
+
+Original expression:
+  QVERIFY(applied->voicegroup == bankId)
+
+A099 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:656
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+          }
+          break;
+      }
+      case EditCase::HardFailure: {
+          const std::optional<VoicegroupId> ghost =
+              VoicegroupId::create(QStringLiteral("sound/voicegroups/porydaw_ghost.inc"), QString{});
+
+Original expression:
+  QVERIFY(ghost)
+
+A100 | ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure | src/checks/project/workspace.cpp:661
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; occupied-slot materialization triggers bankConflict (Conflict row), but the Applied view+receipt sequence, unknown-voicegroup hard failure, and exact log-size counts below are unproved.
+Source context since previous assertion:
+  ;
+          if (!ghost)
+              return;
+          m_workspace->submit(ProjectOperation{
+              VoicegroupEditInput{*ghost, SetVoicegroupSlot{0, voice, std::nullopt}}});
+
+Original expression:
+  QVERIFY2(waitFor(
+                       [this, mark, &ghost] {
+                           return indexOf(m_log, mark, [&ghost](const Entry &entry) {
+                                      const auto *const failure =
+                                          mutationFailure<VoicegroupMutationFailed>(entry);
+                                      return failure && failure->voicegroup == *ghost &&
+                                             !failure->message.isEmpty();
+                                  }) >= 0;
+                       },
+                       error),
+                   qPrintable(error))
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+          break;
+      }
+      }
+  }
+
+  } // namespace
+
+  int runProjectWorkspaceCheck(const QString &stagedRoot, const QStringList &qtArguments)
+  {
+      ProjectWorkspaceTest test(stagedRoot);
+      QStringList arguments{QStringLiteral("project-workspace")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "workspace.moc"
+
+Swift assertion predicates
+
+S001 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:563
+  report.expect(publishedChangeCount > 0,
+                    cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
+                    message: "document mutation invokes session presenter callback")
+
+S002 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1411
+  report.expectEqual(ProjectServiceError.bankConflict, error,
+                             cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+                             what: "materializing occupied slot triggers bankConflict")

@@ -1,0 +1,518 @@
+Assertion correspondence: editcheck/tst_songdocument_songraw.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/editcheck/tst_songdocument_songraw.cpp
+Original SHA-256: e4bc0483cc133f175ed962374587844c1ddc699c2713320e5469b678f90544eb
+Swift counterpart: src/checks/editcheck/tst_songdocument_songraw.swift
+Swift SHA-256: 8921251081d73aab391d6063e78d00225d48ebf753192176ec82fba18ab9d19f
+
+Purpose and status
+All 43 original assertion sites are inventoried, including load/setup/index
+guards. MATCHED means the stated predicate and scenario are represented; actual
+execution is recorded separately. Existing small synthetic raw checks are also
+retained in coreRawEventEditing, but do not substitute for corpus-driven rows.
+
+Corpus and fixture sequence
+runRawEventOriginalChecks delegates discovery to coreEditCorpusSongs in
+tst_songdocument_runner.swift, which enumerates every staged sound/songs/midi/*.mid file,
+including unregistered MIDI, matching original playable-file discovery. It rejects
+an empty corpus. Each row reads MIDI bytes directly, as SongDocument.load does;
+no bank/voicegroup is needed. Each checked-in midi.cfg row must have the source
+fixture shape -E -R50 -G<voicegroup> -V100; unexpected flags or duplicate/missing
+rows fail rather than silently defaulting. This maps the fixture config exactly
+(exactGate true, reverb 50, volume 100, source voicegroup, all other defaults).
+Each filename runs both scenarios on separate freshly decoded SongDocuments.
+Read/parse failure fails the suite; no MIDI row is skipped.
+Select track-0 mapped chunk, else first nonempty chunk, else chunk 0 if present.
+Channel is the first channel event or zero. distantBase = max chunk endTick +
+100 * max(1, division / (24 * (extendedClocks ? 2 : 1))).
+Mutation uses distantBase+100: CC7=64 insert, same-tick CC7=99 modify, move to
+tick zero, delete, extend end by 500, clamp end to last event, undo to baseline.
+Reordering uses distantBase+1100: CC7=1, CC10=2, note60 velocity100, same tick;
+query controller/note bounds, swap controllers, attempt both forbidden moves,
+undo/redo swap, then undo/replay all edits and compare exact encoded bytes.
+Shared predicates: eventIndex is firstIndex(of:); eventCount filters equality;
+tracksSorted tests adjacent tick order on every chunk, as the native helper does.
+
+History-count observation
+Swift has no public QUndoStack count accessor. At the tip of a fresh document-only
+history, coreEditHistoryCountAtTip counts successful public undo steps, then redoes
+all steps. It asserts equal traversal counts and exact restored SongState and
+DocumentIdentity. This measures the same entry count before and after forbidden
+moves without adding test-only production APIs. Traversal is additional evidence
+and leaves the original reorder sequence at the same state and history cursor.
+
+Verification evidence
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
+This records the completed checkpoint before the subsequent shared corpus-loader
+extraction/range additions; updated combined verification is pending.
+Legacy editcheck is not registered in the current checkcatalog; no native run
+or live C++/Swift differential parity is claimed.
+
+Shared corpus loader: src/checks/editcheck/tst_songdocument_runner.swift
+Shared corpus SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+
+Original assertion inventory
+
+A001 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:47
+Disposition: MATCHED
+Swift: S002 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S002 asserts the row carries a playable MIDI path under the same cppID.
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no playable song for raw-event mutation")
+
+A002 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:51
+Disposition: MATCHED
+Swift: S001 | src/checks/editcheck/tst_songdocument_songraw.swift :: runRawEventOriginalChecks
+Mapping/reason: Swift S001 fails the suite on corpus loading or encoding failure, so an unreadable staged MIDI throws before SongDocument construction and no loaded row silently disappears, matching the load assertion under the same cppID.
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A003 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:53
+Disposition: MATCHED
+Swift: S003 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S003 fails and returns when no SMF chunk exists, matching the nonnegative-chunk guard under the same cppID.
+Original expression:
+  QVERIFY2(chunk >= 0, "loaded song has no SMF chunk")
+
+A004 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:70
+Disposition: MATCHED
+Swift: S004 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S004 asserts insert increments the raw event count to before + 1 under the same cppID.
+Original expression:
+  QCOMPARE(track.events.size(), before + 1)
+
+A005 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:71
+Disposition: MATCHED
+Swift: S005 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S005 asserts the inserted event occurs exactly once under the same cppID.
+Original expression:
+  QCOMPARE(eventCount(track, event), size_t(1))
+
+A006 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:72
+Disposition: MATCHED
+Swift: S006 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S006 asserts insert extends the chunk end to base under the same cppID.
+Original expression:
+  QCOMPARE(track.endTick, base)
+
+A007 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:73
+Disposition: MATCHED
+Swift: S007 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S007 asserts insert keeps all tracks sorted; coreRawTracksSorted applies the native adjacent nondecreasing-tick predicate to every chunk under the same cppID.
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A008 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:76
+Disposition: MATCHED
+Swift: S008 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S008 fails and returns when the inserted event is absent, matching the nonnegative-index guard under the same cppID.
+Original expression:
+  QVERIFY(sameTickIndex >= 0)
+
+A009 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:79
+Disposition: MATCHED
+Swift: S009 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S009 asserts same-tick modification retains the index under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, event), sameTickIndex)
+
+A010 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:80
+Disposition: MATCHED
+Swift: S010 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S010 asserts same-tick modification keeps sorting under the same cppID.
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A011 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:83
+Disposition: MATCHED
+Swift: S011 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S011 fails and returns when the modified event is absent, matching the nonnegative-index guard under the same cppID.
+Original expression:
+  QVERIFY(movingIndex >= 0)
+
+A012 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:87
+Disposition: MATCHED
+Swift: S012 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S012 asserts the tick change creates the destination event (countBeforeMove + 1) under the same cppID.
+Original expression:
+  QCOMPARE(eventCount(track, event), countBeforeMove + 1)
+
+A013 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:88
+Disposition: MATCHED
+Swift: S013 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S013 asserts the tick change retains the event count (before + 1) under the same cppID.
+Original expression:
+  QCOMPARE(track.events.size(), before + 1)
+
+A014 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:89
+Disposition: MATCHED
+Swift: S014 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S014 asserts the tick change keeps sorting under the same cppID.
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A015 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:92
+Disposition: MATCHED
+Swift: S015 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S015 fails and returns when the moved event is absent, matching the nonnegative-index guard under the same cppID.
+Original expression:
+  QVERIFY(deleteIndex >= 0)
+
+A016 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:94
+Disposition: MATCHED
+Swift: S016 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S016 asserts delete restores the initial event count under the same cppID.
+Original expression:
+  QCOMPARE(track.events.size(), before)
+
+A017 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:97
+Disposition: MATCHED
+Swift: S017 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S017 asserts the explicit chunk-end extension to base + 500 under the same cppID.
+Original expression:
+  QCOMPARE(track.endTick, base + 500)
+
+A018 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:100
+Disposition: MATCHED
+Swift: S018 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S018 asserts the chunk end clamps to the last event under the same cppID.
+Original expression:
+  QCOMPARE(track.endTick, lastTick)
+
+A019 | EditCheckTest::rawEventMutate | src/checks/editcheck/tst_songdocument_songraw.cpp:104
+Disposition: MATCHED
+Swift: S019 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
+Mapping/reason: Swift S019 asserts all mutations undo to the exact MIDI bytes under the same cppID.
+Original expression:
+  QCOMPARE(document.smf().write(), baseline)
+
+A020 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:116
+Disposition: MATCHED
+Swift: S020 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S020 asserts the row carries a playable MIDI path under the same cppID.
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no playable song for raw-event reordering")
+
+A021 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:120
+Disposition: MATCHED
+Swift: S001 | src/checks/editcheck/tst_songdocument_songraw.swift :: runRawEventOriginalChecks
+Mapping/reason: Swift S001 fails the suite on corpus loading or encoding failure; the reorder row decodes with try and funnels into this shared catch, so an unreadable staged MIDI cannot silently disappear, matching the load assertion.
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A022 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:122
+Disposition: MATCHED
+Swift: S021 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S021 fails and returns when no SMF chunk exists, matching the nonnegative-chunk guard under the same cppID.
+Original expression:
+  QVERIFY2(chunk >= 0, "loaded song has no SMF chunk")
+
+A023 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:145
+Disposition: MATCHED
+Swift: S022 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S022 fails and returns when the first inserted controller is absent, matching the nonnegative-index guard under the same cppID.
+Original expression:
+  QVERIFY(firstIndex >= 0)
+
+A024 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:146
+Disposition: MATCHED
+Swift: S023 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S023 asserts the second controller follows the first under the same cppID.
+Original expression:
+  QCOMPARE(secondIndex, firstIndex + 1)
+
+A025 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:147
+Disposition: MATCHED
+Swift: S024 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S024 asserts the note follows the controllers under the same cppID.
+Original expression:
+  QCOMPARE(noteIndex, firstIndex + 2)
+
+A026 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:151
+Disposition: MATCHED
+Swift: S025 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S025 asserts the controller move bounds exist under the same cppID.
+Original expression:
+  QVERIFY(document.rawEventMoveBounds(chunk, size_t(firstIndex), &lower, &upper))
+
+A027 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:152
+Disposition: MATCHED
+Swift: S026 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S026 asserts the controller lower bound under the same cppID.
+Original expression:
+  QCOMPARE(lower, size_t(firstIndex))
+
+A028 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:153
+Disposition: MATCHED
+Swift: S027 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S027 asserts the controller upper bound under the same cppID.
+Original expression:
+  QCOMPARE(upper, size_t(secondIndex))
+
+A029 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:154
+Disposition: MATCHED
+Swift: S028 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S028 asserts the note move bounds exist under the same cppID.
+Original expression:
+  QVERIFY(document.rawEventMoveBounds(chunk, size_t(noteIndex), &lower, &upper))
+
+A030 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:155
+Disposition: MATCHED
+Swift: S029 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S029 asserts the note lower bound under the same cppID.
+Original expression:
+  QCOMPARE(lower, size_t(noteIndex))
+
+A031 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:156
+Disposition: MATCHED
+Swift: S030 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S030 asserts the note upper bound under the same cppID.
+Original expression:
+  QCOMPARE(upper, size_t(noteIndex))
+
+A032 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:159
+Disposition: MATCHED
+Swift: S031 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S031 asserts reorder moves the second controller before the first under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, second), firstIndex)
+
+A033 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:160
+Disposition: MATCHED
+Swift: S032 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S032 asserts reorder moves the first controller after the second under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, first), secondIndex)
+
+A034 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:161
+Disposition: MATCHED
+Swift: S033 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S033 asserts reordering keeps sorting under the same cppID.
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A035 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:165
+Disposition: MATCHED
+Swift: S035 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow; S034 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditHistoryCountAtTip
+Mapping/reason: Swift S035 asserts both forbidden moves leave the history entry count unchanged under the same cppID; Swift S034 additionally asserts the traversal counts agree with exact state and identity restoration.
+Original expression:
+  QCOMPARE(undo->count(), undoCount)
+
+A036 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:166
+Disposition: MATCHED
+Swift: S036 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S036 asserts the forbidden moves retain the first controller position under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, first), secondIndex)
+
+A037 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:167
+Disposition: MATCHED
+Swift: S037 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S037 asserts the forbidden moves retain the second controller position under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, second), firstIndex)
+
+A038 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:170
+Disposition: MATCHED
+Swift: S038 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S038 asserts undo restores the first controller position under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, first), firstIndex)
+
+A039 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:171
+Disposition: MATCHED
+Swift: S039 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S039 asserts undo restores the second controller position under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, second), secondIndex)
+
+A040 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:173
+Disposition: MATCHED
+Swift: S040 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S040 asserts redo restores the reordered first controller under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, first), secondIndex)
+
+A041 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:174
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S041 asserts redo restores the reordered second controller under the same cppID.
+Original expression:
+  QCOMPARE(eventIndex(track, second), firstIndex)
+
+A042 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:178
+Disposition: MATCHED
+Swift: S042 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S042 asserts undo-all restores the exact baseline bytes under the same cppID.
+Original expression:
+  QCOMPARE(document.smf().write(), baseline)
+
+A043 | EditCheckTest::rawEventReorder | src/checks/editcheck/tst_songdocument_songraw.cpp:181
+Disposition: MATCHED
+Swift: S043 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawReorderRow
+Mapping/reason: Swift S043 asserts redo-all restores the exact edited bytes under the same cppID.
+Original expression:
+  QCOMPARE(document.smf().write(), edited)
+
+Swift assertion predicates
+Every report.expect/expectEqual/fail call in the mapped Swift functions
+(coreRawMutationRow, coreRawReorderRow, runRawEventOriginalChecks) plus the
+cited coreEditHistoryCountAtTip helper. Synthetic coreRawEventEditing checks
+are out of scope: the proof header records they do not substitute for
+corpus-driven rows.
+
+S001 | runRawEventOriginalChecks | src/checks/editcheck/tst_songdocument_songraw.swift:12
+        report.fail("editcheck/EditCheckTest::rawEventMutate", "corpus loading or encoding failed: \(error)")
+
+S002 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:33
+    report.expect(!loaded.midiPath.isEmpty, cppID: cppID, message: "row has a playable MIDI path")
+
+S003 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:37
+        report.fail(cppID, "loaded song has no SMF chunk")
+
+S004 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:46
+    report.expectEqual(before + 1, document.rawChunks[chunk].events.count, cppID: cppID,
+                       what: "insert increments the raw event count")
+
+S005 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:48
+    report.expectEqual(1, document.rawChunks[chunk].events.filter { $0 == event }.count,
+                       cppID: cppID, what: "inserted event occurs exactly once")
+
+S006 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:50
+    report.expectEqual(base, document.rawChunks[chunk].endTick, cppID: cppID,
+                       what: "insert extends chunk end")
+
+S007 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:52
+    report.expect(coreRawTracksSorted(document), cppID: cppID, message: "insert keeps all tracks sorted")
+
+S008 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:55
+        report.fail(cppID, "inserted event is absent")
+
+S009 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:60
+    report.expectEqual(sameTickIndex, document.rawChunks[chunk].events.firstIndex(of: event),
+                       cppID: cppID, what: "same-tick modification retains index")
+
+S010 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:62
+    report.expect(coreRawTracksSorted(document), cppID: cppID, message: "same-tick modification keeps sorting")
+
+S011 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:65
+        report.fail(cppID, "modified event is absent")
+
+S012 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:71
+    report.expectEqual(countBeforeMove + 1, document.rawChunks[chunk].events.filter { $0 == event }.count,
+                       cppID: cppID, what: "tick change creates the destination event")
+
+S013 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:73
+    report.expectEqual(before + 1, document.rawChunks[chunk].events.count, cppID: cppID,
+                       what: "tick change retains event count")
+
+S014 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:75
+    report.expect(coreRawTracksSorted(document), cppID: cppID, message: "tick change keeps sorting")
+
+S015 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:77
+        report.fail(cppID, "moved event is absent")
+
+S016 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:81
+    report.expectEqual(before, document.rawChunks[chunk].events.count, cppID: cppID,
+                       what: "delete restores initial event count")
+
+S017 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:84
+    report.expectEqual(base + 500, document.rawChunks[chunk].endTick, cppID: cppID,
+                       what: "explicit chunk-end extension")
+
+S018 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:88
+    report.expectEqual(lastTick, document.rawChunks[chunk].endTick, cppID: cppID,
+                       what: "chunk end clamps to the last event")
+
+S019 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:91
+    report.expectEqual(baseline, try document.state.file.encoded(), cppID: cppID,
+                       what: "all mutations undo to exact MIDI bytes")
+
+S020 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:98
+    report.expect(!loaded.midiPath.isEmpty, cppID: cppID, message: "row has a playable MIDI path")
+
+S021 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:102
+        report.fail(cppID, "loaded song has no SMF chunk")
+
+S022 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:115
+        report.fail(cppID, "first inserted controller is absent")
+
+S023 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:120
+    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+                       cppID: cppID, what: "second controller follows first")
+
+S024 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:122
+    report.expectEqual(noteIndex, document.rawChunks[chunk].events.firstIndex(of: noteOn),
+                       cppID: cppID, what: "note follows controllers")
+
+S025 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:125
+    report.expect(firstBounds != nil, cppID: cppID, message: "controller move bounds exist")
+
+S026 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:126
+    report.expectEqual(firstIndex, firstBounds?.lowerBound, cppID: cppID, what: "controller lower bound")
+
+S027 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:127
+    report.expectEqual(secondIndex, firstBounds?.upperBound, cppID: cppID, what: "controller upper bound")
+
+S028 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:129
+    report.expect(noteBounds != nil, cppID: cppID, message: "note move bounds exist")
+
+S029 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:130
+    report.expectEqual(noteIndex, noteBounds?.lowerBound, cppID: cppID, what: "note lower bound")
+
+S030 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:131
+    report.expectEqual(noteIndex, noteBounds?.upperBound, cppID: cppID, what: "note upper bound")
+
+S031 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:134
+    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+                       cppID: cppID, what: "reorder moves second controller before first")
+
+S032 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:136
+    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+                       cppID: cppID, what: "reorder moves first controller after second")
+
+S033 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:138
+    report.expect(coreRawTracksSorted(document), cppID: cppID, message: "reordering keeps sorting")
+
+S034 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:68
+    report.expect(count == replayed && document.state == restoredState &&
+        document.history.currentIdentity == restoredIdentity, cppID: cppID,
+        message: "counting public undo entries restores the exact state and identity")
+
+S035 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:142
+    report.expectEqual(undoCount, try coreEditHistoryCountAtTip(document, report: report, cppID: cppID),
+                       cppID: cppID, what: "both forbidden moves leave history entry count unchanged")
+
+S036 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:144
+    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+                       cppID: cppID, what: "forbidden moves retain first controller position")
+
+S037 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:146
+    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+                       cppID: cppID, what: "forbidden moves retain second controller position")
+
+S038 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:149
+    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+                       cppID: cppID, what: "undo restores first controller position")
+
+S039 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:151
+    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+                       cppID: cppID, what: "undo restores second controller position")
+
+S040 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:154
+    report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
+                       cppID: cppID, what: "redo restores reordered first controller")
+
+S041 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:156
+    report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
+                       cppID: cppID, what: "redo restores reordered second controller")
+
+S042 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:160
+    report.expectEqual(baseline, try document.state.file.encoded(), cppID: cppID,
+                       what: "undo all restores exact baseline bytes")
+
+S043 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:163
+    report.expectEqual(edited, try document.state.file.encoded(), cppID: cppID,
+                       what: "redo all restores exact edited bytes")

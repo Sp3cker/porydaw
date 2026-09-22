@@ -1,0 +1,79 @@
+Assertion correspondence: editcheck/tst_songdocument_runner.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/editcheck/tst_songdocument_runner.cpp
+Original SHA-256: 83d29d89e7b0fe96edcd6821e86dd6d32eeb6ce32a034cc76f44a73c7b6bfd1f
+Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
+Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+
+Scope
+All 4 original assertion sites are listed below, all in EditCheckTest fixture
+and corpus staging (initTestCase). The legacy C++ editcheck suite is not
+registered in the current checkcatalog, so no native run of these sites is
+claimed. coreEditCorpusSongs in the Swift counterpart enumerates every staged
+sound/songs/midi/*.mid file, rejects an empty corpus, decodes each file
+directly (throwing on failure, reported by the top-level catch so no loaded row
+silently disappears), and requires the exact checked-in midi.cfg flag shape.
+
+Fixture and sequence
+initTestCase opens the staged project root, loads every playable song into a
+SongDocument once, classifies eligibility (editable track, add-track, multi
+track), and requires at least one playable song. addSongRows/eligible/
+songForLabel contain no assertion sites; per-data-row load predicates live in
+the corpus-driven Swift rows and in proof.tst_songdocument_songraw.txt and
+proof.tst_songdocument_songranges.txt.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Original assertion inventory
+
+A001 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:12
+Disposition: GAP
+Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
+Mapping/reason: CLI project-root argument plumbing has no Swift equivalent; the Swift entry discovers the staged corpus directory directly.
+Original expression:
+  QVERIFY2(!m_projectRoot.isEmpty(), "editcheck requires its staged project root");
+
+A002 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:16
+Disposition: PARTIAL
+Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
+Mapping/reason: Unreadable staged sources fail the Swift suite through throwing decode plus the top-level catch; the DecompProject database open step itself has no Swift equivalent.
+Original expression:
+  QVERIFY2(project.open(m_projectRoot, &error), qPrintable(error));
+
+A003 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:24
+Disposition: PARTIAL
+Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
+Mapping/reason: Related coverage only: coreEditCorpusSongs reads every staged .mid file's raw bytes with a throwing Data load, so an unreadable file fails the suite through the top-level catch. Unproved condition: no report.expect/expectEqual/fail predicate in this file asserts per-song MIDI parse plus SongDocument construction success under cppID editcheck/EditCheckTest::initTestCase; MidiFile.decode and SongDocument construction happen downstream in the songraw/songranges suites (see their proofs), so this proof alone does not cover document.load success.
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error));
+
+A004 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:31
+Disposition: MATCHED
+Swift: S002 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
+Mapping/reason: Swift S002 asserts the staged corpus enumerates at least one song under the same cppID, and S003 requires exactly one fixture config row per staged .mid file (failing otherwise), so every counted filename is a configured loadable row, matching the nonempty-playable-corpus requirement.
+Original expression:
+  QVERIFY2(!m_playableSongs.isEmpty(), "editcheck corpus staged no playable songs");
+
+Swift assertion predicates
+Every report.expect/expectEqual/fail call in the mapped Swift functions:
+
+S001 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift:16
+  report.fail("editcheck/EditCheckTest::initTestCase", "missing staged project root")
+
+S002 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift:22
+  report.expect(!filenames.isEmpty, cppID: "editcheck/EditCheckTest::initTestCase",
+                    message: "edit corpus has playable songs")
+
+S003 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift:30
+  report.fail("editcheck/EditCheckTest::initTestCase", "expected one fixture config for \(filename)")
+
+S004 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift:38
+  report.fail("editcheck/EditCheckTest::initTestCase", "fixture flags changed for \(filename): \(flags)")
+
+S005 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:68
+  report.expect(count == replayed && document.state == restoredState &&
+          document.history.currentIdentity == restoredIdentity, cppID: cppID,
+          message: "counting public undo entries restores the exact state and identity")

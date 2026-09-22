@@ -1,0 +1,433 @@
+Assertion correspondence: automation/automationactions.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/automation/automationactions.cpp
+Original SHA-256: 32f5e5de2ff62c9d9bf4b0c9b8b73f462a356dd2f83a5f22bfba1e65fad98768
+Swift counterpart: src/checks/automation/automationactions.swift
+Swift SHA-256: 1529386a279c90602e10b8ab6eea604c3a13672bbccc0724c506724aaef3c435
+
+Purpose and status
+Each A entry is one original assertion or failure site, including helper and setup sites.
+Repeated rows and loops execute a site more than once. The source SHA pins the entire
+original sequence; the context inventory below records its rows, loops and fixtures.
+MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
+a specific related scenario differs; GAP means exact assertion correspondence is not
+established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+A method name or related Swift case alone never establishes an assertion match.
+This inventory does not authorize removing native checks. Unresolved entries remain work.
+
+Execution and ownership
+The original swiftcore suite entrypoints invoke these paired functions in their original
+order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
+VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
+Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+
+Verification evidence
+Pending: root will record the exact final tree and selected Deno verification run.
+
+Fixture, sequence, data-row and loop inventory
+Each line below is an exact original source anchor. Multiline declarations, helper
+implementations, native event delivery and the complete order remain in the pinned source.
+src/checks/automation/automationactions.cpp:64 | QTest::keyClick(&editor, shortcut.key(), shortcut.keyboardModifiers());
+src/checks/automation/automationactions.cpp:104 | QTest::qWait(510);
+src/checks/automation/automationactions.cpp:143 | for (const LaneHandle lane : {pan, lfo}) {
+
+Original assertion inventory
+
+A001 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:35
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action)
+
+A002 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:37
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(shortcut.key() != Qt::Key_unknown)
+
+A003 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:41
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A004 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:43
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A005 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:46
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!action->isChecked())
+
+A006 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:48
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!action->isChecked())
+
+A007 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:54
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action)
+
+A008 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:56
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(shortcut.key() != Qt::Key_unknown)
+
+A009 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:62
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(editor.hasFocus())
+
+A010 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:66
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(editor.text(), QStringLiteral("b"))
+
+A011 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:67
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!action->isChecked())
+
+A012 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:73
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action)
+
+A013 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:75
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(shortcut.key() != Qt::Key_unknown)
+
+A014 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:79
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A015 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:83
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A016 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:86
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A017 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:97
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action)
+
+A018 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:99
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(shortcut.key() != Qt::Key_unknown)
+
+A019 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:103
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A020 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:106
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A021 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:110
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A022 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:112
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A023 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:113
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, 0, kPanController}))
+
+A024 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:115
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationInput().bounds().contains(start))
+
+A025 | AutomationEditingTest::actionHeldKeyGestures | src/checks/automation/automationactions.cpp:119
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(action->isChecked())
+
+A026 | AutomationEditingTest::projectionPartialCell | src/checks/automation/automationactions.cpp:126
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(timeline)
+
+A027 | AutomationEditingTest::projectionPartialCell | src/checks/automation/automationactions.cpp:129
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(finalCell.tickBegin < finalCell.tickEnd)
+
+A028 | AutomationEditingTest::projectionPartialCell | src/checks/automation/automationactions.cpp:130
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(finalCell.tickEnd, timeline->lengthTicks)
+
+A029 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:138
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findRow(panRow).valid())
+
+A030 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:139
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(findRow(lfoRow).valid())
+
+A031 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:145
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!body.isEmpty())
+
+A032 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:148
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(qRound(AutomationProjection::valueAtY(body, geometry, 0, 127, minimum.y())), 0)
+
+A033 | AutomationEditingTest::projectionValueBounds | src/checks/automation/automationactions.cpp:149
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(qRound(AutomationProjection::valueAtY(body, geometry, 0, 127, maximum.y())), 127)
+
+A034 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:156
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(rows.size() > 1)
+
+A035 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:159
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!body.isEmpty())
+
+A036 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:160
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(body.top(), 0)
+
+A037 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:161
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(rows[1].id.kind == EditorAutomationRowKind::ControlChange)
+
+A038 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:164
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(input.y() >= qreal(body.top()))
+
+A039 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:165
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(input.y() < qreal(body.bottom()))
+
+A040 | AutomationEditingTest::projectionCanvasOrigin | src/checks/automation/automationactions.cpp:166
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(qRound(AutomationProjection::valueAtY(body, AutomationGeometry::resolve(), 0, 127,
+                                                     input.y())),
+               64)
+
+A041 | AutomationEditingTest::projectionInsertionTiming | src/checks/automation/automationactions.cpp:175
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A042 | AutomationEditingTest::projectionInsertionTiming | src/checks/automation/automationactions.cpp:189
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(rawTick != double(mappedCell.tickBegin))
+
+A043 | AutomationEditingTest::projectionInsertionTiming | src/checks/automation/automationactions.cpp:190
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(rawTick != caretTick)
+
+A044 | AutomationEditingTest::projectionInsertionTiming | src/checks/automation/automationactions.cpp:191
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(indicator.insertionTick(projection, true), double(mappedCell.tickBegin))
+
+A045 | AutomationEditingTest::projectionInsertionTiming | src/checks/automation/automationactions.cpp:192
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(indicator.insertionTick(projection, false), caretTick)
+
+A046 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:199
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(pan.valid())
+
+A047 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:200
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(activateParameter(panRow))
+
+A048 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:213
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(tab().document().findLanePoint(0, kPanController, mappedCell.tickBegin, &first))
+
+A049 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:214
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(first.value, 72)
+
+A050 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:217
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(following.tickBegin < following.tickEnd)
+
+A051 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:223
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+          tab().document().findLanePoint(0, kPanController, following.tickBegin, &followingPoint))
+
+A052 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:225
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(first.value, 72)
+
+A053 | AutomationEditingTest::pencilClickHalfOpenQuantization | src/checks/automation/automationactions.cpp:226
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(followingPoint.value, 96)
+
+Swift executable assertion index
+The S entries are exact predicates already called by the suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:12
+Swift expression:
+  report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
+                         what: "no Qt bit arms no policy")
+
+S002 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:14
+Swift expression:
+  report.expectEqual(AutomationModifiers(shift: true),
+                         AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: drawerAutomationModifierMappingID,
+                         what: "Qt's shift bit arms the ramp and axis-lock policy")
+
+S003 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:17
+Swift expression:
+  report.expectEqual(AutomationModifiers(snapValue: true),
+                         AutomationQtModifier.automation(AutomationQtModifier.control),
+                         cppID: drawerAutomationModifierMappingID,
+                         what: "Qt's control bit arms the value snap")
+
+S004 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:21
+Swift expression:
+  report.expectEqual(AutomationModifiers(fine: true),
+                         AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
+                         what: "Qt's alt bit arms the fine lattice")
+
+S005 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:24
+Swift expression:
+  report.expectEqual(AutomationModifiers(),
+                         AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: drawerAutomationModifierMappingID,
+                         what: "Qt's meta bit arms nothing")
+
+S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:27
+Swift expression:
+  report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
+                         AutomationQtModifier.automation(AutomationQtModifier.shift
+                                                         | AutomationQtModifier.control
+                                                         | AutomationQtModifier.alt),
+                         cppID: drawerAutomationModifierMappingID,
+                         what: "the three policy bits compose through the same mapping")
+
+S007 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:39
+Swift expression:
+  report.expectEqual(policy, AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
+                             cppID: drawerAutomationModifierMappingID,
+                             what: "the Qt bits that policy composes to map back to it")
+
+S008 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:52
+Swift expression:
+  report.expect(threshold > 1, cppID: drawerAutomationModifierMappingID,
+                    message: "the neutral radius covers more than one value step")
+
+S009 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:56
+Swift expression:
+  report.expect(plain.drag(plain.panLane, from: (24, 80), to: near, modifiers: 0),
+                    cppID: drawerAutomationModifierMappingID,
+                    message: "the pointer route took the drag without a Qt modifier bit")
+
+S010 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:59
+Swift expression:
+  report.expectEqual(["24:\(near)"], plain.values(plain.panLane), cppID: drawerAutomationModifierMappingID,
+                         what: "a drag without the Qt control bit keeps the dragged value")
+
+S011 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:64
+Swift expression:
+  report.expect(snapped.drag(snapped.panLane, from: (24, 80), to: near,
+                                 modifiers: AutomationQtModifier.control),
+                    cppID: drawerAutomationModifierMappingID,
+                    message: "the pointer route took the drag carrying the Qt control bit")
+
+S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:68
+Swift expression:
+  report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
+                         what: "the Qt control bit a QML event carries lands the drag on the neutral")

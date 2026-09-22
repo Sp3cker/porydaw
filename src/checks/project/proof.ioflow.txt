@@ -1,0 +1,871 @@
+Assertion correspondence: project/ioflow.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/project/ioflow.cpp
+Original SHA-256: 570a3612014e502fd553f04d90f4124ae6aa71a923324e4015b7a3d6e0d552bd
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute;
+PARTIAL identifies a related Swift predicate with an explicit unproved condition;
+GAP identifies an original predicate without an established equivalent;
+NATIVE identifies an observation only a native window/rendering/harness run can establish.
+65 assertion sites across snapshot publication, FIFO order, failed-open retention, catalog preemption, song-chain staging, and voicegroup load/preview paths. Same-labelled Swift predicates cover detached-open composition and retention plus reopen timing only; no site is marked MATCHED.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runProjectSessionSuite (SessionChecks.swift) owns the paired Swift predicates via ProjectService/DocumentSession against the staged swiftcore-session-test project (stageTestProject, mus_session_test labels). The C++ ProjectIoFixture async deque (submit/waitFor/resultCount) and the loadSong/songChainAt helpers are C++-only.
+
+Fixture, sequence and row constraints
+songChains_openReloadStageTag_data expands over open/reload/private-load entries; FIFO order and catalog-preemption counts depend on exact submit/waitFor cardinalities (+4, +3, +2, +1).
+
+Original assertion inventory
+
+A001 | ProjectIoFlowTest::init | src/checks/project/ioflow.cpp:49
+Disposition: GAP
+Mapping/reason: C++ harness setup guard (ProjectIoFixture initialize); no Swift predicate establishes this fixture precondition.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <QDir>
+  #include <QFileInfo>
+
+  #include <deque>
+  #include <memory>
+  #include <optional>
+  #include <utility>
+  #include <variant>
+
+  #include "checks/project/iofixture.h"
+
+  namespace {
+
+  using project_check::loadSong;
+  using project_check::songChainAt;
+  using project_check::SongLoad;
+  using project_check::SongLoadEntry;
+
+  class ProjectIoFlowTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(ProjectIoFlowTest)
+
+    public:
+      explicit ProjectIoFlowTest(QString stagedRoot) : m_stagedRoot(std::move(stagedRoot)) {}
+
+    private slots:
+      void init();
+      void cleanup();
+      void openPublishesSnapshotDetached();
+      void fifoDeliversInSubmissionOrder();
+      void failedOpenKeepsWorkerProject();
+      void catalogPreemptionRequeuesOneComplete();
+      void songChains_openReloadStageTag_data();
+      void songChains_openReloadStageTag();
+      void voicegroupLoadAndPreviewPaths();
+
+    private:
+      QString m_stagedRoot;
+      std::unique_ptr<project_check::ProjectIoFixture> m_fixture;
+  };
+
+  void ProjectIoFlowTest::init()
+  {
+      m_fixture = std::make_unique<project_check::ProjectIoFixture>(m_stagedRoot);
+      QString error;
+
+Original expression:
+  QVERIFY2(m_fixture->initialize(error), qPrintable(error))
+
+A002 | ProjectIoFlowTest::cleanup | src/checks/project/ioflow.cpp:54
+Disposition: GAP
+Mapping/reason: C++ harness teardown guard (caller-thread callbacks); no Swift predicate establishes this condition.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoFlowTest::cleanup()
+  {
+
+Original expression:
+  QVERIFY(!m_fixture || m_fixture->callbacksReturnToCallerThread())
+
+A003 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:64
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+      m_fixture.reset();
+  }
+
+  void ProjectIoFlowTest::openPublishesSnapshotDetached()
+  {
+      QString error;
+      bool completedInline = false;
+      const std::optional<project_check::OpenedProject> opened =
+          m_fixture->open(error, &completedInline);
+
+Original expression:
+  QCOMPARE(completedInline, false)
+
+A004 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:65
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A005 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:69
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+
+Original expression:
+  QCOMPARE(opened->snapshot.root(), QDir(m_fixture->root()).absolutePath())
+
+A006 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:70
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!opened->snapshot.songs().isEmpty())
+
+A007 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:71
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(opened->snapshot.players().size(), 5)
+
+A008 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:72
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(opened->oneTrackSong)
+
+A009 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:74
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+      if (opened->oneTrackSong)
+
+Original expression:
+  QCOMPARE(opened->snapshot.trackBudgetFor(*opened->oneTrackSong), 1)
+
+A010 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:75
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(opened->playableSong.isPlayable())
+
+A011 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:76
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(opened->playableSong.hasCfg)
+
+A012 | ProjectIoFlowTest::openPublishesSnapshotDetached | src/checks/project/ioflow.cpp:77
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the detached label survives source-registry replacement, but the snapshot root/song-list/player-count/track-budget/playable/hasCfg/label conjunctions below are unproved (Swift has no snapshot/player model).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(opened->song.value(), opened->playableSong.label)
+
+A013 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:84
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoFlowTest::fifoDeliversInSubmissionOrder()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A014 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:94
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      const int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{ProbeSamplesInput{}});
+      m_fixture->io().submit(ProjectCommand{RegistrationPlanInput{
+          opened->playableSong.label, opened->constant, opened->playableSong.player}});
+      m_fixture->io().submit(ProjectCommand{DeletionPlanInput{opened->song, opened->constant}});
+      m_fixture->io().submit(ProjectCommand{RefreshCatalogInput{}});
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase)
+
+A015 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:95
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 4, error), qPrintable(error))
+
+A016 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:96
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase + 4)
+
+A017 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:99
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+      const std::deque<ProjectResult> &results = m_fixture->results();
+
+Original expression:
+  QVERIFY(std::holds_alternative<SamplesProbed>(results[resultBase]))
+
+A018 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:103
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+      const auto *const registration = std::get_if<RegistrationPlanResult>(&results[resultBase + 1]);
+      const auto *const deletion = std::get_if<DeletionPlanResult>(&results[resultBase + 2]);
+      const auto *const catalog = std::get_if<VoicegroupCatalog>(&results[resultBase + 3]);
+
+Original expression:
+  QVERIFY(registration)
+
+A019 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:104
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(deletion)
+
+A020 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:105
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(catalog)
+
+A021 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:109
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+      if (!(registration && deletion && catalog))
+          return;
+
+
+Original expression:
+  QCOMPARE(registration->song.value(), opened->playableSong.label)
+
+A022 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:110
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(registration->plan.label, opened->playableSong.label)
+
+A023 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:111
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(registration->plan.constant, opened->constant)
+
+A024 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:112
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(registration->plan.player, opened->playableSong.player)
+
+A025 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:113
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(registration->plan.songId >= 0)
+
+A026 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:114
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(registration->plan.songTableLine.contains(opened->playableSong.label))
+
+A027 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:115
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(registration->status.inSongTable)
+
+A028 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:117
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(deletion->song == opened->song)
+
+A029 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:118
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(deletion->plan.tableIndex >= 0)
+
+A030 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(deletion->plan.tableCount > deletion->plan.tableIndex)
+
+A031 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:120
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(deletion->deletableVoicegroupName.isEmpty())
+
+A032 | ProjectIoFlowTest::fifoDeliversInSubmissionOrder | src/checks/project/ioflow.cpp:121
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S005) observes tempo-projection timing, not FIFO submission order, registration/deletion plans, or catalog publication.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!catalog->groupArgs.isEmpty())
+
+A033 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:128
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoFlowTest::failedOpenKeepsWorkerProject()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A034 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:135
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(
+          ProjectCommand{OpenProjectInput{m_fixture->root() + QStringLiteral("/missing")}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A035 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:137
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Source context since previous assertion:
+  ;
+      const auto *const failure = std::get_if<CommandFailure>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(failure)
+
+A036 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:139
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Source context since previous assertion:
+  ;
+      if (failure)
+
+Original expression:
+  QVERIFY(!failure->message.isEmpty())
+
+A037 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:143
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Source context since previous assertion:
+  ;
+
+      resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{ProbeSamplesInput{}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 1, error), qPrintable(error))
+
+A038 | ProjectIoFlowTest::failedOpenKeepsWorkerProject | src/checks/project/ioflow.cpp:144
+Disposition: PARTIAL
+Mapping/reason: Related predicate S002 in SessionChecks.swift; a failed replacement open retains the prior project, but the CommandFailure message and post-failure SamplesProbed below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<SamplesProbed>(m_fixture->results().back()))
+
+A039 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:151
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A040 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:158
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      const int resultBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{RefreshCatalogInput{}});
+      m_fixture->io().submit(ProjectCommand{OpenSongInput{opened->song}});
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase)
+
+A041 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:159
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(resultBase + 4, error), qPrintable(error))
+
+A042 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:160
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase + 4)
+
+A043 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:161
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(songChainAt(m_fixture->results(), resultBase, opened->song, error), qPrintable(error))
+
+A044 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:167
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+
+      int completeCatalogs = 0;
+      for (int index = resultBase; index < m_fixture->resultCount(); ++index) {
+          const ProjectResult &result = m_fixture->results()[index];
+          completeCatalogs += std::holds_alternative<VoicegroupCatalog>(result) ? 1 : 0;
+
+Original expression:
+  QVERIFY(!std::holds_alternative<CommandFailure>(result))
+
+A045 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:169
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+      }
+
+Original expression:
+  QCOMPARE(completeCatalogs, 1)
+
+A046 | ProjectIoFlowTest::catalogPreemptionRequeuesOneComplete | src/checks/project/ioflow.cpp:170
+Disposition: GAP
+Mapping/reason: No Swift predicate references catalog preemption; the complete-catalog count and chain-tagging below remain open.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::holds_alternative<VoicegroupCatalog>(m_fixture->results()[resultBase + 3]))
+
+A047 | ProjectIoFlowTest::songChains_openReloadStageTag | src/checks/project/ioflow.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicates (S003, S006-S012) observe gate/clock/reopen timing, not 3-result chains, inline-completion flags, or entry-point stage tags.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoFlowTest::songChains_openReloadStageTag_data()
+  {
+      QTest::addColumn<int>("entryPoint");
+      QTest::newRow("open") << static_cast<int>(SongLoadEntry::Open);
+      QTest::newRow("reload") << static_cast<int>(SongLoadEntry::Reload);
+      QTest::newRow("private-load") << static_cast<int>(SongLoadEntry::PrivateLoad);
+  }
+
+  void ProjectIoFlowTest::songChains_openReloadStageTag()
+  {
+      QFETCH(int, entryPoint);
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A048 | ProjectIoFlowTest::songChains_openReloadStageTag | src/checks/project/ioflow.cpp:194
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicates (S003, S006-S012) observe gate/clock/reopen timing, not 3-result chains, inline-completion flags, or entry-point stage tags.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      const int resultBase = m_fixture->resultCount();
+      bool completedInline = false;
+      const std::optional<SongLoad> chain = loadSong(
+          *m_fixture, opened->song, static_cast<SongLoadEntry>(entryPoint), &completedInline, error);
+
+Original expression:
+  QCOMPARE(completedInline, false)
+
+A049 | ProjectIoFlowTest::songChains_openReloadStageTag | src/checks/project/ioflow.cpp:195
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicates (S003, S006-S012) observe gate/clock/reopen timing, not 3-result chains, inline-completion flags, or entry-point stage tags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(chain, qPrintable(error))
+
+A050 | ProjectIoFlowTest::songChains_openReloadStageTag | src/checks/project/ioflow.cpp:196
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicates (S003, S006-S012) observe gate/clock/reopen timing, not 3-result chains, inline-completion flags, or entry-point stage tags.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), resultBase + 3)
+
+A051 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:203
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectIoFlowTest::voicegroupLoadAndPreviewPaths()
+  {
+      QString error;
+      const std::optional<project_check::OpenedProject> opened = m_fixture->open(error);
+
+Original expression:
+  QVERIFY2(opened, qPrintable(error))
+
+A052 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:209
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+      if (!opened)
+          return;
+
+      const std::optional<SongLoad> firstSong =
+          loadSong(*m_fixture, opened->song, SongLoadEntry::Open, nullptr, error);
+
+Original expression:
+  QVERIFY2(firstSong, qPrintable(error))
+
+A053 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:216
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+      if (!firstSong)
+          return;
+      const VoicegroupId bankId = firstSong->bankId;
+
+      const int loadBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{LoadVoicegroupCommand{opened->song, bankId}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(loadBase + 2, error), qPrintable(error))
+
+A054 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:217
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(m_fixture->resultCount(), loadBase + 2)
+
+A055 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:220
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+      const auto *const view = std::get_if<LoadedBankView>(&m_fixture->results()[loadBase]);
+      const auto *const bound = std::get_if<VoicegroupBound>(&m_fixture->results()[loadBase + 1]);
+
+Original expression:
+  QVERIFY(view)
+
+A056 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:221
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(bound)
+
+A057 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:224
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+      if (!(view && bound))
+          return;
+
+Original expression:
+  QCOMPARE(view->id.sourceRelativePath(), bankId.sourceRelativePath())
+
+A058 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:225
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view->id.sectionLabel(), bankId.sectionLabel())
+
+A059 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:226
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(view->bank)
+
+A060 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:227
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(bound->id == bankId)
+
+A061 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:231
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+      const int previewBase = m_fixture->resultCount();
+      m_fixture->io().submit(ProjectCommand{PreviewPlanInput{bankId}});
+
+Original expression:
+  QVERIFY2(m_fixture->waitFor(previewBase + 1, error), qPrintable(error))
+
+A062 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:233
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+      const auto *const plan = std::get_if<PreviewPlan>(&m_fixture->results().back());
+
+Original expression:
+  QVERIFY(plan)
+
+A063 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:242
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+      if (!plan)
+          return;
+
+      const QString previewDir =
+          QDir(opened->snapshot.root()).filePath(QStringLiteral(".porydaw/vgpreview"));
+      const QString loadName = bankId.sectionLabel().isEmpty()
+                                   ? QFileInfo(bankId.sourceRelativePath()).completeBaseName()
+                                   : bankId.sectionLabel();
+
+Original expression:
+  QVERIFY(plan->voicegroup == bankId)
+
+A064 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:243
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(plan->shadowSourcePath, previewDir)
+
+A065 | ProjectIoFlowTest::voicegroupLoadAndPreviewPaths | src/checks/project/ioflow.cpp:244
+Disposition: GAP
+Mapping/reason: No equivalent Swift predicate established: the same-labelled Swift predicate (S004) observes the timeline publication callback, not bank-view/bound contents or preview shadow paths.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(plan->targetIncPath, QDir(previewDir).filePath(loadName + QStringLiteral(".inc")))
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace
+
+  int runProjectIoFlowCheck(const QString &stagedRoot, const QStringList &qtArguments)
+  {
+      ProjectIoFlowTest test(stagedRoot);
+      QStringList arguments{QStringLiteral("project-io-flow")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "ioflow.moc"
+
+Swift assertion predicates
+
+S001 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:450
+  report.expectEqual("mus_session_test", detached.source.label,
+                             cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+                             what: "published project snapshot survives source registry replacement")
+
+S002 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:471
+  report.expectEqual("mus_session_test", retained.source.label,
+                                 cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+                                 what: "failed replacement open retains the worker's prior project")
+
+S003 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:500
+  report.expectEqual("mus_session_test", session.document.source.label,
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
+                             what: "DocumentSession adopts the requested song source")
+
+S004 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:566
+  report.expect(lastPublishedTimeline != nil,
+                    cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
+                    message: "immutable playback publication callback received updated timeline")
+
+S005 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:572
+  report.expectEqual(UInt64(19_200), editedSampleAt24,
+                         cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
+                         what: "state factory projection computes exact 19200 samples for edited tempo")
+
+S006 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:583
+  report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
+                         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                         what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
+
+S007 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:586
+  report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
+                    cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                    message: "extended clocks change an observable note-release sample")
+
+S008 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:595
+  report.expectEqual(UInt64(20_000), configuredGate60,
+                         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                         what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
+
+S009 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:598
+  report.expect(defaultGate60 != configuredGate60,
+                    cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                    message: "exact gate changes an observable note-release sample")
+
+S010 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:814
+  report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                             what: "reopen reproduces settings-sensitive note-release timing")
+
+S011 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:842
+  report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                             what: "exact-gate setting survives save/reopen")
+
+S012 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:845
+  report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                             what: "extended-clock setting survives save/reopen")

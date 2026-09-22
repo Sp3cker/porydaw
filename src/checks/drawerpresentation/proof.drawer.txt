@@ -1,0 +1,1872 @@
+Assertion correspondence: drawerpresentation/drawer.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/drawerpresentation/drawer.cpp
+Original SHA-256: 3fb9b03a6e12fb8c61b20290669da95031c0451fec4dca5fd706afeabc777508
+Swift counterpart: src/checks/drawerpresentation/drawer.swift
+Swift SHA-256: fc1eea514ea6e0fe6b28300077b743e9b236a262575ff55295ef553e7ccbf36c
+
+Purpose and status
+Each A entry is one original assertion or failure site, including helper and setup sites.
+Repeated rows and loops execute a site more than once. The source SHA pins the entire
+original sequence; the context inventory below records its rows, loops and fixtures.
+MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
+a specific related scenario differs; GAP means exact assertion correspondence is not
+established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
+A method name or related Swift case alone never establishes an assertion match.
+This inventory does not authorize removing native checks. Unresolved entries remain work.
+
+Execution and ownership
+The original swiftcore suite entrypoints invoke these paired functions in their original
+order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
+VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
+Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+
+Verification evidence
+Pending: root will record the exact final tree and selected Deno verification run.
+
+Fixture, sequence, data-row and loop inventory
+Each line below is an exact original source anchor. Multiline declarations, helper
+implementations, native event delivery and the complete order remain in the pinned source.
+src/checks/drawerpresentation/drawer.cpp:33 | DrawerFixture fixture;
+src/checks/drawerpresentation/drawer.cpp:35 | if (!fixture.create(error))
+src/checks/drawerpresentation/drawer.cpp:37 | return fixture;
+src/checks/drawerpresentation/drawer.cpp:40 | songview::TimelineInputItem *handleFor(const DrawerFixture &fixture, EditorDrawerPage page)
+src/checks/drawerpresentation/drawer.cpp:44 | return fixture.voiceHandle;
+src/checks/drawerpresentation/drawer.cpp:46 | return fixture.velocityHandle;
+src/checks/drawerpresentation/drawer.cpp:48 | return fixture.automationHandle;
+src/checks/drawerpresentation/drawer.cpp:89 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:90 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:92 | DrawerChrome &chrome = fixture.chrome();
+src/checks/drawerpresentation/drawer.cpp:93 | auto *const root = fixture.quickRoot;
+src/checks/drawerpresentation/drawer.cpp:105 | QVERIFY(fixture.quick->quickWindow());
+src/checks/drawerpresentation/drawer.cpp:107 | QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick));
+src/checks/drawerpresentation/drawer.cpp:126 | QTest::addColumn<EditorDrawerPage>("page");
+src/checks/drawerpresentation/drawer.cpp:127 | QTest::newRow("voice") << EditorDrawerPage::VoiceChanges;
+src/checks/drawerpresentation/drawer.cpp:128 | QTest::newRow("velocity") << EditorDrawerPage::Velocity;
+src/checks/drawerpresentation/drawer.cpp:129 | QTest::newRow("automation") << EditorDrawerPage::Automations;
+src/checks/drawerpresentation/drawer.cpp:134 | QFETCH(EditorDrawerPage, page);
+src/checks/drawerpresentation/drawer.cpp:135 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:136 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:142 | fixture.clickToggle(page);
+src/checks/drawerpresentation/drawer.cpp:147 | fixture.clickToggle(page);
+src/checks/drawerpresentation/drawer.cpp:151 | fixture.clickToggle(page);
+src/checks/drawerpresentation/drawer.cpp:158 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:159 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:164 | fixture.quickRoot->findChild<QQuickItem *>(QStringLiteral("drawerVelocityToggle"));
+src/checks/drawerpresentation/drawer.cpp:173 | QVERIFY(fixture.chrome().velocityChecked());
+src/checks/drawerpresentation/drawer.cpp:174 | QVERIFY(fixture.velocityHandle->isVisible());
+src/checks/drawerpresentation/drawer.cpp:180 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:181 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:182 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:183 | DrawerChrome &chrome = fixture.chrome();
+src/checks/drawerpresentation/drawer.cpp:207 | const QPointF probe = fixture.voiceHandle->bounds().center();
+src/checks/drawerpresentation/drawer.cpp:208 | sendMouse(*fixture.voiceHandle, QEvent::MouseMove, probe);
+src/checks/drawerpresentation/drawer.cpp:211 | QCOMPARE(fixture.voiceHandle->cursor().shape(), Qt::SizeVerCursor);
+src/checks/drawerpresentation/drawer.cpp:212 | sendMouse(*fixture.voiceHandle, QEvent::MouseButtonPress, probe, Qt::LeftButton,
+src/checks/drawerpresentation/drawer.cpp:214 | sendMouse(*fixture.voiceHandle, QEvent::MouseButtonRelease, probe, Qt::LeftButton);
+src/checks/drawerpresentation/drawer.cpp:215 | QVERIFY(fixture.voiceHandle->cursor().shape() != Qt::SizeVerCursor);
+src/checks/drawerpresentation/drawer.cpp:216 | sendMouse(*fixture.voiceHandle, QEvent::Leave, {});
+src/checks/drawerpresentation/drawer.cpp:223 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:224 | fixture.clickToggle(EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:225 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:226 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:227 | DrawerChrome &chrome = fixture.chrome();
+src/checks/drawerpresentation/drawer.cpp:228 | const QRect voice = fixture.bandRect(songview::TimelineBand::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:229 | const QRect velocity = fixture.bandRect(songview::TimelineBand::Velocity);
+src/checks/drawerpresentation/drawer.cpp:230 | const QRect automation = fixture.bandRect(songview::TimelineBand::Automation);
+src/checks/drawerpresentation/drawer.cpp:242 | view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Roll,
+src/checks/drawerpresentation/drawer.cpp:245 | view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Velocity,
+src/checks/drawerpresentation/drawer.cpp:248 | view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::VoiceChanges,
+src/checks/drawerpresentation/drawer.cpp:252 | view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Automation,
+src/checks/drawerpresentation/drawer.cpp:255 | for (const songview::TimelineBand band :
+src/checks/drawerpresentation/drawer.cpp:267 | fixture.quickRoot, QStringLiteral("drawerAutomationScrollBar")) == nullptr);
+src/checks/drawerpresentation/drawer.cpp:268 | const QQuickWindow *const quickWindow = fixture.quick->quickWindow();
+src/checks/drawerpresentation/drawer.cpp:270 | const QRectF published = publishedChromeRect(fixture.chrome());
+src/checks/drawerpresentation/drawer.cpp:277 | QTest::addColumn<EditorDrawerPage>("page");
+src/checks/drawerpresentation/drawer.cpp:278 | QTest::newRow("voice") << EditorDrawerPage::VoiceChanges;
+src/checks/drawerpresentation/drawer.cpp:279 | QTest::newRow("velocity") << EditorDrawerPage::Velocity;
+src/checks/drawerpresentation/drawer.cpp:280 | QTest::newRow("automation") << EditorDrawerPage::Automations;
+src/checks/drawerpresentation/drawer.cpp:285 | QFETCH(EditorDrawerPage, page);
+src/checks/drawerpresentation/drawer.cpp:286 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:287 | fixture.clickToggle(EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:288 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:289 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:291 | auto *const handle = handleFor(fixture, page);
+src/checks/drawerpresentation/drawer.cpp:321 | QVERIFY(!fixture.chrome().detentVisible() || page == EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:326 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:327 | fixture.clickToggle(EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:328 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:329 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:367 | auto *const gutter = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
+src/checks/drawerpresentation/drawer.cpp:373 | QQuickItem *const scroller = checks::support::automationTabsScroller(fixture.quickRoot);
+src/checks/drawerpresentation/drawer.cpp:379 | fixture.quickRoot, QStringLiteral("automationParameterTab0"));
+src/checks/drawerpresentation/drawer.cpp:384 | for (int index = 0; index < labels.size(); ++index) {
+src/checks/drawerpresentation/drawer.cpp:388 | fixture.quickRoot, QStringLiteral("automationParameterTab%1").arg(index))) &&
+src/checks/drawerpresentation/drawer.cpp:404 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:405 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:406 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:409 | DrawerChrome &chrome = fixture.chrome();
+src/checks/drawerpresentation/drawer.cpp:419 | for (int step = 0; step < 64; ++step) {
+src/checks/drawerpresentation/drawer.cpp:443 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:444 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:445 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:447 | auto &handle = *fixture.voiceHandle;
+src/checks/drawerpresentation/drawer.cpp:488 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:489 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:490 | fixture.clickToggle(EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:491 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:493 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:504 | fixture.clickToggle(EditorDrawerPage::Automations);
+src/checks/drawerpresentation/drawer.cpp:512 | DrawerChrome &chrome = fixture.chrome();
+src/checks/drawerpresentation/drawer.cpp:515 | fixture.clickToggle(EditorDrawerPage::Automations);
+src/checks/drawerpresentation/drawer.cpp:523 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:524 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:531 | fixture.clickToggle(EditorDrawerPage::Automations);
+src/checks/drawerpresentation/drawer.cpp:532 | QTRY_VERIFY(fixture.bar->hasActiveFocus());
+src/checks/drawerpresentation/drawer.cpp:534 | fixture.clickToggle(EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:541 | fixture.clickToggle(EditorDrawerPage::VoiceChanges);
+src/checks/drawerpresentation/drawer.cpp:544 | fixture.clickToggle(EditorDrawerPage::Velocity);
+src/checks/drawerpresentation/drawer.cpp:547 | fixture.clickToggle(EditorDrawerPage::Automations);
+src/checks/drawerpresentation/drawer.cpp:554 | DrawerFixture fixture = makeDrawerFixture();
+src/checks/drawerpresentation/drawer.cpp:555 | SongView &view = *fixture.view;
+src/checks/drawerpresentation/drawer.cpp:557 | const QRect rollBefore = fixture.bandRect(songview::TimelineBand::Roll);
+src/checks/drawerpresentation/drawer.cpp:567 | QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).top(), rollBefore.top());
+src/checks/drawerpresentation/drawer.cpp:568 | QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).height(), rollBefore.height());
+src/checks/drawerpresentation/drawer.cpp:569 | drawer->setHostBounds(fixture.bandRect(songview::TimelineBand::Roll));
+src/checks/drawerpresentation/drawer.cpp:592 | auto *const input = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
+src/checks/drawerpresentation/drawer.cpp:609 | auto *const automationGutter = fixture.quickRoot->findChild<songview::TimelineInputItem *>(
+src/checks/drawerpresentation/drawer.cpp:613 | const QRect automationBand = fixture.bandRect(songview::TimelineBand::Automation);
+src/checks/drawerpresentation/drawer.cpp:617 | QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick));
+
+Original assertion inventory
+
+A001 | makeDrawerFixture | src/checks/drawerpresentation/drawer.cpp:36
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario.
+Original expression:
+  qFatal("%s", qPrintable(error))
+
+A002 | sendWindowMouse | src/checks/drawerpresentation/drawer.cpp:57
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario.
+Original expression:
+  Q_ASSERT(window)
+
+A003 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:100
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer)
+
+A004 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:101
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(roll)
+
+A005 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:102
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automation)
+
+A006 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:103
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocity)
+
+A007 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:104
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice)
+
+A008 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:105
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(fixture.quick->quickWindow())
+
+A009 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:106
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(drawer->minimumSectionHeight(), layout::fontPx(17.0 / 5.0))
+
+A010 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:107
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
+
+A011 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:108
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!chrome.barRect().isEmpty())
+
+A012 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:109
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!chrome.voiceChangesToggleRect().isEmpty())
+
+A013 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:110
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!chrome.velocityToggleRect().isEmpty())
+
+A014 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:111
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!chrome.automationToggleRect().isEmpty())
+
+A015 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:112
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.barBorderWidth(), layout::singlePixel())
+
+A016 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:113
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.toggleCheckedBackground(),
+               QGuiApplication::palette().color(QPalette::Highlight))
+
+A017 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:115
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.barBackground().alpha(), 255)
+
+A018 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:116
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.barOutline().alpha(), 255)
+
+A019 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:117
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(chrome.iconRevision() > 0)
+
+A020 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:118
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
+
+A021 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:119
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
+
+A022 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:120
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+
+A023 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:121
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations)
+
+A024 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:143
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionVisible(page))
+
+A025 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:144
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerActivePage(), page)
+
+A026 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:145
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.editorDrawer()->bodyRect(page).has_value())
+
+A027 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:148
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.drawerSectionVisible(page))
+
+A028 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:149
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(page), originalHeight)
+
+A029 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:152
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionVisible(page))
+
+A030 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:153
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(page), originalHeight)
+
+A031 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:161
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.editorViewState().velocity.height.has_value())
+
+A032 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:165
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(toggle)
+
+A033 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:166
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(toggle->property("activeFocusOnTab").toBool())
+
+A034 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:170
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
+
+A035 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:171
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
+
+A036 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:172
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Velocity)
+
+A037 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:173
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(fixture.chrome().velocityChecked())
+
+A038 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:174
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(fixture.velocityHandle->isVisible())
+
+A039 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:175
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.editorViewState().velocity.height.has_value())
+
+A040 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:185
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(beforeBody)
+
+A041 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:191
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(afterBody)
+
+A042 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:198
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(afterBody)
+
+A043 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:200
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(std::abs(afterBody->height() - beforeBody->height()),
+               layout::space(layout::Space::Two))
+
+A044 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:205
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.editorDrawer()->bodyRect(EditorDrawerPage::VoiceChanges) == beforeBody)
+
+A045 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:210
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.hoveredHandle(), static_cast<int>(DrawerChromeTarget::VoiceChangesHandle))
+
+A046 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:211
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(fixture.voiceHandle->cursor().shape(), Qt::SizeVerCursor)
+
+A047 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:215
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(fixture.voiceHandle->cursor().shape() != Qt::SizeVerCursor)
+
+A048 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:218
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.hoveredHandle(), -1)
+
+A049 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:231
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocity.y() < voice.y())
+
+A050 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:232
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice.y() < automation.y())
+
+A051 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:233
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(chrome.velocityHandleRect().y() < chrome.voiceChangesHandleRect().y())
+
+A052 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:234
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(chrome.voiceChangesHandleRect().y() < chrome.automationHandleRect().y())
+
+A053 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:235
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.automationToggleRect().x(), chrome.voiceChangesToggleRect().x() +
+                                                      chrome.voiceChangesToggleRect().width() +
+                                                      layout::space(layout::Space::One))
+
+A054 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:238
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(chrome.velocityToggleRect().x(), chrome.automationToggleRect().x() +
+                                                    chrome.automationToggleRect().width() +
+                                                    layout::space(layout::Space::One))
+
+A055 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:241
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::physicalInputsMatchCanonical(
+          view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Roll,
+          QStringLiteral("timelineRollInput"), QStringLiteral("timelineRollGutterInput")))
+
+A056 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:244
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::physicalInputsMatchCanonical(
+          view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Velocity,
+          QStringLiteral("timelineVelocityInput"), QStringLiteral("timelineVelocityGutterInput")))
+
+A057 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:247
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::physicalInputsMatchCanonical(
+          view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::VoiceChanges,
+          QStringLiteral("timelineVoiceChangesInput"),
+          QStringLiteral("timelineVoiceChangesGutterInput")))
+
+A058 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:251
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::physicalInputsMatchCanonical(
+          view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Automation,
+          QStringLiteral("timelineAutomationInput"),
+          QStringLiteral("timelineAutomationGutterInput")))
+
+A059 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:259
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(geometry)
+
+A060 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:260
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(geometry->plotRect.x(), view.timelineSplitX())
+
+A061 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:261
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(geometry->plotRect.right(), geometry->rect.right())
+
+A062 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:262
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(geometry->plotRect.height(), geometry->rect.height())
+
+A063 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:266
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::visualDescendant(
+                  fixture.quickRoot, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
+
+A064 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:269
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(quickWindow)
+
+A065 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:271
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!published.isEmpty())
+
+A066 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:272
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(QRectF(QPointF{}, QSizeF(quickWindow->size())).contains(published))
+
+A067 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:292
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(handle)
+
+A068 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:295
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(bodyBefore)
+
+A069 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:300
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(handle->window())
+
+A070 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:304
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer->bodyRect(page) == bodyBefore)
+
+A071 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:305
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(page), storedBefore)
+
+A072 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:308
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(handle->window()->mouseGrabberItem(), handle)
+
+A073 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:312
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(liveBody)
+
+A074 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:313
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(liveBody->height() > bodyBefore->height())
+
+A075 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:314
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(drawer->overlayRect().bottom(), overlay.bottom())
+
+A076 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:316
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!handle->window()->mouseGrabberItem())
+
+A077 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:318
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(page), liveBody->height())
+
+A078 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:319
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionHeight(page) > storedBefore)
+
+A079 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:320
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionHeight(page) <= drawer->maximumSectionHeight())
+
+A080 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:321
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!fixture.chrome().detentVisible() || page == EditorDrawerPage::Velocity)
+
+A081 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:331
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer)
+
+A082 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:333
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationPage && automationPage->canvas())
+
+A083 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:340
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceBefore)
+
+A084 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:341
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocityBefore)
+
+A085 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:347
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(sectionMinimum > 0)
+
+A086 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:350
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), sectionMinimum)
+
+A087 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:352
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(flooredBody)
+
+A088 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:353
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(flooredBody->height(), sectionMinimum)
+
+A089 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:360
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceAtFloor)
+
+A090 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:361
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocityAtFloor)
+
+A091 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:362
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(voiceAtFloor->height(), voiceBefore->height())
+
+A092 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:363
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(velocityAtFloor->height(), velocityBefore->height())
+
+A093 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:369
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(gutter)
+
+A094 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:370
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_COMPARE(qCeil(gutter->height()), sectionMinimum)
+
+A095 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:372
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!gutterBounds.isEmpty())
+
+A096 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:374
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scroller)
+
+A097 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:375
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(scroller->property("clip").toBool())
+
+A098 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:377
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height())
+
+A099 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:380
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(firstTab)
+
+A100 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:381
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
+                                              gutterBounds))
+
+A101 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:386
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(
+              (label = checks::support::visualDescendant(
+                   fixture.quickRoot, QStringLiteral("automationParameterTab%1").arg(index))) &&
+              label->isVisible() && label->width() > 0.0 && label->height() > 0.0)
+
+A102 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:391
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(checks::support::rectInside(label->mapRectToScene(label->boundingRect()),
+                                                  gutterBounds))
+
+A103 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:397
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceAfterLabels && velocityAfterLabels)
+
+A104 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:398
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(voiceAfterLabels->height(), voiceBefore->height())
+
+A105 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:399
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(velocityAfterLabels->height(), velocityBefore->height())
+
+A106 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:408
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer)
+
+A107 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:412
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceBefore)
+
+A108 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:415
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(voiceBefore->height(), voiceMin)
+
+A109 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:416
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceMax > voiceMin)
+
+A110 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:423
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice)
+
+A111 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:426
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice->height() > previous)
+
+A112 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:427
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice->height() <= voiceMax)
+
+A113 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:431
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceAtMax)
+
+A114 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:432
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(voiceAtMax->height(), voiceMax)
+
+A115 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:437
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceAfter)
+
+A116 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:438
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(voiceAfter->height(), voiceMax)
+
+A117 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:451
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voiceBefore)
+
+A118 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:452
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationBefore)
+
+A119 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:453
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer.automationPage())
+
+A120 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:455
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationBefore->height() >= automationMinimum)
+
+A121 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:469
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationOverflowed)
+
+A122 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:470
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(automationOverflowed->height(), automationBefore->height() + overflow)
+
+A123 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:471
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationOverflowed->height() >= automationMinimum)
+
+A124 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:472
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(drawer.bodyRect(EditorDrawerPage::VoiceChanges)->height(),
+               drawer.voiceChangesMaximumBodyHeight())
+
+A125 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:477
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationOverflowed)
+
+A126 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:479
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer.bodyRect(EditorDrawerPage::VoiceChanges) == voiceBefore)
+
+A127 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:480
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationBefore)
+
+A128 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:482
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.editorViewState().voiceChanges == stateBefore.voiceChanges)
+
+A129 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:483
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.editorViewState().automation == stateBefore.automation)
+
+A130 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:494
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+
+A131 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:495
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges), voiceHeight)
+
+A132 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:502
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Velocity), collapsedVelocityHeight)
+
+A133 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:503
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges), collapsedVoiceHeight)
+
+A134 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:505
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.hasVisibleDrawerSection())
+
+A135 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:506
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Velocity))
+
+A136 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:507
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Automation))
+
+A137 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:508
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges))
+
+A138 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:509
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Roll))
+
+A139 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:510
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents))
+
+A140 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:516
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
+
+A141 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:517
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Automations))
+
+A142 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:518
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations)
+
+A143 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:528
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
+
+A144 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:529
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() &&
+                  *view.focusedTimelineBand() == songview::TimelineBand::Roll)
+
+A145 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:532
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(fixture.bar->hasActiveFocus())
+
+A146 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:533
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!view.focusedTimelineBand())
+
+A147 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:535
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() &&
+                  *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
+
+A148 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:538
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
+
+A149 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:539
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() &&
+                  *view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges)
+
+A150 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:542
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() &&
+                  *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
+
+A151 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:545
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() &&
+                  *view.focusedTimelineBand() == songview::TimelineBand::Automation)
+
+A152 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:548
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QTRY_VERIFY(view.focusedTimelineBand() &&
+                  *view.focusedTimelineBand() == songview::TimelineBand::Roll)
+
+A153 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:560
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!hostBounds.isEmpty())
+
+A154 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:561
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(rollGeometry)
+
+A155 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:566
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(drawer->plotWidth(), 0)
+
+A156 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:567
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).top(), rollBefore.top())
+
+A157 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:568
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).height(), rollBefore.height())
+
+A158 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:580
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice)
+
+A159 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:581
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocity)
+
+A160 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:582
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automation)
+
+A161 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:583
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice->height() >= 0)
+
+A162 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:584
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocity->height() >= 0)
+
+A163 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:585
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automation->height() >= 0)
+
+A164 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:586
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(velocity->bottom() <= voice->top())
+
+A165 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:587
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(voice->bottom() <= automation->top())
+
+A166 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:594
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(headers)
+
+A167 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:595
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(input)
+
+A168 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:596
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(input->window())
+
+A169 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:597
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(headers->rowCount(), 16)
+
+A170 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:601
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(input->bounds().contains(point))
+
+A171 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:603
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(input->window()->mouseGrabberItem(), input)
+
+A172 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:605
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(!input->window()->mouseGrabberItem())
+
+A173 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:607
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QCOMPARE(view.selectionModel().primaryTrack(),
+               headers->data(index, songview::TrackHeaderModel::TrackRole).toInt())
+
+A174 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:611
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationGutter)
+
+A175 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:614
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationGutter->isVisible())
+
+A176 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:615
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationGutter->bounds().contains(automationGutter->bounds().center()))
+
+A177 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:616
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(automationBand.contains(QPoint(automationBand.left(), automationBand.center().y())))
+
+A178 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:617
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Original expression:
+  QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
+
+Swift executable assertion index
+The S entries are exact predicates already called by the suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:9
+Swift expression:
+  report.expectEqual(
+          EditorDrawerMetrics(barHeight: drawerLayoutDrawerBarHeight, handleHeight: drawerLayoutDrawerHandleHeight,
+                              minimumBody: drawerLayoutDrawerMinimumBody, pianoRollReserve: 130,
+                              toggleInset: 3, resizeStep: drawerLayoutDrawerResizeStep, pixel: 1),
+          metrics, cppID: drawerLayoutMetricsID,
+          what: "resolved metrics derive the production bar row, handle, body floor, reserve, inset, step and hairline")
+
+S002 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:15
+Swift expression:
+  report.expectEqual(
+          6, EditorDrawerMetrics.resolve(baseFontPx: 13, appFontLineSpacing: -8).barHeight,
+          cppID: drawerLayoutMetricsID,
+          what: "a negative application line spacing does not shrink the bar below its own padding")
+
+S003 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:19
+Swift expression:
+  report.expectEqual(270, metrics.maximumDefaultBodyHeight(hostHeight: 400), cppID: drawerLayoutMetricsID,
+                         what: "the piano-roll reserve bounds a default body height")
+
+S004 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:21
+Swift expression:
+  report.expectEqual(173, metrics.maximumDefaultBodyHeight(hostHeight: 173), cppID: drawerLayoutMetricsID,
+                         what: "a host shorter than reserve plus floor keeps the whole host height")
+
+S005 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:23
+Swift expression:
+  report.expectEqual(44, metrics.maximumDefaultBodyHeight(hostHeight: 174), cppID: drawerLayoutMetricsID,
+                         what: "the reserve bound meets the body floor exactly at its boundary")
+
+S006 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:26
+Swift expression:
+  report.expect(DrawerSectionKind.automation.rawValue == 0 &&
+                    DrawerSectionKind.velocity.rawValue == 1 &&
+                    DrawerSectionKind.voiceChanges.rawValue == 2 &&
+                    DrawerSectionKind.stackOrder == [.velocity, .voiceChanges, .automation] &&
+                    DrawerSectionKind.toggleOrder == [.voiceChanges, .automation, .velocity],
+                    cppID: drawerLayoutMetricsID,
+                    message: "section identities keep production raw values and the fixed stack and toggle orders")
+
+S007 | drawerLayoutCheckDrawerMetricsAndKinds | src/checks/drawerpresentation/drawer.swift:33
+Swift expression:
+  report.expect(DrawerSectionKind.allCases.map(\.name) == ["automations", "velocity", "voiceChanges"] &&
+                    DrawerSectionKind.allCases.map(\.keyName) == ["automation", "velocity", "voiceChanges"] &&
+                    DrawerSectionKind.automation.iconResource == "qrc:/icons/automation.svg" &&
+                    DrawerSectionKind.velocity.iconResource == "qrc:/icons/velocity.svg" &&
+                    DrawerSectionKind.voiceChanges.iconResource == "qrc:/icons/flat-music.svg",
+                    cppID: drawerLayoutMetricsID,
+                    message: "preference key names and toggle icon resources follow the historical formats")
+
+S008 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:46
+Swift expression:
+  report.expect(empty.height == 0 && !empty.barVisible && empty.plotOrigin == drawerLayoutDrawerGutterWidth &&
+                    empty.plotWidth == drawerLayoutDrawerHostWidth - drawerLayoutDrawerGutterWidth &&
+                    empty.barWidth == 0 && empty.barHeight == 0, cppID: drawerLayoutAvailabilityID,
+                    message: "a container with no attached page contributes zero height and no bar")
+
+S009 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:52
+Swift expression:
+  report.expect(!geometry.available && geometry.contentUrl.isEmpty &&
+                        geometry.bodyWidth == 0 && geometry.bodyHeight == 0 &&
+                        geometry.handleHeight == 0 && geometry.toggleSize == 0,
+                        cppID: drawerLayoutAvailabilityID,
+                        message: "\(kind.name) publishes no control, no body and an empty URL with no page attached")
+
+S010 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:64
+Swift expression:
+  report.expect(harness.layout.isVisible(.velocity) &&
+                    harness.layout.storedBodyHeight(.velocity) == 220 &&
+                    harness.layout.isVisible(.automation) &&
+                    harness.layout.storedBodyHeight(.automation) == nil &&
+                    !harness.layout.isVisible(.voiceChanges) &&
+                    harness.layout.activePage == .automation && harness.layout.snapshot.height == 0,
+                    cppID: drawerLayoutAvailabilityID,
+                    message: "restored section intent is retained as stored preference while no page is attached")
+
+S011 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:78
+Swift expression:
+  report.expect(attached.published && harness.layout.isAvailable(.velocity) &&
+                    attached.snapshot[.velocity].contentUrl == drawerLayoutDrawerVelocityUrl &&
+                    attached.snapshot[.velocity].bodyHeight == 220 &&
+                    attached.snapshot[.velocity].available && attached.snapshot[.velocity].visible &&
+                    attached.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 220,
+                    cppID: drawerLayoutAvailabilityID,
+                    message: "attaching a page turns a stored visible section into visible content in the same publication")
+
+S012 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:87
+Swift expression:
+  report.expect(!duplicate.published && duplicate.isEmpty &&
+                    harness.layout.attachedPage(.velocity) === velocity &&
+                    duplicate.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 220,
+                    cppID: drawerLayoutAvailabilityID,
+                    message: "a kind that already holds a page rejects a second attach and publishes nothing")
+
+S013 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:96
+Swift expression:
+  report.expect(!rejected.published && rejected.isEmpty &&
+                    !harness.layout.isAvailable(.voiceChanges) &&
+                    harness.layout.attachedPage(.voiceChanges) == nil &&
+                    rejected.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 220,
+                    cppID: drawerLayoutAvailabilityID,
+                    message: "an empty content URL is rejected without changing any state")
+
+S014 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:109
+Swift expression:
+  report.expect(!detachedToggle.published && !detachedHeight.published &&
+                    !detachedVisible.published && !detachedResize.published &&
+                    detachedToggle.isEmpty && detachedResize.isEmpty &&
+                    harness.layout.resizeKind == nil && !harness.layout.isVisible(.voiceChanges) &&
+                    harness.layout.storedBodyHeight(.voiceChanges) == nil &&
+                    harness.layout.activePage == .automation && emptyUrl.cancelCount == 0,
+                    cppID: drawerLayoutAvailabilityID,
+                    message: "visibility, height and resize calls are ignored for a kind with no attached page")
+
+S015 | drawerLayoutCheckDrawerNoPageAndAvailability | src/checks/drawerpresentation/drawer.swift:119
+Swift expression:
+  report.expect(detached.published && !harness.layout.isAvailable(.velocity) &&
+                    harness.layout.attachedPage(.velocity) == nil &&
+                    harness.layout.isVisible(.velocity) &&
+                    harness.layout.storedBodyHeight(.velocity) == 220 &&
+                    detached.snapshot.height == 0 && detached.cancelledSections == [.velocity] &&
+                    velocity.cancelCount == 1 && velocity.publishedHeightsAtCancel == [246],
+                    cppID: drawerLayoutAvailabilityID,
+                    message: "detaching cancels its page synchronously and drops its controls while stored visibility and height survive")
+
+S016 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer.swift:135
+Swift expression:
+  report.expect(snapshot.height == drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 50 + 100 &&
+                    snapshot.barVisible && snapshot.plotOrigin == drawerLayoutDrawerGutterWidth &&
+                    snapshot.plotWidth == drawerLayoutDrawerHostWidth - drawerLayoutDrawerGutterWidth,
+                    cppID: drawerLayoutStackingID,
+                    message: "three visible sections stack their bodies, handles and bar into one container height")
+
+S017 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer.swift:163
+Swift expression:
+  report.expect(snapshot.barX == 0 && snapshot.barY == snapshot.height - drawerLayoutDrawerBarHeight &&
+                    snapshot.barWidth == drawerLayoutDrawerHostWidth && snapshot.barHeight == drawerLayoutDrawerBarHeight &&
+                    snapshot.barY == automation.bodyY + automation.bodyHeight,
+                    cppID: drawerLayoutStackingID,
+                    message: "the bar spans the host width as the last row, directly below the lowest body")
+
+S018 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer.swift:170
+Swift expression:
+  report.expect(buttonSize == 16 && velocity.toggleSize == buttonSize &&
+                    voiceChanges.toggleSize == buttonSize && automation.toggleSize == buttonSize,
+                    cppID: drawerLayoutStackingID,
+                    message: "toggle buttons take the production size for the resolved bar row")
+
+S019 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer.swift:183
+Swift expression:
+  report.expect(snapshot.detentX == 0 && snapshot.detentY == 48 &&
+                    snapshot.detentSize == 16 && snapshot.detentIconInset == 1.5,
+                    cppID: drawerLayoutStackingID,
+                    message: "detents occupy the velocity body's lower-left corner, not the bar")
+
+S020 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer.swift:190
+Swift expression:
+  report.expect(narrow.detentSize == 9 && narrow.detentY == 55,
+                    cppID: drawerLayoutStackingID,
+                    message: "detent hit geometry is bounded by the visible velocity gutter")
+
+S021 | drawerLayoutCheckDrawerStackingAndToggles | src/checks/drawerpresentation/drawer.swift:197
+Swift expression:
+  report.expect(detached.published && afterDetach[.automation].toggleX == 1 + buttonSize + 3 &&
+                    afterDetach[.velocity].toggleX == 1 + 2 * (buttonSize + 3) &&
+                    afterDetach[.voiceChanges].toggleSize == 0 &&
+                    afterDetach[.voiceChanges].contentUrl.isEmpty,
+                    cppID: drawerLayoutStackingID,
+                    message: "detaching one kind leaves the surviving toggle slots and their controls unmoved")
+
+S022 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:212
+Swift expression:
+  report.expect(hidden.published && harness.layout.storedBodyHeight(.automation) == 100 &&
+                    harness.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + 2 * drawerLayoutDrawerHandleHeight + 60 + 50 &&
+                    hiddenGeometry.bodyHeight == 0 && hiddenGeometry.handleHeight == 0 &&
+                    hiddenGeometry.available && !hiddenGeometry.visible &&
+                    hiddenGeometry.contentUrl == drawerLayoutDrawerAutomationUrl &&
+                    hiddenGeometry.toggleSize == 16 &&
+                    hiddenGeometry.toggleY == harness.layout.snapshot.barY + 3,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "hiding a section releases its body and handle while its toggle, URL and stored height stay")
+
+S023 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:229
+Swift expression:
+  report.expect(shown.published && harness.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 50 + 100 &&
+                        harness.layout.snapshot[.automation].bodyHeight == 100,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "re-showing a hidden section restores its stored body height")
+
+S024 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:240
+Swift expression:
+  report.expect(!equalVisibility.published && equalVisibility.isEmpty &&
+                    equalVisibility.focusRequest == nil && !equalHeight.published &&
+                    equalHeight.isEmpty && !zeroDirection.published && zeroDirection.isEmpty,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "equal visibility and height setters publish nothing and request no focus")
+
+S025 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:247
+Swift expression:
+  report.expect(toggled.published && !harness.layout.isVisible(.velocity) &&
+                    harness.layout.storedBodyHeight(.velocity) == 60 &&
+                    harness.layout.activePage == .velocity &&
+                    harness.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + 2 * drawerLayoutDrawerHandleHeight + 50 + 100 &&
+                    toggled.activePagePreference == .velocity,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "toggling hides the section, keeps its stored height, moves the active page and records both")
+
+S026 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:257
+Swift expression:
+  report.expect(restoredHeight.published && harness.layout.isVisible(.velocity) &&
+                    harness.layout.snapshot[.velocity].bodyHeight == 60 &&
+                    restoredHeight.activePagePreference == nil &&
+                    restoredHeight.sectionPreferences.count == 1,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "re-showing through the toggle restores the height and records no page change")
+
+S027 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:265
+Swift expression:
+  report.expect(unset.published && harness.layout.storedBodyHeight(.automation) == nil &&
+                    harness.layout.snapshot[.automation].bodyHeight == 80,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "a height below one maps to the unset marker and the page default takes over")
+
+S028 | drawerLayoutCheckDrawerVisibilityAndStoredHeights | src/checks/drawerpresentation/drawer.swift:274
+Swift expression:
+  report.expect(floored.published && harness.layout.storedBodyHeight(.velocity) == 20 &&
+                    harness.layout.snapshot[.velocity].bodyHeight == drawerLayoutDrawerMinimumBody,
+                    cppID: drawerLayoutVisibilityID,
+                    message: "a drawn body never falls below the font-relative minimum body")
+
+S029 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:284
+Swift expression:
+  report.expect(harness.layout.resizeKind == .automation, cppID: drawerLayoutResizeID,
+                    message: "beginning a resize claims the session for its kind")
+
+S030 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:289
+Swift expression:
+  report.expect(!crossKind.published && !crossEnd.published && crossKind.isEmpty &&
+                    harness.layout.resizeKind == .automation &&
+                    harness.layout.storedBodyHeight(.velocity) == 60,
+                    cppID: drawerLayoutResizeID,
+                    message: "a resize session belongs to one kind and ignores other kinds")
+
+S031 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:296
+Swift expression:
+  report.expect(grown.published && harness.layout.storedBodyHeight(.automation) == 130 &&
+                    harness.layout.snapshot[.automation].bodyHeight == 130,
+                    cppID: drawerLayoutResizeID,
+                    message: "a positive drag delta grows the body by the rounded delta, above the reserve bound")
+
+S032 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:304
+Swift expression:
+  report.expect(harness.layout.resizeKind == nil &&
+                    harness.layout.storedBodyHeight(.automation) == 130 &&
+                    ended.sectionPreferences.count == 1, cppID: drawerLayoutResizeID,
+                    message: "ending the resize records the changed section preference once")
+
+S033 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:314
+Swift expression:
+  report.expect(!sessionless.published && !sessionlessEnd.published &&
+                    harness.layout.storedBodyHeight(.automation) == 130,
+                    cppID: drawerLayoutResizeID,
+                    message: "apply and end without a live session are ignored")
+
+S034 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:321
+Swift expression:
+  report.expect(shrunk.published &&
+                    harness.layout.storedBodyHeight(.automation) == drawerLayoutDrawerMinimumBody,
+                    cppID: drawerLayoutResizeID,
+                    message: "a shrink clamps at the minimum body height")
+
+S035 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:326
+Swift expression:
+  report.expect(returned.published && harness.layout.storedBodyHeight(.automation) == 130,
+                    cppID: drawerLayoutResizeID,
+                    message: "returning to the drag-start height restores the original stored height")
+
+S036 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:335
+Swift expression:
+  report.expect(returnedToUnset.published &&
+                    unsetReturn.layout.storedBodyHeight(.automation) == nil &&
+                    unsetReturn.layout.snapshot[.automation].bodyHeight == 80,
+                    cppID: drawerLayoutResizeID,
+                    message: "returning to the drag start restores the unset marker, not a concrete height")
+
+S037 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:344
+Swift expression:
+  report.expect(clamped.published && available.layout.storedBodyHeight(.velocity) == 216 &&
+                    available.layout.snapshot[.velocity].bodyHeight == 216 &&
+                    available.layout.snapshot.height == drawerLayoutDrawerHostHeight,
+                    cppID: drawerLayoutResizeID,
+                    message: "the available-height clamp fills the host exactly and never overflows it")
+
+S038 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:354
+Swift expression:
+  report.expect(cappedResize.published &&
+                    declared.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                    declared.layout.snapshot[.voiceChanges].bodyHeight == 110,
+                    cppID: drawerLayoutResizeID,
+                    message: "a page-declared maximum applies after the available-height clamp without a spill partner")
+
+S039 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:364
+Swift expression:
+  report.expect(!cancelChange.published && cancelChange.isEmpty &&
+                    cancelled.layout.resizeKind == nil &&
+                    cancelled.layout.storedBodyHeight(.voiceChanges) == 90 &&
+                    cancelled.layout.snapshot[.voiceChanges].bodyHeight == 90,
+                    cppID: drawerLayoutResizeID,
+                    message: "cancelling a resize drops the session, keeps the applied height and records nothing")
+
+S040 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:375
+Swift expression:
+  report.expect(interrupted.layout.resizeKind == nil &&
+                    interrupted.layout.storedBodyHeight(.voiceChanges) == 70,
+                    cppID: drawerLayoutResizeID,
+                    message: "global cancellation drops a live resize session and keeps the applied height")
+
+S041 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:382
+Swift expression:
+  report.expect(step.published &&
+                    stepped.layout.storedBodyHeight(.automation) == 100 + drawerLayoutDrawerResizeStep &&
+                    stepped.layout.resizeKind == nil, cppID: drawerLayoutResizeID,
+                    message: "a handle step applies one resize step through the resize path and ends its own session")
+
+S042 | drawerLayoutCheckDrawerResizeClampsAndSessions | src/checks/drawerpresentation/drawer.swift:393
+Swift expression:
+  report.expect(!floorStep.published && floorStep.isEmpty &&
+                    flooredStep.layout.storedBodyHeight(.automation) == drawerLayoutDrawerMinimumBody,
+                    cppID: drawerLayoutResizeID,
+                    message: "a handle step that resolves to the drag start publishes nothing")
+
+S043 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:404
+Swift expression:
+  report.expect(spilled.published && harness.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                    harness.layout.storedBodyHeight(.automation) == 130 &&
+                    harness.layout.snapshot[.automation].bodyHeight == 130 &&
+                    harness.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 110 + 130,
+                    cppID: drawerLayoutSpillID,
+                    message: "a voice-change drag past its declared maximum moves the automations stored height by the excess")
+
+S044 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:413
+Swift expression:
+  report.expect(!stationary.published && harness.layout.storedBodyHeight(.automation) == 130,
+                    cppID: drawerLayoutSpillID,
+                    message: "a stationary pointer cannot add the same spill twice")
+
+S045 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:418
+Swift expression:
+  report.expect(spilledEnd.sectionPreferences.count == 2 &&
+                    spilledEnd.sectionPreferences.contains {
+                        $0.kind == .voiceChanges && $0.storedBodyHeight == 110
+                    } &&
+                    spilledEnd.sectionPreferences.contains {
+                        $0.kind == .automation && $0.storedBodyHeight == 130
+                    } && harness.layout.resizeKind == nil,
+                    cppID: drawerLayoutSpillID,
+                    message: "ending a spilled resize records both changed kinds")
+
+S046 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:432
+Swift expression:
+  report.expect(returned.published &&
+                    reverted.layout.storedBodyHeight(.voiceChanges) == 50 &&
+                    reverted.layout.storedBodyHeight(.automation) == 100 &&
+                    reverted.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 50 + 100,
+                    cppID: drawerLayoutSpillID,
+                    message: "returning to the drag start restores both original stored heights")
+
+S047 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:443
+Swift expression:
+  report.expect(floored.published &&
+                    crowded.layout.storedBodyHeight(.voiceChanges) == 106 &&
+                    crowded.layout.storedBodyHeight(.automation) == drawerLayoutDrawerMinimumBody,
+                    cppID: drawerLayoutSpillID,
+                    message: "spilled automations stop at the minimum body when the available height is exhausted")
+
+S048 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:453
+Swift expression:
+  report.expect(withoutPartner.published &&
+                    unspilled.layout.storedBodyHeight(.voiceChanges) == 110 &&
+                    unspilled.layout.storedBodyHeight(.automation) == 100,
+                    cppID: drawerLayoutSpillID,
+                    message: "a voice-change drag without a visible automations partner keeps the automations height")
+
+S049 | drawerLayoutCheckDrawerVoiceChangesSpill | src/checks/drawerpresentation/drawer.swift:462
+Swift expression:
+  report.expect(velocityGrowth.published &&
+                    uncapped.layout.storedBodyHeight(.velocity) == 90 &&
+                    uncapped.layout.storedBodyHeight(.automation) == 100,
+                    cppID: drawerLayoutSpillID,
+                    message: "a kind with no declared maximum never spills into the automations section")
+
+S050 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:477
+Swift expression:
+  report.expect(shrunk.published && snapshot.height == 120 && snapshot.barY == 98 &&
+                    harness.layout.storedBodyHeight(.velocity) == 60 &&
+                    harness.layout.storedBodyHeight(.voiceChanges) == 50 &&
+                    harness.layout.storedBodyHeight(.automation) == 100,
+                    cppID: drawerLayoutClampID,
+                    message: "a host shrink re-clamps the container without rewriting stored heights")
+
+S051 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:483
+Swift expression:
+  report.expect(snapshot[.voiceChanges].bodyHeight == 50 &&
+                    snapshot[.automation].bodyHeight == 36 &&
+                    snapshot[.velocity].bodyHeight == 0 &&
+                    snapshot[.velocity].handleHeight == drawerLayoutDrawerHandleHeight,
+                    cppID: drawerLayoutClampID,
+                    message: "the clamped allocation fills voice changes first, automations second and velocity with the remainder")
+
+S052 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:489
+Swift expression:
+  report.expect(snapshot[.automation].bodyY ==
+                        snapshot[.velocity].bodyY + snapshot[.velocity].bodyHeight +
+                        snapshot[.voiceChanges].handleHeight + snapshot[.voiceChanges].bodyHeight +
+                        drawerLayoutDrawerHandleHeight &&
+                    snapshot.barY == snapshot[.automation].bodyY + snapshot[.automation].bodyHeight,
+                    cppID: drawerLayoutClampID,
+                    message: "a constrained container keeps every drawn rectangle ordered and non-negative")
+
+S053 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:503
+Swift expression:
+  report.expect(reserved.layout.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 350 &&
+                    reserved.layout.snapshot[.automation].bodyHeight == 350,
+                    cppID: drawerLayoutClampID,
+                    message: "the piano-roll reserve never caps a stored body or the aggregate height")
+
+S054 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:510
+Swift expression:
+  report.expect(grown.published && reserved.layout.storedBodyHeight(.automation) == 374 &&
+                    reserved.layout.snapshot.height == drawerLayoutDrawerHostHeight,
+                    cppID: drawerLayoutClampID,
+                    message: "the reserve never caps a resize, and the aggregate may fill the host exactly")
+
+S055 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:520
+Swift expression:
+  report.expect(defaults.layout.snapshot[.automation].bodyHeight == 80 &&
+                    defaults.layout.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 80,
+                    cppID: drawerLayoutClampID,
+                    message: "a page default is bounded by the reserve through maximumDefaultBodyHeight")
+
+S056 | drawerLayoutCheckDrawerHostClampAndAllocation | src/checks/drawerpresentation/drawer.swift:528
+Swift expression:
+  report.expect(defaults.layout.snapshot[.automation].bodyHeight == drawerLayoutDrawerMinimumBody &&
+                    defaults.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + drawerLayoutDrawerMinimumBody,
+                    cppID: drawerLayoutClampID,
+                    message: "a short host keeps the default body at its minimum instead of the reserve bound")
+
+S057 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:539
+Swift expression:
+  report.expect(hiddenActive.focusRequest?.target == DrawerSectionKind.velocity.rawValue &&
+                    hiddenActive.focusRequest?.revision == 1 && hiddenActive.published &&
+                    harness.layout.activePage == .automation,
+                    cppID: drawerLayoutFocusID,
+                    message: "hiding the active section requests focus for the first remaining visible section")
+
+S058 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:548
+Swift expression:
+  report.expect(unobserved.focusRequest == nil &&
+                    unobserved.cancelledSections == [.voiceChanges] &&
+                    !harness.layout.isVisible(.voiceChanges),
+                    cppID: drawerLayoutFocusID,
+                    message: "a transition that does not own focus cancels content but publishes no focus request")
+
+S059 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:557
+Swift expression:
+  report.expect(observed.focusRequest?.target == DrawerSectionKind.velocity.rawValue &&
+                    observed.focusRequest?.revision == 2, cppID: drawerLayoutFocusID,
+                    message: "focus revisions advance monotonically for real requests only")
+
+S060 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:560
+Swift expression:
+  report.expect(observed.focusRequest?.target != DrawerSectionKind.voiceChanges.rawValue,
+                    cppID: drawerLayoutFocusID,
+                    message: "a request prefers the active visible section over the section just shown")
+
+S061 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:567
+Swift expression:
+  report.expect(noTransition.focusRequest == nil && !noTransition.published &&
+                    noTransition.isEmpty, cppID: drawerLayoutFocusID,
+                    message: "an unchanged visibility transition publishes no focus request")
+
+S062 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:577
+Swift expression:
+  report.expect(fullHide.focusRequest == nil && fullHide.isEmpty, cppID: drawerLayoutFocusID,
+                    message: "hiding an already hidden section is no transition and requests no focus")
+
+S063 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:583
+Swift expression:
+  report.expect(shownAgain.focusRequest?.target == DrawerSectionKind.voiceChanges.rawValue,
+                    cppID: drawerLayoutFocusID,
+                    message: "showing a section with the drawer focused targets that visible section")
+
+S064 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:590
+Swift expression:
+  report.expect(last.focusRequest?.target == -1 && harness.layout.snapshot.barVisible &&
+                    harness.layout.snapshot.height == drawerLayoutDrawerBarHeight &&
+                    harness.layout.snapshot[.velocity].toggleSize == 16 &&
+                    harness.layout.snapshot[.automation].toggleSize == 16 &&
+                    harness.layout.snapshot[.velocity].handleHeight == 0 &&
+                    harness.layout.snapshot[.voiceChanges].bodyHeight == 0,
+                    cppID: drawerLayoutFocusID,
+                    message: "hiding the last visible section requests the roll while the bar and its toggles stay without any body or handle")
+
+S065 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:614
+Swift expression:
+  report.expect(skipped.focusRequest?.target == DrawerSectionKind.automation.rawValue &&
+                    unavailable.layout.activePage == .velocity,
+                    cppID: drawerLayoutFocusID,
+                    message: "a request never targets a kind that is not available and visible")
+
+S066 | drawerLayoutCheckDrawerFocusRequests | src/checks/drawerpresentation/drawer.swift:624
+Swift expression:
+  report.expect(retarget.focusRequest?.target == DrawerSectionKind.voiceChanges.rawValue &&
+                    retarget.focusRequest?.revision == 1 &&
+                    retarget.cancelledSections == [.automation],
+                    cppID: drawerLayoutFocusID,
+                    message: "an active-page change requests the new active visible section in the same transition")
+
+S067 | drawerLayoutCheckDrawerCancellation | src/checks/drawerpresentation/drawer.swift:641
+Swift expression:
+  report.expect(hidden.cancelledSections == [.velocity] && hidden.published &&
+                    pages[.velocity]!.cancelCount == 1 &&
+                    pages[.voiceChanges]!.cancelCount == 0 && pages[.automation]!.cancelCount == 0 &&
+                    harness.trace.kinds == [.velocity] &&
+                    pages[.velocity]!.publishedHeightsAtCancel == [preHideHeight],
+                    cppID: drawerLayoutCancelID,
+                    message: "a transition cancels exactly the kind it hides, inside the call and before the caller sees the new publication")
+
+S068 | drawerLayoutCheckDrawerCancellation | src/checks/drawerpresentation/drawer.swift:651
+Swift expression:
+  report.expect(moved.cancelledSections == [.voiceChanges, .automation] &&
+                    harness.trace.kinds == [.voiceChanges, .automation] &&
+                    moved.activePagePreference == .voiceChanges &&
+                    pages[.voiceChanges]!.cancelCount == 1 && pages[.automation]!.cancelCount == 1,
+                    cppID: drawerLayoutCancelID,
+                    message: "one transition cancels its hidden kind and the kind losing the active slot, in stack order")
+
+S069 | drawerLayoutCheckDrawerCancellation | src/checks/drawerpresentation/drawer.swift:660
+Swift expression:
+  report.expect(pages[.velocity]!.cancelCount == 2 && pages[.voiceChanges]!.cancelCount == 2 &&
+                    pages[.automation]!.cancelCount == 2 &&
+                    Set(harness.trace.kinds) == Set(DrawerSectionKind.allCases) &&
+                    harness.trace.kinds.count == 3,
+                    cppID: drawerLayoutCancelID,
+                    message: "global cancellation fans out to every attached page once, including hidden kinds")
+
+S070 | drawerLayoutCheckDrawerCancellation | src/checks/drawerpresentation/drawer.swift:676
+Swift expression:
+  report.expect(hostChange.cancelledSections.isEmpty && metricChange.cancelledSections.isEmpty &&
+                    unrelated.cancelledSections.isEmpty && pages[.automation]!.cancelCount == 2 &&
+                    harness.layout.storedBodyHeight(.automation) == 90 && heightBefore == 100,
+                    cppID: drawerLayoutCancelID,
+                    message: "host, metric and height changes cancel nothing again")
+
+S071 | drawerLayoutCheckDrawerCancellation | src/checks/drawerpresentation/drawer.swift:686
+Swift expression:
+  report.expect(resizing.harness.layout.resizeKind == nil &&
+                    resizing.pages[.voiceChanges]!.cancelCount == 1 &&
+                    resizing.pages[.velocity]!.cancelCount == 1 &&
+                    resizing.harness.layout.storedBodyHeight(.voiceChanges) == 70,
+                    cppID: drawerLayoutCancelID,
+                    message: "global cancellation ends a live resize session and cancels every page in the same call")
+
+S072 | drawerLayoutCheckDrawerCancellation | src/checks/drawerpresentation/drawer.swift:694
+Swift expression:
+  report.expect(detached.cancelledSections == [.velocity] &&
+                    pages[.velocity]!.cancelCount == 3 &&
+                    !harness.layout.isAvailable(.velocity),
+                    cppID: drawerLayoutCancelID,
+                    message: "detaching cancels its own page exactly once and drops the attachment")
+
+S073 | drawerLayoutCheckDrawerRestoreAndPreferenceRecords | src/checks/drawerpresentation/drawer.swift:712
+Swift expression:
+  report.expect(restored.published && harness.layout.isVisible(.velocity) &&
+                    harness.layout.isVisible(.automation) &&
+                    harness.layout.isVisible(.voiceChanges) &&
+                    harness.layout.storedBodyHeight(.velocity) == 120 &&
+                    harness.layout.storedBodyHeight(.automation) == nil &&
+                    harness.layout.storedBodyHeight(.voiceChanges) == 96 &&
+                    harness.layout.activePage == .voiceChanges &&
+                    harness.layout.snapshot.height ==
+                        drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 120 + 80 + 96 &&
+                    harness.layout.snapshot[.automation].bodyHeight == 80,
+                    cppID: drawerLayoutPersistenceID,
+                    message: "restored values apply visibility, heights, active page and geometry in one publication")
+
+S074 | drawerLayoutCheckDrawerRestoreAndPreferenceRecords | src/checks/drawerpresentation/drawer.swift:732
+Swift expression:
+  report.expect(!absent.published && absent.isEmpty, cppID: drawerLayoutPersistenceID,
+                    message: "an absent-only restore publishes nothing")
+
+S075 | drawerLayoutCheckDrawerRestoreAndPreferenceRecords | src/checks/drawerpresentation/drawer.swift:734
+Swift expression:
+  report.expect(harness.layout.isVisible(.velocity) && harness.layout.isVisible(.automation) &&
+                    harness.layout.isVisible(.voiceChanges) &&
+                    harness.layout.activePage == .voiceChanges, cppID: drawerLayoutPersistenceID,
+                    message: "absent visibility and page values leave the current section state untouched")
+
+S076 | drawerLayoutCheckDrawerRestoreAndPreferenceRecords | src/checks/drawerpresentation/drawer.swift:742
+Swift expression:
+  report.expect(toggled.activePagePreference == .automation &&
+                    toggled.sectionPreferences.count == 1 && toggled.published &&
+                    harness.layout.activePage == .automation, cppID: drawerLayoutPersistenceID,
+                    message: "an interactive toggle records its own visibility and the active-page slot")
+
+S077 | drawerLayoutCheckDrawerRestoreAndPreferenceRecords | src/checks/drawerpresentation/drawer.swift:748
+Swift expression:
+  report.expect(suppressedPage.activePagePreference == nil &&
+                    suppressedPage.sectionPreferences.count == 1, cppID: drawerLayoutPersistenceID,
+                    message: "an interactive call that does not move the active page records only the section preference")
+
+S078 | drawerLayoutCheckDrawerRestoreAndPreferenceRecords | src/checks/drawerpresentation/drawer.swift:762
+Swift expression:
+  report.expect(detached.cancelledSections == [.voiceChanges] &&
+                    detached.sectionPreferences.isEmpty &&
+                    detached.activePagePreference == nil && !detachedToggle.published &&
+                    !detachedHeight.published && detachedToggle.isEmpty && detachedHeight.isEmpty &&
+                    harness.layout.storedBodyHeight(.voiceChanges) == 96,
+                    cppID: drawerLayoutPersistenceID,
+                    message: "an unavailable kind never has its keys written and keeps its stored preference")

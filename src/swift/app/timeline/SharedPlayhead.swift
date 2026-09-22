@@ -155,6 +155,7 @@ public final class SharedPlayheadPresenter {
     /// object. The QML-facing fields and signals below are unchanged, and this
     /// callback never changes what the presenter publishes.
     @QtIgnored public var onPresentation: ((SharedPlayheadPresentation) -> Void)?
+    @QtIgnored public var onPoll: ((Float, Bool) -> Void)?
 
     /// The polling lifecycle token: a new one per attach, and every observation
     /// carries the token of the generation that produced it. A task from a
@@ -204,6 +205,7 @@ public final class SharedPlayheadPresenter {
         lifecycleToken &+= 1
         stopPolling()
         onPresentation = nil
+        onPoll = nil
         session = nil
         audio = nil
         grid = nil
@@ -219,6 +221,7 @@ public final class SharedPlayheadPresenter {
         guard pollTask == nil, session != nil else { return }
         let token = lifecycleToken
         pollTask = Task { [weak self] in
+            var previous = ContinuousClock.now
             while !Task.isCancelled {
                 do {
                     try await Task.sleep(for: SharedPlayheadPresenter.pollInterval)
@@ -227,6 +230,11 @@ public final class SharedPlayheadPresenter {
                 }
                 guard let self, self.lifecycleToken == token else { return }
                 self.observeCurrent(token: token)
+                let now = ContinuousClock.now
+                let elapsed = previous.duration(to: now).components
+                previous = now
+                self.onPoll?(Float(elapsed.seconds) + Float(elapsed.attoseconds) / 1e18,
+                             self.playing)
             }
         }
     }

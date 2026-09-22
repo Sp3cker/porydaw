@@ -149,23 +149,6 @@ public struct AutomationSweepTransaction: Sendable {
         }
     }
 
-    /// The write list one lane receives: tick order with the last at a tick
-    /// winning, which is the canonical shape `writeLane` stores.
-    static func upsertAll(_ points: inout [AutomationLanePoint]) {
-        var result: [AutomationLanePoint] = []
-        result.reserveCapacity(points.count)
-        for point in points.enumerated().sorted(by: {
-            $0.element.tick == $1.element.tick ? $0.offset < $1.offset
-                                               : $0.element.tick < $1.element.tick
-        }).map(\.element) {
-            if let last = result.last, last.tick == point.tick {
-                result[result.count - 1] = point
-            } else {
-                result.append(point)
-            }
-        }
-        points = result
-    }
 }
 
 // MARK: - Pencil

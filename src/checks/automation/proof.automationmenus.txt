@@ -1,0 +1,314 @@
+Assertion correspondence: automation/automationmenus.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/automation/automationmenus.cpp
+Original SHA-256: 21a5bbb0b1795bff9bec4f987313788e484a08ab232989d16bfb48cf6a35b8c3
+Original C++ file has been removed from current checkout; retrieve it from the reference revision.
+Swift counterpart: src/checks/automation/automationmenus.swift
+Swift SHA-256: 23e3e173b7f5aab8380eedb9f152a7726df792b8bdf5642534376f619321acbd
+
+Scope: contextMenuActionsApplyEffects and laneMenuValueRangeSubmenuPickRescalesAndCloses. Other methods in the historical C++ file are NOT claimed migrated by this scoped proof. This is not a file-retirement certificate.
+
+Oracle sequences: Clear menus use tempo120 BPM and controller10=64 at tick48, clear tempo, switch CC10/tempo, clear CC10, switch tempo/CC10. Range menus use controller21 (LFO), track0, value96 at tick48; open lane label menu, hover Value range, choose64, assert closure/view range/revision/history, reopen and inspect checked64, dismiss. The Swift fixtures reproduce these parameter inputs and action order. Native pointer delivery, rendering and Escape are not proven by direct presenter calls. Keyboard/focus work is explicitly deferred by the user.
+
+Verification: deno task verify --filter swiftcore --verbose passed on the current worktree at d1b7aaf9d55968b677352ff14ad80e7be94ef1a2: build ok in 32.07s; swiftcore ok in 8.49s; 1/24 harnesses selected, 23 skipped. Entry: runAutomationPageChecks -> drawerAutomationOriginalClearMenus / drawerAutomationOriginalRangeMenu. Migration-only QML captures are not acceptance criteria or evidence for this proof. MATCHED below identifies equivalent presenter/document predicates with passing execution; PARTIAL retains original UI-delivery obligations.
+
+contextMenuActionsApplyEffects
+
+Original 226
+Disposition: NATIVE-SETUP
+Mapping: the retired AutomationCanvas pointer check is replaced by construction of the production Swift AutomationPage; this is not a native rendering assertion.
+QVERIFY(canvas)
+
+Original 240
+Disposition: PARTIAL
+Mapping: drawerAutomationOriginalClearMenus opens the actual tempo presenter menu; original rendered label right-press and popup session delivery are not exercised.
+QVERIFY2(clearTempo.session, qUtf8Printable(clearTempo.diagnostic))
+
+Original 242
+Disposition: MATCHED
+Mapping: tempo iteration requires the published enabled clearLane row. [S002]
+QVERIFY2(tempoClearRow >= 0, "the tempo lane menu has no Clear row")
+
+Original 243
+Disposition: PARTIAL
+Mapping: consumeMenuAction accepts the published Clear action; no rendered-row mouse click is claimed.
+QVERIFY2(quick_popup::clickMenuRow(*clearTempo.session, tempoClearRow),
+             "the Clear tempo row did not receive a real click")
+
+Original 246
+Disposition: MATCHED
+Mapping: tempo iteration requires page.menuOpen false after Clear. [S004]
+QVERIFY2(!clearTempo.session->isOpen(), "the Clear tempo pick left the shared menu open")
+
+Original 247
+Disposition: MATCHED
+Mapping: tempo iteration requires production document.state.tempo.isEmpty. [S005]
+QVERIFY(songTab.document().tempoPoints().empty())
+
+Original 251
+Disposition: PARTIAL
+Mapping: activateParameter(CC10) must succeed after tempo clear; real label activation is not exercised.
+QVERIFY2(activateParameter(ccRow), "the lane label was no longer selectable")
+
+Original 252
+Disposition: PARTIAL
+Mapping: activateParameter(tempo) must succeed and activeParameter must equal tempo after clearing it; real label activation is not exercised.
+QVERIFY2(activateParameter(tempoRow), "the cleared tempo parameter was no longer selectable")
+
+Original 256
+Disposition: PARTIAL
+Mapping: CC10 iteration opens the actual presenter menu; original label right-press is not exercised.
+QVERIFY2(clearCc.session, qUtf8Printable(clearCc.diagnostic))
+
+Original 258
+Disposition: MATCHED
+Mapping: CC10 iteration requires the published enabled clearLane row. [S002]
+QVERIFY2(ccClearRow >= 0, "the lane menu has no Clear row")
+
+Original 259
+Disposition: PARTIAL
+Mapping: consumeMenuAction accepts the published Clear action; no rendered-row mouse click is claimed.
+QVERIFY2(quick_popup::clickMenuRow(*clearCc.session, ccClearRow),
+             "the Clear events row did not receive a real click")
+
+Original 262
+Disposition: MATCHED
+Mapping: CC10 iteration requires page.menuOpen false after Clear. [S004]
+QVERIFY2(!clearCc.session->isOpen(), "the Clear events pick left the shared menu open")
+
+Original 263
+Disposition: MATCHED
+Mapping: CC10 iteration requires production document lanePoints for track0/controller10 to be empty. [S006]
+QVERIFY(songTab.document().lanePoints(0, kController).empty())
+
+Original 266
+Disposition: PARTIAL
+Mapping: activateParameter(tempo) must succeed after CC10 clear; real label activation is not exercised.
+QVERIFY2(activateParameter(tempoRow), "the tempo label was no longer selectable")
+
+Original 267
+Disposition: PARTIAL
+Mapping: activateParameter(CC10) must succeed and activeParameter must equal CC10 after clearing it; real label activation is not exercised.
+QVERIFY2(activateParameter(ccRow), "the cleared lane parameter was no longer selectable")
+
+laneMenuValueRangeSubmenuPickRescalesAndCloses
+
+Original 282
+Disposition: PARTIAL
+Mapping: Swift openParameterMenu succeeds for LFO; native label right-press and popup rendering remain unverified.
+QVERIFY2(menu.session, qUtf8Printable(menu.diagnostic))
+
+Original 287
+Disposition: MATCHED
+Mapping: Swift publishedMenuRows has ValueRange with hasSubmenu for LFO. [S011]
+QVERIFY2(rangeRow >= 0, "the lane menu has no value range row")
+
+Original 290
+Disposition: GAP
+Mapping: Swift presenter coverage does not establish a rendered row center.
+QVERIFY2(!rangeCenter.isNull(), "the value range row never rendered")
+
+Original 293
+Disposition: GAP
+Mapping: Swift presenter coverage does not establish hover-driven submenu rendering.
+QVERIFY2(QTest::qWaitFor([&menu, &submenu] {
+                 return (submenu = menuSubmenuPanel(*menu.session)) != nullptr;
+             }),
+             "hovering the value range row did not open its submenu")
+
+Original 298
+Disposition: PARTIAL
+Mapping: Swift typed menuChildRows contains enabled Range64, but rendered submenu ownership is unverified.
+QVERIFY2(submenuModel, "the value range submenu rendered without a typed model")
+
+Original 306
+Disposition: GAP
+Mapping: Swift presenter coverage does not establish a rendered child row center.
+QVERIFY2(!pickCenter.isNull(), "the 0-64 range row never rendered")
+
+Original 309
+Disposition: MATCHED
+Mapping: Swift menuOpen false after consuming Range64 on the original LFO fixture. [S014]
+QVERIFY2(!menu.session->isOpen(), "a normal range pick left the shared menu open")
+
+Original 310
+Disposition: MATCHED
+Mapping: Swift scaleLabels maximum64 observes the applied LFO view range through its production projection. [S015]
+QCOMPARE(automationPage.automationViewState().laneRanges.at(lfoId), uint8_t{64})
+
+Original 311
+Disposition: MATCHED
+Mapping: Swift complete document snapshot equality includes unchanged revision. [S016]
+QCOMPARE(songTab.document().revision(), revision)
+
+Original 312
+Disposition: MATCHED
+Mapping: Swift history identity and availability remain unchanged; one subsequent undo reaches the preceding lane write, proving range selection inserted no history entry. [S023]
+QCOMPARE(songTab.document().undoStack()->index(), undoIndex)
+
+Original 318
+Disposition: PARTIAL
+Mapping: Swift openParameterMenu succeeds again for LFO; native label input remains unverified.
+QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
+
+Original 320
+Disposition: MATCHED
+Mapping: Swift requires the reopened publishedMenuRows to contain ValueRange with hasSubmenu. [S020]
+QVERIFY2(reopenedRangeRow >= 0, "the reopened lane menu has no value range row")
+
+Original 323
+Disposition: GAP
+Mapping: Swift presenter coverage does not establish the reopened row's rendered center.
+QVERIFY2(!reopenedRangeCenter.isNull(), "the reopened value range row never rendered")
+
+Original 326
+Disposition: GAP
+Mapping: Swift presenter coverage does not establish hover reopening the rendered submenu.
+QVERIFY2(QTest::qWaitFor([&reopened, &reopenedSubmenu] {
+                 return (reopenedSubmenu = menuSubmenuPanel(*reopened.session)) != nullptr;
+             }),
+             "reopening the value range submenu failed")
+
+Original 331
+Disposition: PARTIAL
+Mapping: Swift typed menuChildRows exists on reopen; rendered submenu model ownership remains unverified.
+QVERIFY2(reopenedSubmenuModel, "the reopened submenu rendered without a typed model")
+
+Original 334
+Disposition: MATCHED
+Mapping: Swift menuChildRows requires Range64 checked after reopening the LFO menu. [S021]
+QVERIFY2(advertised && advertised->checked,
+             "the reopened submenu does not advertise the applied 0-64 range")
+
+Original 338
+Disposition: DEFERRED-KEYBOARD
+Mapping: Swift dismissMenu closes the presenter, but does not prove Escape delivery. Keyboard/focus routing is explicitly deferred by the user.
+QVERIFY2(!reopened.session->isOpen(), "Escape did not dismiss the reopened lane menu")
+
+
+Swift assertion predicates
+Every report.expect/expectEqual call in the mapped Swift functions
+(drawerAutomationOriginalClearMenus, drawerAutomationOriginalRangeMenu):
+
+S001 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:15
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: parameter), x: 0, y: 0),
+                      cppID: id, message: "the original parameter opens its lane menu")
+
+S002 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:17
+Swift expression:
+  report.expect(page.publishedMenuRows.contains {
+            $0.actionId == AutomationMenuAction.clearLane.rawValue && $0.enabled
+        }, cppID: id, message: "the lane menu publishes the enabled Clear row")
+
+S003 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:20
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.clearLane.rawValue),
+                      cppID: id, message: "the published Clear action is consumed")
+
+S004 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:22
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "Clear closes the lane menu")
+
+S005 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:24
+Swift expression:
+  report.expect(fixture.document.state.tempo.isEmpty, cppID: id,
+                          message: "Clear removes the original tempo point")
+
+S006 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:27
+Swift expression:
+  report.expect(fixture.lanePoints(parameter).isEmpty, cppID: id,
+                          message: "Clear removes the original CC10 point")
+
+S007 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:33
+Swift expression:
+  report.expect(page.activateParameter(index: page.catalogIndex(of: other)),
+                      cppID: id, message: "the other parameter remains selectable")
+
+S008 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:35
+Swift expression:
+  report.expect(page.activateParameter(index: page.catalogIndex(of: parameter)),
+                      cppID: id, message: "the cleared parameter remains selectable")
+
+S009 | drawerAutomationOriginalClearMenus | src/checks/automation/automationmenus.swift:37
+Swift expression:
+  report.expectEqual(parameter, page.activeParameter, cppID: id,
+                           what: "switching back selects the cleared parameter")
+
+S010 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:58
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: lane), x: 0, y: 0),
+                  cppID: id, message: "original LFO label opens its lane menu")
+
+S011 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:60
+Swift expression:
+  report.expect(page.publishedMenuRows.contains {
+        $0.actionId == AutomationMenuAction.valueRange.rawValue && $0.hasSubmenu
+    }, cppID: id, message: "the lane menu publishes a real Value range submenu")
+
+S012 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:63
+Swift expression:
+  report.expect(page.menuChildRows.asArray.contains {
+        $0.actionId == AutomationMenuAction.range64.rawValue && $0.enabled
+    }, cppID: id, message: "the submenu publishes the enabled 0-64 choice")
+
+S013 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:66
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
+                  cppID: id, message: "the original range choice is accepted")
+
+S014 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:68
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "a normal range pick closes the menu")
+
+S015 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:69
+Swift expression:
+  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+                       what: "the selected range rescales the lane to 64")
+
+S016 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:71
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "range selection preserves document revision and history identity")
+
+S017 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:73
+Swift expression:
+  report.expect(fixture.document.state == state, cppID: id,
+                  message: "range selection preserves all song content")
+
+S018 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:75
+Swift expression:
+  report.expect(fixture.document.history.canUndo == canUndo &&
+                  fixture.document.history.canRedo == canRedo,
+                  cppID: id, message: "range selection preserves history availability")
+
+S019 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:78
+Swift expression:
+  report.expect(page.openParameterMenu(index: page.catalogIndex(of: lane), x: 0, y: 0),
+                  cppID: id, message: "the same LFO menu reopens")
+
+S020 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:80
+Swift expression:
+  report.expect(page.publishedMenuRows.contains {
+        $0.actionId == AutomationMenuAction.valueRange.rawValue && $0.hasSubmenu
+    }, cppID: id, message: "the reopened lane menu still publishes Value range")
+
+S021 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:83
+Swift expression:
+  report.expect(page.menuChildRows.asArray.contains {
+        $0.actionId == AutomationMenuAction.range64.rawValue && $0.checked
+    }, cppID: id, message: "the reopened submenu advertises the applied range")
+
+S022 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:87
+Swift expression:
+  report.expect(!page.menuOpen, cppID: id, message: "dismissal closes the reopened menu")
+
+S023 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:88
+Swift expression:
+  report.expect(fixture.undo(), cppID: id, message: "one undo still reaches the preceding lane write")
+
+S024 | drawerAutomationOriginalRangeMenu | src/checks/automation/automationmenus.swift:89
+Swift expression:
+  report.expect(fixture.document.lanePoints(track: 0, lane: .controller(21)).isEmpty,
+                  cppID: id, message: "range picks inserted no history entries before the lane write")

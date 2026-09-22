@@ -1,0 +1,1712 @@
+Assertion correspondence: automation/automationparity.cpp
+
+Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+Original: src/checks/automation/automationparity.cpp
+Original SHA-256: c4bbe92fac0cee53964bc15712503ed0cd350d1836838ad5f546d750b516212f
+Swift counterpart: src/checks/automation/domain/gestures.swift
+Swift SHA-256: ed769eeedca873b5a9d77d5b20399840f5f4357643468157e10c7520bd6c2f31
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+All 73 sites in this file are GAP: hoverInsertionDoesNotMutateDocument, stationaryNodeInteractions, doubleClickDeletesOnceWithoutValuePrompt, sweepAndRampCommit, pencilPreviewCommits, laneBandSelectsRange, and blankAndSubThresholdNoOps exercise interaction parity across hover, double-click delete, sweeps, and lane selection. Related gesture checks exist in domain/gestures.swift, but full behavioral equivalence remains an open obligation.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
+Their sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+The legacy AutomationEditingTest parity suite asserted behavioral parity across gesture types. In the converted Swift suite, drawerAutomationSweepSteppingAndRampFinish and drawerAutomationPointRangeAndPencilReplacements in src/checks/automation/domain/gestures.swift cover sweep stepping, ramp completion, and point replacements.
+
+Fixture, sequence and row constraints
+Data rows expand hoverInsertionDoesNotMutateDocument (cc-lane, tempo-lane), stationaryNodeInteractions (click-node, move-subslop), doubleClickDeletesOnceWithoutValuePrompt (cc-point, tempo-point), sweepAndRampCommit (drag-sweep, shift-ramp), pencilPreviewCommits (pencil-stroke, pencil-click), laneBandSelectsRange (time-range, full-lane), and blankAndSubThresholdNoOps (blank-click, subthreshold-drag). Loops check point values across edited ranges.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | AutomationEditingTest::hoverInsertionDoesNotMutateDocument | src/checks/automation/automationparity.cpp:133
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+  #include "checks/automation/tst_automationediting.h"
+
+  #include <algorithm>
+  #include <cmath>
+  #include <cstdint>
+  #include <limits>
+  #include <vector>
+
+  #include <QSignalSpy>
+  #include <QtTest>
+
+  #include "checks/automation/automationvalueprompt.h"
+  #include "core/timedefaults.h"
+  #include "ui/editordrawer/automationpage.h"
+  #include "ui/editordrawer/drawerchrome.h"
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/songview/editorselectionmodel.h"
+  #include "ui/songview/quick/timelinequickscene.h"
+
+  namespace {
+
+  constexpr int kTempo = 0;
+  constexpr int kCc = 1;
+  constexpr uint8_t kController = 10;
+  constexpr Tick kFirstTick = 0;
+  constexpr Tick kNodeTick = 96;
+  constexpr Tick kLateTick = 288;
+  constexpr Tick kSweepStartTick = 48;
+  constexpr Tick kSweepEndTick = 144;
+  constexpr int kFirstValue = 80;
+  constexpr int kNodeValue = 100;
+  constexpr int kLateValue = 64;
+
+  EditorAutomationRowId rowId(int adapter)
+  {
+      return adapter == kTempo
+                 ? EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}
+                 : EditorAutomationRowId{EditorAutomationRowKind::ControlChange, 0, kController};
+  }
+
+  void setPoints(SongDocument &document, int adapter, const std::vector<NodePoint> &points)
+  {
+      if (adapter == kTempo) {
+          TempoEdit edit;
+          edit.remove = document.tempoPoints();
+          edit.add.reserve(points.size());
+          for (const NodePoint &point : points) {
+              edit.add.push_back({Tick(point.tick),
+                                  CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(point.value)});
+          }
+          if (edit.remove != edit.add)
+              document.applyTempoEdit(edit);
+          return;
+      }
+
+      std::vector<SongDocument::LanePointValue> values;
+      values.reserve(points.size());
+      for (const NodePoint &point : points)
+          values.push_back({Tick(point.tick), point.value});
+      document.writeLanePoints(0, kController, 0, CoreTimeDefaults::kNoTick, values);
+  }
+
+  std::vector<NodePoint> pointsOf(const SongDocument &document, int adapter)
+  {
+      std::vector<NodePoint> points;
+      if (adapter == kTempo) {
+          points.reserve(document.tempoPoints().size());
+          for (const TempoPoint &point : document.tempoPoints()) {
+              points.push_back(
+                  {point.tick,
+                   int(std::lround(CoreTimeDefaults::tempoBpm(point.microsecondsPerQuarterNote)))});
+          }
+          return points;
+      }
+
+      for (const DocLanePoint &point : document.lanePoints(0, kController))
+          points.push_back({point.tick, point.value});
+      return points;
+  }
+
+  bool containsPoint(const std::vector<NodePoint> &points, Tick tick, int value)
+  {
+      return std::any_of(points.cbegin(), points.cend(), [tick, value](const NodePoint &point) {
+          return point.tick == tick && point.value == value;
+      });
+  }
+
+  // Held-step value at `tick`: the last point at or before it. Strokes canonicalize
+  // away a leading point that merely repeats the held value, so ramp-start
+  // coverage asserts this rather than an exact stored point.
+  int heldValueAt(const std::vector<NodePoint> &points, Tick tick)
+  {
+      int value = points.front().value;
+      for (const NodePoint &point : points) {
+          if (point.tick > tick)
+              break;
+          value = point.value;
+      }
+      return value;
+  }
+
+  bool samePoints(const std::vector<NodePoint> &actual, const std::vector<NodePoint> &expected)
+  {
+      return actual.size() == expected.size() &&
+             std::equal(actual.cbegin(), actual.cend(), expected.cbegin(),
+                        [](const NodePoint &left, const NodePoint &right) {
+                            return left.tick == right.tick && left.value == right.value;
+                        });
+  }
+
+  QPoint dragActivation(const QPoint &source, const QPoint &target, int distance)
+  {
+      const QPoint activation = source + QPoint(distance + 2, 0);
+      return activation + target - source;
+  }
+
+  } // namespace
+
+  void AutomationEditingTest::hoverInsertionDoesNotMutateDocument_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::hoverInsertionDoesNotMutateDocument()
+  {
+      QFETCH(int, adapter);
+      setPoints(m_tab->document(), adapter,
+                {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
+
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A002 | AutomationEditingTest::hoverInsertionDoesNotMutateDocument | src/checks/automation/automationparity.cpp:134
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A003 | AutomationEditingTest::hoverInsertionDoesNotMutateDocument | src/checks/automation/automationparity.cpp:138
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPointF hover = inputPoint(lane, kSweepStartTick, 90);
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A004 | AutomationEditingTest::hoverInsertionDoesNotMutateDocument | src/checks/automation/automationparity.cpp:139
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A005 | AutomationEditingTest::hoverInsertionDoesNotMutateDocument | src/checks/automation/automationparity.cpp:144
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
+
+      mouseMove(automation_test::windowFromContent(page(), automationInput(), hover), Qt::NoModifier);
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+
+A006 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:161
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::stationaryNodeInteractions_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::stationaryNodeInteractions()
+  {
+      QFETCH(int, adapter);
+      const std::vector<NodePoint> fixture{
+          {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
+      setPoints(m_tab->document(), adapter, fixture);
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A007 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:162
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A008 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:171
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPoint node = automation_test::windowFromContent(page(), automationInput(),
+                                                             inputPoint(lane, kNodeTick, kNodeValue));
+      const uint64_t revision = m_tab->document().revision();
+      const int undoIndex = m_tab->document().undoStack()->index();
+
+      mousePress(Qt::LeftButton, node, Qt::NoModifier);
+      mouseRelease(Qt::LeftButton, node, Qt::NoModifier);
+
+
+Original expression:
+  QCOMPARE(m_tab->document().revision(), revision + 1);
+
+A009 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:172
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().undoStack()->index(), undoIndex + 1);
+
+A010 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:173
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter),
+                         {{kFirstTick, kFirstValue}, {kLateTick, kLateValue}}));
+
+A011 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:179
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      setPoints(m_tab->document(), adapter, fixture);
+      QSignalSpy shiftDocumentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy shiftEdited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(shiftDocumentChanged.isValid());
+
+A012 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:180
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(shiftEdited.isValid());
+
+A013 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:186
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState beforeShift =
+          frozenDocumentState(shiftDocumentChanged.count(), shiftEdited.count());
+      mousePress(Qt::LeftButton, node, Qt::ShiftModifier);
+      mouseRelease(Qt::LeftButton, node, Qt::ShiftModifier);
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(shiftDocumentChanged.count(), shiftEdited.count()) == beforeShift);
+
+A014 | AutomationEditingTest::stationaryNodeInteractions | src/checks/automation/automationparity.cpp:187
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), fixture));
+
+A015 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:204
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt()
+  {
+      QFETCH(int, adapter);
+      const std::vector<NodePoint> fixture{
+          {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
+      setPoints(m_tab->document(), adapter, fixture);
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A016 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:205
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A017 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:210
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPoint node = automation_test::windowFromContent(page(), automationInput(),
+                                                             inputPoint(lane, kNodeTick, kNodeValue));
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A018 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:211
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A019 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:221
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const uint64_t revision = m_tab->document().revision();
+      const int undoCount = m_tab->document().undoStack()->count();
+      const int undoIndex = m_tab->document().undoStack()->index();
+
+      // The double click lands on an existing node, so it deletes exactly once
+      // and must not leave the inline value prompt behind.
+      DrawerChrome &chrome = m_tab->view().editorDrawer()->chrome();
+      mouseDClick(Qt::LeftButton, node, Qt::NoModifier);
+
+
+Original expression:
+  QVERIFY(!automation_valueprompt::promptVisible(chrome));
+
+A020 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:222
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(documentChanged.count(), 1);
+
+A021 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:223
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), 1);
+
+A022 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:224
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().revision(), revision + 1);
+
+A023 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:225
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().undoStack()->count(), undoCount + 1);
+
+A024 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:226
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().undoStack()->index(), undoIndex + 1);
+
+A025 | AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt | src/checks/automation/automationparity.cpp:227
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(samePoints(pointsOf(m_tab->document(), adapter),
+                         {{kFirstTick, kFirstValue}, {kLateTick, kLateValue}}));
+
+A026 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:245
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::sweepAndRampCommit_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::sweepAndRampCommit()
+  {
+      QFETCH(int, adapter);
+      const std::vector<NodePoint> fixture{
+          {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
+      setPoints(m_tab->document(), adapter, fixture);
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A027 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:246
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A028 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:261
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPoint start = automation_test::windowFromContent(page(), automationInput(),
+                                                              inputPoint(lane, kSweepStartTick, 80));
+      const QPoint target = automation_test::windowFromContent(page(), automationInput(),
+                                                               inputPoint(lane, kSweepEndTick, 110));
+      const int activationDistance = AutomationGeometry::resolve().nodeDragActivationDistance;
+      const QPoint activation = start + QPoint(activationDistance + 2, 0);
+      const QPoint activatedTarget = dragActivation(start, target, activationDistance);
+      const auto deliveredStart =
+          pointerMapping(lane, automation_test::contentFromWindow(page(), automationInput(), start));
+      const auto deliveredTarget =
+          pointerMapping(lane, automation_test::contentFromWindow(page(), automationInput(), target));
+      const auto effectiveSweepTarget =
+          pointerMapping(lane, automation_test::effectiveDragContent(page(), automationInput(), start,
+                                                                     activation, activatedTarget));
+
+Original expression:
+  QCOMPARE(deliveredStart.point.tick, kSweepStartTick);
+
+A029 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:262
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(deliveredTarget.point.tick, kSweepEndTick);
+
+A030 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:263
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(effectiveSweepTarget.point.tick, kSweepEndTick);
+
+A031 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:266
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A032 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:267
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A033 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:274
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState sweepBefore =
+          frozenDocumentState(documentChanged.count(), edited.count());
+
+      mousePress(Qt::LeftButton, start, Qt::NoModifier);
+      mouseMove(activation, Qt::NoModifier);
+      mouseMove(activatedTarget, Qt::NoModifier);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == sweepBefore);
+
+A034 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:277
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      mouseRelease(Qt::LeftButton, activatedTarget, Qt::NoModifier);
+
+
+Original expression:
+  QCOMPARE(m_tab->document().revision(), sweepBefore.revision + 1);
+
+A035 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:278
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().undoStack()->index(), sweepBefore.undoIndex + 1);
+
+A036 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:280
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const std::vector<NodePoint> sweep = pointsOf(m_tab->document(), adapter);
+
+Original expression:
+  QVERIFY(containsPoint(sweep, kFirstTick, kFirstValue));
+
+A037 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:281
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(containsPoint(sweep, kSweepEndTick, effectiveSweepTarget.point.value));
+
+A038 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:282
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(containsPoint(sweep, kLateTick, kLateValue));
+
+A039 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:289
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      setPoints(m_tab->document(), adapter, fixture);
+      const FrozenDocumentState rampBefore =
+          frozenDocumentState(documentChanged.count(), edited.count());
+      mousePress(Qt::LeftButton, start, Qt::ShiftModifier);
+      mouseMove(target, Qt::ShiftModifier);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rampBefore);
+
+A040 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:292
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      mouseRelease(Qt::LeftButton, target, Qt::ShiftModifier);
+
+
+Original expression:
+  QCOMPARE(m_tab->document().revision(), rampBefore.revision + 1);
+
+A041 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:293
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().undoStack()->index(), rampBefore.undoIndex + 1);
+
+A042 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:295
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const std::vector<NodePoint> ramp = pointsOf(m_tab->document(), adapter);
+
+Original expression:
+  QVERIFY(containsPoint(ramp, kFirstTick, kFirstValue));
+
+A043 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:296
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(heldValueAt(ramp, kSweepStartTick), deliveredStart.point.value);
+
+A044 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:297
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(containsPoint(ramp, kSweepEndTick, deliveredTarget.point.value));
+
+A045 | AutomationEditingTest::sweepAndRampCommit | src/checks/automation/automationparity.cpp:298
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(containsPoint(ramp, kLateTick, kLateValue));
+
+A046 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:313
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::pencilPreviewCommits_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::pencilPreviewCommits()
+  {
+      QFETCH(int, adapter);
+      setPoints(m_tab->document(), adapter, {});
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A047 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:314
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A048 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:321
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      setPencilMode(true);
+      const QPoint start =
+          automation_test::windowFromContent(page(), automationInput(), inputPoint(lane, 36, 80));
+      const QPoint end = automation_test::windowFromContent(page(), automationInput(),
+                                                            inputPoint(lane, kSweepEndTick, 110));
+      auto *scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A049 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:326
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const uint64_t transientRevision =
+          scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision;
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A050 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:327
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A051 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:333
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
+
+      mousePress(Qt::LeftButton, start, Qt::NoModifier);
+      mouseMove(end, Qt::NoModifier);
+
+
+Original expression:
+  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
+                  transientRevision);
+
+A052 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:335
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
+
+A053 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:336
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+
+A054 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:340
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      mouseRelease(Qt::LeftButton, end, Qt::NoModifier);
+
+
+Original expression:
+  QCOMPARE(m_tab->document().revision(), before.revision + 1);
+
+A055 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:341
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(m_tab->document().undoStack()->index(), before.undoIndex + 1);
+
+A056 | AutomationEditingTest::pencilPreviewCommits | src/checks/automation/automationparity.cpp:342
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!pointsOf(m_tab->document(), adapter).empty());
+
+A057 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:358
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::laneBandSelectsRange_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::laneBandSelectsRange()
+  {
+      QFETCH(int, adapter);
+      setPoints(m_tab->document(), adapter,
+                {{kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}});
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A058 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:359
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A059 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:368
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      m_tab->view().selectionModel().clearTimeSelection();
+      const QPoint start = automation_test::windowFromContent(page(), automationInput(),
+                                                              inputPoint(lane, kNodeTick, 80));
+      const QPoint end = automation_test::windowFromContent(page(), automationInput(),
+                                                            inputPoint(lane, kLateTick, 80));
+
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A060 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:369
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A061 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:376
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
+      mousePress(Qt::RightButton, start, Qt::NoModifier);
+      mouseMove(end, Qt::NoModifier);
+      mouseRelease(Qt::RightButton, end, Qt::NoModifier);
+
+      const auto &selection = m_tab->view().selectionModel().timeSelection();
+
+Original expression:
+  QVERIFY(selection.active());
+
+A062 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:377
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(selection.scope, songview::EditorSelectionModel::TimeSelection::Lanes);
+
+A063 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:378
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(selection.startTick, kNodeTick);
+
+A064 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:379
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(selection.endTick, kLateTick);
+
+A065 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:380
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(selection.tempo, adapter == kTempo);
+
+A066 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:382
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      if (adapter == kTempo)
+
+Original expression:
+  QVERIFY(selection.lanes.empty());
+
+A067 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:384
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      else
+
+Original expression:
+  QCOMPARE(selection.lanes, (std::vector<std::pair<int, uint8_t>>{{0, kController}}));
+
+A068 | AutomationEditingTest::laneBandSelectsRange | src/checks/automation/automationparity.cpp:385
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+
+A069 | AutomationEditingTest::blankAndSubThresholdNoOps | src/checks/automation/automationparity.cpp:402
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::blankAndSubThresholdNoOps_data()
+  {
+      QTest::addColumn<int>("adapter");
+      QTest::newRow("tempo") << kTempo;
+      QTest::newRow("cc") << kCc;
+  }
+
+  void AutomationEditingTest::blankAndSubThresholdNoOps()
+  {
+      QFETCH(int, adapter);
+      const std::vector<NodePoint> fixture{
+          {kFirstTick, kFirstValue}, {kNodeTick, kNodeValue}, {kLateTick, kLateValue}};
+      setPoints(m_tab->document(), adapter, fixture);
+      const LaneHandle lane = findRow(rowId(adapter));
+
+Original expression:
+  QVERIFY(lane.valid());
+
+A070 | AutomationEditingTest::blankAndSubThresholdNoOps | src/checks/automation/automationparity.cpp:403
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(activateParameter(rowId(adapter)));
+
+A071 | AutomationEditingTest::blankAndSubThresholdNoOps | src/checks/automation/automationparity.cpp:408
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPoint blank = automation_test::windowFromContent(page(), automationInput(),
+                                                              inputPoint(lane, kSweepStartTick, 90));
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A072 | AutomationEditingTest::blankAndSubThresholdNoOps | src/checks/automation/automationparity.cpp:409
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A073 | AutomationEditingTest::blankAndSubThresholdNoOps | src/checks/automation/automationparity.cpp:425
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
+
+      mousePress(Qt::LeftButton, blank, Qt::NoModifier);
+      mouseRelease(Qt::LeftButton, blank, Qt::NoModifier);
+      mousePress(Qt::LeftButton, blank, Qt::NoModifier);
+      mouseMove(
+          blank +
+              QPoint(std::max(0, AutomationGeometry::resolve().nodeDragActivationDistance - 1), 0),
+          Qt::NoModifier);
+      mouseRelease(
+          Qt::LeftButton,
+          blank +
+              QPoint(std::max(0, AutomationGeometry::resolve().nodeDragActivationDistance - 1), 0),
+          Qt::NoModifier);
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
+
+Remaining original source (closing sequence and helper bodies):
+
+  }
+
+
+Swift assertion predicates
+The S entries are exact predicates called by the paired Swift suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:24
+  report.expectEqual(Tick(1), projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepStepsID,
+                         what: "a 24-tick document's clock lattice steps one tick")
+
+S002 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:30
+  report.expect(!sweep.slopExceeded, cppID: drawerAutomationSweepStepsID,
+                    message: "a drag sweep waits for the activation distance")
+
+S003 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:33
+  report.expect(sweep.slopExceeded, cppID: drawerAutomationSweepStepsID,
+                    message: "a move past the activation distance arms the sweep")
+
+S004 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:37
+  report.expectEqual((0...10).map { "\($0):\($0 * 10)" },
+                         fixture.laneValues(sweep.points), cppID: drawerAutomationSweepStepsID,
+                         what: "each stepped tick interpolates its value across the stroke")
+
+S005 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:40
+  report.expectEqual(11, sweep.points.count, cppID: drawerAutomationSweepStepsID,
+                         what: "the sweep steps every lattice tick of the stroke")
+
+S006 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:48
+  report.expectEqual("5:50", "\(update.current.tick):\(update.current.value)", cppID: drawerAutomationSweepStepsID,
+                         what: "the stroke's current point is its mapped one")
+
+S007 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:50
+  report.expectEqual((0...5).map { "\($0):\($0 * 10)" },
+                         fixture.laneValues(update.points), cppID: drawerAutomationSweepStepsID,
+                         what: "the second stroke interpolates across its own span")
+
+S008 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:53
+  report.expectEqual(6, update.points.count, cppID: drawerAutomationSweepStepsID,
+                         what: "the second stroke has all six lattice points")
+
+S009 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:61
+  report.expectEqual(11, rampPoints.count, cppID: drawerAutomationSweepStepsID,
+                         what: "a ramp sweep fills every lattice tick between its endpoints")
+
+S010 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:63
+  report.expectEqual(["0:0", "10:100"],
+                         fixture.laneValues([rampPoints[0], rampPoints[10]]), cppID: drawerAutomationSweepStepsID,
+                         what: "the ramp runs from its anchor value to its release value")
+
+S011 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:66
+  report.expectEqual(50, rampPoints[5].value, cppID: drawerAutomationSweepStepsID,
+                         what: "the ramp's midpoint interpolates linearly")
+
+S012 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:69
+  report.expect(edit != nil && !edit!.unchanged, cppID: drawerAutomationSweepStepsID,
+                    message: "the completed ramp is a changed span replacement")
+
+S013 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:71
+  report.expectEqual(Tick(0), edit?.tickBegin ?? 99, cppID: drawerAutomationSweepStepsID,
+                         what: "the ramp replacement starts at its anchor")
+
+S014 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:73
+  report.expectEqual(Tick(11), edit?.tickEnd ?? 0, cppID: drawerAutomationSweepStepsID,
+                         what: "the ramp replacement closes one lattice step past its release")
+
+S015 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:75
+  report.expectEqual("0:0", "\(edit?.points.first?.tick ?? 0):\(edit?.points.first?.value ?? 0)",
+                         cppID: drawerAutomationSweepStepsID, what: "the replacement keeps the ramp's first point")
+
+S016 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:81
+  report.expect(emptyFacts.displayPoints.isEmpty && emptyFacts.snapshot.leadInValue == nil,
+                    cppID: drawerAutomationSweepStepsID, message: "the completion fixture is an empty lane")
+
+S017 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:88
+  report.fail(drawerAutomationSweepStepsID, "the empty-lane ramp produced no completion")
+
+S018 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:91
+  report.expect(!emptyCompletion.unchanged, cppID: drawerAutomationSweepStepsID,
+                    message: "the empty-lane completion changes the lane")
+
+S019 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:93
+  report.expectEqual(11, emptyCompletion.points.count, cppID: drawerAutomationSweepStepsID,
+                         what: "the completion itself contains eleven points")
+
+S020 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:95
+  report.expectEqual(AutomationLanePoint(tick: 0, value: 0), emptyCompletion.points.first,
+                         cppID: drawerAutomationSweepStepsID, what: "the completion starts at the anchor")
+
+S021 | drawerAutomationSweepSteppingAndRampFinish | src/checks/automation/domain/gestures.swift:97
+  report.expectEqual(AutomationLanePoint(tick: 10, value: 100), emptyCompletion.points.last,
+                         cppID: drawerAutomationSweepStepsID, what: "the empty lane adds no trailing held point")
+
+S022 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:118
+  report.expectEqual(Tick(24), projection.snapPolicy.clockTicks, cppID: drawerAutomationSweepTailID,
+                         what: "the lattice step of this document is 24 ticks")
+
+S023 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:121
+  report.fail(drawerAutomationSweepTailID,
+                      "the fixture song ends at \(fixture.songEndTick), shorter than the seam")
+
+S024 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:132
+  report.expect(dragEdit != nil && !dragEdit!.unchanged, cppID: drawerAutomationSweepTailID,
+                    message: "the drag over a flat lane is a changed span")
+
+S025 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:134
+  report.expect(dragEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
+                    cppID: drawerAutomationSweepTailID, message: "the stroke's release point is written")
+
+S026 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:136
+  report.expectEqual("168:85",
+                         "\(dragEdit?.points.last?.tick ?? 0):\(dragEdit?.points.last?.value ?? 0)",
+                         cppID: drawerAutomationSweepTailID,
+                         what: "the tail re-anchors the original held value one step past the release")
+
+S027 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:140
+  report.expectEqual(Tick(168), dragEdit?.tickEnd ?? 0, cppID: drawerAutomationSweepTailID,
+                         what: "the replacement's span covers the restored tail")
+
+S028 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:148
+  report.expect(rampEdit != nil && !rampEdit!.unchanged, cppID: drawerAutomationSweepTailID,
+                    message: "the ramp over a flat lane is a changed span")
+
+S029 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:150
+  report.expect(rampEdit?.points.contains { $0.tick == 144 && $0.value == 25 } == true,
+                    cppID: drawerAutomationSweepTailID, message: "the ramp's release point is written")
+
+S030 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:152
+  report.expectEqual("168:85",
+                         "\(rampEdit?.points.last?.tick ?? 0):\(rampEdit?.points.last?.value ?? 0)",
+                         cppID: drawerAutomationSweepTailID,
+                         what: "the ramp's tail re-anchors the original held value too")
+
+S031 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:174
+  report.expectEqual(endTick, endSweep.points.last?.tick ?? 0, cppID: drawerAutomationSweepTailID,
+                         what: "a stroke that ends at the song's end steps to the song's end")
+
+S032 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:177
+  report.expect(endEdit?.points.allSatisfy { $0.tick <= endTick } == true, cppID: drawerAutomationSweepTailID,
+                    message: "a stroke that ends at the song's end restores no tail")
+
+S033 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:199
+  report.expectEqual(["48:85", "72:70", "96:55", "120:40", "144:25"],
+                         committed.laneValues(live.preview), cppID: drawerAutomationSweepTailID,
+                         what: "the sweep preview is the stepped draft alone")
+
+S034 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:202
+  report.expectEqual(beforeRelease, committed.snapshot, cppID: drawerAutomationSweepTailID,
+                         what: "the draft writes nothing before the release")
+
+S035 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:205
+  report.fail(drawerAutomationSweepTailID, "the released sweep produced no edit")
+
+S036 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:208
+  report.expect(AutomationCommit.apply(committedEdit, in: committed.document), cppID: drawerAutomationSweepTailID,
+                    message: "the released sweep commits once")
+
+S037 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:210
+  report.expectEqual(["0:85", "72:70", "96:55", "120:40", "144:25", "168:85"],
+                         committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
+                         what: "the committed lane holds the stroke and its restored tail")
+
+S038 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:213
+  report.expectEqual(beforeRelease.revision + 1, committed.document.revision, cppID: drawerAutomationSweepTailID,
+                         what: "one released sweep is one revision")
+
+S039 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:215
+  report.expect(committed.undo(), cppID: drawerAutomationSweepTailID, message: "the sweep is undoable")
+
+S040 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:216
+  report.expectEqual(["0:85"], committed.values(committed.modulationLane), cppID: drawerAutomationSweepTailID,
+                         what: "one undo restores the flat lane")
+
+S041 | drawerAutomationSweepFinishRestoresTrailingHeldValue | src/checks/automation/domain/gestures.swift:218
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationSweepTailID,
+                    message: "the released sweep recorded exactly one history entry")
+
+S042 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:227
+  report.expectEqual(64, metadata.neutral, cppID: drawerAutomationNeutralSnapID,
+                         what: "Pan's neutral is 64, the centered domain's midpoint")
+
+S043 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:232
+  report.expect(threshold > 0, cppID: drawerAutomationNeutralSnapID,
+                    message: "the neutral snap radius covers more than one value step")
+
+S044 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:248
+  report.fail(drawerAutomationNeutralSnapID, "the plot contains no pixel inside the neutral snap radius")
+
+S045 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:255
+  report.expectEqual(Tick(100), plain.tick, cppID: drawerAutomationNeutralSnapID,
+                         what: "the unsnapped value mapping preserves tick 100")
+
+S046 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:257
+  report.expectEqual(valueNear, plain.value, cppID: drawerAutomationNeutralSnapID,
+                         what: "the unsnapped value mapping keeps the near-neutral pixel value")
+
+S047 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:262
+  report.expectEqual(Tick(100), snapped.tick, cppID: drawerAutomationNeutralSnapID,
+                         what: "neutral snapping preserves tick 100")
+
+S048 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:264
+  report.expectEqual(64, snapped.value, cppID: drawerAutomationNeutralSnapID,
+                         what: "the near-neutral pixel snaps to 64")
+
+S049 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:270
+  report.expectEqual(AutomationLanePoint(tick: 200, value: 64), exact,
+                         cppID: drawerAutomationNeutralSnapID,
+                         what: "the exact neutral maps to the original tick-200 point")
+
+S050 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:273
+  report.expectEqual(near, metadata.snappedValue(near, snapValue: false, plotHeight: height,
+                                                     neutralSnapRadius: radius),
+                         cppID: drawerAutomationNeutralSnapID,
+                         what: "an unsnapped drag keeps the value under the pointer")
+
+S051 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:277
+  report.expectEqual(64, metadata.snappedValue(near, snapValue: true, plotHeight: height,
+                                                   neutralSnapRadius: radius),
+                         cppID: drawerAutomationNeutralSnapID, what: "a snapped drag lands exactly on the neutral")
+
+S052 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:280
+  report.expectEqual(64, metadata.snappedValue(64, snapValue: true, plotHeight: height,
+                                                   neutralSnapRadius: radius),
+                         cppID: drawerAutomationNeutralSnapID, what: "a pointer on the neutral stays neutral")
+
+S053 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:284
+  report.expectEqual(outside, metadata.snappedValue(outside, snapValue: true, plotHeight: height,
+                                                        neutralSnapRadius: radius),
+                         cppID: drawerAutomationNeutralSnapID,
+                         what: "a value outside the radius keeps its own value")
+
+S054 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:288
+  report.expectEqual(19, metadata.snappedValue(19, snapValue: true, plotHeight: height,
+                                                   neutralSnapRadius: radius),
+                         cppID: drawerAutomationNeutralSnapID,
+                         what: "a snap only ever moves a value onto the neutral")
+
+S055 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:293
+  report.expectEqual(60, volume.snappedValue(60, snapValue: true, plotHeight: height,
+                                                 neutralSnapRadius: radius),
+                         cppID: drawerAutomationNeutralSnapID,
+                         what: "a parameter with no neutral keeps the dragged value")
+
+S056 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:304
+  report.expect(fixture.page.pointerPress(x: nodeX, y: nodeY, surface: 1, button: 1, modifiers: drawerAutomationQtModifiers(modifiers)),
+                    cppID: drawerAutomationNeutralSnapID, message: "a snapped press grabs the node under the pointer")
+
+S057 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:307
+  report.expectEqual(Tick(24), fixture.page.previewPoints.first?.tick ?? 0, cppID: drawerAutomationNeutralSnapID,
+                         what: "the armed preview keeps the node's own tick")
+
+S058 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:310
+  report.expectEqual(64, fixture.page.previewPoints.first?.value ?? 0, cppID: drawerAutomationNeutralSnapID,
+                         what: "the preview publishes the snapped neutral")
+
+S059 | drawerAutomationPanNeutralSnap | src/checks/automation/domain/gestures.swift:313
+  report.expectEqual(["24:64"], fixture.values(fixture.panLane), cppID: drawerAutomationNeutralSnapID,
+                         what: "the snapped release writes the neutral at the node's own tick")
+
+S060 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:324
+  report.expectEqual(3, sources.count, cppID: drawerAutomationNodeDragID,
+                         what: "the fixture offers three draggable nodes")
+
+S061 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:331
+  report.expectEqual(AutomationPointRelease.noOp, empty.finish().release, cppID: drawerAutomationNodeDragID,
+                         what: "a gesture with no target finishes as a no-op")
+
+S062 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:333
+  report.expect(!empty.finish().changed, cppID: drawerAutomationNodeDragID,
+                    message: "an empty gesture reports no change")
+
+S063 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:340
+  report.expectEqual(AutomationPointRelease.noOp, shiftPress.finish().release, cppID: drawerAutomationNodeDragID,
+                         what: "a Shift-held stationary release is a no-op")
+
+S064 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:342
+  report.expect(!shiftPress.finish().changed, cppID: drawerAutomationNodeDragID,
+                    message: "a Shift-held stationary release changes nothing")
+
+S065 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:347
+  report.expectEqual(AutomationPointRelease.stationaryDelete, plainPress.finish().release,
+                         cppID: drawerAutomationNodeDragID, what: "a stationary release without Shift deletes")
+
+S066 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:349
+  report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
+                    message: "the stationary delete reports no move")
+
+S067 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:354
+  report.expectEqual(AutomationPointRelease.move, plainPress.finish().release, cppID: drawerAutomationNodeDragID,
+                         what: "a released stroke past the slop is a move")
+
+S068 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:356
+  report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
+                    message: "a stroke that never moved the node changes nothing")
+
+S069 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:364
+  report.expectEqual(AutomationPointRelease.move, moved.release, cppID: drawerAutomationNodeDragID,
+                         what: "the moved gesture is still a move")
+
+S070 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:366
+  report.expect(moved.changed, cppID: drawerAutomationNodeDragID, message: "the moved node reports a change")
+
+S071 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:367
+  report.expectEqual(6, moved.dTick, cppID: drawerAutomationNodeDragID,
+                         what: "the reported delta is the grabbed node's own tick delta")
+
+S072 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:369
+  report.expectEqual(AutomationLanePoint(tick: 30, value: 80), plainPress.targets[0].current,
+                         cppID: drawerAutomationNodeDragID, what: "the target's preview is the mapped destination")
+
+S073 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:385
+  report.expectEqual(AutomationPointRelease.move, groupFinish.release,
+                         cppID: drawerAutomationNodeDragID, what: "the selection releases as a move")
+
+S074 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:387
+  report.expect(groupFinish.changed, cppID: drawerAutomationNodeDragID,
+                    message: "the moved selection reports a change")
+
+S075 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:389
+  report.expectEqual(6, groupFinish.dTick, cppID: drawerAutomationNodeDragID,
+                         what: "the shared delta is the grabbed node's delta")
+
+S076 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:391
+  report.expect(groupFinish.selectionDrag, cppID: drawerAutomationNodeDragID,
+                    message: "the finish reports that the whole selection moved")
+
+S077 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:393
+  report.expectEqual(["30:70", "54:90"], group.targets.map { "\($0.current.tick):\($0.current.value)" },
+                         cppID: drawerAutomationNodeDragID, what: "every selected node moves by the same delta")
+
+S078 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:408
+  report.expectEqual(["0:60", "24:80"], edge.targets.map { "\($0.current.tick):\($0.current.value)" },
+                         cppID: drawerAutomationNodeDragID,
+                         what: "a leftward drag clamps at tick zero without collapsing the group")
+
+S079 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:411
+  report.expectEqual(-24, edge.finish().dTick, cppID: drawerAutomationNodeDragID,
+                         what: "the clamped delta is what the finish reports")
+
+S080 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:413
+  report.expectEqual(AutomationPointRelease.move, edge.finish().release,
+                         cppID: drawerAutomationNodeDragID, what: "the clamped group releases as a move")
+
+S081 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:415
+  report.expect(edge.finish().changed, cppID: drawerAutomationNodeDragID,
+                    message: "the clamped group reports a change")
+
+S082 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:425
+  report.expectEqual(80, locked.targets[0].current.value, cppID: drawerAutomationNodeDragID,
+                         what: "a time lock keeps the original value")
+
+S083 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:427
+  report.expectEqual(Tick(60), locked.targets[0].current.tick, cppID: drawerAutomationNodeDragID,
+                         what: "a time lock keeps the mapped tick")
+
+S084 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:433
+  report.expectEqual(AutomationAxisLock.value,
+                         phantom.update(AutomationPointDrag.Update(phase: .reset, effectiveX: 100,
+                                                                   effectiveY: 100, axisLock: .none),
+                                        mappedValue: 127),
+                         cppID: drawerAutomationNodeDragID, what: "a phantom drag only ever locks the value axis")
+
+S085 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:438
+  report.expectEqual(AutomationLanePoint(tick: 24, value: 60), phantom.target.current,
+                         cppID: drawerAutomationNodeDragID, what: "a reset restores the phantom's source value")
+
+S086 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:440
+  report.expect(phantom.finish() == nil, cppID: drawerAutomationNodeDragID,
+                    message: "a reset phantom finishes as no edit")
+
+S087 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:447
+  report.fail(drawerAutomationNodeDragID, "the dragged phantom publishes no target")
+
+S088 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:450
+  report.expectEqual(phantomTarget.original.tick, phantomTarget.current.tick, cppID: drawerAutomationNodeDragID,
+                         what: "a phantom drag never moves in time")
+
+S089 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:452
+  report.expectEqual(127, phantomTarget.current.value, cppID: drawerAutomationNodeDragID,
+                         what: "a phantom drag clamps into the lane's domain")
+
+S090 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:454
+  report.expectEqual(Tick(24), phantom.move?.sourceTick ?? 0, cppID: drawerAutomationNodeDragID,
+                         what: "the phantom's write names its own source tick")
+
+S091 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:470
+  report.fail(drawerAutomationNodeDragID, "the committed drag resolved no plan")
+
+S092 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:473
+  report.expect(AutomationCommit.apply(plan, in: fixture.document), cppID: drawerAutomationNodeDragID,
+                    message: "the committed drag writes once")
+
+S093 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:475
+  report.expectEqual(["48:90", "120:40"], fixture.values(fixture.panLane), cppID: drawerAutomationNodeDragID,
+                         what: "the node lands on its destination and evicts the occupant there")
+
+S094 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:477
+  report.expectEqual(beforeCommit.revision + 1, fixture.document.revision, cppID: drawerAutomationNodeDragID,
+                         what: "one drag is one revision")
+
+S095 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:479
+  report.expect(fixture.undo(), cppID: drawerAutomationNodeDragID, message: "the drag is undoable")
+
+S096 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:480
+  report.expectEqual(["24:60", "48:80", "120:40"], fixture.values(fixture.panLane),
+                         cppID: drawerAutomationNodeDragID,
+                         what: "one undo restores the moved node and the evicted occupant")
+
+S097 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:487
+  report.expectEqual(["0:64"], promotion.laneValues(promotionFacts.displayPoints), cppID: drawerAutomationNodeDragID,
+                         what: "the empty lane displays its projected engine node")
+
+S098 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:494
+  report.fail(drawerAutomationNodeDragID, "the promotion resolved no plan")
+
+S099 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:497
+  report.expect(!promotionPlan.isEmpty, cppID: drawerAutomationNodeDragID,
+                    message: "a write on the projected node resolves to a promotion")
+
+S100 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:499
+  report.expect(AutomationCommit.apply(promotionPlan, in: promotion.document), cppID: drawerAutomationNodeDragID,
+                    message: "the promotion commits")
+
+S101 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:501
+  report.expectEqual(["0:20"], promotion.values(promotion.panLane), cppID: drawerAutomationNodeDragID,
+                         what: "the projected node becomes a written event at its own tick")
+
+S102 | drawerAutomationNodeDragAndPhantomOutcomes | src/checks/automation/domain/gestures.swift:503
+  report.expect(promotion.undo() && promotion.values(promotion.panLane).isEmpty, cppID: drawerAutomationNodeDragID,
+                    message: "one undo returns the lane to its projected node alone")
+
+S103 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:518
+  report.expectEqual(7, freeze.revision, cppID: drawerAutomationPointRangeID,
+                         what: "the frozen lane carries the revision it was read at")
+
+S104 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:524
+  report.expect(AutomationLaneReplacement.pointRange(
+          originalPointRange, begin: 24, end: 48,
+          points: [AutomationLanePoint(tick: 24, value: 64),
+                   AutomationLanePoint(tick: 48, value: 64)]).unchanged,
+          cppID: drawerAutomationPointRangeID, message: "the original two-point range is unchanged")
+
+S105 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:529
+  report.expect(!AutomationLaneReplacement.pointRange(
+          originalPointRange, begin: 24, end: 48,
+          points: [AutomationLanePoint(tick: 24, value: 64)]).unchanged,
+          cppID: drawerAutomationPointRangeID, message: "dropping the original range endpoint changes it")
+
+S106 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:542
+  report.expect(!leadInCompletion.unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "the original implicit lead-in replacement changes the lane")
+
+S107 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:544
+  report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
+                          AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
+                         cppID: drawerAutomationPointRangeID,
+                         what: "the original implicit lead-in is restored at the two-point span end")
+
+S108 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:552
+  report.expect(identical.unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "an identical point range is unchanged")
+
+S109 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:558
+  report.expect(!shortened.unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "a range the lane does not hold is a change")
+
+S110 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:564
+  report.expect(!restored.unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "a held-span replacement that differs is a change")
+
+S111 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:566
+  report.expectEqual(["24:80", "48:60"], restored.points.map { "\($0.tick):\($0.value)" },
+                         cppID: drawerAutomationPointRangeID,
+                         what: "the held span closes on the original endpoint's value")
+
+S112 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:569
+  report.expectEqual(Tick(48), restored.tickEnd, cppID: drawerAutomationPointRangeID,
+                         what: "the replacement names the last tick it covers")
+
+S113 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:575
+  report.expect(flat.unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "a replacement the lane already holds is unchanged")
+
+S114 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:577
+  report.expectEqual(0, flat.points.count, cppID: drawerAutomationPointRangeID,
+                         what: "an unchanged replacement carries no point")
+
+S115 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:580
+  report.expect(!deletion.unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "an empty replacement over a covered span deletes it")
+
+S116 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:582
+  report.expectEqual(0, deletion.points.count, cppID: drawerAutomationPointRangeID,
+                         what: "the deleting replacement carries no point")
+
+S117 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:586
+  report.expectEqual(["8:20", "24:40"],
+                         AutomationLaneReplacement.canonical(
+                             [AutomationLanePoint(tick: 24, value: 30),
+                              AutomationLanePoint(tick: 8, value: 20),
+                              AutomationLanePoint(tick: 32, value: 30),
+                              AutomationLanePoint(tick: 24, value: 40)],
+                             begin: 0, end: 30, minimum: 0, maximum: 127, priorValue: nil)
+                             .map { "\($0.tick):\($0.value)" },
+                         cppID: drawerAutomationPointRangeID,
+                         what: "canonicalization sorts, drops the far tick and keeps the last occupant")
+
+S118 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:596
+  report.expectEqual(["0:0", "24:9"],
+                         AutomationLaneReplacement.canonical(
+                             [AutomationLanePoint(tick: 0, value: -4),
+                              AutomationLanePoint(tick: 9, value: -4),
+                              AutomationLanePoint(tick: 24, value: 9)],
+                             begin: 0, end: 96, minimum: 0, maximum: 9, priorValue: nil)
+                             .map { "\($0.tick):\($0.value)" },
+                         cppID: drawerAutomationPointRangeID,
+                         what: "canonicalization clamps into the domain and drops repeated values")
+
+S119 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:606
+  report.expect(AutomationLaneReplacement.held(held, at: 8, inclusive: false) == nil,
+                    cppID: drawerAutomationPointRangeID,
+                    message: "the exclusive held lookup skips a point on the tick")
+
+S120 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:609
+  report.expectEqual(20, AutomationLaneReplacement.held(held, at: 8, inclusive: true) ?? -1,
+                         cppID: drawerAutomationPointRangeID,
+                         what: "the inclusive held lookup takes a point on the tick")
+
+S121 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:612
+  report.expectEqual(30, AutomationLaneReplacement.held(held, at: 40, inclusive: true) ?? -1,
+                         cppID: drawerAutomationPointRangeID,
+                         what: "the held lookup walks to the last point before the tick")
+
+S122 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:615
+  report.expect(AutomationLaneReplacement.held(held, at: 4, inclusive: true) == nil,
+                    cppID: drawerAutomationPointRangeID, message: "the held lookup reports nothing before the first")
+
+S123 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:621
+  report.expectEqual(0, emptyFacts.snapshot.leadInValue ?? -1, cppID: drawerAutomationPointRangeID,
+                         what: "an unwritten Modulation lane leads in on its engine default")
+
+S124 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:629
+  report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start on an empty lane")
+
+S125 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:632
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
+                         cppID: drawerAutomationPointRangeID,
+                         what: "the stroke writes its point and restores the lane's held value")
+
+S126 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:635
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.preview.points),
+                         cppID: drawerAutomationPointRangeID, what: "the stroke's preview matches its completion")
+
+S127 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:637
+  report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "an empty lane's first stroke is a change")
+
+S128 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:649
+  report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start past the last point")
+
+S129 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:652
+  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
+                         cppID: drawerAutomationPointRangeID,
+                         what: "a stroke past the last point re-anchors that point's value")
+
+S130 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:655
+  report.expect(!pastLastStroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
+                    message: "a stroke past the last point reports a change")
+
+S131 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:666
+  report.expect(committed.page.consumeMenuAction(actionId: AutomationMenuAction.range127.rawValue),
+                    cppID: drawerAutomationPointRangeID, message: "the stroke fixture selects its intended value range")
+
+S132 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:668
+  report.expectEqual(committedBefore, committed.snapshot, cppID: drawerAutomationPointRangeID,
+                         what: "preparing the display range leaves document and history unchanged")
+
+S133 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:672
+  report.expect(committed.page.pointerPress(x: committed.x(24), y: strokeY, surface: 1, button: 1), cppID: drawerAutomationPointRangeID,
+                    message: "the pencil press starts a stroke")
+
+S134 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:674
+  report.expect(committed.page.isPainting, cppID: drawerAutomationPointRangeID,
+                    message: "the page publishes the painting gesture")
+
+S135 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:676
+  report.expect(committed.page.pointerRelease(x: committed.x(24), y: strokeY, button: 1), cppID: drawerAutomationPointRangeID,
+                    message: "the pencil release commits")
+
+S136 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:678
+  report.expectEqual(committedBefore.revision + 1, committed.document.revision, cppID: drawerAutomationPointRangeID,
+                         what: "one pencil press and release is one revision")
+
+S137 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:680
+  report.expect(committed.values(committed.modulationLane).contains { $0.hasSuffix(":60") },
+                    cppID: drawerAutomationPointRangeID,
+                    message: "the released stroke writes the value under the pointer")
+
+S138 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:683
+  report.expect(committed.undo(), cppID: drawerAutomationPointRangeID, message: "the stroke is undoable")
+
+S139 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:684
+  report.expectEqual(["0:20"], committed.values(committed.modulationLane), cppID: drawerAutomationPointRangeID,
+                         what: "one undo restores the pre-stroke lane")
+
+S140 | drawerAutomationPointRangeAndPencilReplacements | src/checks/automation/domain/gestures.swift:686
+  report.expect(!committed.document.history.canUndo, cppID: drawerAutomationPointRangeID,
+                    message: "the released stroke recorded exactly one history entry")
+
+S141 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift:703
+  report.expectEqual(
+          ["0:20", "24:80", "48:60", "72:90"],
+          replacement.lanePoints(track: 0, lane: .controller(7))
+              .map { "\($0.tick):\($0.value)" },
+          cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
+          what: "core held-span replacement including the trailing held-value seam")
+
+S142 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift:718
+  report.expectEqual(
+          ["24:80", "48:20"],
+          emptyLane.lanePoints(track: 0, lane: .controller(7))
+              .map { "\($0.tick):\($0.value)" },
+          cppID: "automation-domain/AutomationDomainTest::pointRangeAndPencilReplacements",
+          what: "core empty-lane replacement stores the pencil value and restored tail")
+
+S143 | coreEventAutomationGestureCoreSeams | src/checks/automation/domain/gestures.swift:734
+  report.expectEqual(
+          ["0:85", "144:25", "168:85"],
+          trailingHold.lanePoints(track: 0, lane: .controller(7))
+              .map { "\($0.tick):\($0.value)" },
+          cppID: "automation-domain/AutomationDomainTest::sweepFinishRestoresTrailingHeldValue",
+          what: "core lane write retains the explicit post-sweep held-value seam")
+
+S144 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:758
+  report.fail(id, "Pan node move resolves")
+
+S145 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:759
+  report.expect(AutomationCommit.apply(plan, in: fx.document), cppID: id,
+                    message: "node value move records its own transaction")
+
+S146 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:762
+  report.expect(moved != beforeMove, cppID: id, message: "the move actually changes document state")
+
+S147 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:764
+  report.expect(undone, cppID: id, message: "awaited undo completes")
+
+S148 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:765
+  report.expectEqual(beforeMove, fx.document.state, cppID: id,
+                         what: "one undo restores all four written Pan occurrences")
+
+S149 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:768
+  report.expect(redone, cppID: id, message: "awaited redo completes")
+
+S150 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:769
+  report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")
+
+S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:772
+  report.expectEqual(firstWrite, fx.document.state, cppID: id,
+                         what: "only a second undo removes the preceding Pan sweep")
+
+Shared helper: src/checks/automation/AutomationPageChecks.swift
+SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+src/checks/automation/AutomationPageChecks.swift:381
+  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

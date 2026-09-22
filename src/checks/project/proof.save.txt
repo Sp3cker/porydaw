@@ -1,0 +1,692 @@
+Assertion correspondence: project/save.cpp
+
+Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
+Original: src/checks/project/save.cpp
+Original SHA-256: 5f5306be9e71206a513833ec502664570672a044a793d9061915d0c400e2964b
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute;
+PARTIAL identifies a related Swift predicate with an explicit unproved condition;
+GAP identifies an original predicate without an established equivalent;
+NATIVE identifies an observation only a native window/rendering/harness run can establish.
+35 assertion sites across save/reload note-loop-cfg round-trips, saved-identity undo/redo/stale snapshots, and saved-MIDI compilation. Note the Swift cppIDs use the savecheck/ lane prefix for the same C++ cases. No site is marked MATCHED: harnesses differ (QUndoStack/SongDocument vs DocumentSession; QProcess mid2agb vs pdc_check_compile_saved_midi).
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+runProjectSessionSuite (SessionChecks.swift) owns the save/reload and identity predicates via DocumentSession save/reopen against the staged swiftcore-session-test project. savedMidiCompilesAfterDocumentSave edits a DocumentSession tail note, saves, and compiles the persisted MIDI via pdc_check_compile_saved_midi.
+
+Fixture, sequence and row constraints
+requireEmptyTail demands a collision-free [base, base+528) tail or the case QSKIPs (3 sites); savedMidiCompilesWhenAvailable QSKIPs when mid2agb is unavailable; saveEditedDocument fixes note pitch 72/velocity 93/duration 24, loop +24, and masterVolume 111.
+
+Original assertion inventory
+
+A001 | ProjectSaveTest::init | src/checks/project/save.cpp:139
+Disposition: GAP
+Mapping/reason: C++ harness setup guard (ProjectFixture copyOf); no Swift predicate establishes this fixture precondition.
+Source context since previous assertion:
+  #include <QtTest>
+
+  #include <QFile>
+  #include <QFileInfo>
+  #include <QProcess>
+  #include <QUndoStack>
+
+  #include <algorithm>
+  #include <cstdint>
+  #include <memory>
+  #include <optional>
+
+  #include "checks/support/songfixture.h"
+  #include "core/songdocument.h"
+
+  namespace {
+
+  QByteArray readFileBytes(const QString &path)
+  {
+      QFile file(path);
+      if (!file.open(QIODevice::ReadOnly))
+          return {};
+      return file.readAll();
+  }
+
+  int firstNonemptyTrack(const SongDocument &document)
+  {
+      for (int track = 0; track < document.engineTrackCount(); ++track)
+          if (!document.notesForTrack(track).empty())
+              return track;
+      return -1;
+  }
+
+  struct EditWindow {
+      int track = -1;
+      uint64_t base = 0;
+  };
+
+  std::optional<EditWindow> emptyTailWindow(const SongDocument &document, int track)
+  {
+      Tick lastEnd = 0;
+      for (const SmfTrack &smfTrack : document.smf().tracks)
+          lastEnd = std::max(lastEnd, smfTrack.endTick);
+      const Tick kRequiredTail = 96 + 528;
+      if (lastEnd > CoreTimeDefaults::kMaxTick - kRequiredTail)
+          return std::nullopt;
+
+      const Tick base = lastEnd + 96;
+      const Tick windowEnd = base + 528;
+      for (const DocNote &note : document.notesForTrack(track))
+          if (note.tick < windowEnd && document.noteEndTick(note) > base)
+              return std::nullopt;
+      return EditWindow{track, base};
+  }
+
+  struct SavedEdit {
+      EditWindow window;
+      uint64_t expectedLoopStart = 0;
+      QString cfgPath;
+      QList<QByteArray> cfgBefore;
+  };
+
+  bool saveEditedDocument(SongDocument &document, const EditWindow &window, SavedEdit &saved,
+                          QString &error)
+  {
+      saved.window = window;
+      saved.cfgPath = QFileInfo(document.midPath()).dir().filePath(QStringLiteral("midi.cfg"));
+      saved.cfgBefore = readFileBytes(saved.cfgPath).split('\n');
+
+      document.addNote(window.track, window.base, 72, 24, 93);
+      const uint64_t oldLoopStart = document.loopTick(false);
+      saved.expectedLoopStart =
+          oldLoopStart == CoreTimeDefaults::kNoTick ? 0 : uint64_t(oldLoopStart) + 24;
+      document.setLoopTick(false, static_cast<int64_t>(saved.expectedLoopStart));
+      SongCfg cfg = document.cfg();
+      cfg.masterVolume = 111;
+      document.setCfg(cfg);
+      return document.save(&error);
+  }
+
+  bool isExactSongCfgLine(const QByteArray &line, const QString &songLabel)
+  {
+      return line.startsWith(songLabel.toUtf8() + ".mid:");
+  }
+
+  class ProjectSaveTest final : public QObject
+  {
+      Q_OBJECT
+      Q_DISABLE_COPY_MOVE(ProjectSaveTest)
+
+    public:
+      ProjectSaveTest(QString stagedRoot, QString songLabel, QString mid2agbPath)
+          : m_stagedRoot(std::move(stagedRoot))
+          , m_songLabel(std::move(songLabel))
+          , m_mid2agbPath(std::move(mid2agbPath))
+      {}
+
+    private slots:
+      void init();
+      void cleanup();
+      void saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes();
+      void savedIdentityUndoRedoAndStaleSnapshot();
+      void savedMidiCompilesWhenAvailable();
+
+    private:
+      std::unique_ptr<checks::LoadedSong> load(QString &error) const;
+      std::optional<EditWindow> requireEmptyTail(SongDocument &document, QString &reason) const;
+
+      QString m_stagedRoot;
+      QString m_songLabel;
+      QString m_mid2agbPath;
+      std::unique_ptr<checks::ProjectFixture> m_project;
+  };
+
+  std::unique_ptr<checks::LoadedSong> ProjectSaveTest::load(QString &error) const
+  {
+      return checks::LoadedSong::load(m_project->root(), m_songLabel, error);
+  }
+
+  std::optional<EditWindow> ProjectSaveTest::requireEmptyTail(SongDocument &document,
+                                                              QString &reason) const
+  {
+      const int track = firstNonemptyTrack(document);
+      if (track < 0) {
+          reason = QStringLiteral("fixture song has no nonempty engine track");
+          return std::nullopt;
+      }
+      const std::optional<EditWindow> window = emptyTailWindow(document, track);
+      if (!window)
+          reason = QStringLiteral(
+              "fixture has no collision-free [base, base + 528) tail for the save identity edits");
+      return window;
+  }
+
+  void ProjectSaveTest::init()
+  {
+      QString error;
+      m_project = checks::ProjectFixture::copyOf(m_stagedRoot, error);
+
+Original expression:
+  QVERIFY2(m_project, qPrintable(error))
+
+A002 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:151
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectSaveTest::cleanup()
+  {
+      m_project.reset();
+  }
+
+  void ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes()
+  {
+      QString error;
+      std::unique_ptr<checks::LoadedSong> loaded = load(error);
+
+Original expression:
+  QVERIFY2(loaded, qPrintable(error))
+
+A003 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:158
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+      if (!loaded)
+          return;
+      SongDocument &document = loaded->document();
+      const std::optional<EditWindow> window = requireEmptyTail(document, error);
+      if (!window) {
+          if (error.startsWith(QStringLiteral("fixture has no collision-free")))
+
+Original expression:
+  QSKIP(qPrintable(error))
+
+A004 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:159
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QFAIL(qPrintable(error))
+
+A005 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:163
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+      }
+
+      SavedEdit saved;
+
+Original expression:
+  QVERIFY2(saveEditedDocument(document, *window, saved, error), qPrintable(error))
+
+A006 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:164
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.isDirty())
+
+A007 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:167
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+      std::unique_ptr<checks::LoadedSong> reloaded = load(error);
+
+Original expression:
+  QVERIFY2(reloaded, qPrintable(error))
+
+A008 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:172
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+      if (!reloaded)
+          return;
+      SongDocument &afterReload = reloaded->document();
+      DocNote savedNote;
+
+Original expression:
+  QVERIFY(afterReload.findNote(saved.window.track, saved.window.base, 72, &savedNote))
+
+A009 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:173
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(savedNote.velocity, 93)
+
+A010 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:174
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(savedNote.duration, 24)
+
+A011 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:175
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(afterReload.cfg().masterVolume, 111)
+
+A012 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:176
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(afterReload.loopTick(false), saved.expectedLoopStart)
+
+A013 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:179
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+
+      const QList<QByteArray> cfgAfter = readFileBytes(saved.cfgPath).split('\n');
+
+Original expression:
+  QCOMPARE(cfgAfter.size(), saved.cfgBefore.size())
+
+A014 | ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes | src/checks/project/save.cpp:185
+Disposition: PARTIAL
+Mapping/reason: Related predicates S002-S006 and S011-S018 in SessionChecks.swift; the loop edit, clean save, note/file/loop/config streams, and other-song cfg bytes survive save/reopen, but exact note velocity/duration/loop-start values and cfg line-count plus per-line byte equality below are unproved.
+Source context since previous assertion:
+  ;
+      if (cfgAfter.size() != saved.cfgBefore.size())
+          return;
+      for (qsizetype index = 0; index < cfgAfter.size(); ++index) {
+          const bool isSongLine = isExactSongCfgLine(saved.cfgBefore[index], m_songLabel);
+          if (!isSongLine)
+
+Original expression:
+  QCOMPARE(cfgAfter[index], saved.cfgBefore[index])
+
+A015 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:193
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot()
+  {
+      QString error;
+      std::unique_ptr<checks::LoadedSong> loaded = load(error);
+
+Original expression:
+  QVERIFY2(loaded, qPrintable(error))
+
+A016 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:200
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      if (!loaded)
+          return;
+      SongDocument &document = loaded->document();
+      const std::optional<EditWindow> window = requireEmptyTail(document, error);
+      if (!window) {
+          if (error.startsWith(QStringLiteral("fixture has no collision-free")))
+
+Original expression:
+  QSKIP(qPrintable(error))
+
+A017 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:201
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QFAIL(qPrintable(error))
+
+A018 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:205
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      }
+
+      SavedEdit saved;
+
+Original expression:
+  QVERIFY2(saveEditedDocument(document, *window, saved, error), qPrintable(error))
+
+A019 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:206
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.isDirty())
+
+A020 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:210
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      const int savedUndoCount = document.undoStack()->count();
+
+      document.addNote(saved.window.track, saved.window.base + 480, 74, 24, 90);
+
+Original expression:
+  QVERIFY(document.isDirty())
+
+A021 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:212
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QVERIFY(!document.isDirty())
+
+A022 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:214
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      document.undoStack()->redo();
+
+Original expression:
+  QVERIFY(document.isDirty())
+
+A023 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:219
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+
+      const SongSaveSnapshot stale = document.captureSaveSnapshot();
+      document.addNote(saved.window.track, saved.window.base + 504, 76, 24, 90);
+      document.didSave(stale, true);
+
+Original expression:
+  QVERIFY(document.isDirty())
+
+A024 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:221
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QVERIFY(document.isDirty())
+
+A025 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:223
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QVERIFY(!document.isDirty())
+
+A026 | ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot | src/checks/project/save.cpp:224
+Disposition: PARTIAL
+Mapping/reason: Related predicates S007-S010 and S019-S021 in SessionChecks.swift; dirty/undo/redo/stale-snapshot behavior is exercised on DocumentSession, but QUndoStack count arithmetic and saved-identity crossings below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), savedUndoCount + 2)
+
+A027 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:231
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+  }
+
+  void ProjectSaveTest::savedMidiCompilesWhenAvailable()
+  {
+      QString error;
+      std::unique_ptr<checks::LoadedSong> loaded = load(error);
+
+Original expression:
+  QVERIFY2(loaded, qPrintable(error))
+
+A028 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:238
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+      if (!loaded)
+          return;
+      SongDocument &document = loaded->document();
+      const std::optional<EditWindow> window = requireEmptyTail(document, error);
+      if (!window) {
+          if (error.startsWith(QStringLiteral("fixture has no collision-free")))
+
+Original expression:
+  QSKIP(qPrintable(error))
+
+A029 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:239
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QFAIL(qPrintable(error))
+
+A030 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:243
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+      }
+
+      SavedEdit saved;
+
+Original expression:
+  QVERIFY2(saveEditedDocument(document, *window, saved, error), qPrintable(error))
+
+A031 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:248
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+      const QString mid2agb = m_mid2agbPath.isEmpty()
+                                  ? m_project->root() + QStringLiteral("/tools/mid2agb/mid2agb")
+                                  : m_mid2agbPath;
+      if (!QFileInfo::exists(mid2agb))
+
+Original expression:
+  QSKIP(qPrintable(QStringLiteral("mid2agb is unavailable at %1").arg(mid2agb)))
+
+A032 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:256
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+
+      QStringList arguments = document.cfg().rawFlags;
+      const QString outSource =
+          document.midPath().left(document.midPath().size() - 4) + QStringLiteral(".s");
+      arguments << document.midPath() << outSource;
+      QProcess compiler;
+      compiler.start(mid2agb, arguments);
+
+Original expression:
+  QVERIFY2(compiler.waitForStarted(15000), qPrintable(compiler.errorString()))
+
+A033 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:257
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(compiler.waitForFinished(15000), qPrintable(compiler.errorString()))
+
+A034 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:258
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(compiler.exitStatus(), QProcess::NormalExit)
+
+A035 | ProjectSaveTest::savedMidiCompilesWhenAvailable | src/checks/project/save.cpp:259
+Disposition: PARTIAL
+Mapping/reason: Related predicate S001 in SessionChecks.swift; the persisted edited MIDI is compiled via pdc_check_compile_saved_midi, but the QProcess start/finish handshake and NormalExit/exit-code distinction below are unproved.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(compiler.exitCode(), 0)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+  } // namespace
+
+  int runSaveCheck(const QString &stagedRoot, const QString &songLabel, const QString &mid2agbPath,
+                   const QStringList &qtArguments)
+  {
+      ProjectSaveTest test(stagedRoot, songLabel, mid2agbPath);
+      QStringList arguments{QStringLiteral("project-save")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "save.moc"
+
+Swift assertion predicates
+
+S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/SessionChecks.swift:287
+  report.expectEqual(Int32(1), compileResult, cppID: cppID,
+                         what: "actual mid2agb exit result for the persisted edited MIDI and flags")
+
+S002 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:529
+  report.expect(chunkMetasStripped,
+                    cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                    message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
+
+S003 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:737
+  report.expect(otherSongCfgBefore != nil,
+                    cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                    message: "fixture exposes the other song's midi.cfg line")
+
+S004 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:747
+  report.expectEqual(Tick(72), preSaveLoopStart,
+                         cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                         what: "the loop-start edit is present before save")
+
+S005 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:756
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "edited song save confirms clean state")
+
+S006 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:763
+  report.expectEqual(
+          otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
+          cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+          what: "save preserves the other song's complete midi.cfg line bytes")
+
+S007 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:783
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "edit after save is dirty")
+
+S008 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:787
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "undo to the saved state is clean")
+
+S009 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:791
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "redo away from the saved state is dirty")
+
+S010 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:795
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "cleanup undo returns to the saved state")
+
+S011 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:817
+  report.expectEqual(preSaveFile, reopened.document.state.file,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "note and non-tempo metadata streams survive save/reopen")
+
+S012 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:820
+  report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "loop-start marker survives save/reopen")
+
+S013 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:823
+  report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "loop-end marker survives save/reopen")
+
+S014 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:827
+  report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "raw config flags survive save/reopen")
+
+S015 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:830
+  report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "voicegroup argument survives save/reopen")
+
+S016 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:833
+  report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "master volume survives save/reopen")
+
+S017 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:836
+  report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "reverb survives save/reopen")
+
+S018 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:839
+  report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "priority survives save/reopen")
+
+S019 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:873
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "stale snapshot completion leaves the newer document dirty")
+
+S020 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:877
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "undoing only the newer edit remains dirty")
+
+S021 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:881
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "undoing both post-save edits returns to the saved state")

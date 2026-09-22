@@ -1,0 +1,877 @@
+Assertion correspondence: trackheaders/trackheaderraster.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/trackheaders/trackheaderraster.cpp
+Original SHA-256: b1617fff2ac01b216df78376f32c3e66258407c61889f40d1fb11b30e67cef8e
+Swift counterpart: src/checks/trackheaders/trackheaderraster.swift
+Swift SHA-256: 9c9ab74a3f20421c85104e12c78a7cabbafba19974caee39d95b9472948a4589
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
+original Swift suite order. headerfixture.swift constructs a real two-track
+DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
+headerinputfixture.swift owns pointer probes and document/history baselines.
+Their helper expectations execute on every call and are inventoried below.
+
+Original assertion inventory and source sequence
+
+A001 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:78
+Disposition: MATCHED
+Mapping/reason: tst_EditorDrawer.qml::test_trackActivityRenderedMeterParity verifies rows && rows.count > 1 and selects the actual first row; typed row access replaces optional native model lookup. [S035]
+Source context since previous assertion:
+  #include "checks/trackheaders/tst_trackheaders.h"
+
+  #include <QtTest>
+
+  #include <QAbstractItemModel>
+  #include <QCoreApplication>
+
+  #include <algorithm>
+  #include <cstring>
+  #include <optional>
+  #include <vector>
+
+  #include "checks/support/quickframebuffer.h"
+  #include "core/miditimeline.h"
+  #include "core/songdocument.h"
+  #include "ui/activity/trackactivity.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/trackheadermodel.h"
+
+  namespace {
+
+  constexpr int kHeightTolerance = 1;
+
+  struct DataChange final {
+      int first = -1;
+      int last = -1;
+      QList<int> roles;
+  };
+
+  QVariant rowData(const songview::TrackHeaderModel &model, int row, int role)
+  {
+      return model.data(model.index(row, 0), role);
+  }
+
+  int pixelStride(const QImage &image)
+  {
+      return image.depth() > 0 && image.depth() % 8 == 0 ? image.depth() / 8 : 0;
+  }
+
+  int changedBottomSpan(const QImage &before, const QImage &after, const QRect &logicalRect,
+                        bool rightChannel)
+  {
+      const int stride = pixelStride(before);
+      if (before.isNull() || after.isNull() || before.size() != after.size() ||
+          before.format() != after.format() || stride == 0 ||
+          before.bytesPerLine() < before.width() * stride ||
+          after.bytesPerLine() < after.width() * stride) {
+          return 0;
+      }
+      const QRect device = checks::support::devicePixelRect(before, logicalRect);
+      if (device.isEmpty() || !after.rect().contains(device))
+          return 0;
+      const int x =
+          rightChannel ? device.right() - device.width() / 4 : device.x() + device.width() / 4;
+      int changed = 0;
+      bool seen = false;
+      for (int y = device.bottom(); y >= device.top(); --y) {
+          const uchar *const beforePixel = before.constScanLine(y) + x * stride;
+          const uchar *const afterPixel = after.constScanLine(y) + x * stride;
+          if (std::memcmp(beforePixel, afterPixel, stride) != 0) {
+              seen = true;
+              ++changed;
+          } else if (seen) {
+              break;
+          }
+      }
+      return changed;
+  }
+
+  } // namespace
+
+  void TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged()
+  {
+      TrackHeadersFixture &fx = fixture();
+      songview::TrackHeaderModel &headers = fx.headers();
+      const std::optional<int> sourceRow = fx.rowForTrack(fx.sourceTrack());
+Original expression:
+  QVERIFY(sourceRow)
+
+A002 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:82
+Disposition: MATCHED-QML
+Mapping/reason: headerMeterPixels verifies positive observed image scale and nonempty width/height; its first capture follows explicit zero playing levels. This is a Qt composition image, not physical desktop screenshot evidence. [S059, S060]
+Source context since previous assertion:
+  ;
+
+      QString error;
+      const QImage before = fx.captureBand(error);
+Original expression:
+  QVERIFY2(!before.isNull(), qPrintable(error))
+
+A003 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:95
+Disposition: RETIRED-ROLE-PROTOCOL
+Mapping/reason: The old exact one dataChanged event with two named C++ roles is not asserted by the Swift QListModel replacement protocol. trackActivityPhysicalPixelPredicates instead checks unchanged other-track row identity and changed addressed physical height; production advanceActivity replaces only changed rows. No signal-count equivalence is claimed.
+Source context since previous assertion:
+  ;
+      std::vector<DataChange> changes;
+      const QMetaObject::Connection observed = QObject::connect(
+          &headers, &QAbstractItemModel::dataChanged, &headers,
+          [&changes](const QModelIndex &first, const QModelIndex &last, const QList<int> &roles) {
+              changes.push_back({first.row(), last.row(), roles});
+          });
+
+      TrackActivity activity;
+      TrackActivityLevels levels{};
+      levels[fx.sourceTrack()] = {255, 0};
+      activity.advance(levels, 1.0F, true);
+      headers.syncActivity(activity, true);
+Original expression:
+  QCOMPARE(int(changes.size()), 1)
+
+A004 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:96
+Disposition: RETIRED-ROLE-PROTOCOL
+Mapping/reason: C++ QModelIndex event bounds no longer name the publication API. Replacement changed-row scope is checked by h.rows[1] === untouched while row0 physical heights change; not an assertion about old signal arguments.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(changes.front().first, *sourceRow)
+
+A005 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:97
+Disposition: RETIRED-ROLE-PROTOCOL
+Mapping/reason: Same replacement changed-row scope as line96; no claim that old last QModelIndex signal argument is executed.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(changes.front().last, *sourceRow)
+
+A006 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:100
+Disposition: RETIRED-ROLE-PROTOCOL
+Mapping/reason: Swift QListModel replaces the changed row and publishes its registered properties; it does not emit exactly the old two numeric C++ role identifiers. Tests preserve changed-row scope and physically unchanged levels publish no replacement row, rather than resurrecting the retired role protocol.
+Source context since previous assertion:
+  ;
+      const QList<int> expectedRoles{songview::TrackHeaderModel::ActivityLeftHeightRole,
+                                     songview::TrackHeaderModel::ActivityRightHeightRole};
+Original expression:
+  QCOMPARE(changes.front().roles, expectedRoles)
+
+A007 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:103
+Disposition: MATCHED-QML
+Mapping/reason: test_trackActivityRenderedMeterParity explicitly presents left255/right0 and compares row.activityRightHeight == 0. [S038]
+Source context since previous assertion:
+  ;
+      const qreal leftHeight =
+          rowData(headers, *sourceRow, songview::TrackHeaderModel::ActivityLeftHeightRole).toReal();
+Original expression:
+  QCOMPARE(
+          rowData(headers, *sourceRow, songview::TrackHeaderModel::ActivityRightHeightRole).toReal(),
+          0.0)
+
+A008 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:106
+Disposition: MATCHED-QML
+Mapping/reason: test_trackActivityRenderedMeterParity verifies row.activityLeftHeight > 0 after left255/right0. [S039]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(leftHeight > 0.0)
+
+A009 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:109
+Disposition: MATCHED-QML
+Mapping/reason: headerMeterPixels captures the actual original TrackHeaderBand composition after left255/right0 and verifies nonempty dimensions, positive observed scale and opaque pixels. [S059, S060]
+Source context since previous assertion:
+  ;
+      checks::support::pumpQuick();
+      const QImage after = fx.captureBand(error);
+Original expression:
+  QVERIFY2(!after.isNull(), qPrintable(error))
+
+A010 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:114
+Disposition: MATCHED-QML
+Mapping/reason: test_trackActivityRenderedMeterParity scans changed pixels bottom-up against the zero-level capture and verifies observedSpan >= max(1, round(row.activityLeftHeight * leftOnly.dpr) - 2). [S040]
+Source context since previous assertion:
+  ;
+      const QRect leftMeter{0, *sourceRow * fx.rowHeight(), std::max(1, headers.activityWidth() / 2),
+                            std::max(0, fx.rowHeight() - headers.separatorWidth())};
+      const int observedLeft = changedBottomSpan(before, after, leftMeter, false);
+      const int expectedLeft = qRound(leftHeight * after.devicePixelRatio());
+Original expression:
+  QVERIFY(observedLeft >= std::max(1, expectedLeft - kHeightTolerance))
+
+A011 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:115
+Disposition: MATCHED-QML
+Mapping/reason: The same measured changed-pixel span is <= round(row.activityLeftHeight * leftOnly.dpr) + 2. [S041]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(observedLeft <= expectedLeft + kHeightTolerance)
+
+A012 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:119
+Disposition: MATCHED
+Mapping/reason: trackActivityPhysicalPixelPredicates checks zip(rows, fx.trackRows).allSatisfy identity after identical converged levels; within one physical pixel h.rows[0] === within. This proves no row replacement, not the retired dataChanged event representation. [S027]
+Source context since previous assertion:
+  ;
+
+      changes.clear();
+      headers.syncActivity(activity, true);
+Original expression:
+  QVERIFY(changes.empty())
+
+A013 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:130
+Disposition: PARTIAL
+Mapping/reason: TrackHeadersFixture provides two concrete rows and voiceSubtitleFollowsProgramPosition addresses real track1 through nonoptional h.rows[1] access, but no exact row-existence predicate exists for the voice-track row. Nearest predicate: converted-window rows && input && rows.count > 1 [S062]. The specific row guard remains unproved.
+Source context since previous assertion:
+  ;
+      QObject::disconnect(observed);
+  }
+
+  void TrackHeadersTest::voiceSubtitleFollowsProgramPosition()
+  {
+      TrackHeadersFixture &fx = fixture();
+      songview::TrackHeaderModel &headers = fx.headers();
+      SongView &view = fx.view();
+      SongDocument &doc = fx.tab().document();
+      const std::optional<int> row = fx.rowForTrack(fx.voiceTrack());
+Original expression:
+  QVERIFY(row)
+
+A014 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:144
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition explicitly expects program(at:0) == 1 through the same VoiceLanePolicy.slot production policy used by TrackHeadersGeometry, plus cursor479 subtitle == initial. Fixture firstProgram1, changed5. [S001]
+Source context since previous assertion:
+  ;
+
+      // The header voice line is live: currentProgram is the last program
+      // change at or before the display position — the playhead while playing,
+      // the edit cursor otherwise — falling back to the track's first program
+      // (which is what primes the engine before any change).
+      const int base = view.currentProgram(fx.voiceTrack());
+      const int atStart = base < 0 ? 4 : base;
+      const int changed = atStart == 5 ? 6 : 5;
+      const uint64_t vcTick = 480;
+      if (base < 0)
+          doc.addLanePoint(fx.voiceTrack(), DOC_CC_VOICE, 0, atStart);
+      doc.addLanePoint(fx.voiceTrack(), DOC_CC_VOICE, vcTick, changed);
+      QCoreApplication::processEvents();
+Original expression:
+  QCOMPARE(view.currentProgram(fx.voiceTrack()), atStart)
+
+A015 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:146
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition sets editCursor480 and explicitly expects program(at:editCursor) == 5, plus changed subtitle != initial. [S003, S004]
+Source context since previous assertion:
+  ;
+      view.setEditCursorTick(vcTick);
+Original expression:
+  QCOMPARE(view.currentProgram(fx.voiceTrack()), changed)
+
+A016 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:149
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition refreshPlayhead(tick:480,playing:true) explicitly expects program(at:480) == 5 and subtitle == changed while editCursor0. [S007, S008]
+Source context since previous assertion:
+  ;
+      view.setEditCursorTick(0);
+      view.setPlayheadSample(view.timeline()->sampleForTick(vcTick), true);
+Original expression:
+  QCOMPARE(view.currentProgram(fx.voiceTrack()), changed)
+
+A017 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:151
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition refreshPlayhead(tick:481,playing:false) explicitly expects program(at:editCursor) == 1 and subtitle == initial. [S010, S011]
+Source context since previous assertion:
+  ;
+      view.setPlayheadSample(0, false); // stopped: back to the edit cursor
+Original expression:
+  QCOMPARE(view.currentProgram(fx.voiceTrack()), atStart)
+
+A018 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:166
+Disposition: MATCHED-QML
+Mapping/reason: test_headerVoiceChangeAltersRetainedRaster grabs the existing composition before the real picker completion; regionOf maps the concrete row into the full image. [S062]
+Source context since previous assertion:
+  ;
+
+      // Header program presentation is a model-to-Quick contract: a transition
+      // changes the subtitle role for just this record and the retained header
+      // framebuffer.
+      std::vector<DataChange> changes;
+      const QMetaObject::Connection observed = QObject::connect(
+          &headers, &QAbstractItemModel::dataChanged, &headers,
+          [&changes](const QModelIndex &first, const QModelIndex &last, const QList<int> &roles) {
+              changes.push_back({first.row(), last.row(), roles});
+          });
+      const QString beforeSubtitle =
+          rowData(headers, *row, songview::TrackHeaderModel::SubtitleRole).toString();
+      QString error;
+      const QImage beforeProgram = fx.captureBand(error);
+Original expression:
+  QVERIFY2(!beforeProgram.isNull(), qPrintable(error))
+
+A019 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:172
+Disposition: MATCHED-QML
+Mapping/reason: The same test grabs after real program127 completion, compares dimensions to the before image, and reads the actual row pixels. [S066, S067]
+Source context since previous assertion:
+  ;
+      view.setEditCursorTick(vcTick);
+      QCoreApplication::processEvents();
+      const QString afterSubtitle =
+          rowData(headers, *row, songview::TrackHeaderModel::SubtitleRole).toString();
+      const QImage afterProgram = fx.captureBand(error);
+Original expression:
+  QVERIFY2(!afterProgram.isNull(), qPrintable(error))
+
+A020 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:173
+Disposition: RETIRED-ROLE-PROTOCOL
+Mapping/reason: Old SubtitleRole numeric dataChanged bounds are replaced by Swift QListModel row publication. voiceSubtitleFollowsProgramPosition checks unrelated h.rows[0] === unaffected and changed subtitle, with unchanged-program row retained; old signal payload is not claimed equivalent.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(std::any_of(changes.cbegin(), changes.cend(),
+                           [row = *row](const DataChange &change) {
+                               return change.first == row && change.last == row &&
+                                      change.roles.contains(songview::TrackHeaderModel::SubtitleRole);
+                           }),
+               "program change did not publish a bounded header subtitle role")
+
+A021 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:179
+Disposition: MATCHED-QML
+Mapping/reason: test_headerVoiceChangeAltersRetainedRaster tryVerify(row.subtitle !== beforeSubtitle) after actual voice completion; Swift voiceSubtitleFollowsProgramPosition also asserts changed != initial. [S065, S004]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(beforeSubtitle != afterSubtitle, "program change did not alter the header subtitle")
+
+A022 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:180
+Disposition: MATCHED-QML
+Mapping/reason: test_headerVoiceChangeAltersRetainedRaster compares image width/height and verifies differences > 0 over the same row region. Selection occurs before capture; paused activity polling prevents unrelated meter animation. [S066, S067, S068]
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(beforeProgram.size() == afterProgram.size() && beforeProgram != afterProgram,
+               "program change did not alter the retained Quick header rendering")
+
+A023 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:187
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition editCursor0 + refreshFromDocument asserts subtitle == initial. [S002]
+Source context since previous assertion:
+  ;
+      QObject::disconnect(observed);
+      view.setEditCursorTick(0);
+      const auto subtitle = [&] {
+          return rowData(headers, *row, songview::TrackHeaderModel::SubtitleRole).toString();
+      };
+Original expression:
+  QCOMPARE(subtitle(), beforeSubtitle)
+
+A024 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:189
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition playing480 asserts subtitle == changed. [S008]
+Source context since previous assertion:
+  ;
+      view.setPlayheadSample(view.timeline()->sampleForTick(vcTick), true);
+Original expression:
+  QCOMPARE(subtitle(), afterSubtitle)
+
+A025 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:191
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition playing481 retains the same published row object and therefore its changed subtitle. [S008, S009]
+Source context since previous assertion:
+  ;
+      view.setPlayheadSample(view.timeline()->sampleForTick(vcTick + 1), true);
+Original expression:
+  QCOMPARE(subtitle(), afterSubtitle)
+
+A026 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:193
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition stopped481 asserts subtitle == initial. [S011]
+Source context since previous assertion:
+  ;
+      view.setPlayheadSample(0, false);
+Original expression:
+  QCOMPARE(subtitle(), beforeSubtitle)
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+
+Swift assertion predicates
+
+S001 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(1, program(at: 0), cppID: id, what: "initial numeric program")
+
+S002 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(initial, h.rows[1].subtitle, cppID: id,
+                         what: "cursor before change still shows first program")
+
+S003 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(5, program(at: fx.session.editCursor), cppID: id,
+                         what: "edit cursor resolves the changed numeric program")
+
+S004 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expect(changed != initial, cppID: id, message: "cursor at change publishes new subtitle")
+
+S005 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expect(h.rows[0] === unaffected, cppID: id, message: "program transition retains unrelated row")
+
+S006 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(initial, h.rows[1].subtitle, cppID: id, what: "stopped cursor restores first program")
+
+S007 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(5, program(at: 480), cppID: id,
+                         what: "playing position resolves the changed numeric program")
+
+S008 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(changed, h.rows[1].subtitle, cppID: id, what: "playing follows playhead over edit cursor")
+
+S009 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expect(h.rows[1] === retained, cppID: id, message: "unchanged program retains published row")
+
+S010 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(1, program(at: fx.session.editCursor), cppID: id,
+                         what: "stopped position resolves the original numeric program")
+
+S011 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(initial, h.rows[1].subtitle, cppID: id, what: "stop immediately returns to edit cursor")
+
+S012 | program | src/checks/trackheaders/trackheaderraster.swift :: voiceSubtitleFollowsProgramPosition
+  report.expectEqual(rebuilds, h.rowRebuildCount, cppID: id, what: "subtitle transitions never rebuild rows")
+
+S013 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(height > 0 && h.activityWidth > 0, cppID: id, message: "meter geometry exists")
+
+S014 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(h.rows[1] === untouched, cppID: id, message: "activity does not publish another track")
+
+S015 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expectEqual(Double(physical(128)) / dpr, h.rows[0].activityLeftHeight,
+                           cppID: id, what: "left height follows physical pixel rounding")
+
+S016 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expectEqual(Double(physical(128)) / dpr, h.rows[0].activityRightHeight,
+                           cppID: id, what: "right height follows physical pixel rounding")
+
+S017 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.fail(id, "fixture has no two levels within a physical pixel")
+
+S018 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(h.rows[0] === within, cppID: id, message: "same physical pixel publishes no row")
+
+S019 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.fail(id, "fixture has no next physical pixel")
+
+S020 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(h.rows[0].activityLeftHeight > within.activityLeftHeight, cppID: id,
+                      message: "crossing physical boundary changes height")
+
+S021 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expectEqual(Double((Double(height) * dpr).rounded()) / dpr,
+                           h.rows[0].activityLeftHeight, cppID: paused, what: "paused left fills row")
+
+S022 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expectEqual(h.rows[0].activityLeftHeight, h.rows[0].activityRightHeight,
+                           cppID: paused, what: "paused right fills row")
+
+S023 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expectEqual(Int((0.15 * Double(height) * dpr).rounded()), capped,
+                           cppID: paused, what: "playing intensity obeys cap")
+
+S024 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(TrackActivity.physicalHeight(1, meterHeight: height, dpr: dpr,
+                                                    playing: false, maximumIntensity: 0.15) > capped,
+                      cppID: paused, message: "pause ignores playing cap")
+
+S025 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(h.rows[0].activityLeftHeight > h.rows[0].activityRightHeight,
+                      cppID: stereo, message: "stereo channels keep independent heights")
+
+S026 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(h.rows[0].activityLeftHeight > h.rows[1].activityLeftHeight,
+                      cppID: stereo, message: "tracks keep independent heights")
+
+S027 | activity | src/checks/trackheaders/tst_trackactivitymeter.swift :: trackActivityPhysicalPixelPredicates
+  report.expect(zip(rows, fx.trackRows).allSatisfy { $0 === $1 }, cppID: stereo,
+                      message: "unchanged converged levels retain all rows")
+
+S028 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expectEqual(127, fx.document.lanePoints(track: 0, lane: .voice).first?.value,
+                           cppID: id, what: "picker completion writes program127")
+
+S029 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expect(changed != subtitle, cppID: id, message: "voice edit publishes the new subtitle")
+
+S030 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expect(undone, cppID: id, message: "awaited session undo completes")
+
+S031 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expectEqual(before, fx.document.state, cppID: id, what: "one undo restores the entire document")
+
+S032 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expectEqual(subtitle, fx.headers.rows[0].subtitle, cppID: id,
+                         what: "undo restores the original subtitle")
+
+S033 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expect(redone, cppID: id, message: "awaited session redo completes")
+
+S034 | undo-regression | src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+  report.expectEqual(changed, fx.headers.rows[0].subtitle, cppID: id,
+                         what: "redo restores the changed subtitle")
+
+S035 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2051
+  verify(rows && rows.count > 1, "the real header has track rows")
+
+S036 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2054
+  verify(bootstrap.presentHeaderActivity(track, 0, 0, true))
+
+S037 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2056
+  verify(bootstrap.presentHeaderActivity(track, 255, 0, true))
+
+S038 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2066
+  compare(row.activityRightHeight, 0, "left-only activity leaves the right meter dark")
+
+S039 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2067
+  verify(row.activityLeftHeight > 0)
+
+S040 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2068
+  verify(observedSpan >= Math.max(1, expectedSpan - 2),
+               "rendered changed span reaches the published height at observed grab scale")
+
+S041 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2070
+  verify(observedSpan <= expectedSpan + 2,
+               "rendered changed span does not exceed the published height tolerance")
+
+S042 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2072
+  verify(bootstrap.presentHeaderActivity(track, 128, 128, true))
+
+S043 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2078
+  verify(shared < 255, "two adjacent levels share a physical pixel")
+
+S044 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2079
+  verify(bootstrap.presentHeaderActivity(track, shared, shared, true))
+
+S045 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2081
+  verify(bootstrap.presentHeaderActivity(track, shared + 1, shared + 1, true))
+
+S046 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2083
+  compare(same.pixels, within.pixels, "levels within one physical pixel render identically")
+
+S047 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2086
+  verify(across < 255, "a larger level crosses a physical pixel")
+
+S048 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2087
+  verify(bootstrap.presentHeaderActivity(track, across, across, true))
+
+S049 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2089
+  verify(JSON.stringify(changed.pixels) !== JSON.stringify(within.pixels),
+               "crossing a physical pixel changes the rendered meter")
+
+S050 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2091
+  verify(bootstrap.presentHeaderActivity(track, 255, 64, true))
+
+S051 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2096
+  verify(stereo.pixels[top * stereo.width + left] !== stereo.pixels[top * stereo.width + right],
+               "stereo channel tops render different fill heights")
+
+S052 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2098
+  compare(stereo.pixels[(stereo.height - 1) * stereo.width + left],
+                stereo.pixels[(stereo.height - 1) * stereo.width + right],
+                "stereo channels share their track identity at the bottom")
+
+S053 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2101
+  verify(bootstrap.presentHeaderActivity(track, 0, 0, false))
+
+S054 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2103
+  compare(paused.width, active.width)
+
+S055 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2104
+  compare(paused.height, active.height)
+
+S056 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2105
+  compare(paused.dpr, active.dpr)
+
+S057 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2117
+  verify(complete >= 2, "paused fill covers at least two complete meter columns")
+
+S058 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_trackActivityRenderedMeterParity:2119
+  verify(active.pixels[probe] !== paused.pixels[probe], "paused fill differs from active half level")
+
+S059 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2028
+  verify(dpr > 0, "the rendered meter has an observed DPR")
+
+S060 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2033
+  verify(width > 0 && height > 0, "the meter capture excludes the separator")
+
+S061 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: headerMeterPixels:2037
+  compare(image.alpha(x0 + x, y0 + y), 255, "meter pixels remain opaque")
+
+S062 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2129
+  verify(rows && input && rows.count > 1)
+
+S063 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2136
+  mouseClick(input, point.x, point.y, Qt.LeftButton)
+
+S064 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2144
+  tryVerify(function() { return bootstrap.automationDocumentRevision() !== revision }, 2000,
+                  "the real voice picker completion writes the fixture program")
+
+S065 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2146
+  tryVerify(function() { return row.subtitle !== beforeSubtitle }, 2000,
+                  "the changed program publishes a new header subtitle")
+
+S066 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2150
+  compare(after.width, before.width)
+
+S067 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2151
+  compare(after.height, before.height)
+
+S068 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2160
+  verify(differences > 0, "the retained original header QML renders the changed subtitle")
+
+S069 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2161
+  verify(bootstrap.requestAutomationUndo(), "the production undo completes through the Swift run loop")
+
+S070 | qml | src/checks/editorqml/tst_EditorDrawer.qml :: test_headerVoiceChangeAltersRetainedRaster:2162
+  tryCompare(row, "subtitle", beforeSubtitle, 2000,
+                   "undo restores the original program subtitle")
+
+Shared helper: src/checks/trackheaders/headerfixture.swift
+SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+src/checks/trackheaders/headerfixture.swift:64
+  report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts press")
+src/checks/trackheaders/headerfixture.swift:66
+  report.expect(headers.updatePointer(x: x, y: dropY, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts drag")
+src/checks/trackheaders/headerfixture.swift:68
+  report.expect(headers.endPointer(x: x, y: dropY, button: 1, modifiers: 0),
+                        cppID: trackHeadersReorderID, message: "\(label): header accepts release")
+src/checks/trackheaders/headerfixture.swift:73
+  report.expectEqual(Array(names.indices), trackRows.map(\.track), cppID: cppID,
+                             what: "\(phase): rows follow engine track order")
+src/checks/trackheaders/headerfixture.swift:76
+  report.expectEqual(titles, trackRows.map(\.title), cppID: cppID,
+                             what: "\(phase): rows display ordered numbered track names")
+src/checks/trackheaders/headerfixture.swift:78
+  report.expectEqual(names.count + 1, headers.rows.count, cppID: cppID,
+                             what: "\(phase): one row per track plus add-track row")
+src/checks/trackheaders/headerfixture.swift:81
+  report.expectEqual([names.count], addRows, cppID: cppID,
+                             what: "\(phase): add-track row remains last")
+
+Shared helper: src/checks/trackheaders/headerinputfixture.swift
+SHA-256: 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
+src/checks/trackheaders/headerinputfixture.swift:28
+  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
+                        cppID: cppID, message: "\(probe) row \(row) accepts press")
+src/checks/trackheaders/headerinputfixture.swift:30
+  report.expect(headers.endPointer(x: p.x, y: p.y, button: 1, modifiers: modifiers),
+                        cppID: cppID, message: "\(probe) row \(row) accepts release")
+src/checks/trackheaders/headerinputfixture.swift:36
+  report.expect(headers.beginPointer(x: p.x, y: p.y, button: 2, modifiers: 0),
+                        cppID: cppID, message: "right press is handled")
+src/checks/trackheaders/headerinputfixture.swift:38
+  report.expect(headers.menuOpen, cppID: cppID, message: "right press opens header menu")
+src/checks/trackheaders/headerinputfixture.swift:64
+  report.expectEqual(state, document.state, cppID: cppID, what: "\(phase): song unchanged")
+src/checks/trackheaders/headerinputfixture.swift:65
+  report.expectEqual(revision, document.revision, cppID: cppID,
+                             what: "\(phase): no document write")
+src/checks/trackheaders/headerinputfixture.swift:67
+  report.expectEqual(history, document.history.currentIdentity, cppID: cppID,
+                             what: "\(phase): history unchanged")
+Converted-window predicate source
+Source: src/checks/editorqml/tst_EditorDrawer.qml
+SHA-256: 69724da3f9f197d4b0a78d6659e229c9dc6d51f3de0d48833d8eea19c244bbaf
+Command: deno task verify:qml --verbose
+New raster predicates await the next centralized run; no passing result is inferred.
+Image scale is the observed Qt composition grab scale, not a physical desktop DPR claim.
+
+regionOf | src/checks/editorqml/tst_EditorDrawer.qml:638
+        function regionOf(image, anchor, control) {
+            var origin = control.mapToItem(anchor, 0, 0)
+            var scaleX = anchor.width > 0 ? image.width / anchor.width : 1
+            var scaleY = anchor.height > 0 ? image.height / anchor.height : 1
+            return { x0: Math.round(origin.x * scaleX), y0: Math.round(origin.y * scaleY),
+                     x1: Math.round((origin.x + control.width) * scaleX) - 1,
+                     y1: Math.round((origin.y + control.height) * scaleY) - 1 }
+        }
+
+headerMeterPixels | src/checks/editorqml/tst_EditorDrawer.qml:2022
+        function headerMeterPixels(row) {
+            waitForRendering(row)
+            var image = grabImage(testCase.surface)
+            var origin = row.mapToItem(testCase.surface, 0, 0)
+            var model = testCase.surface.headersModel
+            var dpr = image.width / testCase.surface.width
+            verify(dpr > 0, "the rendered meter has an observed DPR")
+            var x0 = Math.round(origin.x * dpr)
+            var y0 = Math.round(origin.y * dpr)
+            var width = Math.round((origin.x + model.activityWidth) * dpr) - x0
+            var height = Math.round((origin.y + model.rowHeight - model.separatorWidth) * dpr) - y0
+            verify(width > 0 && height > 0, "the meter capture excludes the separator")
+            var pixels = []
+            for (var y = 0; y < height; ++y) {
+                for (var x = 0; x < width; ++x) {
+                    compare(image.alpha(x0 + x, y0 + y), 255, "meter pixels remain opaque")
+                    pixels.push([image.red(x0 + x, y0 + y), image.green(x0 + x, y0 + y),
+                                 image.blue(x0 + x, y0 + y)].join(","))
+                }
+            }
+            return { pixels: pixels, width: width, height: height, dpr: dpr }
+        }
+
+test_trackActivityRenderedMeterParity | src/checks/editorqml/tst_EditorDrawer.qml:2045
+        function test_trackActivityRenderedMeterParity() {
+            if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+            testCase.resetChrome(bootstrap.preferencesUrl("track-header-activity"))
+            bootstrap.pausePlayheadPolling()
+            var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
+            var rows = findChild(band, "timelineTrackHeaderRows")
+            verify(rows && rows.count > 1, "the real header has track rows")
+            var row = rows.itemAt(0)
+            var track = row.track
+            verify(bootstrap.presentHeaderActivity(track, 0, 0, true))
+            var silent = testCase.headerMeterPixels(row)
+            verify(bootstrap.presentHeaderActivity(track, 255, 0, true))
+            var leftOnly = testCase.headerMeterPixels(row)
+            var expectedSpan = Math.round(row.activityLeftHeight * leftOnly.dpr)
+            var leftColumn = Math.floor(leftOnly.width / 4)
+            var observedSpan = 0
+            for (var scanY = leftOnly.height - 1; scanY >= 0; --scanY) {
+                var offset = scanY * leftOnly.width + leftColumn
+                if (leftOnly.pixels[offset] === silent.pixels[offset]) break
+                ++observedSpan
+            }
+            compare(row.activityRightHeight, 0, "left-only activity leaves the right meter dark")
+            verify(row.activityLeftHeight > 0)
+            verify(observedSpan >= Math.max(1, expectedSpan - 2),
+                   "rendered changed span reaches the published height at observed grab scale")
+            verify(observedSpan <= expectedSpan + 2,
+                   "rendered changed span does not exceed the published height tolerance")
+            verify(bootstrap.presentHeaderActivity(track, 128, 128, true))
+            var active = testCase.headerMeterPixels(row)
+            var height = testCase.surface.headersModel.rowHeight - testCase.surface.headersModel.separatorWidth
+            function physical(level) { return Math.round(level / 255 * height * active.dpr) }
+            var shared = 128
+            while (shared < 255 && physical(shared) !== physical(shared + 1)) ++shared
+            verify(shared < 255, "two adjacent levels share a physical pixel")
+            verify(bootstrap.presentHeaderActivity(track, shared, shared, true))
+            var within = testCase.headerMeterPixels(row)
+            verify(bootstrap.presentHeaderActivity(track, shared + 1, shared + 1, true))
+            var same = testCase.headerMeterPixels(row)
+            compare(same.pixels, within.pixels, "levels within one physical pixel render identically")
+            var across = shared + 2
+            while (across < 255 && physical(across) <= physical(shared + 1)) ++across
+            verify(across < 255, "a larger level crosses a physical pixel")
+            verify(bootstrap.presentHeaderActivity(track, across, across, true))
+            var changed = testCase.headerMeterPixels(row)
+            verify(JSON.stringify(changed.pixels) !== JSON.stringify(within.pixels),
+                   "crossing a physical pixel changes the rendered meter")
+            verify(bootstrap.presentHeaderActivity(track, 255, 64, true))
+            var stereo = testCase.headerMeterPixels(row)
+            var left = Math.floor(stereo.width / 4)
+            var right = Math.floor(stereo.width * 3 / 4)
+            var top = Math.floor(stereo.height / 8)
+            verify(stereo.pixels[top * stereo.width + left] !== stereo.pixels[top * stereo.width + right],
+                   "stereo channel tops render different fill heights")
+            compare(stereo.pixels[(stereo.height - 1) * stereo.width + left],
+                    stereo.pixels[(stereo.height - 1) * stereo.width + right],
+                    "stereo channels share their track identity at the bottom")
+            verify(bootstrap.presentHeaderActivity(track, 0, 0, false))
+            var paused = testCase.headerMeterPixels(row)
+            compare(paused.width, active.width)
+            compare(paused.height, active.height)
+            compare(paused.dpr, active.dpr)
+            var complete = 0
+            var columns = [Math.floor(paused.width / 4), Math.floor(paused.width / 2),
+                           Math.floor(paused.width * 3 / 4)]
+            for (var index = 0; index < columns.length; ++index) {
+                var column = columns[index]
+                var bottom = paused.pixels[(paused.height - 1) * paused.width + column]
+                var filled = 0
+                for (var scan = paused.height - 1;
+                     scan >= 0 && paused.pixels[scan * paused.width + column] === bottom; --scan) ++filled
+                if (filled >= paused.height - 1) ++complete
+            }
+            verify(complete >= 2, "paused fill covers at least two complete meter columns")
+            var probe = Math.floor(active.height / 4) * active.width + Math.floor(active.width / 4)
+            verify(active.pixels[probe] !== paused.pixels[probe], "paused fill differs from active half level")
+        }
+
+test_headerVoiceChangeAltersRetainedRaster | src/checks/editorqml/tst_EditorDrawer.qml:2122
+        function test_headerVoiceChangeAltersRetainedRaster() {
+            if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+            testCase.resetChrome(bootstrap.preferencesUrl("track-header-voice-raster"))
+            bootstrap.pausePlayheadPolling()
+            var band = findChild(testCase.surface, "timelineQuickTrackHeaders")
+            var rows = findChild(band, "timelineTrackHeaderRows")
+            var input = findChild(band, "timelineTrackHeadersInput")
+            verify(rows && input && rows.count > 1)
+            testCase.surface.headersModel.scrollY = 0
+            var row = rows.itemAt(0)
+            var point = row.mapToItem(input, row.subtitleRect.x + row.subtitleRect.width / 2,
+                                     row.subtitleRect.y + row.subtitleRect.height / 2)
+            // Select before the reference capture so selection styling cannot supply
+            // the image difference attributed to the changed voice subtitle.
+            mouseClick(input, point.x, point.y, Qt.LeftButton)
+            testCase.awaitRenderedLayout()
+            var beforeSubtitle = row.subtitle
+            var before = grabImage(testCase.surface)
+            var region = testCase.regionOf(before, testCase.surface, row)
+            var revision = bootstrap.automationDocumentRevision()
+            mouseDoubleClickSequence(input, point.x, point.y, Qt.LeftButton)
+            session.completeTrackHeaderVoiceRequest(127)
+            tryVerify(function() { return bootstrap.automationDocumentRevision() !== revision }, 2000,
+                      "the real voice picker completion writes the fixture program")
+            tryVerify(function() { return row.subtitle !== beforeSubtitle }, 2000,
+                      "the changed program publishes a new header subtitle")
+            waitForRendering(row)
+            var after = grabImage(testCase.surface)
+            compare(after.width, before.width)
+            compare(after.height, before.height)
+            var differences = 0
+            for (var y = region.y0; y <= region.y1; ++y) {
+                for (var x = region.x0; x <= region.x1; ++x) {
+                    if (before.red(x, y) !== after.red(x, y)
+                            || before.green(x, y) !== after.green(x, y)
+                            || before.blue(x, y) !== after.blue(x, y)) ++differences
+                }
+            }
+            verify(differences > 0, "the retained original header QML renders the changed subtitle")
+            verify(bootstrap.requestAutomationUndo(), "the production undo completes through the Swift run loop")
+            tryCompare(row, "subtitle", beforeSubtitle, 2000,
+                       "undo restores the original program subtitle")
+        }
+
+Supplemental awaited-history regression (not an original assertion)
+src/checks/trackheaders/trackheaderraster.swift :: coreHeaderVoiceUndoRegression
+Header menu ChangeVoice and real picker completion write program127. Awaited DocumentSession.undo restores exact SongState and header subtitle; redo restores the changed subtitle.
+The source values reproduce the production QML undo failure, not new literal
+assertions attributed to the original C++ check. Original trackheaderraster
+asserts cursor/playhead subtitle transitions; original panNeutralSnap asserts
+neutral value mapping. Their original inventories are unchanged.
+TrackHeadersChecks.runTrackHeadersChecks invokes this async scenario through its suite-owned RunLoop-pumping helper. The Qt Quick test lane must separately await ApplicationSession Tasks
+through its existing RunLoop-pumping history helper; a Qt-only tryCompare does
+not itself demonstrate that the Swift Task has completed.
+Supplemental verification command: deno task verify --filter swiftcore --verbose.
+The earlier centralized run passed both awaited-history regressions before this
+ownership-only relocation. Re-run that command for the current paired-file hash.
+QML verification is separate: deno task verify:qml --verbose. A model pass does
+not establish Qt-loop Task scheduling or native rendered acceptance.

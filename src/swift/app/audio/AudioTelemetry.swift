@@ -4,6 +4,11 @@ import PorydawPlaybackNative
 public struct AudioActivityLevel: Equatable {
     public var left: UInt8 = 0
     public var right: UInt8 = 0
+
+    public init(left: UInt8 = 0, right: UInt8 = 0) {
+        self.left = left
+        self.right = right
+    }
 }
 public struct AudioPolyChannel {
     public var on: Bool

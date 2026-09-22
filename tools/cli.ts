@@ -1,9 +1,9 @@
 // Singular CLI for porydaw build/verify/format lanes.
 // Builds print only summaries and diagnostics; verify uses a quiet reporter with a live name line.
 // Usage:
-// deno task build:app [--release] -> build porydaw only
-// deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
-// deno task build:render [--release] -> build porydaw_render_cli only
+// deno task build:app [--release] -> Debug porydaw; --release opts into Release
+// deno task build:checks [--release] -> Debug porydaw + checks + mid2agb
+// deno task build:render [--release] -> Debug porydaw_render_cli; --release opts into Release
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
 // deno task format [--check] [files...]
@@ -50,7 +50,7 @@ function help(command?: Subcommand): string {
           ? "build the Swift-backed offline renderer"
           : "build the application, checks, and mid2agb"
       }
-  --release       configure and build Release
+  --release       configure and build Release; default is Debug
   --verbose, -v   accepted; successful builds remain concise
   --help          show this help without building
 
@@ -142,15 +142,51 @@ async function usesMultiConfigBuild(): Promise<boolean> {
   }
 }
 
-async function ensureConfigured(release: boolean): Promise<void> {
+async function cachedBuildType(): Promise<string | undefined> {
+  try {
+    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
+    return /^CMAKE_BUILD_TYPE:STRING=(.*)$/m.exec(cache)?.[1];
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return undefined;
+    throw error;
+  }
+}
+
+async function cachedBuildChecks(): Promise<boolean | undefined> {
+  try {
+    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
+    const value = /^PORYDAW_BUILD_CHECKS:BOOL=(.*)$/m.exec(cache)?.[1];
+    if (value === "ON") return true;
+    if (value === "OFF") return false;
+    return undefined;
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) return undefined;
+    throw error;
+  }
+}
+
+async function ensureConfigured(
+  release: boolean,
+  buildChecks: boolean,
+): Promise<void> {
   const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
-  if (!release && (await hasBuildSystem()) && poryaaaa.cacheMatches) return;
+  const buildType = release ? "Release" : "Debug";
+  const multiConfig = await usesMultiConfigBuild();
+  const typeMatches = multiConfig ||
+    (await cachedBuildType()) === buildType;
+  const checksMatch = (await cachedBuildChecks()) === buildChecks;
+  if (
+    (await hasBuildSystem()) && poryaaaa.cacheMatches && typeMatches &&
+    checksMatch
+  ) return;
   const localQt = await localQtPrefix();
   const result = await new Deno.Command("cmake", {
     args: await cmakeConfigureArgs({
       buildDirectory: BUILD_DIR,
       poryaaaaArgument: poryaaaa.cmakeArgument,
       qtPrefix: localQt,
+      buildType,
+      buildChecks,
     }),
     stdout: "piped",
     stderr: "piped",
@@ -168,9 +204,10 @@ async function ensureConfigured(release: boolean): Promise<void> {
 async function runBuild(
   targets: string[],
   release = false,
+  buildChecks = true,
 ): Promise<void> {
   const started = performance.now();
-  await ensureConfigured(release);
+  await ensureConfigured(release, buildChecks);
   const nproc = String(navigator.hardwareConcurrency);
   const args = ["--build", BUILD_DIR, "-j", nproc];
   if (release || (await usesMultiConfigBuild())) {
@@ -201,7 +238,6 @@ async function runBuild(
   // Filter progress noise: only show summary, not per-target [%] lines
   console.log(`build: ok (${sec}s)`);
 }
-
 // One verify lane = the build targets it needs plus the harness it runs through
 // tools/run_checks.ts. Options, filters and the --qt payload are identical.
 interface VerifyLane {
@@ -286,7 +322,7 @@ async function runVerify(
     usage(lane.command, error instanceof Error ? error.message : String(error));
   }
   if (options.help) showHelp(lane.command);
-  await runBuild(lane.buildTargets(options));
+  await runBuild(lane.buildTargets(options), false, true);
   const executable = Deno.build.os === "windows"
     ? `${lane.binary}.exe`
     : lane.binary;
@@ -401,15 +437,20 @@ if (sub === "verify-qml") sub = "verify:qml";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
-    await runBuild(["porydaw"], buildRelease(rest, "build:app"));
+    await runBuild(["porydaw"], buildRelease(rest, "build:app"), false);
     break;
   case "build:render":
-    await runBuild(["porydaw_render_cli"], buildRelease(rest, "build:render"));
+    await runBuild(
+      ["porydaw_render_cli"],
+      buildRelease(rest, "build:render"),
+      false,
+    );
     break;
   case "build:checks":
     await runBuild(
       ["porydaw", "porydaw_checks", "mid2agb"],
       buildRelease(rest, "build:checks"),
+      true,
     );
     break;
   case "verify":

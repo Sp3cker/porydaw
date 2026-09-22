@@ -1,0 +1,534 @@
+Assertion correspondence: rollcheck/interlock.cpp
+
+Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
+Original: src/checks/rollcheck/interlock.cpp
+Original SHA-256: 971c3e6a77a900a75bbef16205c6f5a4cb3c5872fad7a6833cd7d1d85c842e18
+Swift counterpart: none identified
+Swift SHA-256: n/a
+Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
+Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact counterpart predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Five gesture-interlock scenarios (blocked click resolving as empty space, demoted right band, PendingDraw park-cursor release, deferred modifier click with audition, velocity-preview abort) plus slot-level undo-neutrality; the gated band slots commit and cancel selection bands on the Swift surface but establish none of these interlock outcomes, so all twenty sites stay open.
+
+Verification
+Command: deno task verify --filter swiftrollgated --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+SwiftRollGatedTest::rightDragSelectionCommits, escapeCancelsSelectionBand and ungrabCancelsSelectionBand execute the paired band gestures on the Swift grid surface (all three skip unless the swiftbandkeys mode is active). Shared fixture: GridFixture, defined in the counterpart lane itself (scene open, visible-note search, selection-band helpers, draw and drag helpers, note summary model). No separate fixture file carries predicates.
+
+Fixture, sequence and row constraints
+Each scenario owns local SMF bytes, undo index and undo count baselines inside gestureInterlock; the slot closes with two undo-slot QCOMPAREs. No data rows; fixture scans never re-execute an assertion.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:27
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  #include "checks/rollcheck/tst_pianoroll.h"
+
+  #include <QApplication>
+  #include <QEvent>
+  #include <QObject>
+  #include <QPoint>
+  #include <QtTest>
+  #include <algorithm>
+  #include <optional>
+  #include <vector>
+
+  #include "checks/rollcheck/rollcheck.h"
+  #include "checks/support/eventsynth.h"
+  #include "core/songdocument.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+
+  using checks::rollcheck::Cell;
+  using checks::rollcheck::makeVelocitySeed;
+  using checks::rollcheck::PencilVelocityFixture;
+  using checks::rollcheck::SnappedRows;
+
+  void PianoRollTest::gestureInterlock()
+  {
+      auto &check = *m_fixture;
+      const std::optional<PencilVelocityFixture> seed = makeVelocitySeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A002 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:58
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      auto &roll = check.rollInput();
+      const QByteArray beforeSlot = doc.smf().write();
+      const int undoSlot = doc.undoStack()->index();
+      const SnappedRows rows{view, roll};
+      const Cell &a = seed->a;
+      const Cell &b = seed->b;
+      const DocNote &noteA = seed->noteA;
+      const DocNote &noteB = seed->noteB;
+      const Qt::MouseButtons bothButtons = Qt::LeftButton | Qt::RightButton;
+      const QPoint bandStart(1, 0);
+      const int startDragDistance = QApplication::startDragDistance();
+      const QPoint bandWarmup = bandStart + QPoint(startDragDistance + 1, 0);
+      const auto beyond = [](const QPoint &origin, const QPoint &target) {
+          const QPoint delta = target - origin;
+          return QPoint(target.x() + (delta.x() < 0 ? -4 : 4), target.y() + (delta.y() < 0 ? -4 : 4));
+      };
+      const QPoint bandEnd = beyond(bandStart, QPoint(std::max(a.center.x(), b.center.x()),
+                                                      std::max(a.center.y(), b.center.y())));
+      const auto unchanged = [&](const QByteArray &bytes, int index, int count) {
+          return doc.smf().write() == bytes && doc.undoStack()->index() == index &&
+                 doc.undoStack()->count() == count;
+      };
+      const auto containsAB = [&] {
+          const std::vector<NoteId> &selection = view.selectionModel().noteSelection();
+          return std::find(selection.begin(), selection.end(), noteA.noteId) != selection.end() &&
+                 std::find(selection.begin(), selection.end(), noteB.noteId) != selection.end();
+      };
+      const Cell freeCell = check.findFreeCell();
+Original expression:
+  QVERIFY2(freeCell.key >= 0, "no free grid cell for the gesture interlock scenarios");
+
+A003 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:77
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().clearNoteSelection();
+      view.selectionModel().clearTimeSelection();
+      {
+          const QByteArray before = doc.smf().write();
+          const int undoIndex = doc.undoStack()->index();
+          const int undoCount = doc.undoStack()->count();
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove,
+                                    QPoint(a.center.x(), rows.centerY(a.key - 1)), Qt::NoButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
+                                    bothButtons, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove, bandEnd, Qt::NoButton, bothButtons,
+                                    Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandEnd, Qt::RightButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(view.selectionModel().noteSelection().empty() &&
+                       !view.selectionModel().timeSelection().active(),
+                   "right release did not resolve the blocked click as empty space");
+
+A004 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:82
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandEnd, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(unchanged(before, undoIndex, undoCount),
+                   "aborted left Move changed the document or undo history");
+
+A005 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:103
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      view.selectionModel().clearNoteSelection();
+      view.selectionModel().clearTimeSelection();
+      {
+          const QByteArray before = doc.smf().write();
+          const int undoIndex = doc.undoStack()->index();
+          const int undoCount = doc.undoStack()->count();
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove, bandWarmup, Qt::NoButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, a.center, Qt::LeftButton,
+                                    bothButtons, Qt::NoModifier);
+          const QPoint beyondB = beyond(a.center, b.center);
+          checks::events::sendMouse(roll, QEvent::MouseMove, beyondB, Qt::NoButton, bothButtons,
+                                    Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, beyondB, Qt::RightButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(view.selectionModel().noteSelection().empty() &&
+                       !view.selectionModel().timeSelection().active(),
+                   "demoted right Band did not resolve as a plain clear");
+
+A006 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:108
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, beyondB, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(unchanged(before, undoIndex, undoCount),
+                   "demoted right Band changed the document or undo history");
+
+A007 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:126
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      view.selectionModel().clearNoteSelection();
+      view.selectionModel().clearTimeSelection();
+      {
+          const QByteArray before = doc.smf().write();
+          const int undoIndex = doc.undoStack()->index();
+          const int undoCount = doc.undoStack()->count();
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, freeCell.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
+                                    bothButtons, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove, bandEnd, Qt::NoButton, bothButtons,
+                                    Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandEnd, Qt::RightButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(containsAB(), "right Band did not select notes A and B from PendingDraw");
+
+A008 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:129
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, freeCell.center, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(containsAB(), "PendingDraw park-cursor release changed the band selection");
+
+A009 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:130
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(unchanged(before, undoIndex, undoCount),
+                   "PendingDraw interlock changed the document or undo history");
+
+A010 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:148
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      view.selectionModel().clearNoteSelection();
+      view.selectionModel().clearTimeSelection();
+      {
+          const QByteArray before = doc.smf().write();
+          const int undoIndex = doc.undoStack()->index();
+          const int undoCount = doc.undoStack()->count();
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove, bandWarmup, Qt::NoButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    bothButtons, Qt::ControlModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, b.center, Qt::LeftButton,
+                                    Qt::RightButton, Qt::ControlModifier);
+Original expression:
+  QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{noteB.noteId});
+
+A011 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:158
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          bool noteBAuditioned = false;
+          const auto auditionConnection = QObject::connect(&view, &SongView::auditionNoteTimed, &view,
+                                                           [&](int, int key, int velocity, quint32) {
+                                                               if (key == noteB.key && velocity > 0)
+                                                                   noteBAuditioned = true;
+                                                           });
+          checks::events::sendMouse(roll, QEvent::MouseMove, b.center + QPoint(1, 1), Qt::NoButton,
+                                    Qt::RightButton, Qt::NoModifier);
+          QObject::disconnect(auditionConnection);
+Original expression:
+  QVERIFY2(noteBAuditioned, "deferred modifier click did not preserve the live right Band");
+
+A012 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:164
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          const QPoint beyondA = beyond(b.center, a.center);
+          checks::events::sendMouse(roll, QEvent::MouseMove, beyondA, Qt::NoButton, Qt::RightButton,
+                                    Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, beyondA, Qt::RightButton,
+                                    Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(containsAB(), "right Band token did not survive the deferred modifier click");
+
+A013 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:165
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(unchanged(before, undoIndex, undoCount),
+                   "deferred modifier interlock changed the document or undo history");
+
+A014 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      view.selectionModel().clearNoteSelection();
+      view.selectionModel().clearTimeSelection();
+      {
+          const QByteArray before = doc.smf().write();
+          const int undoIndex = doc.undoStack()->index();
+          const int undoCount = doc.undoStack()->count();
+          const QPoint velocityTarget = b.center - QPoint(0, startDragDistance + 1);
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove, velocityTarget, Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+Original expression:
+  QVERIFY2(view.previewVelocity(noteB.noteId).has_value(),
+                   "modifier velocity drag did not create a preview");
+
+A015 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
+                                    bothButtons, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::RightButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(!view.previewVelocity(noteB.noteId),
+                   "right release did not abort the live velocity preview");
+
+A016 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:194
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, b.center, Qt::LeftButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+          checks::events::sendMouse(roll, QEvent::MouseMove, velocityTarget, Qt::NoButton,
+                                    Qt::LeftButton, Qt::ControlModifier);
+Original expression:
+  QVERIFY2(view.previewVelocity(noteB.noteId).has_value(),
+                   "later modifier velocity gesture did not create a preview");
+
+A017 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:200
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
+                                    bothButtons, Qt::NoModifier);
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::RightButton,
+                                    Qt::LeftButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(!view.previewVelocity(noteB.noteId),
+                   "second right release did not abort the live velocity preview");
+
+A018 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:204
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::LeftButton,
+                                    Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(unchanged(before, undoIndex, undoCount),
+                   "right-release velocity abort changed the document or undo history");
+
+A019 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:207
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Slot-level undo-neutrality across all five scenarios.
+Source context since previous assertion:
+      }
+Original expression:
+  QCOMPARE(doc.undoStack()->index(), undoSlot);
+
+A020 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:208
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Slot-level byte-for-byte SMF restoration across all five scenarios.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QCOMPARE(doc.smf().write(), beforeSlot);
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+Counterpart executable predicate index
+The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:420
+Counterpart expression:
+  QSKIP("right-drag selection belongs to swiftbandkeys");
+
+S002 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:423
+Counterpart expression:
+  QVERIFY2(fixture.open(&error), qPrintable(error));
+
+S003 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:425
+Counterpart expression:
+  QVERIFY2(target.has_value(), qPrintable(error));
+
+S004 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:426
+Counterpart expression:
+  QVERIFY(!target->selected);
+
+S005 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:428
+Counterpart expression:
+  QVERIFY(band.has_value());
+
+S006 | SwiftRollGatedTest::rightDragSelectionCommits | src/checks/swiftrollgated/gesturechecks.cpp:430
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto selected = noteWithId(fixture.notes(&ignored), target->id);
+              return selected && selected->selected;
+          },
+          kSettleTimeoutMs));
+
+S007 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:442
+Counterpart expression:
+  QSKIP("Escape cancellation belongs to swiftbandkeys");
+
+S008 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:445
+Counterpart expression:
+  QVERIFY2(fixture.open(&error), qPrintable(error));
+
+S009 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:448
+Counterpart expression:
+  QVERIFY2(target.has_value(), qPrintable(error));
+
+S010 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:450
+Counterpart expression:
+  QVERIFY(band.has_value());
+
+S011 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:454
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto selected = noteWithId(fixture.notes(&ignored), target->id);
+              return selected && selected->selected;
+          },
+          kSettleTimeoutMs));
+
+S012 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:464
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] { return fixture.grid()->property("noteSummary").toString() == before; },
+          kSettleTimeoutMs));
+
+S013 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:467
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("lastCancelReason").toInt(), -1);
+
+S014 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:472
+Counterpart expression:
+  QVERIFY(idleItem != nullptr);
+
+S015 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:475
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto selected = noteWithId(fixture.notes(&ignored), target->id);
+              return selected && selected->selected;
+          },
+          kSettleTimeoutMs));
+
+S016 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:484
+Counterpart expression:
+  QVERIFY2(idleError.isEmpty(), qPrintable(idleError));
+
+S017 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:489
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto cleared = noteWithId(fixture.notes(&ignored), target->id);
+              return cleared && !cleared->selected;
+          },
+          kSettleTimeoutMs));
+
+S018 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:498
+Counterpart expression:
+  QVERIFY2(idleAfterError.isEmpty(), qPrintable(idleAfterError));
+
+S019 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:499
+Counterpart expression:
+  QCOMPARE(idleAfter.size(), idleBefore.size());
+
+S020 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:501
+Counterpart expression:
+  QCOMPARE(idleAfter[index].id, idleBefore[index].id);
+
+S021 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:502
+Counterpart expression:
+  QCOMPARE(idleAfter[index].tick, idleBefore[index].tick);
+
+S022 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:503
+Counterpart expression:
+  QCOMPARE(idleAfter[index].duration, idleBefore[index].duration);
+
+S023 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:504
+Counterpart expression:
+  QCOMPARE(idleAfter[index].pitch, idleBefore[index].pitch);
+
+S024 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:505
+Counterpart expression:
+  QCOMPARE(idleAfter[index].track, idleBefore[index].track);
+
+S025 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:506
+Counterpart expression:
+  QCOMPARE(idleAfter[index].velocity, idleBefore[index].velocity);
+
+S026 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:507
+Counterpart expression:
+  QVERIFY(!idleAfter[index].selected);
+
+S027 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:509
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("appliedRevisionText").toString(), idleRevision);
+
+S028 | SwiftRollGatedTest::escapeCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:510
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("lastCancelReason").toInt(), idleReason);
+
+S029 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:516
+Counterpart expression:
+  QSKIP("pointer-ungrab cancellation belongs to swiftbandkeys");
+
+S030 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:519
+Counterpart expression:
+  QVERIFY2(fixture.open(&error), qPrintable(error));
+
+S031 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:522
+Counterpart expression:
+  QVERIFY2(target.has_value(), qPrintable(error));
+
+S032 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:524
+Counterpart expression:
+  QVERIFY(band.has_value());
+
+S033 | SwiftRollGatedTest::ungrabCancelsSelectionBand | src/checks/swiftrollgated/gesturechecks.cpp:531
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              return fixture.grid()->property("lastCancelReason").toInt() == 1 &&
+                     fixture.grid()->property("noteSummary").toString() == before;
+          },
+          kSettleTimeoutMs));

@@ -1,0 +1,1647 @@
+Assertion correspondence: rollcheck/keyboard.cpp
+
+Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
+Original: src/checks/rollcheck/keyboard.cpp
+Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9ebaee
+Swift counterpart: none identified
+Swift SHA-256: n/a
+Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
+Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact counterpart predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related counterpart predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift surface.
+GAP identifies an original predicate without a replacement assertion.
+Eleven keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize); the gated routing and resize slots nudge, delete, toggle and edge-resize notes on the Swift grid surface but establish almost none of these key-driven outcomes. Eleven framebuffer and popup observations stay native, three sites are partial, and the remaining ninety-one stay open.
+
+Verification
+Command: deno task verify --filter swiftrollgated --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+SwiftRollGatedTest::focusedGridCommandRouting (skips unless the selectionkey mode is active) and resizeEdgesRespectMinimumDuration (swiftrollgated mode) execute the paired command and resize checks on the Swift grid surface. Shared fixture: GridFixture, defined in the counterpart lane itself (scene open, visible-note search, selection-band helpers, draw and drag helpers, note summary model). No separate fixture file carries predicates.
+
+Fixture, sequence and row constraints
+Every slot snapshots SMF bytes plus undo index and count, then unwinds to them; timelineInsertBlankTimeTracks additionally probes a rejected insert mid-slot and restores afterwards; keyboardResizeNotes re-executes its shrink sites once per Shift+Left press (up to 256 presses). No _data rows expand sites in this file.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  #include "checks/rollcheck/tst_pianoroll.h"
+
+  #include "checks/quickpopupguard.h"
+  #include "checks/rollcheck/headerchecksupport.h"
+  #include "checks/rollcheck/rollcheck.h"
+  #include "checks/trackheaders/trackheaderoracles.h"
+  #include "core/timedefaults.h"
+
+  #include "checks/support/eventsynth.h"
+  #include "checks/support/quickframebuffer.h"
+  #include "core/songdocument.h"
+  #include "ui/songview.h"
+  #include "ui/songview/pianoroll.h"
+  #include "ui/songview/quick/pianorollquick.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/songview/trackheadermodel.h"
+  #include <QByteArray>
+  #include <QColor>
+  #include <QCoreApplication>
+  #include <QEvent>
+  #include <QImage>
+  #include <QPoint>
+  #include <QPointer>
+  #include <QRectF>
+  #include <QtTest>
+  #include <algorithm>
+  #include <iterator>
+  #include <optional>
+  #include <vector>
+
+  using namespace checks::rollcheck;
+
+  void PianoRollTest::keyboardTranspose()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A002 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:53
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem &roll = check.rollInput();
+      const SnappedRows rows{view, roll};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      const QPoint center(
+          qRound(view.camera().displayX(double(d.tick) + 0.5 * double(snapCell), 0.0, rows.dpr())),
+          rows.centerY(d.key));
+      click(roll, center);
+      sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
+      DocNote note;
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key + 1), &note),
+               "Up did not transpose up a semitone");
+
+A003 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:56
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_Down, Qt::ShiftModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick, uint8_t(d.key - 11), &note),
+               "Shift+Down did not transpose down an octave");
+
+A004 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:59
+Disposition: PARTIAL
+Mapping/reason: focusedGridCommandRouting (S007..S028) nudges the selected note right one snap on the Swift grid surface and verifies tick and pitch; unproved: native key-event delivery, the rollcheck song and fixture, and the octave transpose and off-grid snap-back in this slot.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick + snapCell, uint8_t(d.key - 11), &note),
+               "Right did not nudge one snap cell right");
+
+A005 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:64
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({note}, int64_t(snapCell / 2), 0);
+      view.selectionModel().setNoteSelection({note.noteId});
+      sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(check.track(), d.tick + snapCell, uint8_t(d.key - 11), &note),
+               "Left did not snap the off-grid note back to the grid");
+
+A006 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:68
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A007 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:75
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::keyboardKeepVisible()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A008 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:86
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem &roll = check.rollInput();
+      const int track = check.track();
+      const SnappedRows rows{view, roll};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote transposed;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
+               "keyboard keep-visible seed note was not found");
+
+A009 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:89
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({transposed}, int64_t(snapCell), -11);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
+               "keyboard keep-visible seed did not reach the expected post-transpose state");
+
+A010 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:95
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().setNoteSelection({transposed.noteId});
+
+      const int keyNow = d.key - 11;
+      view.scrollRollBy((129 - keyNow) * view.camera().keyHeight() - view.camera().scrollY());
+Original expression:
+  QVERIFY2((128 - keyNow) * view.camera().keyHeight() - view.camera().scrollY() <= 1e-9,
+               "could not park the note's row above the viewport");
+
+A011 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:98
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(keyNow + 1), &transposed),
+               "Up did not transpose the selected note before the keep-visible check");
+
+A012 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:100
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(rows.top(keyNow + 1) >= 0.0 && rows.bottom(keyNow + 1) <= roll.bounds().height(),
+               "Up above the viewport did not keep the transposed row fully visible");
+
+A013 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:108
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_Down, Qt::NoModifier, false);
+
+      Tick nStart = d.tick + snapCell;
+      const qreal dpr = roll.devicePixelRatio();
+      const qreal physicalPixel = dpr > 0.0 ? 1.0 / dpr : 1.0;
+      view.scrollByPx(view.camera().contentX(double(nStart + snapCell)) + 40);
+Original expression:
+  QVERIFY2(view.camera().displayX(double(nStart + snapCell), 0.0, dpr) < 0.0,
+               "could not park the note past the left edge");
+
+A014 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:112
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
+      nStart += snapCell;
+Original expression:
+  QCOMPARE(view.camera().displayX(double(nStart), 0.0, dpr), 0.0);
+
+A015 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:120
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const qreal vw = std::max<qreal>(50, roll.width());
+      const qreal cellPx =
+          view.camera().contentX(double(nStart + snapCell)) - view.camera().contentX(double(nStart));
+      const int rides = (vw - view.camera().contentX(double(nStart + snapCell))) / cellPx + 2;
+      for (int i = 0; i < rides; ++i)
+          sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
+      nStart += uint64_t(rides) * snapCell;
+Original expression:
+  QVERIFY2(doc.findNote(track, nStart, uint8_t(keyNow), &transposed),
+               "Right did not nudge the selected note to the expected tick");
+
+A016 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:125
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const qreal visibleStart = view.camera().displayX(double(transposed.tick), 0.0, dpr);
+      const qreal visibleEnd =
+          view.camera().displayX(double(transposed.tick + transposed.duration), 0.0, dpr);
+Original expression:
+  QVERIFY2(visibleStart >= 0.0 && visibleEnd <= vw - physicalPixel,
+               "Right did not keep the nudged note fully visible");
+
+A017 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:129
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      for (int i = 0; i < rides + 1; ++i)
+          sendKeyStroke(roll, Qt::Key_Left, Qt::NoModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
+               "the ride right and back did not return the note home");
+
+A018 | PianoRollTest::keyboardKeepVisible | src/checks/rollcheck/keyboard.cpp:133
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A019 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:140
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::timelineRulerScope()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A020 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:151
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem &roll = check.rollInput();
+      const int track = check.track();
+      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote transposed;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
+               "timeline scope seed note was not found");
+
+A021 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:154
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({transposed}, int64_t(snapCell), -11);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
+               "timeline scope seed did not reach the expected post-transpose state");
+
+A022 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:166
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      auto *quick =
+          view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+      auto *rulerInput = quick && quick->rootObject()
+                             ? quick->rootObject()->findChild<songview::TimelineInputItem *>(
+                                   QStringLiteral("timelineRulerInput"))
+                             : nullptr;
+      const std::optional<songview::TimelineBandGeometry> rulerBand =
+          view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+      auto *headers = headercheck::model(view);
+Original expression:
+  QVERIFY2(headers, "could not find the Quick track-header model");
+
+A023 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:167
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(trackheaders_test::recordsMatchTimeline(*headers, check.timeline(), doc.canAddTrack()),
+               "Quick header records did not match the current timeline");
+
+A024 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:169
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(rulerInput && rulerBand, "could not find the time ruler");
+
+A025 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:197
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const qreal rulerDpr = rulerInput->devicePixelRatio();
+      // Press at the drawn-cell edge: snapCell ticks past the cell start can
+      // land inside the fixture's tick-12 signature chip label.
+      const Tick startTick = d.tick + d.dur;
+      const Tick endTick = d.tick + d.dur + snapCell;
+      const QPointF start(view.camera().displayX(double(startTick), 0.0, rulerDpr),
+                          rulerBand->rect.height() - 2.0);
+      const QPointF end(view.camera().displayX(double(endTick), 0.0, rulerDpr),
+                        rulerBand->rect.height() - 2.0);
+      const QPointF activate = start + QPointF(qreal(QApplication::startDragDistance() + 2), 0.0);
+
+      view.selectionModel().clearTimeSelection();
+      view.selectionModel().applyTrackScopeAdjustment(
+          track, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Plain);
+      if (doc.engineTrackCount() > 1) {
+          const int priorSecondary = track == 0 ? 1 : 0;
+          view.selectionModel().applyTrackScopeAdjustment(
+              priorSecondary, 0xffffu, songview::EditorSelectionModel::TrackScopeAction::Toggle);
+      }
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
+                                Qt::LeftButton, Qt::NoModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
+                                Qt::LeftButton, Qt::NoModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
+                                Qt::NoModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
+                                Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(view.selectionModel().timeSelection().active() &&
+                   view.selectionModel().timeSelection().startTick == startTick &&
+                   view.selectionModel().timeSelection().endTick == endTick &&
+                   view.selectionModel().storedTrackScope() == (uint32_t{1} << track),
+               "plain ruler drag did not create a primary-only time selection");
+
+A026 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:232
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      uint32_t expectedScope = uint32_t{1} << track;
+      const ViewNote *scopedGhost = nullptr;
+      for (const ViewNote &note : view.model().notes) {
+          if (note.startTick >= endTick)
+              break;
+          if (startTick < note.endTick()) {
+              expectedScope |= uint32_t{1} << note.track;
+              if (note.track != track && !scopedGhost)
+                  scopedGhost = &note;
+          }
+      }
+      const std::optional<int> secondaryRecord =
+          scopedGhost ? trackheaders_test::rowForTrack(*headers, scopedGhost->track) : std::nullopt;
+      const QColor plainOverlay = secondaryRecord
+                                      ? headers
+                                            ->data(headers->index(*secondaryRecord, 0),
+                                                   songview::TrackHeaderModel::OverlayColorRole)
+                                            .value<QColor>()
+                                      : QColor{};
+      const QImage plainHeaderFrame =
+          secondaryRecord ? headercheck::captureBand(check, view) : QImage{};
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::LeftButton,
+                                Qt::LeftButton, Qt::ControlModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, activate, Qt::NoButton,
+                                Qt::LeftButton, Qt::ControlModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::LeftButton,
+                                Qt::ControlModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::LeftButton,
+                                Qt::NoButton, Qt::ControlModifier);
+Original expression:
+  QVERIFY2(view.selectionModel().timeSelection().startTick == startTick &&
+                   view.selectionModel().timeSelection().endTick == endTick &&
+                   view.selectionModel().storedTrackScope() == expectedScope,
+               "modified ruler drag did not derive the overlapping note-track scope");
+
+A027 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:236
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(scopedGhost, "modified ruler drag fixture has no overlapping secondary-track note");
+
+A028 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:251
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const SongView::ViewState priorViewState = view.viewState();
+      SongView::ViewState ghostViewState = priorViewState;
+      ghostViewState.scrollY = std::max(
+          0.0, (127.5 - double(scopedGhost->key)) * ghostViewState.keyHeight - roll.height() / 2.0);
+      view.applyViewState(ghostViewState);
+      const SnappedRows ghostRows{view, roll};
+      const QRectF ghostPlotBox = ghostRows.noteBox(ghostRows.noteRect(
+          view.camera().displayX(double(scopedGhost->startTick), 0.0, ghostRows.dpr()),
+          view.camera().displayX(double(scopedGhost->endTick()), 0.0, ghostRows.dpr()),
+          scopedGhost->key));
+      const QRectF ghostBandBox = ghostPlotBox.translated(pianoKeyboardWidth, 0.0);
+      const QRectF visibleGhostBox = ghostBandBox.intersected(
+          QRectF(pianoKeyboardWidth, 0.0, qreal(roll.width()), qreal(roll.height())));
+      const QImage scopedImage = check.captureQuickFramebuffer();
+Original expression:
+  QVERIFY2(!visibleGhostBox.isEmpty(),
+               "time-scoped ghost note is outside the horizontal viewport");
+
+A029 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:256
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      const qreal scopedDpr = scopedImage.devicePixelRatio();
+      const int centerX = qRound(visibleGhostBox.center().x() * scopedDpr);
+      const int bottomY = qRound(visibleGhostBox.bottom() * scopedDpr) - 1;
+Original expression:
+  QVERIFY2(isSelectionRingColor(scopedImage.pixel(centerX, bottomY)),
+               "time-scoped ghost note did not render its selection ring");
+
+A030 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:262
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.applyViewState(priorViewState);
+      view.selectionModel().setTimeSelection(
+          {startTick, endTick, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(secondaryRecord, "time-scoped secondary track has no TrackHeaderModel record");
+
+A031 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:267
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const QColor selectedOverlay = headers
+                                         ->data(headers->index(*secondaryRecord, 0),
+                                                songview::TrackHeaderModel::OverlayColorRole)
+                                         .value<QColor>();
+Original expression:
+  QVERIFY2(plainOverlay != selectedOverlay,
+               "time-scoped secondary header did not publish its selection role");
+
+A032 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:270
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      const QImage selectedHeaderFrame = headercheck::captureBand(check, view);
+Original expression:
+  QVERIFY2(!plainHeaderFrame.isNull() && !selectedHeaderFrame.isNull(),
+               "could not capture the time-scoped secondary header");
+
+A033 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:275
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      if (plainHeaderFrame == selectedHeaderFrame) {
+          QCoreApplication::processEvents();
+          const QImage repaintedHeaderFrame = headercheck::captureBand(check, view);
+Original expression:
+  QVERIFY2(!repaintedHeaderFrame.isNull(),
+                   "could not recapture the time-scoped secondary header");
+
+A034 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:277
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(plainHeaderFrame != repaintedHeaderFrame,
+                   "time-scoped secondary header did not render its selection indicator");
+
+A035 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:288
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      }
+
+      const QPointF outsideSelection(
+          view.camera().displayX(double(endTick + snapCell), 0.0, rulerDpr),
+          rulerBand->rect.height() - 2.0);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, outsideSelection,
+                                Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, outsideSelection,
+                                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+Original expression:
+  QVERIFY2(view.selectionModel().timeSelection().active(),
+               "left-clicking the timeline ruler outside the time selection cleared it");
+
+A036 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:295
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().clearTimeSelection();
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, start, Qt::RightButton,
+                                Qt::RightButton, Qt::NoModifier);
+      checks::events::sendMouse(*rulerInput, QEvent::MouseMove, end, Qt::NoButton, Qt::RightButton,
+                                Qt::NoModifier);
+Original expression:
+  QVERIFY2(!view.selectionModel().timeSelection().active(),
+               "right-dragging the timeline ruler still created a time selection");
+
+A037 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:302
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, end, Qt::RightButton,
+                                Qt::NoButton, Qt::NoModifier);
+      // The release publishes the shared ruler menu instead of a nested native
+      // exec, so the test continues linearly; a real Escape key dismisses it.
+      const QPointer<songview::QuickPopupSession> live(quick_popup::popupSession(view));
+Original expression:
+  QVERIFY2(QTest::qWaitFor(
+                   [&live] { return live && live->isOpen() && quick_popup::menuPanel(*live); }),
+               "releasing the right-drag did not open the shared ruler menu");
+
+A038 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:307
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      QTest::keyClick(live->window(), Qt::Key_Escape);
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(live && !live->isOpen(), "Escape did not dismiss the right-drag ruler menu");
+
+A039 | PianoRollTest::timelineRulerScope | src/checks/rollcheck/keyboard.cpp:310
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A040 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:317
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::timelineOtherEventsStrip()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A041 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:326
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      const std::optional<songview::TimelineBandGeometry> otherEvents =
+          view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents);
+Original expression:
+  QVERIFY2(otherEvents, "could not find the canonical other-events band");
+
+A042 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:334
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const StripItem *trackEvent = nullptr;
+      for (const StripItem &item : view.model().strip) {
+          if (item.track >= 0) {
+              trackEvent = &item;
+              break;
+          }
+      }
+Original expression:
+  QVERIFY2(trackEvent, "timeline fixture has no track-colored other-events marker");
+
+A043 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:351
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                              d.tick + 2 * snapCell,
+                                              songview::EditorSelectionModel::TimeSelection::Tracks,
+                                              {}});
+      QCoreApplication::processEvents();
+      const double originalScroll = view.camera().scrollX();
+      const qreal visibleContentX = std::max<qreal>(1.0, otherEvents->plotRect.width() / 3.0);
+      view.setEditorHorizontalScroll(
+          originalScroll + view.camera().contentX(double(trackEvent->tick)) - visibleContentX);
+      QCoreApplication::processEvents();
+      const QImage beforeStripImage = check.captureQuickBand(otherEvents->rect);
+      auto movedSelection = view.selectionModel().timeSelection();
+      ++movedSelection.endTick;
+      view.selectionModel().setTimeSelection(movedSelection);
+      QCoreApplication::processEvents();
+      const QImage afterStripImage = check.captureQuickBand(otherEvents->rect);
+Original expression:
+  QVERIFY2(!beforeStripImage.isNull() && !afterStripImage.isNull() &&
+                   beforeStripImage == afterStripImage,
+               "moving a time selection changed the other-events strip pixels");
+
+A044 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:371
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      const qreal stripDpr = afterStripImage.devicePixelRatioF();
+      const qreal plotOffset = otherEvents->plotRect.left() - otherEvents->rect.left();
+      const int markerX = qRound(
+          (plotOffset + view.camera().displayX(double(trackEvent->tick), 0.0, stripDpr)) * stripDpr);
+      const int plotLeft = qRound(plotOffset * stripDpr);
+      const int markerY = afterStripImage.height() / 2;
+      const QRgb expected = SongView::trackColor(trackEvent->track).rgba();
+      bool foundMarker = false;
+      for (int y = markerY - 2; y <= markerY + 2 && !foundMarker; ++y) {
+          for (int x = markerX - 2; x <= markerX + 2; ++x) {
+              if (x >= plotLeft && y >= 0 && x < afterStripImage.width() &&
+                  y < afterStripImage.height() && afterStripImage.pixel(x, y) == expected) {
+                  foundMarker = true;
+                  break;
+              }
+          }
+      }
+Original expression:
+  QVERIFY2(markerX >= plotLeft && markerX < afterStripImage.width(),
+               "track-colored other-events marker was not positioned in the plot");
+
+A045 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:373
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(foundMarker, "other-events strip did not render a visible track-colored diamond");
+
+A046 | PianoRollTest::timelineOtherEventsStrip | src/checks/rollcheck/keyboard.cpp:378
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.setEditorHorizontalScroll(originalScroll);
+      QCoreApplication::processEvents();
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A047 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:385
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::timelinePartialSelectionRepaint()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A048 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:404
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                              d.tick + 2 * snapCell,
+                                              songview::EditorSelectionModel::TimeSelection::Tracks,
+                                              {}});
+      QCoreApplication::processEvents();
+      auto movedSelection = view.selectionModel().timeSelection();
+      ++movedSelection.endTick;
+      view.selectionModel().setTimeSelection(movedSelection);
+      QCoreApplication::processEvents();
+      const QImage partialSelectionImage = check.captureQuickFramebuffer();
+      check.roll().requestQuickUpdate(songview::PianoRollQuickDirty::All);
+      QCoreApplication::processEvents();
+Original expression:
+  QCOMPARE(partialSelectionImage, check.captureQuickFramebuffer());
+
+A049 | PianoRollTest::timelinePartialSelectionRepaint | src/checks/rollcheck/keyboard.cpp:407
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A050 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:414
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::keyboardTimeSelectionShortcuts()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A051 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:426
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem &roll = check.rollInput();
+      const int track = check.track();
+      const int pianoKeyboardWidth = check.pianoKeyboardWidth();
+      const SnappedRows rows{view, roll};
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote transposed;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
+               "time shortcut seed note was not found");
+
+A052 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:429
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({transposed}, int64_t(snapCell), -11);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
+               "time shortcut seed did not reach the expected post-transpose state");
+
+A053 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:447
+Disposition: NATIVE
+Mapping/reason: Original native window/rendering/harness observation (framebuffer pixels, host cursor pixmaps, or window exposure). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+      songview::EditorSelectionModel::TimeSelection band;
+      band.startTick = d.tick + snapCell;
+      band.endTick = d.tick + 2 * snapCell;
+      view.selectionModel().setTimeSelection(band);
+      const QRectF selectedByTimeBox =
+          rows.noteBox(
+                  rows.noteRect(view.camera().displayX(double(transposed.tick), 0.0, rows.dpr()),
+                                view.camera().displayX(double(transposed.tick + transposed.duration),
+                                                       0.0, rows.dpr()),
+                                transposed.key))
+              .translated(pianoKeyboardWidth, 0.0);
+      const QImage selectedByTimeImage = check.captureQuickFramebuffer();
+      const qreal selectedByTimeDpr = selectedByTimeImage.devicePixelRatio();
+      const int centerX = qRound(selectedByTimeBox.center().x() * selectedByTimeDpr);
+      const int bottomY = qRound(selectedByTimeBox.bottom() * selectedByTimeDpr) - 1;
+Original expression:
+  QVERIFY2(isSelectionRingColor(selectedByTimeImage.pixel(centerX, bottomY)),
+               "time-selected note did not show the normal selection ring");
+
+A054 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:449
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(view.selectionModel().noteSelection().empty(),
+               "time-selected note leaked into the explicit note selection");
+
+A055 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:466
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const Tick emptyTick = band.startTick + (band.endTick - band.startTick) / 2;
+      int emptyKey = -1;
+      for (int key = 0; key < 128 && emptyKey < 0; ++key) {
+          const int y = rows.centerY(key);
+          if (y < 0 || y >= roll.height())
+              continue;
+          const bool occupied = std::any_of(view.model().notes.cbegin(), view.model().notes.cend(),
+                                            [track, key, emptyTick](const ViewNote &note) {
+                                                return note.track == track && note.key == key &&
+                                                       note.startTick <= emptyTick &&
+                                                       emptyTick < note.endTick();
+                                            });
+          if (!occupied)
+              emptyKey = key;
+      }
+Original expression:
+  QVERIFY2(emptyKey >= 0, "could not find empty roll space inside the time selection");
+
+A056 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:470
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const QPoint emptyInside(qRound(view.camera().displayX(double(emptyTick), 0.0, rows.dpr())),
+                               rows.centerY(emptyKey));
+      click(roll, emptyInside);
+Original expression:
+  QVERIFY2(!view.selectionModel().timeSelection().active(),
+               "left-clicking empty space inside the time selection did not clear it");
+
+A057 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:474
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().setTimeSelection(band);
+      sendKeyStroke(roll, Qt::Key_Up, Qt::NoModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 10), &transposed),
+               "time-selection Up did not transpose the covered note");
+
+A058 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:477
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
+               "time-selection Right did not nudge the covered note");
+
+A059 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:479
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QCOMPARE(view.selectionModel().timeSelection().startTick, d.tick + 2 * snapCell);
+
+A060 | PianoRollTest::keyboardTimeSelectionShortcuts | src/checks/rollcheck/keyboard.cpp:482
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A061 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:489
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::timelineDuplicateTime()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A062 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:499
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem &roll = check.rollInput();
+      const int track = check.track();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote transposed;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
+               "duplicate-time seed note was not found");
+
+A063 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:502
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({transposed}, int64_t(snapCell), -11);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + snapCell, uint8_t(d.key - 11), &transposed),
+               "duplicate-time seed did not reach the expected post-transpose state");
+
+A064 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:522
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().setTimeSelection({d.tick + snapCell,
+                                              d.tick + 2 * snapCell,
+                                              songview::EditorSelectionModel::TimeSelection::Tracks,
+                                              {}});
+      const songview::EditorSelectionModel::TimeSelection duplicateSource =
+          view.selectionModel().timeSelection();
+      const Tick duplicateSpan = duplicateSource.endTick - duplicateSource.startTick;
+      const int duplicateUndoIndex = doc.undoStack()->index();
+      const uint8_t duplicateKey = transposed.key;
+      const auto hasNoteAt = [&](Tick tick) {
+          DocNote note;
+          return doc.findNote(track, tick, duplicateKey, &note);
+      };
+      sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
+      const Tick firstStart = duplicateSource.endTick;
+      const Tick firstEnd = firstStart + duplicateSpan;
+      const songview::EditorSelectionModel::TimeSelection firstSelection =
+          view.selectionModel().timeSelection();
+Original expression:
+  QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 1 && firstSelection.active() &&
+                   firstSelection.startTick == firstStart && firstSelection.endTick == firstEnd &&
+                   view.editCursorTick() == firstEnd && hasNoteAt(firstStart),
+               "Ctrl+D did not duplicate once and advance the time selection");
+
+A065 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:528
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const qreal duplicateDpr = roll.devicePixelRatio();
+      const qreal duplicateViewport = std::max<qreal>(50, roll.width());
+Original expression:
+  QVERIFY2(view.camera().displayX(double(firstStart), 0.0, duplicateDpr) >= 0.0 &&
+                   view.camera().displayX(double(firstEnd), 0.0, duplicateDpr) <= duplicateViewport,
+               "first duplicated range was not made visible");
+
+A066 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:536
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      sendKeyStroke(roll, Qt::Key_D, Qt::ControlModifier, false);
+      const Tick secondStart = firstEnd;
+      const Tick secondEnd = secondStart + duplicateSpan;
+      const songview::EditorSelectionModel::TimeSelection secondSelection =
+          view.selectionModel().timeSelection();
+Original expression:
+  QVERIFY2(doc.undoStack()->index() == duplicateUndoIndex + 2 && secondSelection.active() &&
+                   secondSelection.startTick == secondStart && secondSelection.endTick == secondEnd &&
+                   view.editCursorTick() == secondEnd && hasNoteAt(secondStart),
+               "repeating Ctrl+D did not duplicate the newest copy");
+
+A067 | PianoRollTest::timelineDuplicateTime | src/checks/rollcheck/keyboard.cpp:542
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A068 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:549
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::timelineInsertBlankTimeTracks()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A069 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:558
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const int track = check.track();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote transposed;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
+               "track insertion seed note was not found");
+
+A070 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:561
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
+               "track insertion seed did not reach the expected shortcut state");
+
+A071 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:568
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Early-return path when the fixture has fewer than two tracks.
+Source context since previous assertion:
+      const Tick insertStart = d.tick + 2 * snapCell;
+      const Tick insertEnd = insertStart + snapCell;
+      if (doc.engineTrackCount() < 2) {
+          while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+              doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A072 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:579
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+          return;
+      }
+      const int otherTrack = track == 0 ? 1 : 0;
+      int otherKey = 12;
+      while (otherKey < 128) {
+          DocNote existing;
+          if (!doc.findNote(otherTrack, insertStart, uint8_t(otherKey), &existing))
+              break;
+          ++otherKey;
+      }
+Original expression:
+  QVERIFY2(otherKey < 128, "could not reserve an unselected-track insert fixture");
+
+A073 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:583
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const uint8_t otherPitch = uint8_t(otherKey);
+      doc.addNote(otherTrack, insertStart, otherPitch, uint32_t(snapCell), 91);
+      DocNote otherBefore;
+Original expression:
+  QVERIFY2(doc.findNote(otherTrack, insertStart, otherPitch, &otherBefore),
+               "could not create the unselected-track insert fixture");
+
+A074 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:593
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectTrack(track);
+      songview::EditorSelectionModel::TimeSelection trackSelection;
+      trackSelection.startTick = insertStart;
+      trackSelection.endTick = insertEnd;
+      view.selectionModel().setTimeSelectionAndTrackScope(trackSelection, 1u << track);
+      // The unified command must anchor on the selection span, not the edit
+      // cursor parked past the range end.
+      view.commitEditCursor(insertEnd + snapCell);
+Original expression:
+  QVERIFY2(view.editCursorTick() == insertEnd + snapCell,
+               "could not park the edit cursor away from the range start");
+
+A075 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:606
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const int insertUndoIndex = doc.undoStack()->index();
+      view.insertTime();
+      DocNote otherAfter;
+      DocNote selectedAfter;
+      const bool otherStable =
+          doc.findNote(otherTrack, insertStart, otherPitch, &otherAfter) &&
+          otherAfter.tick == otherBefore.tick && otherAfter.duration == otherBefore.duration &&
+          otherAfter.key == otherBefore.key && otherAfter.velocity == otherBefore.velocity;
+      const bool selectedShifted = doc.findNote(track, insertEnd, transposed.key, &selectedAfter);
+      const songview::EditorSelectionModel::TimeSelection insertedSelection =
+          view.selectionModel().timeSelection();
+Original expression:
+  QVERIFY2(doc.undoStack()->index() == insertUndoIndex + 1 && otherStable && selectedShifted &&
+                   insertedSelection.active() && insertedSelection.startTick == insertStart &&
+                   insertedSelection.endTick == insertEnd &&
+                   insertedSelection.scope == songview::EditorSelectionModel::TimeSelection::Tracks &&
+                   view.editCursorTick() == insertStart,
+               "Insert Time changed scope, cursor, or an unselected track");
+
+A076 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:614
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A077 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:624
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      // An active but unresolved scope is a rejected command: the unified
+      // entry must refuse without falling through to the whole-song prompt.
+      int unusedTrack = -1;
+      for (int candidate = 0;
+           candidate < static_cast<int>(std::size(check.timeline().tracks)) && unusedTrack < 0;
+           ++candidate)
+          if (!check.timeline().tracks[candidate].used)
+              unusedTrack = candidate;
+Original expression:
+  QVERIFY2(unusedTrack >= 0, "the insert fixture has no timeline-unused track");
+
+A078 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:631
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectTrack(unusedTrack);
+      songview::EditorSelectionModel::TimeSelection rejectedSelection;
+      rejectedSelection.startTick = insertStart;
+      rejectedSelection.endTick = insertEnd;
+      rejectedSelection.scope = songview::EditorSelectionModel::TimeSelection::Tracks;
+      view.selectionModel().setTimeSelection(rejectedSelection);
+Original expression:
+  QVERIFY2(view.selectionModel().primaryTrack() == unusedTrack &&
+                   view.selectionModel().storedTrackScope() == (uint32_t{1} << unusedTrack) &&
+                   !check.timeline().tracks[unusedTrack].used &&
+                   view.selectionModel().timeSelection().active() &&
+                   view.selectionModel().timeSelection().startTick == insertStart &&
+                   view.selectionModel().timeSelection().endTick == insertEnd &&
+                   view.selectionModel().timeSelection().scope ==
+                       songview::EditorSelectionModel::TimeSelection::Tracks,
+               "could not build the invalid active time-selection scope");
+
+A079 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:649
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const quick_popup::PromptGuard guard(view);
+      const QByteArray rejectedBefore = doc.smf().write();
+      const int rejectedUndoIndex = doc.undoStack()->index();
+      const int rejectedUndoCount = doc.undoStack()->count();
+      const uint64_t rejectedRevision = doc.revision();
+      const uint64_t rejectedCursor = view.editCursorTick();
+      view.insertTime();
+      QCoreApplication::processEvents();
+Original expression:
+  QVERIFY2(!quick_popup::popupSession(view)->isOpen(),
+               "the rejected Insert Time opened a prompt");
+
+A080 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:651
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(doc.smf().write() == rejectedBefore && doc.revision() == rejectedRevision &&
+                   doc.undoStack()->index() == rejectedUndoIndex &&
+                   doc.undoStack()->count() == rejectedUndoCount &&
+                   view.editCursorTick() == rejectedCursor &&
+                   view.selectionModel().timeSelection().active() &&
+                   view.selectionModel().timeSelection().startTick == insertStart &&
+                   view.selectionModel().timeSelection().endTick == insertEnd &&
+                   view.selectionModel().primaryTrack() == unusedTrack &&
+                   view.selectionModel().storedTrackScope() == (uint32_t{1} << unusedTrack),
+               "the rejected Insert Time changed document, cursor, or selection state");
+
+A081 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:666
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      // Restore the fixture state after the rejected scenario.
+      view.selectTrack(track);
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A082 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:673
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::timelineInsertBlankTimeLanes()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A083 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:682
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      const int track = check.track();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote transposed;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &transposed),
+               "lane insertion seed note was not found");
+
+A084 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:685
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick + 2 * snapCell, uint8_t(d.key - 10), &transposed),
+               "lane insertion seed did not reach the expected shortcut state");
+
+A085 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:694
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const Tick insertStart = d.tick + 2 * snapCell;
+      const Tick insertEnd = insertStart + snapCell;
+      const uint8_t laneCc = 7;
+      const Tick lanePointTick = insertStart + snapCell / 2;
+      doc.addLanePoint(track, laneCc, lanePointTick, 80);
+      DocLanePoint laneBefore;
+      DocNote laneNoteBefore;
+Original expression:
+  QVERIFY2(doc.findLanePoint(track, laneCc, lanePointTick, &laneBefore) &&
+                   doc.findNote(track, insertStart, transposed.key, &laneNoteBefore),
+               "could not create the lane-scoped insert fixture");
+
+A086 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:706
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      songview::EditorSelectionModel::TimeSelection laneSelection;
+      laneSelection.startTick = insertStart;
+      laneSelection.endTick = insertEnd;
+      laneSelection.scope = songview::EditorSelectionModel::TimeSelection::Lanes;
+      laneSelection.lanes = {{track, laneCc}};
+      view.selectionModel().setTimeSelection(laneSelection);
+      // The unified command must anchor on the selection span, not the edit
+      // cursor parked past the range end.
+      view.commitEditCursor(insertEnd + snapCell);
+Original expression:
+  QVERIFY2(view.editCursorTick() == insertEnd + snapCell,
+               "could not park the edit cursor away from the range start");
+
+A087 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:721
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      const int insertUndoIndex = doc.undoStack()->index();
+      view.insertTime();
+      DocLanePoint shiftedLanePoint;
+      DocNote laneNoteAfter;
+      const bool laneShifted =
+          doc.findLanePoint(track, laneCc, lanePointTick + snapCell, &shiftedLanePoint);
+      const bool noteStable = doc.findNote(track, insertStart, transposed.key, &laneNoteAfter) &&
+                              laneNoteAfter.tick == laneNoteBefore.tick &&
+                              laneNoteAfter.duration == laneNoteBefore.duration &&
+                              laneNoteAfter.key == laneNoteBefore.key &&
+                              laneNoteAfter.velocity == laneNoteBefore.velocity;
+      const songview::EditorSelectionModel::TimeSelection insertedSelection =
+          view.selectionModel().timeSelection();
+Original expression:
+  QVERIFY2(doc.undoStack()->index() == insertUndoIndex + 1 && laneShifted && noteStable &&
+                   insertedSelection.active() &&
+                   insertedSelection.scope == songview::EditorSelectionModel::TimeSelection::Lanes &&
+                   insertedSelection.lanes == laneSelection.lanes &&
+                   insertedSelection.startTick == insertStart &&
+                   insertedSelection.endTick == insertEnd && view.editCursorTick() == insertStart,
+               "lane-scoped Insert Time widened its scope or moved the band");
+
+A088 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:730
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+A089 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:737
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Source context since previous assertion:
+  }
+
+  void PianoRollTest::keyboardResizeNotes()
+  {
+      PianoRollFixture &check = *m_fixture;
+      const std::optional<ResizeFixture> seed = makeResizeSeed(check);
+Original expression:
+  QVERIFY(seed.has_value());
+
+A090 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:747
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      SongDocument &doc = check.document();
+      SongView &view = check.view();
+      songview::TimelineInputItem &roll = check.rollInput();
+      const int track = check.track();
+      const Cell &d = seed->cell;
+      const Tick snapCell = seed->snapCell;
+      const QByteArray before = doc.smf().write();
+      const int undo = doc.undoStack()->index();
+      DocNote noteA;
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA),
+               "keyboard resize seed note was not found");
+
+A091 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:762
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      // A second selected note starts strictly after the seed's onset and
+      // carries a different duration: the batch delta must come from the grid
+      // snap at the earliest onset and apply uniformly to both.
+      const Tick laterTick = d.tick + 2 * d.dur + snapCell;
+      const uint32_t laterDur = uint32_t(snapCell) + (d.dur == snapCell + 1 ? 2 : 1);
+      int laterKey = -1;
+      for (int key = 115; key >= 24 && laterKey < 0; --key) {
+          if (key == d.key)
+              continue;
+          if (!check.isOccupied(laterTick, laterDur, key, true))
+              laterKey = key;
+      }
+Original expression:
+  QVERIFY2(laterKey >= 0, "could not find a free row for the second resize note");
+
+A092 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:765
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      doc.addNote(track, laterTick, uint8_t(laterKey), laterDur, 100);
+      DocNote noteB;
+Original expression:
+  QVERIFY2(doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+               "could not create the second resize note");
+
+A093 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:767
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(noteB.duration != noteA.duration, "the resize fixture is not mixed-duration");
+
+A094 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:777
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
+
+      const QByteArray resizedBefore = doc.smf().write();
+      const int resizeUndo = doc.undoStack()->index();
+      const int resizeUndoCount = doc.undoStack()->count();
+      // Two compatible presses merge into one undo command that re-lands the
+      // accumulated delta from the gesture's start.
+      sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
+      sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                   doc.findNote(track, laterTick, uint8_t(laterKey), &noteB) &&
+                   uint64_t(noteA.duration) == uint64_t(d.dur) + 2 * snapCell &&
+                   uint64_t(noteB.duration) == uint64_t(laterDur) + 2 * snapCell,
+               "Shift+Right did not lengthen every selected note by the earliest-onset snap");
+
+A095 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:782
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  (adjacent to previous assertion; no intervening source lines)
+Original expression:
+  QVERIFY2(doc.undoStack()->index() == resizeUndo + 1 &&
+                   doc.undoStack()->count() == resizeUndoCount + 1,
+               "repeated Shift+Right presses did not merge into one undo entry");
+
+A096 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:786
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Intermediate baseline (merged-resize undo), not the slot baseline.
+Source context since previous assertion:
+      doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), resizedBefore);
+
+A097 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:790
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      // Shortening applies the same uniform delta until the shortest selected
+      // note reaches one tick; further presses are consumed no-ops.
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                   doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+               "the merged resize undo did not restore the seeded notes");
+
+A098 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:800
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Executes once per Shift+Left press in the shrink loop.
+Source context since previous assertion:
+      view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
+      const int floorUndo = doc.undoStack()->index();
+      for (int press = 0; press < 256 && std::min(noteA.duration, noteB.duration) > 1; ++press) {
+          const uint32_t previousA = noteA.duration;
+          const uint32_t previousB = noteB.duration;
+          const uint32_t previousMin = std::min(previousA, previousB);
+          sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                       doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+                   "Shift+Left lost a resized note");
+
+A099 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:804
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Executes once per Shift+Left press in the shrink loop.
+Source context since previous assertion:
+          const uint32_t shrink = previousMin - std::min(noteA.duration, noteB.duration);
+Original expression:
+  QVERIFY2(shrink > 0 && noteA.duration == previousA - shrink &&
+                       noteB.duration == previousB - shrink,
+                   "Shift+Left did not shorten every selected note by one uniform delta");
+
+A100 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:808
+Disposition: PARTIAL
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; unproved: native key-event delivery, the one-tick floor with its uniform batch delta, merged undo, and the time-selection block in this slot.
+Source context since previous assertion:
+      }
+Original expression:
+  QVERIFY2(std::min(noteA.duration, noteB.duration) == 1,
+               "Shift+Left did not stop at the one-tick duration floor");
+
+A101 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:814
+Disposition: PARTIAL
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; unproved: native key-event delivery, the one-tick floor with its uniform batch delta, merged undo, and the time-selection block in this slot. Extra presses at the floor are consumed no-ops.
+Source context since previous assertion:
+      const QByteArray floorBytes = doc.smf().write();
+      const int floorIndex = doc.undoStack()->index();
+      const int floorCount = doc.undoStack()->count();
+      sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
+Original expression:
+  QVERIFY2(doc.smf().write() == floorBytes && doc.undoStack()->index() == floorIndex &&
+                   doc.undoStack()->count() == floorCount,
+               "Shift+Left at the duration floor changed the document or history");
+
+A102 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:819
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Intermediate baseline (floor undo), not the slot baseline.
+Source context since previous assertion:
+      while (doc.undoStack()->index() > floorUndo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), resizedBefore);
+
+A103 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:823
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      // An active time selection owns the timeline: the resize commands refuse
+      // without touching the document or history.
+Original expression:
+  QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &noteA) &&
+                   doc.findNote(track, laterTick, uint8_t(laterKey), &noteB),
+               "the floor undo did not restore the seeded notes");
+
+A104 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:835
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
+      view.selectionModel().setTimeSelection(
+          {d.tick, d.tick + snapCell, songview::EditorSelectionModel::TimeSelection::Tracks, {}});
+      const QByteArray blockedBytes = doc.smf().write();
+      const int blockedIndex = doc.undoStack()->index();
+      const int blockedCount = doc.undoStack()->count();
+      const uint64_t blockedRevision = doc.revision();
+      sendKeyStroke(roll, Qt::Key_Right, Qt::ShiftModifier, false);
+      sendKeyStroke(roll, Qt::Key_Left, Qt::ShiftModifier, false);
+Original expression:
+  QVERIFY2(doc.smf().write() == blockedBytes && doc.revision() == blockedRevision &&
+                   doc.undoStack()->index() == blockedIndex &&
+                   doc.undoStack()->count() == blockedCount &&
+                   view.selectionModel().timeSelection().active(),
+               "an active time selection did not block the note resize keys");
+
+A105 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:843
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+      view.selectionModel().clearTimeSelection();
+      while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
+          doc.undoStack()->undo();
+Original expression:
+  QCOMPARE(doc.smf().write(), before);
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+Counterpart executable predicate index
+The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:349
+Counterpart expression:
+  QSKIP("actual resize editing belongs to swiftrollgated");
+
+S002 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:352
+Counterpart expression:
+  QVERIFY2(fixture.open(&error), qPrintable(error));
+
+S003 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:354
+Counterpart expression:
+  QVERIFY2(lane.has_value(), qPrintable(error));
+
+S004 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:360
+Counterpart expression:
+  QVERIFY2(trailing.has_value() && leading.has_value(), qPrintable(error));
+
+S005 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:365
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto note = noteWithId(fixture.notes(&ignored), trailing->id);
+              return note && note->tick == trailing->tick && note->duration == snap;
+          },
+          kSettleTimeoutMs));
+
+S006 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:376
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto note = noteWithId(fixture.notes(&ignored), leading->id);
+              return note && note->tick == leadingEnd - snap && note->duration == snap;
+          },
+          kSettleTimeoutMs));
+
+S007 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:587
+Counterpart expression:
+  QSKIP("focused-grid command routing belongs to selectionkey");
+
+S008 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:590
+Counterpart expression:
+  QVERIFY2(fixture.open(&error), qPrintable(error));
+
+S009 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:592
+Counterpart expression:
+  QVERIFY2(target.has_value(), qPrintable(error));
+
+S010 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:594
+Counterpart expression:
+  QVERIFY(item != nullptr);
+
+S011 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:598
+Counterpart expression:
+  QVERIFY(nudge != nullptr);
+
+S012 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:599
+Counterpart expression:
+  QTRY_VERIFY_WITH_TIMEOUT(nudge->isEnabled(), kSettleTimeoutMs);
+
+S013 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:600
+Counterpart expression:
+  QVERIFY(sendShortcut(fixture.view(), nudge));
+
+S014 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:601
+Counterpart expression:
+  QVERIFY(QTest::qWaitFor(
+          [&] {
+              QString ignored;
+              const auto moved = noteWithId(fixture.notes(&ignored), target->id);
+              return moved && moved->tick == target->tick + fixture.snap() &&
+                     moved->pitch == target->pitch;
+          },
+          kSettleTimeoutMs));
+
+S015 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:611
+Counterpart expression:
+  QVERIFY(pencil != nullptr && sendShortcut(fixture.view(), pencil));
+
+S016 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:612
+Counterpart expression:
+  QVERIFY(fixture.grid()->property("pencilMode").toBool());
+
+S017 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:616
+Counterpart expression:
+  QVERIFY(fixture.grid()->property("pencilMode").toBool());
+
+S018 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:618
+Counterpart expression:
+  QVERIFY(deleteNotes != nullptr && deleteNotes->isEnabled());
+
+S019 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:623
+Counterpart expression:
+  QVERIFY(movedItem != nullptr);
+
+S020 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:631
+Counterpart expression:
+  QVERIFY(sendShortcut(fixture.view(), deleteNotes));
+
+S021 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:632
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
+
+S022 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:635
+Counterpart expression:
+  QVERIFY(sendShortcut(fixture.view(), pencil));
+
+S023 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:636
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("pencilMode").toBool(), !pencilBefore);
+
+S024 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:637
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
+
+S025 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:638
+Counterpart expression:
+  QVERIFY(sendShortcut(fixture.view(), pencil));
+
+S026 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:639
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("pencilMode").toBool(), pencilBefore);
+
+S027 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:640
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
+
+S028 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:642
+Counterpart expression:
+  QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);

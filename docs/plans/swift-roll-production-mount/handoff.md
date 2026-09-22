@@ -88,7 +88,7 @@ Changed Swift files: `PianoGrid`, `App`, `AudioSession`, `GridGeometry`, `GridSc
 
 QtBridge patch now adds typed nullable QObject QVariant conversion: nil must be a QVariant with the wrapped QObject metatype and null pointer, **not invalid QVariant**. Smoke starts with a non-null return sentinel and requires it to become nullptr.
 
-Keep all existing patch sections, including original nonoptional object-return support, BUILD_ALWAYS, and public registration. `cmake/QtBridge.cmake` tracks patch/script via both `CMAKE_CONFIGURE_DEPENDS` and content hashes in PATCH_COMMAND. Both are needed: configure rerun alone does not invalidate FetchContent's patch stamp.
+Keep all existing patch sections, including original nonoptional object-return support and public registration. The macro ExternalProject declares `QtBridgeMacros` as `BUILD_BYPRODUCTS` instead of `BUILD_ALWAYS`, so ordinary builds do not relink it. `cmake/QtBridge.cmake` tracks patch/script via both `CMAKE_CONFIGURE_DEPENDS` and content hashes in PATCH_COMMAND. Both are needed: configure rerun alone does not invalidate FetchContent's patch stamp.
 
 ## Task 4: ready decomposition
 

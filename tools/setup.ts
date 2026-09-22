@@ -227,6 +227,7 @@ async function configurePorydaw(
     poryaaaaArgument: poryaaaa.cmakeArgument,
     qtPrefix,
     buildChecks: true,
+    buildType: "Release",
   });
   await run("configuring Porydaw", cmake, configureArgs);
 }

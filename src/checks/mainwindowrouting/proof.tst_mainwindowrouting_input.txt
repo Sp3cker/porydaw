@@ -1,0 +1,3213 @@
+Assertion correspondence: mainwindowrouting/tst_mainwindowrouting_input.cpp
+
+Reference revision: 5f768e3401d74d5df185a6de5692595351156a9d
+Original: src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp
+Original SHA-256: 65d7b05f04398b2cd23574c25f0f7b3aecb78e77b2527cc143d8b283ba229348
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+Eight test methods routing tab readiness/focus handoff, drawer shortcut delivery to the persistent Quick toggle, copy/solo QAction routing including text-field respect, and Insert/Delete Time command fanout with undo-byte restore.
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below (207 sites across 8 test methods),
+including fixture guards and platform gates. Source context preserves setup,
+loops, and guards between assertions verbatim. S identifiers identify exact
+Swift predicates in the counterpart, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native harness obligations;
+it does not establish coverage of a converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+Tally: MATCHED 0 / PARTIAL 22 / GAP 93 / NATIVE 92. No MATCHED site is claimed:
+no same-dir Swift counterpart exists for this suite, and none of the
+SessionChecks.swift predicates asserts the same Qt-routing observation.
+The Swift SHA-256 pins the worktree content inspected here, which is currently
+modified relative to its HEAD revision.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+The swiftcore lane executes the Swift counterpart only. The Qt Widget/Quick
+delivery, Cocoa-gated, and harness-timing observations inventoried here execute
+only in the native Qt check harness, never in that lane.
+
+Execution and ownership
+The paired Swift checks execute under runProjectSessionSuite and
+runBankHistorySuite in src/checks/workspace/SessionChecks.swift. Within
+runProjectSessionSuite, mouseHintOwnershipChecks owns the MouseHints model
+predicates (S002–S009); editorSelectionCommandChecks owns the router
+availability/execution predicates (S010–S025); the remaining
+runProjectSessionSuite predicates cover project open, snapshot, save/dirty,
+session state publication including mute/solo (S047–S051), and bank-history
+regressions; runBankHistorySuite owns the bank-history mutation predicates.
+Related-but-outside suites invoked by the same file — runEditorDrawerChecks
+(EditorDrawerChecks.swift), runTrackHeadersInputChecks
+(TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
+carry their own predicates in their own files and are not inventoried here.
+Of these, the router availability/execution (S010–S025), cursor publication (S047–S048), solo publication (S050–S051), and save/dirty-cycle (S057–S063) predicates are the ones cited as PARTIAL mappings below.
+
+Fixture, sequence and row constraints
+Two-song MainWindow session (songs A/B) opened per test; song B is the active tab unless reselected. No QTest _data rows: every case is a straight-line slot. Loops expand single sites: per-track note-search loops seeding the copy, solo, insert, and delete probes; drawer-page loops hiding all sections; the insert() lambda is invoked three times (stopped accept-by-button with a two-beat span, playing accept-by-button with a one-bar span, playing accept-by-Return with a ceiling-rounded quarter fraction) plus separate zero-span, cancel, and stale-prompt sequences; QTRY/async gates order focus and grid readiness.
+
+Original assertion inventory and source sequence
+
+A001 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:101
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+#include "mainwindowroutingfixture.h"
+
+#include "checks/clipcheck_support.h"
+#include "checks/quickpopupguard.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/songview/timeruler.h"
+#include <QDockWidget>
+#include <QPointer>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QtTest>
+
+namespace {
+
+struct InsertTimePromptSession {
+    QQuickWindow *window = nullptr;
+    songview::QuickPopupSession *popup = nullptr;
+    QString diagnostic = QStringLiteral("the Insert Time prompt did not open");
+};
+
+InsertTimePromptSession openedInsertTimePrompt(SongView &view)
+{
+    InsertTimePromptSession session;
+    songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+    if (!popup || !popup->isOpen() || !popup->window()) {
+        session.diagnostic =
+            QStringLiteral("the Insert Time action did not open its canvas prompt");
+        return session;
+    }
+    session.popup = popup;
+    session.window = popup->window();
+    if (!quick_popup::promptItem(*popup, QLatin1String("insertTimePrompt")) ||
+        !quick_popup::promptItem(*popup, QLatin1String("insertTimeBars")) ||
+        !quick_popup::promptItem(*popup, QLatin1String("insertTimeBeats")) ||
+        !quick_popup::promptItem(*popup, QLatin1String("insertTimeBeatFractions"))) {
+        session.diagnostic = QStringLiteral("the Insert Time prompt visual tree is incomplete");
+        return session;
+    }
+    if (checks::async_wait::waitUntil([] { return true; },
+                                      [&session] {
+                                          return quick_popup::inputHasActiveFocus(
+                                              *session.window, QLatin1String("insertTimeBars"));
+                                      },
+                                      5000, 10) != checks::async_wait::Result::Ready) {
+        session.diagnostic = QStringLiteral("the Insert Time bars field did not take focus");
+        return session;
+    }
+    session.diagnostic.clear();
+    return session;
+}
+
+bool enterInsertTimeValues(QQuickWindow &window, const QKeySequence &bars,
+                           const QKeySequence &beats, const QKeySequence &fractions)
+{
+    QTest::keySequence(&window, bars);
+    QTest::keyClick(&window, Qt::Key_Tab);
+    QCoreApplication::processEvents();
+    if (!quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeats")))
+        return false;
+
+    QTest::keySequence(&window, beats);
+    QTest::keyClick(&window, Qt::Key_Tab);
+    QCoreApplication::processEvents();
+    if (!quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions")))
+        return false;
+
+    QTest::keySequence(&window, fractions);
+    QCoreApplication::processEvents();
+    return quick_popup::inputHasActiveFocus(window, QLatin1String("insertTimeBeatFractions"));
+}
+
+uint8_t freeNoteKey(SongTab &tab, int track, uint64_t tick)
+{
+    for (int key = 0; key < 128; ++key) {
+        DocNote existing;
+        if (!tab.document().findNote(track, tick, uint8_t(key), &existing))
+            return uint8_t(key);
+    }
+    return 0;
+}
+} // namespace
+
+namespace checks::mainwindowrouting {
+
+class MainWindowRoutingInputTest final : public QObject, private MainWindowRoutingFixture
+{
+    Q_OBJECT
+    Q_DISABLE_COPY_MOVE(MainWindowRoutingInputTest)
+
+  public:
+    MainWindowRoutingInputTest(QString projectRoot, QString songA, QString songB)
+        : m_projectRoot(std::move(projectRoot))
+        , m_songA(std::move(songA))
+        , m_songB(std::move(songB))
+    {}
+
+  private slots:
+    void freshTabsWithholdReadinessAndAuditionFromTick()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB, false);
+Original expression:
+        QVERIFY(session.has_value())
+
+A002 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:103
+Disposition: GAP
+Mapping/reason: Workspace tab-set observation (counts, lookup, selection) with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+Original expression:
+        QCOMPARE(window.m_workspace->openTabCount(), qsizetype{2})
+
+A003 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:104
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(session->a != session->b)
+
+A004 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:105
+Disposition: GAP
+Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!session->a->isReady())
+
+A005 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:106
+Disposition: GAP
+Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!session->b->isReady())
+
+A006 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:108
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QTabBar *const tabBar = window.findChild<QTabBar *>();
+Original expression:
+        QVERIFY(tabBar)
+
+A007 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:111
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        tabBar->setFocusPolicy(Qt::StrongFocus);
+        window.activateWindow();
+Original expression:
+        QTRY_COMPARE(QApplication::activeWindow(), &window)
+
+A008 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:113
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        tabBar->setFocus(Qt::OtherFocusReason);
+Original expression:
+        QTRY_COMPARE(QApplication::focusWidget(), tabBar)
+
+A009 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:114
+Disposition: GAP
+Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(waitForTabReady(*window.m_workspace, session->a))
+
+A010 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:117
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QWidget *focused = QApplication::focusWidget();
+        if (session->b->isReady())
+Original expression:
+            QVERIFY(focused && (focused == session->b || session->b->isAncestorOf(focused)))
+
+A011 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:119
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        else
+Original expression:
+            QCOMPARE(focused, tabBar)
+
+A012 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:120
+Disposition: GAP
+Mapping/reason: Tab readiness, voicegroup binding-stage, timeline-identity, or project-lookup observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(waitForTabReady(*window.m_workspace, session->b))
+
+A013 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:122
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        focused = QApplication::focusWidget();
+Original expression:
+        QVERIFY(focused && (focused == session->b || session->b->isAncestorOf(focused)))
+
+A014 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:124
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        tabBar->setFocus(Qt::OtherFocusReason);
+Original expression:
+        QCOMPARE(QApplication::focusWidget(), tabBar)
+
+A015 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:127
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_workspace->selectSongTab(session->a);
+        focused = QApplication::focusWidget();
+Original expression:
+        QVERIFY(focused && (focused == session->a || session->a->isAncestorOf(focused)))
+
+A016 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:134
+Disposition: GAP
+Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Source context since previous assertion:
+        window.m_workspace->selectSongTab(session->b);
+
+        constexpr uint64_t tick = 24;
+        window.stopPlayback();
+        session->b->view().commitEditCursor(0);
+        session->b->view().requestPlayPauseFrom(tick);
+Original expression:
+        QCOMPARE(window.m_audio.transport(), Transport::Playing)
+
+A017 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:135
+Disposition: PARTIAL
+Mapping/reason: Related predicates S047, S048 in src/checks/workspace/SessionChecks.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->b->view().editCursorTick(), tick)
+
+A018 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:137
+Disposition: GAP
+Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Source context since previous assertion:
+        session->b->view().requestPlayPauseFrom(tick);
+Original expression:
+        QCOMPARE(window.m_audio.transport(), Transport::Paused)
+
+A019 | MainWindowRoutingInputTest::freshTabsWithholdReadinessAndAuditionFromTick | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:138
+Disposition: GAP
+Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(uint64_t(session->b->view().playheadTick() + 0.5), tick)
+
+A020 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:144
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+    }
+
+    void catalogueViewBindingsReachPersistentQuickFocus()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A021 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:151
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongView &view = session->b->view();
+        const auto &keys = keymap::Registry::instance();
+        QAction *const automation = window.m_automationDrawerAction;
+        QAction *const velocity = window.m_velocityDrawerAction;
+        QAction *const voiceChanges = window.m_voiceChangesDrawerAction;
+Original expression:
+        QVERIFY(window.m_polyDock)
+
+A022 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:153
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QAction *const polyphony = window.m_polyDock->toggleViewAction();
+Original expression:
+        QVERIFY(automation)
+
+A023 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:154
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(velocity)
+
+A024 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:155
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(voiceChanges)
+
+A025 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:156
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(polyphony)
+
+A026 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:158
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+Original expression:
+        QCOMPARE(automation->shortcuts(), keys.sequences(QStringLiteral("view.automation_drawer")))
+
+A027 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:159
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(velocity->shortcuts(), keys.sequences(QStringLiteral("view.velocity_drawer")))
+
+A028 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:160
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(voiceChanges->shortcuts(),
+                 keys.sequences(QStringLiteral("view.voice_changes_drawer")))
+
+A029 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:162
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(polyphony->shortcuts(), keys.sequences(QStringLiteral("view.polyphony_debugger")))
+
+A030 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:164
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        for (QAction *const action : {automation, velocity, voiceChanges, polyphony}) {
+Original expression:
+            QCOMPARE(action->shortcutContext(), Qt::WindowShortcut)
+
+A031 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:165
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+            QVERIFY(!action->shortcut().isEmpty())
+
+A032 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:167
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        }
+Original expression:
+        QVERIFY(automation->toolTip().endsWith(
+            QStringLiteral("(%1)").arg(automation->shortcut().toString(QKeySequence::NativeText))))
+
+A033 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:169
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(velocity->toolTip().endsWith(
+            QStringLiteral("(%1)").arg(velocity->shortcut().toString(QKeySequence::NativeText))))
+
+A034 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:171
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(voiceChanges->toolTip().endsWith(QStringLiteral("(%1)").arg(
+            voiceChanges->shortcut().toString(QKeySequence::NativeText))))
+
+A035 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:180
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        songview::TimelineQuickView *const quick = view.quickView();
+        QQuickWindow *const quickWindow = quick ? quick->quickWindow() : nullptr;
+        QQuickItem *const velocityToggle = quick && quick->rootObject()
+                                               ? quick->rootObject()->findChild<QQuickItem *>(
+                                                     QStringLiteral("drawerVelocityToggle"))
+                                               : nullptr;
+Original expression:
+        QVERIFY2(quickWindow && velocityToggle,
+                 "the active tab's persistent velocity drawer toggle is unavailable")
+
+A036 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:183
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        velocityToggle->forceActiveFocus(Qt::OtherFocusReason);
+Original expression:
+        QTRY_VERIFY(velocityToggle->hasActiveFocus())
+
+A037 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:184
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(quickWindow->activeFocusItem(), velocityToggle)
+
+A038 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:191
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+
+        QSignalSpy automationTriggered(automation, &QAction::triggered);
+        QSignalSpy velocityTriggered(velocity, &QAction::triggered);
+        QSignalSpy voiceChangesTriggered(voiceChanges, &QAction::triggered);
+        QSignalSpy polyphonyTriggered(polyphony, &QAction::triggered);
+
+Original expression:
+        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Automations))
+
+A039 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:192
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
+
+A040 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:193
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+
+A041 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:194
+Disposition: NATIVE
+Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!window.m_polyDock->isVisible())
+
+A042 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:196
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(*quickWindow, automation->shortcut());
+Original expression:
+        QCOMPARE(automationTriggered.count(), 1)
+
+A043 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:197
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
+
+A044 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:199
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(*quickWindow, velocity->shortcut());
+Original expression:
+        QCOMPARE(velocityTriggered.count(), 1)
+
+A045 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:200
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
+
+A046 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:202
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(*quickWindow, voiceChanges->shortcut());
+Original expression:
+        QCOMPARE(voiceChangesTriggered.count(), 1)
+
+A047 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:203
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
+
+A048 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:205
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        sendShortcut(*quickWindow, polyphony->shortcut());
+Original expression:
+        QCOMPARE(polyphonyTriggered.count(), 1)
+
+A049 | MainWindowRoutingInputTest::catalogueViewBindingsReachPersistentQuickFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:206
+Disposition: NATIVE
+Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(window.m_polyDock->isVisible())
+
+A050 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:212
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+    }
+
+    void copyActionRoutesCompleteClipAndTimeSelection()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A051 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:215
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        QAction *copy = window.m_copyAction;
+Original expression:
+        QVERIFY(copy)
+
+A052 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:220
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const QList<QKeySequence> bindings =
+            keymap::Registry::instance().sequences(QStringLiteral("roll.copy"));
+
+        const std::optional<DocNote> note = selectFirstNote(*session->b);
+Original expression:
+        QVERIFY(note.has_value())
+
+A053 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:225
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        songview::EditorSelectionModel::TimeSelection time;
+        time.startTick = 0;
+        session->b->view().setPlayheadSample(session->b->timeline()->sampleForTick(24), false);
+        auto *overlay = session->b->view().findChild<songview::PlayheadOverlay *>();
+Original expression:
+        QVERIFY(overlay)
+
+A054 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:230
+Disposition: GAP
+Mapping/reason: SongView drawer presentation state. The paired Swift inventory (SessionChecks.swift) carries no drawer predicate — drawer presenter checks live in EditorDrawerChecks.swift, outside this proof's counterpart — so GAP.
+Source context since previous assertion:
+        for (const EditorDrawerPage page :
+             {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+              EditorDrawerPage::VoiceChanges})
+            session->b->view().setDrawerSectionVisible(page, false);
+Original expression:
+        QVERIFY(!session->b->view().hasVisibleDrawerSection())
+
+A055 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:237
+Disposition: GAP
+Mapping/reason: SongView timeline-band state observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        time.endTick = session->a->timeline()->ticksPerBeat;
+        session->a->view().selectionModel().setTimeSelection(time);
+        window.m_workspace->selectSongTab(session->b);
+        QCoreApplication::processEvents();
+        QCoreApplication::sendPostedEvents();
+        QCoreApplication::processEvents();
+Original expression:
+        QCOMPARE(session->b->view().focusedTimelineBand(), songview::TimelineBand::Roll)
+
+A056 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:239
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QWidget *surface = QApplication::focusWidget();
+Original expression:
+        QVERIFY(surface)
+
+A057 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:240
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(surface == session->b || session->b->isAncestorOf(surface))
+
+A058 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:241
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!bindings.isEmpty())
+
+A059 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:245
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+        QSignalSpy triggered(copy, &QAction::triggered);
+        const QKeyCombination key = bindings.front()[0];
+        sendKey(*surface, key.key(), key.keyboardModifiers());
+Original expression:
+        QCOMPARE(triggered.count(), 1)
+
+A060 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:247
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const auto clip = clipcheck_support::checkClipboardClip();
+Original expression:
+        QVERIFY(clip.has_value())
+
+A061 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:248
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(clip->ticksPerBeat, session->b->timeline()->ticksPerBeat)
+
+A062 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:249
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(clip->clip.span, uint64_t{0})
+
+A063 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:250
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(clip->clip.tracks.size(), size_t{1})
+
+A064 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:251
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(clip->clip.tracks.front().notes.size(), size_t{1})
+
+A065 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:252
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(clip->clip.tracks.front().notes.front().key, note->key)
+
+A066 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:253
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(clip->clip.tracks.front().notes.front().velocity, note->velocity)
+
+A067 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:261
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        window.m_workspace->selectSongTab(session->a);
+        QCoreApplication::processEvents();
+        QCoreApplication::sendPostedEvents();
+        QCoreApplication::processEvents();
+        copy->trigger();
+        const auto timeClip = clipcheck_support::checkClipboardClip();
+Original expression:
+        QVERIFY(timeClip.has_value())
+
+A068 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:262
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(timeClip->ticksPerBeat, session->a->timeline()->ticksPerBeat)
+
+A069 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:263
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(timeClip->clip.span, time.endTick)
+
+A070 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:270
+Disposition: NATIVE
+Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        QLineEdit text(&window);
+        text.setText(QStringLiteral("copy probe"));
+        text.selectAll();
+        text.show();
+        text.setFocus(Qt::OtherFocusReason);
+Original expression:
+        QCOMPARE(QApplication::focusWidget(), &text)
+
+A071 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:271
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(text.selectedText(), QStringLiteral("copy probe"))
+
+A072 | MainWindowRoutingInputTest::copyActionRoutesCompleteClipAndTimeSelection | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:274
+Disposition: NATIVE
+Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QApplication::clipboard()->clear();
+        sendShortcut(text, QKeySequence(QKeySequence::Copy));
+Original expression:
+        QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("copy probe"))
+
+A073 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:280
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+    }
+
+    void soloActionUsesSingleWindowOwnerAndRespectsTextFocus()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A074 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:283
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        QAction *solo = window.m_soloAction;
+Original expression:
+        QVERIFY(solo)
+
+A075 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:286
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const QList<QKeySequence> bindings =
+            keymap::Registry::instance().sequences(QStringLiteral("roll.solo_tracks"));
+Original expression:
+        QVERIFY(!bindings.isEmpty())
+
+A076 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:294
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        const int track = session->b->view().selectionModel().primaryTrack();
+        session->b->view().setTrackSolo(track, false);
+        window.m_workspace->selectSongTab(session->b);
+        QSignalSpy triggered(solo, &QAction::triggered);
+        const QKeyCombination key = bindings.front()[0];
+        window.menuBar()->setFocus();
+        sendKey(*window.menuBar(), key.key(), key.keyboardModifiers());
+Original expression:
+        QVERIFY(session->b->view().trackSoloed(track))
+
+A077 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:295
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(triggered.count(), 1)
+
+A078 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:297
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendKey(*window.menuBar(), key.key(), key.keyboardModifiers());
+Original expression:
+        QVERIFY(!session->b->view().trackSoloed(track))
+
+A079 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:298
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(triggered.count(), 2)
+
+A080 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:301
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        session->b->view().focusActiveSurface();
+        QWidget *surface = QApplication::focusWidget();
+Original expression:
+        QVERIFY(surface)
+
+A081 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:302
+Disposition: NATIVE
+Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(surface == session->b || session->b->isAncestorOf(surface))
+
+A082 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:304
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendKey(*surface, key.key(), key.keyboardModifiers());
+Original expression:
+        QVERIFY(session->b->view().trackSoloed(track))
+
+A083 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:305
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(triggered.count(), 3)
+
+A084 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:307
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        sendKey(*surface, key.key(), key.keyboardModifiers());
+Original expression:
+        QVERIFY(!session->b->view().trackSoloed(track))
+
+A085 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:308
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(triggered.count(), 4)
+
+A086 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:313
+Disposition: PARTIAL
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Source context since previous assertion:
+        QLineEdit text(&window);
+        text.show();
+        text.setFocus();
+        sendKey(text, key.key(), key.keyboardModifiers());
+Original expression:
+        QVERIFY(!session->b->view().trackSoloed(track))
+
+A087 | MainWindowRoutingInputTest::soloActionUsesSingleWindowOwnerAndRespectsTextFocus | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:314
+Disposition: NATIVE
+Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(triggered.count(), 4)
+
+A088 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:320
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+    }
+
+    void insertTimeRoutesActiveSongAndRestoresUndoBytes()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A089 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:325
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        const std::optional<DocNote> source = selectFirstNote(tab);
+Original expression:
+        QVERIFY(source.has_value())
+
+A090 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:335
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const int sourceTrack = view.selectionModel().primaryTrack();
+        std::optional<DocNote> wholeSongNote;
+        for (int track = 0; track < tab.document().engineTrackCount() && !wholeSongNote; ++track) {
+            if (track == sourceTrack)
+                continue;
+            const std::vector<DocNote> notes = tab.document().notesForTrack(track);
+            if (!notes.empty())
+                wholeSongNote = notes.front();
+        }
+Original expression:
+        QVERIFY(wholeSongNote.has_value())
+
+A091 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:338
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        window.m_workspace->selectSongTab(&tab);
+        QAction *action = window.m_insertTimeAction;
+Original expression:
+        QVERIFY(action)
+
+A092 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:349
+Disposition: GAP
+Mapping/reason: Grid/time-signature/camera observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        for (const EditorDrawerPage page :
+             {EditorDrawerPage::Automations, EditorDrawerPage::Velocity,
+              EditorDrawerPage::VoiceChanges})
+            view.setDrawerSectionVisible(page, false);
+        view.setEventListVisible(false);
+        const quick_popup::PromptGuard guard(view);
+
+        // The fixture's 24 PPQN supports a denominator-scaled one-tick beat,
+        // so a nonzero quarter fraction must use ceiling rather than truncation.
+        tab.document().setTimeSig(0, 3, 6);
+Original expression:
+        QTRY_VERIFY(view.grid().segmentAt(source->tick).beatTicks == uint64_t{1} &&
+                    view.grid().segmentAt(source->tick).beatsPerBar == uint64_t{3})
+
+A093 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:499
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const songview::Grid::Segment segment = view.grid().segmentAt(source->tick);
+
+        QString insertDiagnostic;
+        const auto insert = [&](bool playing, const QKeySequence &bars, const QKeySequence &beats,
+                                const QKeySequence &fractions, uint64_t expectedSpan,
+                                bool acceptWithReturn) {
+            const QByteArray before = tab.document().smf().write();
+            const QByteArray inactiveBefore = session->a->document().smf().write();
+            const int undoIndex = tab.document().undoStack()->index();
+            const uint64_t revision = tab.document().revision();
+            const auto rollback = [&tab, undoIndex] {
+                while (tab.document().undoStack()->index() > undoIndex &&
+                       tab.document().undoStack()->canUndo())
+                    tab.document().undoStack()->undo();
+            };
+            if (!view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason)) {
+                insertDiagnostic = QStringLiteral("the Roll input could not establish focus");
+                return false;
+            }
+            if (checks::async_wait::waitUntil(
+                    [] { return true; },
+                    [&view] { return view.focusedTimelineBand() == songview::TimelineBand::Roll; },
+                    5000, 10) != checks::async_wait::Result::Ready) {
+                insertDiagnostic =
+                    QStringLiteral("the Roll input did not retain focus before opening");
+                return false;
+            }
+            const std::optional<songview::TimelineBand> origin = view.focusedTimelineBand();
+            if (!origin) {
+                insertDiagnostic = QStringLiteral("Insert Time had no focused timeline origin");
+                return false;
+            }
+            // Insert Time anchors on the edit cursor in every transport
+            // state: park the playhead away from it, and while playing let
+            // the playhead keep advancing under the open form.
+            const uint64_t playheadTick = source->tick == 0 ? segment.beatTicks : 0;
+            if (playing) {
+                view.setEditCursorTick(source->tick);
+                view.setPlayheadSample(tab.timeline()->sampleForTick(playheadTick), true);
+            } else {
+                window.stopPlayback();
+                view.setPlayheadSample(tab.timeline()->sampleForTick(playheadTick), false);
+                view.commitEditCursor(source->tick);
+            }
+            if (view.editCursorTick() != source->tick ||
+                uint64_t(view.playheadTick() + 0.5) == source->tick) {
+                insertDiagnostic =
+                    QStringLiteral("Insert Time could not separate the edit cursor and playhead");
+                return false;
+            }
+
+            action->trigger();
+            const InsertTimePromptSession opened = openedInsertTimePrompt(view);
+            if (!opened.window) {
+                insertDiagnostic = opened.diagnostic;
+                return false;
+            }
+            QQuickItem *const barsInput =
+                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBars"));
+            QQuickItem *const beatsInput =
+                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBeats"));
+            QQuickItem *const fractionsInput =
+                quick_popup::promptItem(*opened.popup, QLatin1String("insertTimeBeatFractions"));
+            if (!barsInput || !beatsInput || !fractionsInput ||
+                barsInput->property("text").toString() != QStringLiteral("1") ||
+                beatsInput->property("text").toString() != QStringLiteral("0") ||
+                fractionsInput->property("text").toString() != QStringLiteral("0")) {
+                insertDiagnostic = QStringLiteral("the Insert Time visual defaults are incorrect");
+                return false;
+            }
+            if (playing) {
+                // The form captured the edit cursor at open; the advancing
+                // playhead must not retarget the pending insertion.
+                uint64_t advancedTick = playheadTick + segment.beatTicks;
+                if (advancedTick == source->tick)
+                    advancedTick += segment.beatTicks;
+                view.setPlayheadSample(tab.timeline()->sampleForTick(advancedTick), true);
+                if (uint64_t(view.playheadTick() + 0.5) == source->tick) {
+                    insertDiagnostic = QStringLiteral(
+                        "the advancing playhead did not move under the Insert Time form");
+                    return false;
+                }
+            }
+
+            if (!enterInsertTimeValues(*opened.window, bars, beats, fractions)) {
+                insertDiagnostic =
+                    QStringLiteral("Tab did not keep Insert Time editing inside the popup");
+                return false;
+            }
+            if (acceptWithReturn)
+                QTest::keyClick(opened.window, Qt::Key_Return);
+            else if (!quick_popup::clickPromptButton(*opened.popup,
+                                                     QLatin1String("insertTimeAccept"))) {
+                insertDiagnostic = QStringLiteral("the Insert Time prompt has no OK button");
+                return false;
+            }
+            QCoreApplication::processEvents();
+
+            songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+            DocNote shifted;
+            DocNote wholeSongShifted;
+            const bool sourceFound = tab.document().findNote(source->noteId, &shifted);
+            const bool wholeSongFound =
+                tab.document().findNote(wholeSongNote->noteId, &wholeSongShifted);
+            const int actualUndoIndex = tab.document().undoStack()->index();
+            const int actualUndoCount = tab.document().undoStack()->count();
+            const uint64_t actualRevision = tab.document().revision();
+            const bool committed = popup && !popup->isOpen() && sourceFound && wholeSongFound &&
+                                   actualUndoIndex == undoIndex + 1 &&
+                                   actualRevision == revision + 1 &&
+                                   shifted.tick == source->tick + expectedSpan &&
+                                   wholeSongShifted.tick == wholeSongNote->tick + expectedSpan &&
+                                   session->a->document().smf().write() == inactiveBefore;
+            if (!committed) {
+                rollback();
+                insertDiagnostic =
+                    QStringLiteral("Insert Time commit: source %1 expected %2, whole-song %3 "
+                                   "expected %4, undo index %5 expected %6, undo count %7, "
+                                   "revision %8 expected %9")
+                        .arg(sourceFound ? QString::number(shifted.tick)
+                                         : QStringLiteral("missing"))
+                        .arg(source->tick + expectedSpan)
+                        .arg(wholeSongFound ? QString::number(wholeSongShifted.tick)
+                                            : QStringLiteral("missing"))
+                        .arg(wholeSongNote->tick + expectedSpan)
+                        .arg(actualUndoIndex)
+                        .arg(undoIndex + 1)
+                        .arg(actualUndoCount)
+                        .arg(actualRevision)
+                        .arg(revision + 1);
+                return false;
+            }
+            const bool restored =
+                checks::async_wait::waitUntil(
+                    [] { return true; },
+                    [&view, origin] { return view.focusedTimelineBand() == origin; }, 5000,
+                    10) == checks::async_wait::Result::Ready;
+            rollback();
+            if (!restored || tab.document().smf().write() != before ||
+                tab.document().undoStack()->index() != undoIndex ||
+                session->a->document().smf().write() != inactiveBefore) {
+                insertDiagnostic = QStringLiteral(
+                    "Insert Time did not restore its timeline origin and undo bytes");
+                return false;
+            }
+            return true;
+        };
+
+Original expression:
+        QVERIFY2(insert(false, QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_2),
+                        QKeySequence(Qt::Key_0), 2 * segment.beatTicks, false),
+                 qUtf8Printable(insertDiagnostic))
+
+A094 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:502
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(insert(true, QKeySequence(Qt::Key_1), QKeySequence(Qt::Key_0),
+                        QKeySequence(Qt::Key_0), segment.beatTicks * segment.beatsPerBar, false),
+                 qUtf8Printable(insertDiagnostic))
+
+A095 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:505
+Disposition: NATIVE
+Mapping/reason: Real key/mouse event injection, async Qt-harness wait, native close delivery, or composite prompt-flow predicate. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(insert(true, QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0),
+                        QKeySequence(Qt::Key_1), (segment.beatTicks + 3) / 4, true),
+                 qUtf8Printable(insertDiagnostic))
+
+A096 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:518
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        const QByteArray beforeZero = tab.document().smf().write();
+        const QByteArray inactiveBeforeZero = session->a->document().smf().write();
+        const int zeroUndo = tab.document().undoStack()->index();
+        const int zeroUndoCount = tab.document().undoStack()->count();
+        const uint64_t zeroRevision = tab.document().revision();
+        window.stopPlayback();
+        view.commitEditCursor(source->tick);
+        action->trigger();
+        const InsertTimePromptSession zero = openedInsertTimePrompt(view);
+Original expression:
+        QVERIFY2(zero.window && zero.popup, qUtf8Printable(zero.diagnostic))
+
+A097 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:519
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(enterInsertTimeValues(*zero.window, QKeySequence(Qt::Key_0),
+                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
+                 "the zero-span Insert Time fields could not be edited")
+
+A098 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:522
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(quick_popup::clickPromptButton(*zero.popup, QLatin1String("insertTimeAccept")),
+                 "the zero-span Insert Time prompt has no OK button")
+
+A099 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:526
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+Original expression:
+        QVERIFY(popup && !popup->isOpen())
+
+A100 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:527
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().smf().write(), beforeZero)
+
+A101 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:528
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), zeroUndo)
+
+A102 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:529
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->count(), zeroUndoCount)
+
+A103 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:530
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), zeroRevision)
+
+A104 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:531
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBeforeZero)
+
+A105 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:538
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        const QByteArray beforeCancel = tab.document().smf().write();
+        const int cancelUndo = tab.document().undoStack()->index();
+        const uint64_t cancelRevision = tab.document().revision();
+        action->trigger();
+        const InsertTimePromptSession cancelled = openedInsertTimePrompt(view);
+Original expression:
+        QVERIFY2(cancelled.window && cancelled.popup, qUtf8Printable(cancelled.diagnostic))
+
+A106 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:539
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(enterInsertTimeValues(*cancelled.window, QKeySequence(Qt::Key_1),
+                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_0)),
+                 "the cancellation Insert Time fields could not be edited")
+
+A107 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:542
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(
+            quick_popup::clickPromptButton(*cancelled.popup, QLatin1String("insertTimeCancel")),
+            "the Insert Time prompt has no Cancel button")
+
+A108 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:546
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QCoreApplication::processEvents();
+Original expression:
+        QVERIFY(popup && !popup->isOpen())
+
+A109 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:547
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().smf().write(), beforeCancel)
+
+A110 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:548
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), cancelUndo)
+
+A111 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:549
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), cancelRevision)
+
+A112 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:553
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        action->trigger();
+        const InsertTimePromptSession stale = openedInsertTimePrompt(view);
+Original expression:
+        QVERIFY2(stale.window && stale.popup, qUtf8Printable(stale.diagnostic))
+
+A113 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:554
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(enterInsertTimeValues(*stale.window, QKeySequence(Qt::Key_1),
+                                       QKeySequence(Qt::Key_0), QKeySequence(Qt::Key_1)),
+                 "the stale Insert Time fields could not be edited")
+
+A114 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:563
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        tab.document().setTimeSig(source->tick + 1, 3, 5);
+        const QByteArray afterInterveningEdit = tab.document().smf().write();
+        const int staleUndo = tab.document().undoStack()->index();
+        const int staleUndoCount = tab.document().undoStack()->count();
+        const uint64_t staleRevision = tab.document().revision();
+        if (popup->isOpen())
+Original expression:
+            QVERIFY2(
+                quick_popup::clickPromptButton(*stale.popup, QLatin1String("insertTimeAccept")),
+                "the stale Insert Time prompt has no OK button")
+
+A115 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:567
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QCoreApplication::processEvents();
+Original expression:
+        QVERIFY(popup && !popup->isOpen())
+
+A116 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:568
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().smf().write(), afterInterveningEdit)
+
+A117 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:569
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), staleUndo)
+
+A118 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:570
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->count(), staleUndoCount)
+
+A119 | MainWindowRoutingInputTest::insertTimeRoutesActiveSongAndRestoresUndoBytes | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:571
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), staleRevision)
+
+A120 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:578
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+        view.setPlayheadSample(0, false);
+    }
+
+    void insertTimeActionAnchorsSelectionDuringPlayback()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A121 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:583
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *action = window.m_insertTimeAction;
+Original expression:
+        QVERIFY(action)
+
+A122 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:584
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(action->isEnabled())
+
+A123 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:587
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+
+        const std::optional<DocNote> source = selectFirstNote(tab);
+Original expression:
+        QVERIFY(source.has_value())
+
+A124 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:595
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const int track = view.selectionModel().primaryTrack();
+        const uint64_t span = tab.timeline()->ticksPerBeat;
+        const uint64_t selectionStart = source->tick + span;
+        const uint64_t selectionEnd = selectionStart + span;
+        const uint8_t probeKey = freeNoteKey(tab, track, selectionEnd);
+        tab.document().addNote(track, selectionEnd, probeKey, uint32_t(span), 80);
+        DocNote probe;
+Original expression:
+        QVERIFY2(tab.document().findNote(track, selectionEnd, probeKey, &probe),
+                 "could not seed the insert probe note")
+
+A125 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:606
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        std::optional<DocNote> untouched;
+        for (int candidate = 0; candidate < tab.document().engineTrackCount() && !untouched;
+             ++candidate) {
+            if (candidate == track)
+                continue;
+            const std::vector<DocNote> notes = tab.document().notesForTrack(candidate);
+            if (!notes.empty())
+                untouched = notes.front();
+        }
+Original expression:
+        QVERIFY(untouched.has_value())
+
+A126 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:623
+Disposition: GAP
+Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Source context since previous assertion:
+
+        window.m_workspace->selectSongTab(&tab);
+        view.selectTrack(track);
+        songview::EditorSelectionModel::TimeSelection selection;
+        selection.startTick = selectionStart;
+        selection.endTick = selectionEnd;
+        view.selectionModel().setTimeSelection(selection);
+        const QByteArray before = tab.document().smf().write();
+        const QByteArray inactiveBefore = session->a->document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const uint64_t revision = tab.document().revision();
+
+        // Playback parks the playhead and edit cursor away from the selection
+        // span: the unified command must anchor on the selection, not either.
+        window.stopPlayback();
+        view.requestPlayPauseFrom(source->tick);
+Original expression:
+        QCOMPARE(window.m_audio.transport(), Transport::Playing)
+
+A127 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:624
+Disposition: PARTIAL
+Mapping/reason: Related predicates S047, S048 in src/checks/workspace/SessionChecks.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(view.editCursorTick(), source->tick)
+
+A128 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:625
+Disposition: GAP
+Mapping/reason: Transport/playhead observation with no corresponding SessionChecks predicate in the counterpart; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(view.playheadTick() < double(selectionStart))
+
+A129 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:630
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        action->trigger();
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+Original expression:
+        QVERIFY(!popup || !popup->isOpen())
+
+A130 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:631
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
+
+A131 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:632
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), revision + 1)
+
+A132 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:635
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const songview::EditorSelectionModel::TimeSelection retained =
+            view.selectionModel().timeSelection();
+Original expression:
+        QVERIFY(retained.active())
+
+A133 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:636
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(retained.startTick, selectionStart)
+
+A134 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:637
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(retained.endTick, selectionEnd)
+
+A135 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:638
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(retained.scope, songview::EditorSelectionModel::TimeSelection::Tracks)
+
+A136 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:639
+Disposition: PARTIAL
+Mapping/reason: Related predicates S047, S048 in src/checks/workspace/SessionChecks.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(view.editCursorTick(), selectionStart)
+
+A137 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:641
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        DocNote probeAfter;
+Original expression:
+        QVERIFY(tab.document().findNote(probe.noteId, &probeAfter))
+
+A138 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:642
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(probeAfter.tick, selectionEnd + span)
+
+A139 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:643
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(probeAfter.key, probe.key)
+
+A140 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:645
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        DocNote untouchedAfter;
+Original expression:
+        QVERIFY(tab.document().findNote(untouched->noteId, &untouchedAfter))
+
+A141 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:646
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(untouchedAfter.tick, untouched->tick)
+
+A142 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:647
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+A143 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:651
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+
+        window.stopPlayback();
+        tab.document().undoStack()->undo();
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex)
+
+A144 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:652
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().smf().write(), before)
+
+A145 | MainWindowRoutingInputTest::insertTimeActionAnchorsSelectionDuringPlayback | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:653
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+A146 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:660
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+        view.setPlayheadSample(0, false);
+    }
+
+    void insertTimeRulerMenuAnchorsEditCursor()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A147 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:666
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        window.m_workspace->selectSongTab(&tab);
+        const std::optional<DocNote> source = selectFirstNote(tab);
+Original expression:
+        QVERIFY(source.has_value())
+
+A148 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:672
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        view.selectionModel().clearTimeSelection();
+        window.stopPlayback();
+
+        auto *const quick =
+            view.findChild<songview::TimelineQuickView *>(QStringLiteral("timelineQuickCanvas"));
+Original expression:
+        QVERIFY(quick && quick->rootObject())
+
+A149 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:675
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        auto *const rulerInput = quick->rootObject()->findChild<songview::TimelineInputItem *>(
+            QStringLiteral("timelineRulerInput"));
+Original expression:
+        QVERIFY2(rulerInput, "could not find the time ruler Quick input")
+
+A150 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:684
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        // The outside-selection ruler path commits the clicked tick as the
+        // edit cursor before its menu opens; Insert Time then prompts at
+        // that cursor rather than the playhead.
+        const uint64_t rawTick = source->tick;
+        const QPointF local(
+            view.camera().displayX(double(rawTick), 0.0, rulerInput->devicePixelRatio()),
+            (std::max)(1.0, rulerInput->height() * 0.75));
+Original expression:
+        QVERIFY2(rulerInput->bounds().contains(local),
+                 "the ruler menu point is outside the live ruler input")
+
+A151 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:691
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonPress, local, Qt::RightButton,
+                                  Qt::RightButton, Qt::NoModifier);
+        checks::events::sendMouse(*rulerInput, QEvent::MouseButtonRelease, local, Qt::RightButton,
+                                  Qt::NoButton, Qt::NoModifier);
+        const QPointer<songview::QuickPopupSession> live{quick_popup::popupSession(view)};
+Original expression:
+        QVERIFY2(QTest::qWaitFor([&live] {
+                     return live && live->isOpen() && quick_popup::menuPanel(*live) &&
+                            quick_popup::menuModel(*quick_popup::menuPanel(*live)) != nullptr;
+                 }),
+                 "the ruler right-click did not open the shared ruler menu")
+
+A152 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:697
+Disposition: GAP
+Mapping/reason: Grid/time-signature/camera observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const uint64_t target = view.editCursorTick();
+Original expression:
+        QCOMPARE(target, view.grid().snapTick(double(rawTick)))
+
+A153 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:701
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        songview::QuickMenuModel *const model =
+            quick_popup::menuModel(*quick_popup::menuPanel(*live));
+        const int insertRow = model->rowForId(int(songview::RulerMenuAction::InsertBlank));
+Original expression:
+        QVERIFY2(insertRow >= 0 && model->itemAt(insertRow)->enabled,
+                 "the cursor ruler menu omitted an enabled Insert Time row")
+
+A154 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:710
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        const QByteArray before = tab.document().smf().write();
+        const QByteArray inactiveBefore = session->a->document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+        const uint64_t revision = tab.document().revision();
+        const uint64_t insertSpan = view.grid().segmentAt(target).beatTicks;
+
+Original expression:
+        QVERIFY2(quick_popup::clickMenuRow(*live, insertRow),
+                 "the ruler Insert Time row did not receive a real click")
+
+A155 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:713
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const InsertTimePromptSession opened = openedInsertTimePrompt(view);
+Original expression:
+        QVERIFY2(opened.window && opened.popup, qUtf8Printable(opened.diagnostic))
+
+A156 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:714
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(enterInsertTimeValues(*opened.window, QKeySequence(Qt::Key_0),
+                                       QKeySequence(Qt::Key_1), QKeySequence(Qt::Key_0)),
+                 "the ruler-flow Insert Time fields could not be edited")
+
+A157 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:717
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY2(quick_popup::clickPromptButton(*opened.popup, QLatin1String("insertTimeAccept")),
+                 "the ruler-flow Insert Time prompt has no OK button")
+
+A158 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:721
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *const popup = quick_popup::popupSession(view);
+Original expression:
+        QVERIFY(popup && !popup->isOpen())
+
+A159 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:722
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
+
+A160 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:723
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), revision + 1)
+
+A161 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:725
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        DocNote shifted;
+Original expression:
+        QVERIFY(tab.document().findNote(source->noteId, &shifted))
+
+A162 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:726
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(shifted.tick, source->tick + insertSpan)
+
+A163 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:727
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+A164 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:729
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        tab.document().undoStack()->undo();
+Original expression:
+        QCOMPARE(tab.document().smf().write(), before)
+
+A165 | MainWindowRoutingInputTest::insertTimeRulerMenuAnchorsEditCursor | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:730
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+A166 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:736
+Disposition: GAP
+Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Source context since previous assertion:
+    }
+
+    void deleteTimeActionRipplesScopedAndWholeSongSelections()
+    {
+        const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
+Original expression:
+        QVERIFY(session.has_value())
+
+A167 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:741
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        MainWindow &window = *session->window;
+        SongTab &tab = *session->b;
+        SongView &view = tab.view();
+        QAction *action = window.m_deleteTimeAction;
+Original expression:
+        QVERIFY(action)
+
+A168 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:742
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!action->isEnabled())
+
+A169 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:745
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+
+        const std::optional<DocNote> source = selectFirstNote(tab);
+Original expression:
+        QVERIFY(source.has_value())
+
+A170 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:754
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const int track = view.selectionModel().primaryTrack();
+        const uint64_t span = tab.timeline()->ticksPerBeat;
+        const uint64_t selectionStart = source->tick + span;
+        const uint64_t selectionEnd = selectionStart + span;
+        const uint64_t wholeEnd = selectionEnd + span;
+        const uint8_t insideKey = freeNoteKey(tab, track, selectionStart);
+        tab.document().addNote(track, selectionStart, insideKey, uint32_t(span), 80);
+        DocNote inside;
+Original expression:
+        QVERIFY2(tab.document().findNote(track, selectionStart, insideKey, &inside),
+                 "could not seed the removed-range probe note")
+
+A171 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:759
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const uint8_t laterKey = freeNoteKey(tab, track, wholeEnd);
+        tab.document().addNote(track, wholeEnd, laterKey, uint32_t(span), 80);
+        DocNote later;
+Original expression:
+        QVERIFY2(tab.document().findNote(track, wholeEnd, laterKey, &later),
+                 "could not seed the later-event probe note")
+
+A172 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:770
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        std::optional<DocNote> untouched;
+        for (int candidate = 0; candidate < tab.document().engineTrackCount() && !untouched;
+             ++candidate) {
+            if (candidate == track)
+                continue;
+            const std::vector<DocNote> notes = tab.document().notesForTrack(candidate);
+            if (!notes.empty())
+                untouched = notes.front();
+        }
+Original expression:
+        QVERIFY(untouched.has_value())
+
+A173 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:775
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const int untouchedTrack = untouched->engineTrack;
+        const uint8_t excludedKey = freeNoteKey(tab, untouchedTrack, span);
+        tab.document().addNote(untouchedTrack, span, excludedKey, uint32_t(span), 80);
+        DocNote excluded;
+Original expression:
+        QVERIFY2(tab.document().findNote(untouchedTrack, span, excludedKey, &excluded),
+                 "could not seed the excluded-track probe note")
+
+A174 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:781
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const uint8_t excludedLaterKey = freeNoteKey(tab, untouchedTrack, wholeEnd + span);
+        tab.document().addNote(untouchedTrack, wholeEnd + span, excludedLaterKey, uint32_t(span),
+                               80);
+        DocNote excludedLater;
+Original expression:
+        QVERIFY2(tab.document().findNote(untouchedTrack, wholeEnd + span, excludedLaterKey,
+                                         &excludedLater),
+                 "could not seed the excluded later-event probe note")
+
+A175 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:797
+Disposition: NATIVE
+Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+        window.m_workspace->selectSongTab(&tab);
+        const QByteArray before = tab.document().smf().write();
+        const QByteArray inactiveBefore = session->a->document().smf().write();
+        const int undoIndex = tab.document().undoStack()->index();
+
+        // Scoped ripple removal: in-range content goes, later events shift
+        // left, the selection clears, and the cursor parks at the seam.
+        view.selectTrack(track);
+        songview::EditorSelectionModel::TimeSelection selection;
+        selection.startTick = selectionStart;
+        selection.endTick = selectionEnd;
+        view.selectionModel().setTimeSelection(selection);
+Original expression:
+        QVERIFY(action->isEnabled())
+
+A176 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:802
+Disposition: NATIVE
+Mapping/reason: Quick popup/prompt session state owned by the native canvas delivery path. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+        const uint64_t revision = tab.document().revision();
+        action->trigger();
+        QCoreApplication::processEvents();
+        songview::QuickPopupSession *popup = quick_popup::popupSession(view);
+Original expression:
+        QVERIFY(!popup || !popup->isOpen())
+
+A177 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:803
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
+
+A178 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:804
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), revision + 1)
+
+A179 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:805
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!view.selectionModel().timeSelection().active())
+
+A180 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:806
+Disposition: PARTIAL
+Mapping/reason: Related predicates S047, S048 in src/checks/workspace/SessionChecks.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(view.editCursorTick(), selectionStart)
+
+A181 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:808
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+        DocNote scratch;
+Original expression:
+        QVERIFY(!tab.document().findNote(inside.noteId, &scratch))
+
+A182 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:810
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+        DocNote laterAfter;
+Original expression:
+        QVERIFY(tab.document().findNote(later.noteId, &laterAfter))
+
+A183 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:811
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(laterAfter.tick, selectionEnd)
+
+A184 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:813
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+        DocNote sourceAfter;
+Original expression:
+        QVERIFY(tab.document().findNote(source->noteId, &sourceAfter))
+
+A185 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:814
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(sourceAfter.tick, source->tick)
+
+A186 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:816
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+        DocNote untouchedAfter;
+Original expression:
+        QVERIFY(tab.document().findNote(untouched->noteId, &untouchedAfter))
+
+A187 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:817
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(untouchedAfter.tick, untouched->tick)
+
+A188 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:818
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+A189 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:820
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        tab.document().undoStack()->undo();
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex)
+
+A190 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:821
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().smf().write(), before)
+
+A191 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:828
+Disposition: GAP
+Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+
+        // Whole-song routing: content outside the scoped case participates.
+        uint32_t usedMask = 0;
+        for (int candidate = 0; candidate < 16; ++candidate)
+            if (tab.timeline()->tracks[candidate].used)
+                usedMask |= 1u << candidate;
+Original expression:
+        QVERIFY(usedMask != 0)
+
+A192 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:834
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        view.selectTrack(track);
+        songview::EditorSelectionModel::TimeSelection whole;
+        whole.startTick = 0;
+        whole.endTick = wholeEnd;
+        view.selectionModel().setTimeSelectionAndTrackScope(whole, 0xFFFFu);
+Original expression:
+        QVERIFY(view.selectionModel().timeSelection().active())
+
+A193 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:835
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(view.selectionModel().storedTrackScope(), 0xFFFFu)
+
+A194 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:836
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(view.selectionModel().timeSelectionCoversTempo(usedMask))
+
+A195 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:840
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        const uint64_t wholeRevision = tab.document().revision();
+        action->trigger();
+        QCoreApplication::processEvents();
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex + 1)
+
+A196 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:841
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().revision(), wholeRevision + 1)
+
+A197 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:842
+Disposition: GAP
+Mapping/reason: Selection-model (time selection, scope, primary track) observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!view.selectionModel().timeSelection().active())
+
+A198 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:843
+Disposition: PARTIAL
+Mapping/reason: Related predicates S047, S048 in src/checks/workspace/SessionChecks.swift (cursor-only mutation publishes exactly the cursor domain; equal assignment publishes nothing); unproved: edit-cursor value anchoring and the Qt view route in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(view.editCursorTick(), uint64_t{0})
+
+A199 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:844
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!tab.document().findNote(source->noteId, &sourceAfter))
+
+A200 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:845
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!tab.document().findNote(inside.noteId, &scratch))
+
+A201 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:846
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QVERIFY(!tab.document().findNote(excluded.noteId, &scratch))
+
+A202 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:848
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+        DocNote excludedLaterAfter;
+Original expression:
+        QVERIFY(tab.document().findNote(excludedLater.noteId, &excludedLaterAfter))
+
+A203 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:849
+Disposition: PARTIAL
+Mapping/reason: Related predicates S015, S016, S017, S018, S021, S022, S023 in src/checks/workspace/SessionChecks.swift (router range/track deletion removes only in-interval content and leaves outside notes intact); unproved: DeleteTime scoped/whole-song command semantics, Qt action delivery, and undo integration in this test.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(excludedLaterAfter.tick, span)
+
+A204 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:850
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+A205 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:852
+Disposition: GAP
+Mapping/reason: Qt undo-stack index/count or document-revision observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+        tab.document().undoStack()->undo();
+Original expression:
+        QCOMPARE(tab.document().undoStack()->index(), undoIndex)
+
+A206 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:853
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(tab.document().smf().write(), before)
+
+A207 | MainWindowRoutingInputTest::deleteTimeActionRipplesScopedAndWholeSongSelections | src/checks/mainwindowrouting/tst_mainwindowrouting_input.cpp:854
+Disposition: GAP
+Mapping/reason: SMF byte equality observation with no corresponding SessionChecks predicate; GAP.
+Source context since previous assertion:
+(none — assertion sites adjacent)
+Original expression:
+        QCOMPARE(session->a->document().smf().write(), inactiveBefore)
+
+Remaining original source (closing sequence and helper bodies):
+    }
+
+  private:
+    QString m_projectRoot;
+    QString m_songA;
+    QString m_songB;
+};
+
+int runMainWindowRoutingInputCheck(const QString &projectRoot, const QString &songA,
+                                   const QString &songB, const QStringList &qtArguments)
+{
+    MainWindowRoutingInputTest test(projectRoot, songA, songB);
+    QStringList arguments{QStringLiteral("mainwindow-routing-input")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+} // namespace checks::mainwindowrouting
+
+#include "tst_mainwindowrouting_input.moc"
+
+Swift assertion predicates
+
+S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/SessionChecks.swift:287
+    report.expectEqual(Int32(1), compileResult, cppID: cppID,
+                       what: "actual mid2agb exit result for the persisted edited MIDI and flags")
+
+S002 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:298
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "inactive windows reject hint claims")
+
+S003 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:305
+    report.expectEqual(nodeHint, hints.text, cppID: id,
+                       what: "replaced source cannot clear an identical-profile new owner")
+
+S004 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:308
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "empty profile replaces and clears prior visible hint")
+
+S005 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:312
+    report.expect(hints.text != nodeHint, cppID: id,
+                  message: "replacing the node profile changes the presented instructions")
+
+S006 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:315
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "current source lifecycle clear removes hint")
+
+S007 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:319
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "window deactivation clears an owned hint")
+
+S008 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:322
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "reactivation never resurrects cached ownership")
+
+S009 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:326
+    report.expectEqual("", hints.text, cppID: id,
+                       what: "unknown profile clears rather than retaining unrelated instructions")
+
+S010 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:356
+    report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
+                  && router.isAvailable(.cut), cppID: id,
+                  message: "automation range owns semantic edit availability")
+
+S011 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:359
+    report.expectEqual(EditKeyDecision.execute.rawValue,
+                       router.route(.delete, autoRepeat: true).rawValue,
+                       cppID: id, what: "range Delete retains canonical repeat execution")
+
+S012 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:362
+    report.expectEqual(revision, document.revision, cppID: id,
+                       what: "availability and key arbitration never mutate the document")
+
+S013 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:364
+    report.expectEqual(EditKeyDecision.consume.rawValue,
+                       router.route(.transposeUp, autoRepeat: false).rawValue,
+                       cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
+
+S014 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:368
+    report.expectEqual(revision, document.revision, cppID: id,
+                       what: "lane transpose does not mutate a simultaneous note selection")
+
+S015 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:371
+    report.expectEqual([Tick(72)], document.lanePoints(
+        track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
+        cppID: id, what: "range Delete removes only points in the selected interval")
+
+S016 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:374
+    report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                  message: "time selection deletion leaves simultaneously selected notes intact")
+
+S017 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:378
+    report.expectEqual(afterDelete, document.revision, cppID: id,
+                       what: "empty selected range deletion never falls through to notes")
+
+S018 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:380
+    report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                  message: "empty range still owns the operation target")
+
+S019 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:383
+    report.expect(page.selection == nil, cppID: id,
+                  message: "canonical clear-selection command clears the automation range")
+
+S020 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:385
+    report.expectEqual(EditKeyDecision.execute.rawValue,
+                       router.route(.delete, autoRepeat: false).rawValue,
+                       cppID: id, what: "note selection becomes the target after range clear")
+
+S021 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:389
+    report.expect(document.note(selectedNote.id) == nil, cppID: id,
+                  message: "shared note deletion remains reachable after range clear")
+
+S022 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:396
+    report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
+                  && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
+                  cppID: id, message: "track range deletes both its notes and automation points")
+
+S023 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:399
+    report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
+                  message: "track range leaves outside notes intact")
+
+S024 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:410
+    report.expectEqual(EditKeyDecision.consume.rawValue,
+                       router.route(.delete, autoRepeat: false).rawValue,
+                       cppID: id, what: "a live pointer gesture consumes semantic deletion")
+
+S025 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:414
+    report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
+                       what: "direct activation cannot bypass pointer gesture arbitration")
+
+S026 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:450
+        report.expectEqual("mus_session_test", detached.source.label,
+                           cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+                           what: "published project snapshot survives source registry replacement")
+
+S027 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:471
+            report.expectEqual("mus_session_test", retained.source.label,
+                               cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+                               what: "failed replacement open retains the worker's prior project")
+
+S028 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:489
+        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                      cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
+                      message: "unknown label reaches the native playable-song rejection")
+
+S029 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:500
+        report.expectEqual("mus_session_test", session.document.source.label,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
+                           what: "DocumentSession adopts the requested song source")
+
+S030 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:509
+    report.expectEqual(false, session.document.isDirty,
+                       cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
+                       what: "opened session starts clean")
+
+S031 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:516
+    report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
+                       cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
+                       what: "initial timeline matches canonical state factory projection")
+
+S032 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:529
+    report.expect(chunkMetasStripped,
+                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                  message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
+
+S033 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:532
+    report.expectEqual(1, session.document.state.tempo.count,
+                       cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
+                       what: "authoritative tempo point count in state")
+
+S034 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:538
+    report.expectEqual(UInt64(24_000), initialSampleAt24,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
+                       what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
+
+S035 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:563
+    report.expect(publishedChangeCount > 0,
+                  cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
+                  message: "document mutation invokes session presenter callback")
+
+S036 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:566
+    report.expect(lastPublishedTimeline != nil,
+                  cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
+                  message: "immutable playback publication callback received updated timeline")
+
+S037 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:572
+    report.expectEqual(UInt64(19_200), editedSampleAt24,
+                       cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
+                       what: "state factory projection computes exact 19200 samples for edited tempo")
+
+S038 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:583
+    report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
+                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                       what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
+
+S039 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:586
+    report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
+                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                  message: "extended clocks change an observable note-release sample")
+
+S040 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:595
+    report.expectEqual(UInt64(20_000), configuredGate60,
+                       cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                       what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
+
+S041 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:598
+    report.expect(defaultGate60 != configuredGate60,
+                  cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                  message: "exact gate changes an observable note-release sample")
+
+S042 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:607
+        report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
+                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                           what: "undo config restores default gate release scheduling")
+
+S043 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:610
+        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                           what: "timeline remains at 150 BPM prior to tempo undo")
+
+S044 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:617
+        report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
+                           cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
+                           what: "undo tempo restores initial 120 BPM timing")
+
+S045 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:624
+        report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                           cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
+                           what: "redo tempo restores 150 BPM timing")
+
+S046 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:630
+        report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
+                           cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                           what: "redo config reproduces exact-gate event timing")
+
+S047 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:649
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.cursor]
+            && publishedChanges.last?.revision == preRevision
+            && publishedChanges.last?.trackRemap == nil,
+        cppID: statePublicationID,
+        message: "cursor-only mutation publishes exactly the cursor domain")
+
+S048 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:658
+    report.expectEqual(publicationStart, publishedChangeCount,
+                       cppID: statePublicationID,
+                       what: "equal cursor assignment publishes nothing")
+
+S049 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:664
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.mixState],
+        cppID: statePublicationID,
+        message: "mute mutation publishes exactly the mix-state domain")
+
+S050 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:671
+    report.expect(
+        publishedChangeCount == publicationStart + 1
+            && publishedChanges.last?.domains == [.mixState],
+        cppID: statePublicationID,
+        message: "solo mutation publishes exactly the mix-state domain")
+
+S051 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:679
+    report.expectEqual(publicationStart, publishedChangeCount,
+                       cppID: statePublicationID,
+                       what: "equal mute and solo assignments publish nothing")
+
+S052 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:708
+    report.expect(publishedChangeCount == publicationStart + 1 && observedCompletedBatch,
+                  cppID: statePublicationID,
+                  message: "nested throwing batch publishes completed state exactly once")
+
+S053 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:713
+    report.expect(
+        session.document.revision == preRevision
+            && session.document.isDirty == preDirty
+            && session.document.history.currentIdentity == preIdentity
+            && session.document.history.canUndo == preCanUndo
+            && session.document.history.canRedo == preCanRedo
+            && publishedPlaybackCount == prePlaybackCount,
+        cppID: statePublicationID,
+        message: "session-only changes preserve revision, dirty/history, and playback publication")
+
+S054 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:728
+        report.expectEqual(false, session.selectedNotes.contains(note1),
+                           cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
+                           what: "selection reconciler prunes dead note IDs when notes are deleted")
+
+S055 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:737
+    report.expect(otherSongCfgBefore != nil,
+                  cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                  message: "fixture exposes the other song's midi.cfg line")
+
+S056 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:747
+    report.expectEqual(Tick(72), preSaveLoopStart,
+                       cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                       what: "the loop-start edit is present before save")
+
+S057 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:756
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "edited song save confirms clean state")
+
+S058 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:763
+    report.expectEqual(
+        otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
+        cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+        what: "save preserves the other song's complete midi.cfg line bytes")
+
+S059 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:772
+    report.expect(legacyContent?.contains("\"protected\": true") == true,
+                  cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
+                  message: "save leaves legacy sidecar JSON untouched")
+
+S060 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:783
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "edit after save is dirty")
+
+S061 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:787
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undo to the saved state is clean")
+
+S062 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:791
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "redo away from the saved state is dirty")
+
+S063 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:795
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "cleanup undo returns to the saved state")
+
+S064 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:811
+        report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
+                           what: "reopen reproduces saved authoritative 150 BPM timing")
+
+S065 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:814
+        report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                           what: "reopen reproduces settings-sensitive note-release timing")
+
+S066 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:817
+        report.expectEqual(preSaveFile, reopened.document.state.file,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "note and non-tempo metadata streams survive save/reopen")
+
+S067 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:820
+        report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "loop-start marker survives save/reopen")
+
+S068 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:823
+        report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "loop-end marker survives save/reopen")
+
+S069 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:827
+        report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "raw config flags survive save/reopen")
+
+S070 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:830
+        report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "voicegroup argument survives save/reopen")
+
+S071 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:833
+        report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "master volume survives save/reopen")
+
+S072 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:836
+        report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "reverb survives save/reopen")
+
+S073 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:839
+        report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
+                           cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                           what: "priority survives save/reopen")
+
+S074 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:842
+        report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                           what: "exact-gate setting survives save/reopen")
+
+S075 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:845
+        report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
+                           cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                           what: "extended-clock setting survives save/reopen")
+
+S076 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:854
+        report.expectEqual(false, reopenedHasTempoMeta,
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
+                           what: "tempo metas remain stripped while authoritative timing persists")
+
+S077 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:873
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "stale snapshot completion leaves the newer document dirty")
+
+S078 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:877
+        report.expectEqual(true, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undoing only the newer edit remains dirty")
+
+S079 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:881
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                           what: "undoing both post-save edits returns to the saved state")
+
+S080 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:897
+        report.expect(song1.bank.bankToken != 0,
+                      cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+                      message: "opened song has non-zero bank token")
+
+S081 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:900
+        report.expectEqual(song1.bank.bankToken, song2.bank.bankToken,
+                           cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+                           what: "songs sharing the same voicegroup reuse the native bank lease")
+
+S082 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:933
+        report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
+                           what: "failed stage preserves MIDI file bytes")
+
+S083 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:935
+        report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
+                           what: "failed stage preserves voicegroup file bytes")
+
+S084 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:937
+        report.expectEqual(true, session.document.isDirty, cppID: cppID,
+                           what: "failed stage leaves document dirty")
+
+S085 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:939
+        report.expectEqual(true, session.bankDirty, cppID: cppID,
+                           what: "failed stage leaves bank dirty")
+
+S086 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:950
+        report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                      cppID: reconcileID,
+                      message: "reconcile stage reports the native playable-song failure")
+
+S087 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:968
+            report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
+                          cppID: midiID,
+                          message: "MIDI stage reports its missing source file")
+
+S088 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:989
+            report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
+                          cppID: voicegroupID,
+                          message: "voicegroup stage reports its missing source file")
+
+S089 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1013
+        report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                      cppID: saveID,
+                      message: "save stage reports the unwritable destination")
+
+S090 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1029
+            report.expect(
+                operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
+                cppID: cppID,
+                message: "playable label reaches native voicegroup resolution and is rejected")
+
+S091 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1039
+        report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
+                           cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+                           what: "native service publishes a project-relative normalized bank identity")
+
+S092 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1042
+        report.expectEqual("mus_session_test", normalized.source.label,
+                           cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
+                           what: "native service round-trips the accepted playable song label")
+
+S093 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1065
+        report.expectEqual(true, firstDocumentClosed,
+                           cppID: lifetimeID,
+                           what: "first document closes cleanly")
+
+S094 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1071
+    report.expectEqual(true, session.isClosed,
+                       cppID: lifetimeID,
+                       what: "first document marks isClosed without closing its project service")
+
+S095 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1079
+        report.expect(labels.contains("mus_session_test") &&
+                      labels.contains("mus_session_test2"),
+                      cppID: lifetimeID,
+                      message: "project song labels remain available after document close")
+
+S096 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1096
+        report.expectEqual("mus_session_test2", secondLabel,
+                           cppID: lifetimeID,
+                           what: "same project service opens a second document without reopening")
+
+S097 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1099
+        report.expectEqual(true, secondDocumentClosed,
+                           cppID: lifetimeID,
+                           what: "second document closes cleanly")
+
+S098 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1120
+        report.expectEqual(ProjectServiceError.serviceClosed, error,
+                           cppID: lifetimeID,
+                           what: "explicit project service close owns worker shutdown")
+
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1165
+    report.expect(session.bankSlots.count >= 4,
+                  cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                  message: "published bank has slot views")
+
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1168
+    report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
+                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                       what: "slot 0 is editable square 1")
+
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1171
+    report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                       what: "slot 3 is initially blank")
+
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1195
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "bank edit dirties bank")
+
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1198
+        report.expectEqual(scalarEditedSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "scalar edit changes the requested voice and preserves every other slot")
+
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1201
+        report.expect(result.lease.bankToken != oldToken,
+                      cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                      message: "applied bank edit mints a fresh lease")
+
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1204
+        report.expectEqual(oldToken, oldLease.bankToken,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "superseded lease retains its bank token and stays valid")
+
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1207
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank edit publishes bank, dirty, and history exactly once")
+
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1218
+        report.expectEqual(originalSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "undo restores the complete original bank view")
+
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1221
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank undo publishes bank, dirty, and history exactly once")
+
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1232
+        report.expectEqual(scalarEditedSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "redo restores the scalar edit without changing other slots")
+
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1235
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "bank redo publishes bank, dirty, and history exactly once")
+
+S111 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1269
+            report.expect(operationFailureMessage(error) != nil,
+                          cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                          message: "preview filesystem failure reaches the public service error type")
+
+S112 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1277
+    report.expectEqual(previewSlots, session.bankSlots,
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure preserves every visible bank slot")
+
+S113 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1280
+    report.expectEqual(previewDirty, session.bankDirty,
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure preserves visible dirty state")
+
+S114 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1283
+    report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
+                       cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                       what: "preview failure leaves source file bytes unchanged")
+
+S115 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1298
+        report.expect(materialized.materializationToken != nil,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                      message: "blank slot materialization issues a single-shot token")
+
+S116 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1301
+        report.expectEqual(materializedSlots, session.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                           what: "blank materialization publishes the requested voice and preserves other slots")
+
+S117 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1309
+        report.expectEqual(beforeMaterializationSlots, session.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+                           what: "undo restores the complete pre-materialization bank view")
+
+S118 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1317
+        report.expectEqual(materializedSlots, session.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                           what: "redo rematerializes the voice without changing other slots")
+
+S119 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1339
+        report.expectEqual(Int32(25), session.bankSlots[0].voice?.pan,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                           what: "second pan edit applied")
+
+S120 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1347
+        report.expectEqual(Int32(15), session.bankSlots[0].voice?.pan,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                           what: "undo reverts merged pan edits to origin in one step")
+
+S121 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1366
+        report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
+                      cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                      message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
+
+S122 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1388
+        report.expectEqual(ProjectServiceError.bankConflict, error,
+                           cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                           what: "stale expected voice triggers bankConflict")
+
+S123 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1395
+    report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                       what: "initial conflict leaves canUndo unchanged")
+
+S124 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1398
+    report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
+                       cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                       what: "initial conflict leaves canRedo unchanged")
+
+S125 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1411
+        report.expectEqual(ProjectServiceError.bankConflict, error,
+                           cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+                           what: "materializing occupied slot triggers bankConflict")
+
+S126 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1427
+        report.expectEqual(ProjectServiceError.bankConflict, error,
+                           cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                           what: "unknown token triggers bankConflict")
+
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1453
+        report.expectEqual(false, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "unified save marks the song clean")
+
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1456
+        report.expectEqual(false, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "unified save marks the bank clean")
+
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1459
+        report.expect(
+            bankPublications.count == 1
+                && bankPublications[0].domains == [.bank, .dirty, .history],
+            cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+            message: "unified bank save publishes bank, dirty, and history exactly once")
+
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1464
+        report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                      message: "unified save changes persisted MIDI bytes")
+
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1467
+        report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
+                      cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                      message: "unified save changes persisted bank bytes")
+
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1478
+        report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "fresh reopen reads the unified song edit from disk")
+
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1481
+        report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                           what: "fresh reopen reads the unified bank edits and preserved slots from disk")
+
+S134 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1525
+            report.expectEqual(Optional(Data(staleSnapshot.bytes)),
+                               bytes(at: session.document.source.midiPath),
+                               cppID: queuedSaveID,
+                               what: "queued save writes the captured stale MIDI snapshot")
+
+S135 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1529
+            report.expectEqual(newerIdentity, session.document.history.currentIdentity,
+                               cppID: queuedSaveID,
+                               what: "save completion preserves the newer document identity")
+
+S136 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1532
+            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                               what: "stale save completion cannot clean the newer edit")
+
+S137 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1534
+            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                               what: "queued native bank write publishes its clean receipt")
+
+S138 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1536
+            report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                               cppID: queuedSaveID,
+                               what: "queued bank save preserves the edited bank voice")
+
+S139 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1545
+            report.expectEqual(Optional(Data(newerSnapshot.bytes)),
+                               bytes(at: session.document.source.midiPath),
+                               cppID: queuedSaveID,
+                               what: "retry writes the newer MIDI snapshot")
+
+S140 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1549
+            report.expectEqual(false, session.document.isDirty, cppID: queuedSaveID,
+                               what: "newer-state retry marks the document clean")
+
+S141 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1553
+            report.expect(undidNewer && session.document.note(newerNote) == nil
+                && session.document.note(staleNote) != nil,
+                cppID: queuedSaveID,
+                message: "first undo removes only the newer note")
+
+S142 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1558
+            report.expect(undidStale && session.document.note(staleNote) == nil,
+                          cppID: queuedSaveID,
+                          message: "second undo removes the stale note")
+
+S143 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1561
+            report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                               what: "undoing past the retry save point is dirty")
+
+S144 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1563
+            report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                               what: "note undos leave the saved bank clean")
+
+S145 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1565
+            report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                               cppID: queuedSaveID,
+                               what: "note undos leave the saved bank edit applied")
+
+S146 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1568
+            report.expectEqual(savedBankBytes, bytes(at: bankPath), cppID: queuedSaveID,
+                               what: "note undos leave saved bank bytes intact")
+
+S147 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1586
+        report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit reaches the production bank view")
+
+S148 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1589
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit dirties the bank")
+
+S149 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1592
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                           what: "adjacent release edit does not dirty the document")
+
+S150 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1602
+        report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower release bound reaches the production bank view")
+
+S151 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1605
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower-bound bank edit dirties the bank")
+
+S152 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1608
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                           what: "lower-bound bank edit does not dirty the document")
+
+S153 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1617
+        report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper release bound reaches the production bank view")
+
+S154 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1620
+        report.expectEqual(true, session.bankDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper-bound bank edit dirties the bank")
+
+S155 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1623
+        report.expectEqual(documentWasDirty, session.document.isDirty,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                           what: "upper-bound bank edit does not dirty the document")
+
+S156 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1630
+        report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "opening another song reuses the unsaved shared-bank record")
+
+S157 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1633
+        report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "another song publishes the unsaved shared-bank edit")
+
+S158 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1636
+        report.expectEqual(true, switched.bankDirty,
+                           cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                           what: "another song preserves shared-bank dirty state")
+
+S159 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1665
+            report.expect(operationFailureMessage(error) != nil,
+                          cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                          message: "catalog outage reaches the native service error boundary")
+
+S160 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1673
+    report.expectEqual(retainedToken, session.bankLease.bankToken,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains the last valid bank lease")
+
+S161 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1676
+    report.expectEqual(retainedSlots, session.bankSlots,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains the last valid bank slots")
+
+S162 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1679
+    report.expectEqual(retainedDirty, session.bankDirty,
+                       cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                       what: "catalog outage retains bank dirty state")
+
+S163 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1706
+        report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                           cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                           what: "round-trip scalar edit preserves every other bank slot")
+
+S164 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1714
+        report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
+                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                      message: "successful bank save publishes a refreshed native bank")
+
+S165 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1717
+        report.expectEqual(false, roundtripSession.bankDirty,
+                           cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                           what: "successful bank save publishes a clean record")
+
+S166 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1720
+        report.expect(editedBytes != originalBytes,
+                      cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                      message: "successful bank save changes persisted bank bytes")
+
+S167 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1727
+        report.expectEqual(originalSlots, roundtripSession.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "undo after save restores the complete original bank")
+
+S168 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1733
+        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "saving the undo restores original voicegroup bytes")
+
+S169 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1740
+        report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "redo after saving the undo restores the edited bank and other slots")
+
+S170 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1746
+        report.expectEqual(editedBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "saving the redo reproduces edited voicegroup bytes")
+
+S171 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1756
+        report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                           cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                           what: "final undo/save restores original voicegroup bytes")
+
+S172 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1785
+            report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                          cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                          message: "failed bank save reports its unwritable source")
+
+S173 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1788
+            report.expectEqual(true, roundtripSession.bankDirty,
+                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                               what: "failed bank save retains the dirty bank record")
+
+S174 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1791
+            report.expectEqual(true, roundtripSession.document.isDirty,
+                               cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                               what: "failed ordered save retains the dirty document record")
+
+S175 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1819
+            report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
+                          cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+                          message: "unknown identity is reported as a hard native error")
+
+S176 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1862
+        report.expectEqual(
+            ProjectServiceError.operationFailed("A bank transition is already in progress."),
+            result.1,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            what: "session gate refuses a second transition while the first is pending")
+
+S177 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1867
+        report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "coordinator publishes only the applied transition")
+
+S178 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1870
+        report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
+                           cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                           what: "coordinator adopts the applied transition lease")
+
+S179 | releaseEditorBankHistorySemantics | src/checks/workspace/SessionChecks.swift:1933
+            report.expect(appliedThroughBankPipeline && undone
+                && session.bankSlots[0].voice?.release == original.release
+                && !session.document.isDirty,
+                cppID: cppID,
+                message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
+
+S180 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2044
+        report.expect(result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
+
+S181 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2075
+        report.expect(result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
+            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+            message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
+
+S182 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2093
+    report.expect(staleRedoRemoved && !staleRedoDocument.history.canRedo &&
+        staleRedoDocument.state.config.priority == 6,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+        message: "stale bank redo entry is removed without mutating document state")
+
+S183 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2108
+    report.expect(staleRemoved && staleUndoDocument.state.config.priority == 0,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+        message: "stale bank undo entry is removed so the next undo reaches document history")
+
+S184 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2120
+    report.expect(hardAction.calls == 2 && hardDocument.state.config.priority == 4 &&
+        hardDocument.history.canUndo,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+        message: "hard bank failure keeps the entry available and does not cross it")
+
+S185 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2132
+    report.expect(cancelling.state.config.priority == 0,
+        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+        message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
+
+No shared Swift fixture files carrying report.expect predicates are part of this
+counterpart: the SessionChecks.swift staging helpers (makeMidiFixture,
+stageTestProject, bytes/configLineBytes readers) assert nothing and are not
+inventoried. Predicates from related suites invoked by runProjectSessionSuite
+live in their own files and are likewise outside this inventory.

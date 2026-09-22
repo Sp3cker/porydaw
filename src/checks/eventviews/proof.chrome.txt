@@ -1,0 +1,1651 @@
+Assertion correspondence: eventviews/chrome.cpp
+
+Reference revision: 9f1bdd1b021196289b916074dd8eda12e80b7cc2
+Original: src/checks/eventviews/chrome.cpp
+Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70d5
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards and the filter-menu lambda-local predicates. NATIVE identifies predicates that observe the live Quick window, rendered items, the popup session/panel, delivered mouse/key/wheel input, active focus, or the controller effect of such a natively delivered stimulus; a presenter-level Swift check cannot establish these observations. GAP identifies fixture-open/conversion guards, lookup guards, static model mirrors, the fixed filter-category ledger count, and SongView state predicates with no Swift equivalent. A swiftcore-wide search (EventChecks, SharedPlayheadChecks, EditorGridCameraChecks, EditorDrawerChecks, SessionChecks, TimeChecks, MidiChecks) found no event-list controller, filter-menu, column-width, typography, scrollbar, or view-state Swift predicates; the Swift suite observes documents, grids, and drawers, never the event-list chrome. None of these labels authorizes deletion or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter eventviews --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+No Swift entry point executes these checks. Native ownership: runEventViewsChromeCheck in this file drives EventViewsChromeTest (visibilityAndTrackSelection, rowMirrorPlusEot, monoTypography, columnResizeDrag, drawerFocusKeepsNavigation, scrollbarWheelClamps, filterMatrix, viewStateRoundTrip, filterMenuSession, rowMenuActivationCloses, outsideRightCancelsAndSwallowsRelease). The rig fixture lives in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openRigFixture shapes Basic, Empty, EotCoincident, Long).
+
+Fixture, sequence and row constraints
+Data rows expand single sites into many cases: rowMirrorPlusEot_data emits 3 shapes (empty chunk, single event at EOT, multi-event chunk); filterMatrix_data emits 4 category rows (meta, meta and notes, none, all). The monoTypography column loop (columns 0, 2, 3, 4 over first and last rows) expands each font QCOMPARE site over 8 cells. The columnResizeDrag 4-step pointer drag, the scrollbarWheelClamps 600/1200-notch wheel loops, and the filterMenuSession/rowMenuActivationCloses multi-phase menu sessions expand their sites over repeated native deliveries; the row-menu retire sequence re-verifies dismissal across four context changes (row change, chunk switch, document edit, selection change).
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+#include "checks/eventviews/eventview_fixture.h"
+#include "checks/eventviews/tst_eventviews.h"
+#include "checks/quickpopupguard.h"
+#include <QCoreApplication>
+#include <QFontInfo>
+#include <QGuiApplication>
+#include <QList>
+#include <QQuickItem>
+#include <QQuickWindow>
+#include <QSignalSpy>
+#include <QVariant>
+#include <QWheelEvent>
+#include <QtTest>
+
+#include "ui/eventtabletypes.h"
+#include "ui/songview.h"
+#include "ui/songview/quick/quickmenumodel.h"
+#include "ui/songview/quick/quickpopupsession.h"
+#include "ui/songview/quick/timelineinputitem.h"
+#include "ui/typography.h"
+
+using checks::eventviews::EventWidgets;
+using checks::eventviews::FixtureShape;
+
+namespace {
+
+// One real wheel notch delivered through the Quick window at a scene point.
+void wheelAt(QQuickWindow &window, const QPointF &scenePos, int notches)
+{
+    QWheelEvent event(scenePos, window.mapToGlobal(scenePos.toPoint()), QPoint(),
+                      QPoint(0, notches * 120), Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase,
+                      false);
+    QCoreApplication::sendEvent(&window, &event);
+}
+
+// The row's rendered check mark — the only child carrying the tick stroke
+// metric. Its visibility must mirror the model's checked role.
+bool tickRenderedChecked(QQuickItem &row)
+{
+    for (QQuickItem *child : row.childItems()) {
+        if (child->property("stroke").isValid())
+            return child->isVisible();
+    }
+    return false;
+}
+
+SmfEvent controlChange(uint64_t tick, uint8_t controller, uint8_t value)
+{
+    SmfEvent event;
+    event.tick = tick;
+    event.status = 0xb0;
+    event.data0 = controller;
+    event.data1 = value;
+    return event;
+}
+
+} // namespace
+
+void EventViewsChromeTest::visibilityAndTrackSelection()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
+Disposition: GAP
+Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!opened.fixture->view().eventListVisible())
+
+A003 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:66
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A004 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:69
+Disposition: GAP
+Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Source context since previous assertion:
+;
+
+    opened.fixture->view().selectTrack(1);
+
+Original expression:
+QTRY_COMPARE(widgets.controller->chunk(),
+                 checks::eventviews::chunkForTrack(opened.fixture->document(), 1))
+
+A005 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:85
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+void EventViewsChromeTest::rowMirrorPlusEot_data()
+{
+    QTest::addColumn<int>("shape");
+    QTest::newRow("empty chunk") << int(FixtureShape::Empty);
+    QTest::newRow("single event at EOT") << int(FixtureShape::EotCoincident);
+    QTest::newRow("multi-event chunk") << int(FixtureShape::Basic);
+}
+
+void EventViewsChromeTest::rowMirrorPlusEot()
+{
+    QFETCH(int, shape);
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape(shape));
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A006 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:87
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A007 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:90
+Disposition: GAP
+Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Source context since previous assertion:
+;
+
+    const int chunk = widgets.controller->chunk();
+
+Original expression:
+QVERIFY(chunk >= 0)
+
+A008 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:94
+Disposition: GAP
+Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Source context since previous assertion:
+;
+    const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
+    const int projectedTempoRows =
+        chunk == 0 ? int(opened.fixture->document().tempoPoints().size()) : 0;
+
+Original expression:
+QCOMPARE(widgets.model->rowCount(), int(track.events.size()) + projectedTempoRows + 1)
+
+A009 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:95
+Disposition: GAP
+Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(
+        widgets.model->data(widgets.model->index(widgets.model->rowCount() - 1, 0), Qt::EditRole)
+            .toULongLong(),
+        track.endTick)
+
+A010 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:104
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+void EventViewsChromeTest::monoTypography()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A011 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:106
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A012 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:116
+Disposition: GAP
+Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Source context since previous assertion:
+;
+
+    const QFont expected = typography::tableMono(QGuiApplication::font());
+    const QFontInfo expectedInfo(expected);
+    const int rows[] = {0, widgets.model->rowCount() - 1};
+    const int columns[] = {0, 2, 3, 4};
+    for (const int row : rows) {
+        for (const int column : columns) {
+            const QModelIndex index = widgets.model->index(row, column);
+            const QFont cell = widgets.model->data(index, Qt::FontRole).value<QFont>();
+
+Original expression:
+QCOMPARE(QFontInfo(cell).family(), expectedInfo.family())
+
+A013 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:117
+Disposition: GAP
+Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(cell.letterSpacingType(), QFont::AbsoluteSpacing)
+
+A014 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:118
+Disposition: GAP
+Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(cell.letterSpacing(), -0.5)
+
+A015 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:124
+Disposition: NATIVE
+Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+        }
+    }
+
+    // The rendered cell editor carries the same numeric face while typing.
+    QQuickItem *editor = nullptr;
+
+Original expression:
+QVERIFY(checks::eventviews::openCellEditor(widgets, 0, eventlist::EventTableModel::ColTick,
+                                               QStringLiteral("eventListTickEditor"), &editor))
+
+A016 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:127
+Disposition: NATIVE
+Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    const QFont editorFont = editor->property("font").value<QFont>();
+
+Original expression:
+QCOMPARE(QFontInfo(editorFont).family(), expectedInfo.family())
+
+A017 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:128
+Disposition: NATIVE
+Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(editorFont.letterSpacingType(), QFont::AbsoluteSpacing)
+
+A018 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:129
+Disposition: NATIVE
+Mapping/reason: Observes the rendered in-cell editor surface; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(editorFont.letterSpacing(), -0.5)
+
+A019 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:138
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+    checks::eventviews::closeCellEditor(widgets);
+}
+
+// A real horizontal drag of the Type column's resize handle must widen the
+// persisted column through controller.resizeColumn.
+void EventViewsChromeTest::columnResizeDrag()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A020 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:140
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A021 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:143
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QQuickItem *const handle = checks::eventviews::visualItem(
+        *widgets.quickWindow, QStringLiteral("eventListColumnResizeHandle1"));
+
+Original expression:
+QVERIFY(handle)
+
+A022 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:145
+Disposition: GAP
+Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Source context since previous assertion:
+;
+    const QList<double> initial = widgets.controller->columnWidths();
+
+Original expression:
+QVERIFY(initial.size() >= 2)
+
+A023 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:160
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+    const QPointF center =
+        handle->mapToScene(QPointF(handle->width() / 2.0, handle->height() / 2.0));
+    const QPointF target = center + QPointF(40.0, 0.0);
+    QTest::mousePress(widgets.quickWindow, Qt::LeftButton, Qt::NoModifier, center.toPoint());
+    const int steps = 4;
+    for (int step = 1; step <= steps; ++step) {
+        const QPointF waypoint = center + (target - center) * (double(step) / steps);
+        QTest::mouseMove(widgets.quickWindow, waypoint.toPoint());
+        QCoreApplication::processEvents();
+    }
+    QTest::mouseRelease(widgets.quickWindow, Qt::LeftButton, Qt::NoModifier, target.toPoint());
+    QCoreApplication::processEvents();
+
+
+Original expression:
+QTRY_VERIFY(widgets.controller->columnWidths().value(1) > initial.value(1) + 20.0)
+
+A024 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:161
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(widgets.controller->columnWidths().size(), initial.size())
+
+A025 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:170
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+// The page's navigation shortcuts are gated on the event list input's active
+// focus: a sibling drawer surface that owns the keyboard keeps it, and the
+// event list current row stays put.
+void EventViewsChromeTest::drawerFocusKeepsNavigation()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A026 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:172
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A027 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:175
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    auto *drawer = widgets.quickWindow->findChild<songview::TimelineInputItem *>(
+        QStringLiteral("drawerBarInput"));
+
+Original expression:
+QVERIFY(drawer)
+
+A028 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:178
+Disposition: GAP
+Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Source context since previous assertion:
+;
+    widgets.controller->selectRow(0, Qt::NoModifier);
+    QCoreApplication::processEvents();
+
+Original expression:
+QCOMPARE(widgets.controller->currentRow(), 0)
+
+A029 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:180
+Disposition: NATIVE
+Mapping/reason: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Source context since previous assertion:
+;
+
+
+Original expression:
+QVERIFY(checks::eventviews::focusSurface(widgets, *drawer))
+
+A030 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:183
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+    QTest::keyClick(widgets.quickWindow, Qt::Key_Down);
+    QCoreApplication::processEvents();
+
+Original expression:
+QCOMPARE(widgets.controller->currentRow(), 0)
+
+A031 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:184
+Disposition: NATIVE
+Mapping/reason: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(drawer->hasActiveFocus())
+
+A032 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:187
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+    QTest::keyClick(widgets.quickWindow, Qt::Key_Up);
+    QCoreApplication::processEvents();
+
+Original expression:
+QCOMPARE(widgets.controller->currentRow(), 0)
+
+A033 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:188
+Disposition: NATIVE
+Mapping/reason: Observes natively delivered input (mouse, key, wheel, or focus change) through the Quick window; a presenter-level Swift check cannot reproduce this delivery.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(drawer->hasActiveFocus())
+
+A034 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:196
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+// Wheel notches past either end must clamp to the scrollbar range instead of
+// driving the content offset unbounded.
+void EventViewsChromeTest::scrollbarWheelClamps()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Long);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A035 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:198
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A036 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:201
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    auto *scrollbar =
+        widgets.quickWindow->findChild<QQuickItem *>(QStringLiteral("eventListVerticalScrollBar"));
+
+Original expression:
+QVERIFY(scrollbar)
+
+A037 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:203
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QQuickItem *const table = checks::eventviews::eventListTable(widgets);
+
+Original expression:
+QVERIFY(table)
+
+A038 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:204
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(scrollbar->property("maximum").toReal() > 0)
+
+A039 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:211
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    const qreal maximum = scrollbar->property("maximum").toReal();
+    const QPointF center =
+        scrollbar->mapToScene(QPointF(scrollbar->width() / 2.0, scrollbar->height() / 2.0));
+
+    for (int notch = 0; notch < 600; ++notch)
+        wheelAt(*widgets.quickWindow, center, -1);
+
+Original expression:
+QTRY_COMPARE(table->property("contentY").toReal(), maximum)
+
+A040 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:215
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    for (int notch = 0; notch < 1200; ++notch)
+        wheelAt(*widgets.quickWindow, center, 1);
+
+Original expression:
+QTRY_COMPARE(table->property("contentY").toReal(), 0.0)
+
+A041 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:244
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+void EventViewsChromeTest::filterMatrix_data()
+{
+    QTest::addColumn<QStringList>("categories");
+    QTest::addColumn<int>("expectedEvents");
+    // The Basic fixture deliberately authors three meta rows, four note rows,
+    // and four other channel rows. These are a fixed fixture ledger, not the
+    // EventTableModel filtering predicate under test.
+    QTest::newRow("meta") << QStringList{QStringLiteral("Meta")} << 3;
+    QTest::newRow("meta and notes")
+        << QStringList{QStringLiteral("Meta"), QStringLiteral("Notes")} << 7;
+    QTest::newRow("none") << QStringList{} << 0;
+    QTest::newRow("all") << QStringList{QStringLiteral("Notes"),
+                                        QStringLiteral("Control changes"),
+                                        QStringLiteral("Program changes"),
+                                        QStringLiteral("Pitch bends"),
+                                        QStringLiteral("Aftertouch"),
+                                        QStringLiteral("SysEx"),
+                                        QStringLiteral("Meta")}
+                         << 11;
+}
+
+void EventViewsChromeTest::filterMatrix()
+{
+    QFETCH(QStringList, categories);
+    QFETCH(int, expectedEvents);
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A042 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:246
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A043 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:268
+Disposition: GAP
+Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Source context since previous assertion:
+;
+
+    const struct {
+        const char *name;
+        int bit;
+    } categoriesByBit[] = {
+        {"Notes", eventlist::EventTableModel::FilterNotes},
+        {"Control changes", eventlist::EventTableModel::FilterCc},
+        {"Program changes", eventlist::EventTableModel::FilterProgram},
+        {"Pitch bends", eventlist::EventTableModel::FilterBend},
+        {"Aftertouch", eventlist::EventTableModel::FilterTouch},
+        {"SysEx", eventlist::EventTableModel::FilterSysEx},
+        {"Meta", eventlist::EventTableModel::FilterMeta},
+    };
+    int wantedMask = 0;
+    for (const auto &category : categoriesByBit) {
+        const bool wanted = categories.contains(QLatin1String(category.name));
+        if (wanted)
+            wantedMask |= category.bit;
+        if (bool(widgets.controller->filterMask() & category.bit) != wanted)
+            widgets.controller->filterToggled(category.bit);
+    }
+
+Original expression:
+QCOMPARE(widgets.controller->filterMask(), wantedMask)
+
+A044 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:269
+Disposition: GAP
+Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(widgets.model->rowCount(), expectedEvents + 1)
+
+A045 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:275
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+void EventViewsChromeTest::viewStateRoundTrip()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A046 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:277
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A047 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:280
+Disposition: GAP
+Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Source context since previous assertion:
+;
+
+    SongView::ViewState state = opened.fixture->view().viewState();
+
+Original expression:
+QVERIFY(state.eventList)
+
+A048 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:283
+Disposition: GAP
+Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Source context since previous assertion:
+;
+    state.eventList = false;
+    opened.fixture->view().applyViewState(state);
+
+Original expression:
+QVERIFY(!opened.fixture->view().eventListVisible())
+
+A049 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:286
+Disposition: GAP
+Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Source context since previous assertion:
+;
+
+    state = opened.fixture->view().viewState();
+
+Original expression:
+QVERIFY(!state.eventList)
+
+A050 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:289
+Disposition: GAP
+Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Source context since previous assertion:
+;
+    state.eventList = true;
+    opened.fixture->view().applyViewState(state);
+
+Original expression:
+QVERIFY(opened.fixture->view().eventListVisible())
+
+A051 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:299
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+// Real rendered filter-menu session: opened through the toolbar button, tick
+// rendering mirrors the checked role, a stayOpen toggle rebuilds the model
+// without ending the session (highlight restored by id), the host owns keys
+// while open, and Escape/outside presses cancel without activating.
+void EventViewsChromeTest::filterMenuSession()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A052 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:301
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A053 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:307
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QQuickWindow &window = *widgets.quickWindow;
+    EventListController &controller = *widgets.controller;
+
+    QQuickItem *filterButton =
+        checks::eventviews::visualItem(window, QStringLiteral("eventListFilter"));
+
+Original expression:
+QVERIFY(filterButton)
+
+A054 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:312
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    const QPointF buttonCenter = filterButton->mapToScene(
+        QPointF(filterButton->width() / 2.0, filterButton->height() / 2.0));
+
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, buttonCenter.toPoint());
+
+Original expression:
+QTRY_VERIFY(controller.menuOpen())
+
+A055 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:314
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
+
+Original expression:
+QVERIFY(panel)
+
+A056 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:316
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+    songview::QuickMenuModel *model = quick_popup::menuModel(*panel);
+
+Original expression:
+QVERIFY(model)
+
+A057 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:318
+Disposition: GAP
+Mapping/reason: Fixed fixture-ledger count with no Swift predicate.
+Source context since previous assertion:
+;
+    const int rows = model->rowCount();
+
+Original expression:
+QCOMPARE(rows, 7)
+
+A058 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:326
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+; // the fixture's fixed filter-category ledger
+
+    const auto rowChecked = [&model](int row) {
+        return model->data(model->index(row, 0), songview::QuickMenuModel::CheckedRole).toBool();
+    };
+    const auto ticksMirrorCheckedRole = [&panel, &rows, &rowChecked] {
+        for (int row = 0; row < rows; ++row) {
+            QQuickItem *delegate = quick_popup::menuRowItem(*panel, row);
+
+Original expression:
+QVERIFY(delegate)
+
+A059 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:327
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(tickRenderedChecked(*delegate), rowChecked(row))
+
+A060 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:336
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+        }
+    };
+    ticksMirrorCheckedRole(); // FilterAll: every row renders its check
+
+    // Menu-only type-ahead selects the actual Meta filter delegate; normal
+    // text input has no role while this menu session owns the keys.
+    const int metaRow = rows - 1;
+    QTest::keyClick(&window, Qt::Key_M);
+
+Original expression:
+QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow)
+
+A061 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:342
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    // Hover the Meta row, then click it: the stayOpen toggle flips the mask,
+    // rebuilds the model in place, and keeps session and highlight by id.
+    QTest::mouseMove(&window, quick_popup::menuRowSceneCenter(*panel, metaRow).toPoint());
+    QCoreApplication::processEvents();
+
+Original expression:
+QCOMPARE(panel->property("highlightedRow").toInt(), metaRow)
+
+A062 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:345
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier,
+                      quick_popup::menuRowSceneCenter(*panel, metaRow).toPoint());
+
+Original expression:
+QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterMeta))
+
+A063 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:346
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(controller.menuOpen())
+
+A064 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:348
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    panel = checks::eventviews::activeMenuPanel(widgets);
+
+Original expression:
+QVERIFY(panel)
+
+A065 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:349
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_COMPARE(panel->property("highlightedRow").toInt(), metaRow)
+
+A066 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:370
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    ticksMirrorCheckedRole(); // rebuilt: only Meta renders unchecked
+    // Park the cursor clear of the menu rows before keyboard navigation:
+    // rebuilt delegates re-fire hover under a stationary cursor, which can
+    // otherwise reclaim Meta after Down moves on. Rows run top-down, so a
+    // full row above the first (else below the last) is inert: leaving a
+    // row fires no host call, and nothing hoverable lives outside the rows.
+    const qreal rowHeight = panel->property("rowHeight").toReal();
+    const QPointF firstRow = quick_popup::menuRowSceneCenter(*panel, 0);
+    const QPointF lastRow = quick_popup::menuRowSceneCenter(*panel, rows - 1);
+    QPointF park = QPointF(firstRow.x(), firstRow.y() - rowHeight);
+    if (rowHeight <= 0 || park.y() < 0)
+        park = QPointF(lastRow.x(), lastRow.y() + rowHeight);
+    if (rowHeight > 0 && park.y() >= 0 && park.y() < window.height()) {
+        QTest::mouseMove(&window, park.toPoint());
+        QCoreApplication::processEvents();
+    }
+
+    // The host still owns keys while open: Down wraps onto the first row and
+    // Enter toggles it through the same live session.
+    QTest::keyClick(&window, Qt::Key_Down);
+
+Original expression:
+QCOMPARE(panel->property("highlightedRow").toInt(), 0)
+
+A067 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:372
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+    QTest::keyClick(&window, Qt::Key_Return);
+
+Original expression:
+QTRY_VERIFY(!bool(controller.filterMask() & eventlist::EventTableModel::FilterNotes))
+
+A068 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:373
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(controller.menuOpen())
+
+A069 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:378
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    // Escape cancels without activating anything.
+    const int maskBeforeCancel = controller.filterMask();
+    QTest::keyClick(&window, Qt::Key_Escape);
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A070 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:379
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
+
+A071 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:380
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(controller.filterMask(), maskBeforeCancel)
+
+A072 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:385
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+    // A real press and its paired release on the current table cell stay in
+    // the popup underlay. If either leaks, the event list starts an editor.
+    controller.selectRow(0, Qt::NoModifier);
+
+Original expression:
+QTRY_COMPARE(controller.currentRow(), 0)
+
+A073 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:386
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!controller.isEditing())
+
+A074 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:388
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, buttonCenter.toPoint());
+
+Original expression:
+QTRY_VERIFY(controller.menuOpen())
+
+A075 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:391
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+    const QPointF tablePoint =
+        checks::eventviews::cellSceneCenter(widgets, 0, eventlist::EventTableModel::ColData);
+
+Original expression:
+QVERIFY(!tablePoint.isNull())
+
+A076 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:393
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, tablePoint.toPoint());
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A077 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:394
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
+
+A078 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:395
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(controller.currentRow(), 0)
+
+A079 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:396
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!controller.isEditing())
+
+A080 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:397
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(controller.filterMask(), maskBeforeCancel)
+
+A081 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:405
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+// A right-click on a table row opens the row menu; activating the rendered
+// "Insert event" action closes the session first and then inserts one copy.
+void EventViewsChromeTest::rowMenuActivationCloses()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A082 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:407
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A083 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:414
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+    QQuickWindow &window = *widgets.quickWindow;
+    EventListController &controller = *widgets.controller;
+    const int rowsBefore = widgets.model->rowCount();
+    const int undoBefore = opened.fixture->document().undoStack()->index();
+
+    const int row = checks::eventviews::rowForTickAndType(*widgets.model, 60, eventlist::TypeCc);
+
+Original expression:
+QVERIFY(row >= 0)
+
+A084 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:417
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+    const QPointF cell =
+        checks::eventviews::cellSceneCenter(widgets, row, eventlist::EventTableModel::ColData);
+
+Original expression:
+QVERIFY(!cell.isNull())
+
+A085 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:421
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QTest::mousePress(&window, Qt::RightButton, Qt::NoModifier, cell.toPoint());
+    QTest::mouseRelease(&window, Qt::RightButton, Qt::NoModifier, cell.toPoint());
+    QCoreApplication::processEvents();
+
+Original expression:
+QTRY_VERIFY(controller.menuOpen())
+
+A086 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:422
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_COMPARE(controller.currentRow(), row)
+
+A087 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:424
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+; // the pressed row owns the menu
+    QQuickItem *panel = checks::eventviews::activeMenuPanel(widgets);
+
+Original expression:
+QVERIFY(panel)
+
+A088 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:427
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+
+    const QPointF insertCenter = quick_popup::menuRowSceneCenter(*panel, 0);
+
+Original expression:
+QVERIFY(!insertCenter.isNull())
+
+A089 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:429
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QTest::mouseMove(&window, insertCenter.toPoint());
+
+Original expression:
+QTRY_COMPARE(panel->property("highlightedRow").toInt(), 0)
+
+A090 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:431
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, insertCenter.toPoint());
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A091 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:432
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
+
+A092 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:433
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_COMPARE(widgets.model->rowCount(), rowsBefore + 1)
+
+A093 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:434
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(opened.fixture->document().undoStack()->index(), undoBefore + 1)
+
+A094 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:448
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+    // The owned row menu retires when its target context moves: a different
+    // current row, a chunk switch, a document edit, or a selection change.
+    const auto openRowMenu = [&] {
+        const QPointF point = checks::eventviews::cellSceneCenter(
+            widgets, controller.currentRow(), eventlist::EventTableModel::ColData);
+        if (point.isNull())
+            return false;
+        QTest::mouseClick(&window, Qt::RightButton, Qt::NoModifier, point.toPoint());
+        return QTest::qWaitFor([&controller] { return controller.menuOpen(); });
+    };
+
+    controller.selectRow(0, Qt::NoModifier);
+
+Original expression:
+QTRY_COMPARE(controller.currentRow(), 0)
+
+A095 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:449
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(openRowMenu())
+
+A096 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:451
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    controller.selectRow(1, Qt::NoModifier);
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A097 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:452
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
+
+A098 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:454
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+
+Original expression:
+QVERIFY(openRowMenu())
+
+A099 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:455
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(checks::eventviews::selectChunk(controller, 1))
+
+A100 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:456
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A101 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:457
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(checks::eventviews::selectChunk(controller, 0))
+
+A102 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:458
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_COMPARE(controller.chunk(), 0)
+
+A103 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:461
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+    controller.selectRow(0, Qt::NoModifier);
+
+Original expression:
+QTRY_COMPARE(controller.currentRow(), 0)
+
+A104 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:462
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(openRowMenu())
+
+A105 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:465
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    const int revisionBeforeInsert = opened.fixture->document().revision();
+    opened.fixture->document().insertRawEvent(0, controlChange(118, 7, 64));
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A106 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:466
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(opened.fixture->document().revision(), revisionBeforeInsert + 1)
+
+A107 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:472
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    // A stay-open filter menu is a different owned root: row changes while it
+    // is open must not dismiss it.
+    QQuickItem *const filterButton =
+        checks::eventviews::visualItem(window, QStringLiteral("eventListFilter"));
+
+Original expression:
+QVERIFY(filterButton)
+
+A108 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:476
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    const QPointF filterCenter = filterButton->mapToScene(
+        QPointF(filterButton->width() / 2.0, filterButton->height() / 2.0));
+    QTest::mouseClick(&window, Qt::LeftButton, Qt::NoModifier, filterCenter.toPoint());
+
+Original expression:
+QTRY_VERIFY(controller.menuOpen())
+
+A109 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:478
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+    controller.selectRow(2, Qt::NoModifier);
+
+Original expression:
+QTRY_COMPARE(controller.currentRow(), 2)
+
+A110 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:479
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(controller.menuOpen())
+
+A111 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:480
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(checks::eventviews::activeMenuPanel(widgets))
+
+A112 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:482
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QTest::keyClick(&window, Qt::Key_Escape);
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A113 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:492
+Disposition: GAP
+Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Source context since previous assertion:
+;
+}
+
+// An outside right press reports the dismissed menu's owner and the retarget
+// position to the shared session while the popup layer owns both the press
+// and its paired release. Event List has no independent retarget action, so
+// the existing row-menu state must not be re-entered by that release.
+void EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease()
+{
+    const auto opened = checks::eventviews::openRigFixture(FixtureShape::Basic);
+
+Original expression:
+QVERIFY2(opened, qPrintable(opened.error))
+
+A114 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:494
+Disposition: GAP
+Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Source context since previous assertion:
+;
+    const EventWidgets widgets = opened.fixture->openEventList();
+
+Original expression:
+QVERIFY(widgets)
+
+A115 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:500
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+    QQuickWindow &window = *widgets.quickWindow;
+    EventListController &controller = *widgets.controller;
+
+    const int sourceRow =
+        checks::eventviews::rowForTickAndType(*widgets.model, 60, eventlist::TypeCc);
+
+Original expression:
+QVERIFY(sourceRow >= 0)
+
+A116 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:503
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+    const QPointF source = checks::eventviews::cellSceneCenter(widgets, sourceRow,
+                                                               eventlist::EventTableModel::ColData);
+
+Original expression:
+QVERIFY(!source.isNull())
+
+A117 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:506
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    QTest::mouseClick(&window, Qt::RightButton, Qt::NoModifier, source.toPoint());
+
+Original expression:
+QTRY_VERIFY(controller.menuOpen())
+
+A118 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:507
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_COMPARE(controller.currentRow(), sourceRow)
+
+A119 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:509
+Disposition: GAP
+Mapping/reason: Test-spy plumbing guard; not a behavioral observation.
+Source context since previous assertion:
+;
+    QSignalSpy retargeted(widgets.popupSession, &songview::QuickPopupSession::outsideRightPressed);
+
+Original expression:
+QVERIFY(retargeted.isValid())
+
+A120 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:511
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QQuickItem *const panel = checks::eventviews::activeMenuPanel(widgets);
+
+Original expression:
+QVERIFY(panel)
+
+A121 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:513
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QObject *const menuOwner = panel->property("host").value<QObject *>();
+
+Original expression:
+QVERIFY2(menuOwner, "the open menu panel did not expose its owning host")
+
+A122 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:516
+Disposition: NATIVE
+Mapping/reason: Observes rendered items, the native object tree, or window properties; presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    QQuickItem *const frame =
+        checks::eventviews::visualItem(window, QStringLiteral("quickMenuFrame"));
+
+Original expression:
+QVERIFY(frame)
+
+A123 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:530
+Disposition: GAP
+Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Source context since previous assertion:
+;
+    QPointF target;
+    int targetRow = -1;
+    for (int row = 0; row < widgets.model->rowCount(); ++row) {
+        if (row == sourceRow)
+            continue;
+        const QPointF candidate =
+            checks::eventviews::cellSceneCenter(widgets, row, eventlist::EventTableModel::ColData);
+        if (!candidate.isNull() && !frame->contains(frame->mapFromScene(candidate))) {
+            target = candidate;
+            targetRow = row;
+            break;
+        }
+    }
+
+Original expression:
+QVERIFY(targetRow >= 0)
+
+A124 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:533
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    QTest::mousePress(&window, Qt::RightButton, Qt::NoModifier, target.toPoint());
+
+Original expression:
+QTRY_COMPARE(retargeted.count(), 1)
+
+A125 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:535
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+    const QList<QVariant> arguments = retargeted.takeFirst();
+
+Original expression:
+QVERIFY2(arguments.constFirst().value<QObject *>() == menuOwner,
+             "the dismissed right press reported a foreign owner")
+
+A126 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:537
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(arguments.at(1).toPointF(), QPointF(target.toPoint()))
+
+A127 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:538
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!controller.menuOpen())
+
+A128 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:539
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QTRY_VERIFY(!checks::eventviews::activeMenuPanel(widgets))
+
+A129 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:540
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(controller.currentRow(), sourceRow)
+
+A130 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:544
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+    QTest::mouseRelease(&window, Qt::RightButton, Qt::NoModifier, target.toPoint());
+    QCoreApplication::processEvents();
+
+Original expression:
+QVERIFY(!controller.menuOpen())
+
+A131 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:545
+Disposition: NATIVE
+Mapping/reason: Observes the live Quick popup session or panel state (open, highlight, owner, dismissal); presenter-level Swift cannot establish it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!checks::eventviews::activeMenuPanel(widgets))
+
+A132 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:546
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QCOMPARE(controller.currentRow(), sourceRow)
+
+A133 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:547
+Disposition: NATIVE
+Mapping/reason: Stimulus-coupled controller observation verifying a natively delivered gesture took effect; only the native delivery path establishes it.
+Source context since previous assertion:
+;
+
+Original expression:
+QVERIFY(!controller.isEditing())
+
+Remaining original source (closing sequence and helper bodies):
+;
+}
+
+int runEventViewsChromeCheck(const QStringList &qtArguments)
+{
+    EventViewsChromeTest test;
+    QStringList arguments{QStringLiteral("eventviews-chrome")};
+    arguments.append(qtArguments);
+    return QTest::qExec(&test, arguments);
+}
+
+
+Swift assertion predicates
+
+None - no Swift counterpart identified.

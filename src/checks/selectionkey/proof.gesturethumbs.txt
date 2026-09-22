@@ -1,0 +1,335 @@
+Assertion correspondence: selectionkey/gesturethumbs.cpp
+
+Reference revision: de3e5a6cb27d018c313c02b408981668bfa2172b
+Original: src/checks/selectionkey/gesturethumbs.cpp
+Original SHA-256: f3408709c98dce898821250c4c0ee87a28473c16d5871183f516ff79a458e3c0
+Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Swift SHA-256: 6d6d5461a57ced89902dae8964f17b8f992c5932c0117428ee96eec7e9a5a853
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below. Source context preserves setup,
+rows, loops, and guards between assertions verbatim. S identifiers identify
+exact Swift predicates in the counterpart, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+This file proves the scrollbar-thumb guard matrix: the live native MouseArea
+grab blocks the shared Delete, Escape releases the grab, held-button movement
+stays inert, and a physically released then newly pressed drag works before the
+same binding deletes again. The declared Swift counterpart exercises only the
+numeric-prompt transaction (drawerOriginalNumericPromptTransaction); it has no
+predicate for the thumb-drag guard contract below, so no site here is MATCHED
+or PARTIAL. Pure document/selection-state predicates are GAP (migration work a
+presenter-level Swift check could in principle establish); every observation
+requiring the native window, delivery, gesture, or rendering is NATIVE.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution ownership
+SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands runs on the fresh
+rig staged by stageWorld; entry point and lifecycle live in gesture.cpp. No
+Swift entry point executes this native drag guard. drawerOriginalNumericPrompt-
+Transaction is called by runProjectSessionSuite in
+src/checks/workspace/SessionChecks.swift; it builds a
+drawerAutomationAutomationFixture (CC10 pan rows 48=32, 96=64) and drives the
+production Swift AutomationPage prompt. That fixture struct, defined in
+src/checks/automation/AutomationPageChecks.swift, carries no report predicates
+of its own.
+
+Fixture, sequence and row constraints
+scrollbarThumbGuardsSharedCommands_data registers one row ("roll scrollbar":
+timelineRollScrollBar / timelineRollScrollThumb / timelineRollInput, Roll
+band, victim 0); every site below executes once per row. The destructive
+Delete runs last in the case. QTRY_VERIFY2 sites poll the live native gesture
+and scroll model rather than asserting once.
+
+Original assertion inventory and source sequence
+
+A001 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:33
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the live keymap binding query has no Swift counterpart. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  // Scrollbar-thumb guard matrix for the selection-keyboard-routing Qt Test.
+  // The roll vertical thumb is driven end to end: the live native MouseArea grab
+  // blocks the shared Delete, Escape releases the grab, held-button movement
+  // stays inert, and a physically released then newly pressed drag works
+  // before the same binding deletes again.
+
+  #include "checks/selectionkey/gesturecheck.h"
+
+  #include <QGuiApplication>
+  #include <QPoint>
+  #include <QPointF>
+  #include <QQuickItem>
+  #include <QStyleHints>
+  #include <QtMath>
+  #include <QtTest>
+
+  void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands_data()
+  {
+      QTest::addColumn<QString>("barName");
+      QTest::addColumn<QString>("thumbName");
+      QTest::addColumn<QString>("inputName");
+      QTest::addColumn<int>("band");
+      QTest::addColumn<int>("victimIndex");
+
+      QTest::newRow("roll scrollbar")
+          << QStringLiteral("timelineRollScrollBar") << QStringLiteral("timelineRollScrollThumb")
+          << QStringLiteral("timelineRollInput") << int(songview::TimelineBand::Roll) << 0;
+  }
+
+  void SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands()
+  {
+      const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
+Original expression:
+  QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
+
+A002 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:37
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the delivery-surface precondition requires the native Quick window
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      if (!stageWorld("scrollbar-gesture", EditorDrawerPage::Automations,
+                      kScrollbarAutomationSectionHeight))
+          return;
+Original expression:
+  QVERIFY2(!mQuickWindow.isNull(), "scrollbar-gesture delivery surface is unavailable")
+
+A003 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:48
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; live Quick plus native focus acquisition requires the native
+window and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+
+      QFETCH(QString, barName);
+      QFETCH(QString, thumbName);
+      QFETCH(QString, inputName);
+      QFETCH(int, band);
+      QFETCH(int, victimIndex);
+      const auto scrollValue = [&]() -> qreal { return view().camera().scrollY(); };
+
+      songview::TimelineInputItem *const bandInput =
+          selectionkey::rigInput(*mWorld, inputName.toUtf8().constData());
+Original expression:
+  QVERIFY2(focusPointerSurface(bandInput, songview::TimelineBand(band)),
+               "owning timeline band did not have live Quick and native focus")
+
+A004 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:59
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; thumb visibility and draggable geometry observe the native
+rendered window and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      QPointer<QQuickItem> root;
+      QPointer<QQuickItem> bar;
+      QPointer<QQuickItem> thumb;
+      const auto resolveControls = [&] {
+          root = mWorld->rig->quickRoot();
+          bar = root ? root->findChild<QQuickItem *>(barName) : nullptr;
+          thumb = root ? root->findChild<QQuickItem *>(thumbName) : nullptr;
+          return bar && thumb;
+      };
+Original expression:
+  QVERIFY2(resolveControls() && bar->isVisible() && thumb->isVisible() &&
+                   !thumb->boundingRect().isEmpty() && bar->property("thumbTravel").toReal() > 0.0,
+               "registered scrollbar thumb was not draggable in the shown window")
+
+A005 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:76
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the live-gesture observation requires native mouse delivery and
+cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+
+      const NoteId victim = mWorld->notes[victimIndex];
+      view().selectionModel().setNoteSelection({victim});
+      const QByteArray beforeDrag = document().smf().write();
+      const uint64_t revisionBefore = document().revision();
+      const int undoDepthBefore = document().undoStack()->count();
+      const qreal scrollBefore = scrollValue();
+      const QPointF pressPosition = thumb->mapToScene(thumb->boundingRect().center());
+      const qreal activation = QGuiApplication::styleHints()->startDragDistance() + 1.0;
+      const QPoint activationPosition = (pressPosition + QPointF(1.0, activation)).toPoint();
+      const QPoint dragPosition = activationPosition + QPoint(0, 1);
+      mouseMove(pressPosition.toPoint());
+      mousePress(Qt::LeftButton, pressPosition.toPoint());
+      mouseMove(activationPosition);
+Original expression:
+  QTRY_VERIFY2(view().userGestureActive(), "thumb drag did not become a live gesture")
+
+A006 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:81
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; drag-to-scroll-model coupling observes the native MouseArea drag
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      // The smoothed native MouseArea drag establishes its threshold baseline
+      // on this move. A distinct move after activation is the first one that
+      // must displace the proxy and request a model value.
+      mouseMove(dragPosition);
+Original expression:
+  QTRY_VERIFY2(scrollValue() > scrollBefore, "thumb drag did not move its owning scroll model")
+
+A007 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:83
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the document/selection-equality conjuncts below are pure state a
+presenter-level Swift check could in principle assert, but none does. The live-
+gesture blocking condition itself remains a native obligation. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
+Original expression:
+  QVERIFY2(document().smf().write() == beforeDrag && noteSelectionIs({victim}) &&
+                   document().revision() == revisionBefore &&
+                   document().undoStack()->count() == undoDepthBefore,
+               "the registered live gesture did not block the shared Delete")
+
+A008 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:88
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; Escape releasing the native mouse grab requires native delivery
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      selectionkey::deliverKey(window(), Qt::Key_Escape);
+Original expression:
+  QVERIFY2(!view().userGestureActive(),
+               "Escape did not cancel the registered thumb drag by releasing its "
+               "native mouse grab")
+
+A009 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:94
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; held-button movement staying inert observes the native post-cancel
+grab state and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      const qreal scrollAfterCancel = scrollValue();
+      const QPoint heldMove = dragPosition + QPoint(0, qCeil(activation) + 4);
+      mouseMove(heldMove);
+Original expression:
+  QVERIFY2(scrollValue() == scrollAfterCancel,
+               "movement with the button held after Escape changed the scroll model")
+
+A010 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:97
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; physical release after cancellation observes native input state
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      mouseRelease(Qt::LeftButton, heldMove);
+Original expression:
+  QVERIFY2(!view().userGestureActive() && scrollValue() == scrollAfterCancel,
+               "physical release after cancellation changed the scroll model")
+
+A011 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:100
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the fresh-drag control precondition observes the native rendered
+window and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(resolveControls() && bar->isVisible() && thumb->isVisible() &&
+                   !thumb->boundingRect().isEmpty(),
+               "registered scrollbar controls disappeared before the fresh drag")
+
+A012 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:113
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; starting a new thumb drag after physical release requires native
+delivery and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      const qreal maximum = bar->property("maximum").toReal();
+      const int restartDirection = scrollAfterCancel < maximum ? 1 : -1;
+      const QPointF restartPress = thumb->mapToScene(thumb->boundingRect().center());
+      const QPoint restartActivation =
+          (restartPress + QPointF(1.0, restartDirection * activation)).toPoint();
+      const QPoint restartDrag = restartActivation + QPoint(0, restartDirection);
+      mouseMove(restartPress.toPoint());
+      mousePress(Qt::LeftButton, restartPress.toPoint());
+      mouseMove(restartActivation);
+      mouseMove(restartDrag);
+Original expression:
+  QTRY_VERIFY2(view().userGestureActive() && scrollValue() != scrollAfterCancel,
+                   "a fresh press after physical release did not start a new thumb drag")
+
+A013 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:116
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; ending the fresh drag on physical release observes native input
+state and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      mouseRelease(Qt::LeftButton, restartDrag);
+Original expression:
+  QVERIFY2(!view().userGestureActive() && scrollValue() != scrollAfterCancel,
+               "the fresh thumb drag did not end on physical release")
+
+A014 | SelectionKeyGestureTest::scrollbarThumbGuardsSharedCommands | src/checks/selectionkey/gesturethumbs.cpp:119
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the note-removal and document-change conjuncts below are pure
+state a presenter-level Swift check could in principle assert, but none does.
+Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
+Original expression:
+  QVERIFY2(!selectionkey::noteExists(document(), victim) &&
+                   document().smf().write() != beforeDrag,
+               "the shared Delete did not resume after the thumb drag ended")
+
+Remaining original source (closing sequence and helper bodies):
+               "the shared Delete did not resume after the thumb drag ended");
+  }
+Swift assertion predicates
+
+S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:19
+  report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
+
+S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:29
+  report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
+                    message: "the original empty-tick numeric prompt opens")
+
+S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:32
+  report.expectEqual("12", page.promptDraft, cppID: id,
+                         what: "the production prompt retains the supplied numeric draft")
+
+S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:34
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                         what: "draft editing does not mutate the song")
+
+S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:36
+  report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
+                         what: "draft editing preserves note selection")
+
+S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:39
+  report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
+
+S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:40
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                         what: "cancellation leaves the original document unchanged")
+
+S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:42
+  report.expect(fixture.document.state == state, cppID: id,
+                    message: "draft and cancellation preserve the full song contents")

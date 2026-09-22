@@ -1,0 +1,1535 @@
+Assertion correspondence: swiftbandkeys/tst_swiftbandkeys.cpp
+
+Reference revision: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced
+Original: src/checks/swiftbandkeys/tst_swiftbandkeys.cpp
+Original SHA-256: bfbba727f28fc072550ac3a5167cf34254ab38903791778cabcd536815882129
+Swift counterpart: src/checks/swiftbandkeys/SwiftBandKeysCheck.swift
+Swift SHA-256: ad3f4d0645723dce5efbca59597bec2a42bec7922b800907ea7a8d59ced4a77c
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards and helper
+predicates. Source context preserves setup, rows, loops, and guards between
+assertions verbatim. S identifiers identify Swift-side checks, listed after the
+inventory. MATCHED means a corresponding Swift check was identified and would
+execute through the named Swift entry point; PARTIAL means a related Swift
+check exists but leaves the stated condition unproved; NATIVE identifies a
+retained native-window/rendering or native harness obligation a
+presenter-level Swift check cannot establish; GAP means no equivalent Swift
+assertion is established (unsure PARTIAL vs GAP resolves to GAP; bookkeeping
+must not overclaim). Tallies: 110 sites (GAP 56, NATIVE 54). None of these labels authorizes
+deletion or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter swiftbandkeys --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+SwiftBandKeysTest methods own a BandKeysRig: a real window session opened
+through the selectionkey harness, with the production SwiftRollBand plus a
+scratch SwiftGridSessionFeed/SwiftGridKeyRouter/SwiftRollBand pair bound to a
+Swift harness surface. Swift entry points bandkeys_surface_create_full and
+bandkeys_surface_destroy own the SgcKeySurface registry; bandkeys_arrival_count,
+bandkeys_last_command, bandkeys_last_verdict, bandkeys_last_handled,
+bandkeys_gesture_active, bandkeys_cancel_count, bandkeys_cancel_at,
+bandkeys_pointer_count, bandkeys_last_pointer_*,
+bandkeys_wheel_count, bandkeys_last_wheel_*, and bandkeys_leave_count read
+recorded facts; sgk_deliver delivers key facts to the surface. No Swift check
+function executes assertions: Swift is the surface under test, and the C++
+sites below are the only predicates.
+
+Fixture, sequence and row constraints
+The cancel-reason loop expands four TimelineInputCancelReason values
+(FocusLost, PointerUngrabbed, Hidden, WindowDeactivated) into distinct Swift
+log rows asserted by bandkeys_cancel_count/at. The eligibility leg runs the
+same Delete key over a genuinely empty selection and then a populated one,
+feeding the host's live editCommandAvailable answer each time. Gesture legs
+interleave production-band presses (band and host must agree) with scratch-pair
+verdict probes (consume on auto-repeat Delete, execute on surviving pencil).
+Pointer/wheel legs forward fixed sequences: hover decline, press, owned move,
+wheel, leave, release, then gutter-sentinel and double-click gestures, with
+per-sample pointer/wheel/leave counts. The fallback leg clears the Swift
+delivery and proves the band returns to host-policy execution with zero
+arrivals.
+
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:216
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  #include "checks/selectionkey/session.h"
+  #include "checks/swiftbandkeys/keys_check.h"
+  #include "core/songdocument.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/swiftgrid/key_feed.h"
+  #include "ui/songview/quick/swiftgrid/session_feed.h"
+  #include "ui/songview/quick/swiftgrid/swift_roll_band.h"
+  #include "ui/songview/quick/timelineinput.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/workspaceui.h"
+
+  #include <QCoreApplication>
+  #include <QKeyEvent>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QtTest/QTest>
+
+  #include <cmath>
+  #include <memory>
+
+  namespace {
+
+  constexpr int32_t kVerdictDecline = 0;
+  constexpr int32_t kVerdictConsume = 1;
+  constexpr int32_t kVerdictExecute = 2;
+
+  SgkKeyFacts keyFacts(SongView::EditCommand command, bool autoRepeat, bool available)
+  {
+      SgkKeyFacts facts{};
+      facts.command = static_cast<int32_t>(command);
+      facts.modifiers = static_cast<int32_t>(Qt::NoModifier);
+      facts.origin = SGK_ORIGIN_TIMELINE;
+      facts.autoRepeat = autoRepeat ? 1 : 0;
+      facts.commandAvailable = available ? 1 : 0;
+      return facts;
+  }
+
+  // One flag-on workspace window with a private scratch pair for Swift-side
+  // observation: a SwiftGridKeyRouter + SwiftRollBand on the rig's view, never
+  // attached to input items (nothing routes to it), with a fully-bound harness
+  // surface on its target. The rig drives that band's key path and pointer
+  // forwarding directly, exactly as the roll input item does for the production
+  // band. The production band's sgb_ and sgk_ slots both belong to the mounted
+  // grid once editing binds, so the harness never claims the production target:
+  // production ownership is proven by the key-ownership row below, and every
+  // row that needs Swift-side arrivals drives the scratch pair.
+  //
+  // The scratch surface is destroyed before the scratch feed unregisters;
+  // document edits roll back through the real undo stack so the window close
+  // runs its genuine no-prompt branch.
+  class BandKeysRig
+  {
+    public:
+      BandKeysRig(const QString &projectRoot, const QString &song, QString &error)
+      {
+          if (!selectionkey::openWindowSession(m_session, projectRoot, error))
+              return;
+          m_tab = selectionkey::openSongTab(m_session, song, false, error);
+          if (!m_tab)
+              return;
+          m_view = &m_tab->view();
+          m_document = &m_tab->document();
+          m_quickView = m_view->quickView();
+          if (!m_quickView) {
+              error = QStringLiteral("the song view has no Quick canvas");
+              return;
+          }
+          m_quickWin = m_quickView->quickWindow();
+          m_band = m_quickView->swiftRollBand();
+          if (!m_band || !m_quickWin) {
+              error = QStringLiteral("the Swift roll band is not registered");
+              return;
+          }
+          m_targetId = m_band->targetId();
+          m_scratchFeed = std::make_unique<SwiftGridSessionFeed>(*m_view);
+          m_scratchRouter = std::make_unique<songview::SwiftGridKeyRouter>();
+          m_scratchBand = std::make_unique<songview::SwiftRollBand>(*m_view, *m_scratchRouter);
+          m_scratchTargetId = m_scratchRouter->targetId();
+          if (bandkeys_surface_create_full(m_scratchTargetId, m_scratchFeed->sessionId()) != 1) {
+              error = QStringLiteral("the scratch Swift surface did not bind");
+              return;
+          }
+          m_scratchBound = true;
+          // The first authoritative push lands after the surface binds.
+          m_scratchFeed->pushSnapshot();
+          m_ok = true;
+      }
+
+      ~BandKeysRig()
+      {
+          // The scratch surface clears its sgb_/sgk_ slots before the scratch
+          // pair unregisters its endpoints (member destruction below).
+          if (m_scratchBound)
+              bandkeys_surface_destroy(m_scratchTargetId);
+          if (m_tab) {
+              QString error;
+              selectionkey::undoTabToClean(*m_session.workspace, *m_document,
+                                           QStringLiteral("swiftbandkeys rollback"), &error);
+          }
+      }
+
+      BandKeysRig(const BandKeysRig &) = delete;
+      BandKeysRig &operator=(const BandKeysRig &) = delete;
+
+      bool ok() const { return m_ok; }
+      SongView &view() const { return *m_view; }
+      SongDocument &document() const { return *m_document; }
+      songview::TimelineQuickView &quickView() const { return *m_quickView; }
+      QQuickWindow &quickWin() const { return *m_quickWin; }
+      songview::SwiftRollBand &band() const { return *m_band; }
+      uint64_t targetId() const { return m_targetId; }
+      SwiftGridSessionFeed &scratchFeed() const { return *m_scratchFeed; }
+      songview::SwiftRollBand &scratchBand() const { return *m_scratchBand; }
+      uint64_t scratchTargetId() const { return m_scratchTargetId; }
+      bool focusRoll()
+      {
+          if (!m_quickView->focusBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
+              return false;
+          selectionkey::settle();
+          return m_quickView->focusedBand() == songview::TimelineBand::Roll;
+      }
+
+      void sendKey(int key, bool autoRepeat = false)
+      {
+          QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier, QString{}, autoRepeat);
+          QCoreApplication::sendEvent(m_quickWin, &press);
+          QKeyEvent release(QEvent::KeyRelease, key, Qt::NoModifier, QString{}, autoRepeat);
+          QCoreApplication::sendEvent(m_quickWin, &release);
+          selectionkey::settle();
+      }
+
+      // The scratch band's registry-matched key path, driven exactly as the roll
+      // input item drives the production band: keymap::Registry lookup, host
+      // eligibility facts, one synchronous sgk_ delivery.
+      bool scratchKeyPress(int key, bool autoRepeat = false) const
+      {
+          return m_scratchBand->keyPress(
+              songview::TimelineKeyInput{key, Qt::NoModifier, QString{}, autoRepeat});
+      }
+
+      // The second tier of the real key path: the roll input item consults the
+      // shared song policy for a key its interaction declined
+      // (TimelineInputItem::keyPressEvent; the policy TimelineQuickView installs
+      // routes to SongView::handleEditKey with the Timeline origin).
+      bool hostKeyPolicy(int key, bool autoRepeat = false) const
+      {
+          return m_view->handleEditKey(
+              songview::TimelineKeyInput{key, Qt::NoModifier, QString{}, autoRepeat},
+              SongView::EditKeyOrigin::Timeline);
+      }
+
+    private:
+      selectionkey::WindowSession m_session;
+      SongTab *m_tab = nullptr;
+      SongView *m_view = nullptr;
+      SongDocument *m_document = nullptr;
+      songview::TimelineQuickView *m_quickView = nullptr;
+      QQuickWindow *m_quickWin = nullptr;
+      songview::SwiftRollBand *m_band = nullptr;
+      uint64_t m_targetId = 0;
+      // The scratch pair is destroyed (in reverse declaration order) after the
+      // harness surface above unregisters: the scratch band's endpoint
+      // unregisters before the router's, and the feed's session unregisters
+      // last.
+      std::unique_ptr<SwiftGridSessionFeed> m_scratchFeed;
+      std::unique_ptr<songview::SwiftGridKeyRouter> m_scratchRouter;
+      std::unique_ptr<songview::SwiftRollBand> m_scratchBand;
+      uint64_t m_scratchTargetId = 0;
+      bool m_scratchBound = false;
+      bool m_ok = false;
+  };
+  songview::TimelinePointerInput pointerInput(const QPointF &scenePos, const QPoint &globalPos,
+                                              Qt::MouseButton button, Qt::MouseButtons buttons)
+  {
+      songview::TimelinePointerInput input{};
+      input.position = scenePos;
+      input.globalPosition = QPointF(globalPos);
+      input.button = button;
+      input.buttons = buttons;
+      input.modifiers = Qt::NoModifier;
+      input.surface = songview::TimelineInputSurface::Plot;
+      input.host = nullptr;
+      return input;
+  }
+
+  } // namespace
+
+  class SwiftBandKeysTest : public QObject
+  {
+      Q_OBJECT
+
+    public:
+      SwiftBandKeysTest(QString projectRoot, QString songA)
+          : m_projectRoot(std::move(projectRoot))
+          , m_songA(std::move(songA))
+      {}
+    private slots:
+      void initTestCase()
+      {
+          qputenv("PORYDAW_AUDIO_BACKEND", "null");
+          qputenv("PORYDAW_SWIFT_ROLL", "1");
+      }
+
+      void cleanupTestCase() { qunsetenv("PORYDAW_SWIFT_ROLL"); }
+
+      // Registry-matched command ids arrive at the Swift band: Delete reaches
+      // Swift as the Delete ordinal, not as a QKeyEvent. The scratch band's key
+      // path is the whole delivery contract under test (keymap::Registry lookup
+      // then one sgk_ delivery); the production target's slot answers through
+      // the mounted grid, so its arrivals belong to the ownership row below.
+      void testCommandIdArrivalThroughBandKeyPath()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A002 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:226
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.scratchTargetId();
+          // Genuinely empty selection across both domains, pushed before the
+          // key: the decline verdict below mirrors the host's live unavailable
+          // answer, not fixture state.
+          rig.view().selectionModel().clearNoteSelection();
+          rig.view().selectionModel().clearTimeSelection();
+          rig.scratchFeed().pushSnapshot();
+          selectionkey::settle();
+
+
+Original expression:
+  QVERIFY(!rig.scratchKeyPress(Qt::Key_Delete))
+
+A003 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:228
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QCOMPARE(bandkeys_arrival_count(target), 1)
+
+A004 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:229
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_command(target),
+                   static_cast<int32_t>(SongView::EditCommand::Delete))
+
+A005 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:231
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(target), kVerdictDecline)
+
+A006 | SwiftBandKeysTest::testCommandIdArrivalThroughBandKeyPath | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:232
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(target), 0)
+
+A007 | SwiftBandKeysTest::testProductionKeyOwnership | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:245
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // The production band's key slot belongs to the mounted grid, not to the
+      // harness: every SwiftRollBand keyPress lands on the grid's recipient and
+      // is answered through the same shared eligibility the harness surface
+      // uses. A repeat of an available pencil toggle is consumed (handled), the
+      // first press defers — with nothing bound both deliveries would return
+      // false.
+      void testProductionKeyOwnership()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A008 | SwiftBandKeysTest::testProductionKeyOwnership | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:249
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.targetId();
+
+          const SgkKeyFacts repeat = keyFacts(SongView::EditCommand::PencilMode, true, true);
+
+Original expression:
+  QVERIFY(sgk_deliver(target, &repeat))
+
+A009 | SwiftBandKeysTest::testProductionKeyOwnership | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:252
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+          const SgkKeyFacts first = keyFacts(SongView::EditCommand::PencilMode, false, true);
+
+Original expression:
+  QVERIFY(!sgk_deliver(target, &first))
+
+A010 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:263
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // Eligibility flips with the sgs_ selection state while the key stays
+      // deferred: decline without a selection, execute with one, and the
+      // deferred execute really deletes through the shared song policy the roll
+      // input item consults for a declined key.
+      void testEligibilityGatingWithAndWithoutSelection()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A011 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:268
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.scratchTargetId();
+
+          const std::vector<DocNote> notes =
+              rig.document().notesForTrack(rig.view().selectionModel().primaryTrack());
+
+Original expression:
+  QVERIFY(!notes.empty())
+
+A012 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:278
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          // Swift mirrors production: it never judges selection itself, so each
+          // leg feeds the host's live editCommandAvailable answer (exactly what
+          // the band computes on the real key path) over a genuinely empty vs.
+          // populated selection. Both selection domains clear: Delete's range
+          // operation would otherwise target a live time selection.
+          rig.view().selectionModel().clearNoteSelection();
+          rig.view().selectionModel().clearTimeSelection();
+          rig.scratchFeed().pushSnapshot();
+          const bool availableEmpty = rig.view().editCommandAvailable(SongView::EditCommand::Delete);
+
+Original expression:
+  QVERIFY(!availableEmpty)
+
+A013 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:281
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          const SgkKeyFacts emptyFacts =
+              keyFacts(SongView::EditCommand::Delete, false, availableEmpty);
+
+Original expression:
+  QVERIFY(!sgk_deliver(target, &emptyFacts))
+
+A014 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:282
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(target), kVerdictDecline)
+
+A015 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:283
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(target), 0)
+
+A016 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:288
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          rig.view().selectionModel().setNoteSelection({notes.front().noteId});
+          rig.scratchFeed().pushSnapshot();
+          const bool availableFull = rig.view().editCommandAvailable(SongView::EditCommand::Delete);
+
+Original expression:
+  QVERIFY(availableFull)
+
+A017 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:290
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          const SgkKeyFacts fullFacts = keyFacts(SongView::EditCommand::Delete, false, availableFull);
+
+Original expression:
+  QVERIFY(!sgk_deliver(target, &fullFacts))
+
+A018 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:291
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(target), kVerdictExecute)
+
+A019 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:292
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(target), 0)
+
+A020 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:296
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          // The deferred execute: the band declines the key and the fallback
+          // tier runs it, exactly the two tiers TimelineInputItem drives.
+
+Original expression:
+  QVERIFY(rig.focusRoll())
+
+A021 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:298
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const qsizetype before = static_cast<qsizetype>(rig.document().notesForTrack(0).size());
+
+Original expression:
+  QVERIFY(!rig.scratchKeyPress(Qt::Key_Delete))
+
+A022 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:299
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.hostKeyPolicy(Qt::Key_Delete))
+
+A023 | SwiftBandKeysTest::testEligibilityGatingWithAndWithoutSelection | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:300
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<qsizetype>(rig.document().notesForTrack(0).size()), before - 1)
+
+A024 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:312
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // A live Swift gesture blocks non-surviving keys at the band (consumed,
+      // never executed) while surviving policy still defers. The host honors
+      // the production surface's gesture through the real band; verdicts under
+      // a live gesture are also proven directly on the scratch pair, where the
+      // harness surface sees every delivery and its answer.
+      void testGestureActiveBlocking()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A025 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:314
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t scratch = rig.scratchTargetId();
+
+Original expression:
+  QVERIFY(rig.focusRoll())
+
+A026 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:318
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          auto *const rollInput = rig.quickWin().findChild<songview::TimelineInputItem *>(
+              QStringLiteral("timelineRollInput"));
+
+Original expression:
+  QVERIFY(rollInput != nullptr)
+
+A027 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:330
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const QPointF scenePos =
+              rollInput->mapToScene(QPointF(rollInput->width() / 2, rollInput->height() / 2));
+          const QPoint globalPos = rig.quickWin().mapToGlobal(scenePos.toPoint());
+          const songview::TimelinePointerInput press =
+              pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton);
+          const songview::TimelinePointerInput release =
+              pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::NoButton);
+
+          // Host honors gating on the production path: a real press opens the
+          // production gesture (band and host agree), a real Delete is
+          // swallowed mid-gesture, release closes it.
+
+Original expression:
+  QVERIFY(rig.band().pointerPress(press))
+
+A028 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:331
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.band().gestureActive())
+
+A029 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:332
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.quickView().gestureActive())
+
+A030 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:335
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const qsizetype before = static_cast<qsizetype>(rig.document().notesForTrack(0).size());
+          rig.sendKey(Qt::Key_Delete);
+
+Original expression:
+  QCOMPARE(static_cast<qsizetype>(rig.document().notesForTrack(0).size()), before)
+
+A031 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:336
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.band().pointerRelease(release))
+
+A032 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:337
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!rig.band().gestureActive())
+
+A033 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:338
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!rig.quickView().gestureActive())
+
+A034 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:342
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          // Verdicts under a live gesture on the scratch pair: the scratch
+          // surface answers sgk_ deliveries with its own live gesture state.
+
+Original expression:
+  QVERIFY(rig.scratchBand().pointerPress(press))
+
+A035 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:343
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.scratchBand().gestureActive())
+
+A036 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:344
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_gesture_active(scratch), 1)
+
+A037 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:347
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+          const SgkKeyFacts autoRepeatDelete = keyFacts(SongView::EditCommand::Delete, true, true);
+
+Original expression:
+  QVERIFY(sgk_deliver(scratch, &autoRepeatDelete))
+
+A038 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:348
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(scratch), kVerdictConsume)
+
+A039 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:349
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(scratch), 1)
+
+A040 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:352
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+          const SgkKeyFacts pencil = keyFacts(SongView::EditCommand::PencilMode, false, true);
+
+Original expression:
+  QVERIFY(!sgk_deliver(scratch, &pencil))
+
+A041 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:353
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(scratch), kVerdictExecute)
+
+A042 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:354
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(scratch), 0)
+
+A043 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:356
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(rig.scratchBand().pointerRelease(release))
+
+A044 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:357
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!rig.scratchBand().gestureActive())
+
+A045 | SwiftBandKeysTest::testGestureActiveBlocking | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:358
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_gesture_active(scratch), 0)
+
+A046 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:367
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // AutoRepeat consumption is a band-side verdict: the same eligible
+      // command consumes on repeat and defers on first press.
+      void testAutoRepeatConsumption()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A047 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:371
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.scratchTargetId();
+
+          const SgkKeyFacts repeat = keyFacts(SongView::EditCommand::PencilMode, true, true);
+
+Original expression:
+  QVERIFY(sgk_deliver(target, &repeat))
+
+A048 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:372
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(target), kVerdictConsume)
+
+A049 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:373
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(target), 1)
+
+A050 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:376
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+          const SgkKeyFacts first = keyFacts(SongView::EditCommand::PencilMode, false, true);
+
+Original expression:
+  QVERIFY(!sgk_deliver(target, &first))
+
+A051 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:377
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_verdict(target), kVerdictExecute)
+
+A052 | SwiftBandKeysTest::testAutoRepeatConsumption | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:378
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_handled(target), 0)
+
+A053 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:388
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // With no Swift recipient the band returns to the existing fallback
+      // order: Delete executes through the shared song policy and no arrival
+      // logs.
+      void testFallbackWhenUnhandled()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A054 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:390
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.scratchTargetId();
+
+Original expression:
+  QVERIFY(rig.focusRoll())
+
+A055 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:395
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          sgk_clear_delivery(target);
+          const std::vector<DocNote> notes =
+              rig.document().notesForTrack(rig.view().selectionModel().primaryTrack());
+
+Original expression:
+  QVERIFY(!notes.empty())
+
+A056 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:400
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          rig.view().selectionModel().setNoteSelection({notes.front().noteId});
+          rig.scratchFeed().pushSnapshot();
+
+          const qsizetype before = static_cast<qsizetype>(rig.document().notesForTrack(0).size());
+
+Original expression:
+  QVERIFY(!rig.scratchKeyPress(Qt::Key_Delete))
+
+A057 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:401
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.hostKeyPolicy(Qt::Key_Delete))
+
+A058 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:402
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(static_cast<qsizetype>(rig.document().notesForTrack(0).size()), before - 1)
+
+A059 | SwiftBandKeysTest::testFallbackWhenUnhandled | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:403
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_arrival_count(target), 0)
+
+A060 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:413
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // All four named cancel reasons end a live gesture mid-stream and land
+      // distinctly in the Swift log. Driven on the scratch pair: the
+      // production band's deliveries belong to the production grid's surface.
+      void testCancelReasonsMidGesture()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A061 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:418
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t scratch = rig.scratchTargetId();
+
+          auto *const rollInput = rig.quickWin().findChild<songview::TimelineInputItem *>(
+              QStringLiteral("timelineRollInput"));
+
+Original expression:
+  QVERIFY(rollInput != nullptr)
+
+A062 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:432
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const QPointF scenePos =
+              rollInput->mapToScene(QPointF(rollInput->width() / 2, rollInput->height() / 2));
+          const QPoint globalPos = rig.quickWin().mapToGlobal(scenePos.toPoint());
+          const songview::TimelinePointerInput press =
+              pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton);
+
+          const songview::TimelineInputCancelReason reasons[] = {
+              songview::TimelineInputCancelReason::FocusLost,
+              songview::TimelineInputCancelReason::PointerUngrabbed,
+              songview::TimelineInputCancelReason::Hidden,
+              songview::TimelineInputCancelReason::WindowDeactivated,
+          };
+          for (int index = 0; index < 4; ++index) {
+
+Original expression:
+  QVERIFY(rig.scratchBand().pointerPress(press))
+
+A063 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:433
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rig.scratchBand().gestureActive())
+
+A064 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:435
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+              rig.scratchBand().inputCancelled(reasons[index]);
+
+Original expression:
+  QVERIFY(!rig.scratchBand().gestureActive())
+
+A065 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:437
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          }
+
+Original expression:
+  QCOMPARE(bandkeys_cancel_count(scratch), 4)
+
+A066 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:439
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          for (int index = 0; index < 4; ++index)
+
+Original expression:
+  QCOMPARE(bandkeys_cancel_at(scratch, index), static_cast<int32_t>(reasons[index]))
+
+A067 | SwiftBandKeysTest::testCancelReasonsMidGesture | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:440
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_gesture_active(scratch), 0)
+
+A068 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:452
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // Pointer, wheel, and leave cross as plain values with per-sample
+      // handled/declined verdicts: hover moves decline, owned moves handle,
+      // wheels decline to the host, releases absorb. Driven on the scratch
+      // pair: the production band's deliveries belong to the production
+      // grid's surface.
+      void testPointerWheelLeaveForwarding()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A069 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:458
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.scratchTargetId();
+          songview::SwiftRollBand &band = rig.scratchBand();
+
+          auto *const rollInput = rig.quickWin().findChild<songview::TimelineInputItem *>(
+              QStringLiteral("timelineRollInput"));
+
+Original expression:
+  QVERIFY(rollInput != nullptr)
+
+A070 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:463
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const QPointF scenePos =
+              rollInput->mapToScene(QPointF(rollInput->width() / 2, rollInput->height() / 2));
+          const QPoint globalPos = rig.quickWin().mapToGlobal(scenePos.toPoint());
+
+
+Original expression:
+  QVERIFY(!band.pointerMove(pointerInput(scenePos, globalPos, Qt::NoButton, Qt::NoButton)))
+
+A071 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:464
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(
+              band.pointerPress(pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton)))
+
+A072 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:466
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(band.pointerMove(pointerInput(scenePos + QPointF(10, 0), globalPos + QPoint(10, 0),
+                                                Qt::NoButton, Qt::LeftButton)))
+
+A073 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:477
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          songview::TimelineWheelInput wheel{};
+          wheel.position = scenePos;
+          wheel.globalPosition = QPointF(globalPos);
+          wheel.angleDelta = QPoint(0, -120);
+          wheel.modifiers = Qt::NoModifier;
+          wheel.surface = songview::TimelineInputSurface::Plot;
+          wheel.host = nullptr;
+          wheel.inverted = false;
+
+Original expression:
+  QVERIFY(!band.wheel(wheel))
+
+A074 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:480
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          band.pointerLeave();
+
+Original expression:
+  QVERIFY(
+              band.pointerRelease(pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::NoButton)))
+
+A075 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:483
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QCOMPARE(bandkeys_pointer_count(target), 4)
+
+A076 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:484
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_kind(target), static_cast<int32_t>(SGB_POINTER_RELEASE))
+
+A077 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:486
+Disposition: GAP
+Mapping/reason: Range/finiteness guard over a crossed pointer/wheel fact. Swift records the fact but predicates nothing about it; no equivalent Swift assertion established.
+Source context since previous assertion:
+  ;
+          const int32_t key = bandkeys_last_pointer_key(target);
+
+Original expression:
+  QVERIFY(key >= -1 && key <= 127)
+
+A078 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:487
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::isfinite(bandkeys_last_pointer_tick(target)))
+
+A079 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:490
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+          // Full release facts: LeftButton released, no buttons still held, no
+          // modifiers, plot surface.
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_button(target), static_cast<int32_t>(Qt::LeftButton))
+
+A080 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:491
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_buttons(target), static_cast<int32_t>(Qt::NoButton))
+
+A081 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:492
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_modifiers(target), 0)
+
+A082 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:493
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_surface(target), static_cast<int32_t>(SGB_SURFACE_PLOT))
+
+A083 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:497
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+          // Full wheel facts: the -120 angle step crosses intact; pixel deltas
+          // default to zero, no modifiers, plot surface, not inverted.
+
+Original expression:
+  QCOMPARE(bandkeys_wheel_count(target), 1)
+
+A084 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:498
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(std::isfinite(bandkeys_last_wheel_tick(target)))
+
+A085 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:500
+Disposition: GAP
+Mapping/reason: Range/finiteness guard over a crossed pointer/wheel fact. Swift records the fact but predicates nothing about it; no equivalent Swift assertion established.
+Source context since previous assertion:
+  ;
+          const int32_t wheelKey = bandkeys_last_wheel_key(target);
+
+Original expression:
+  QVERIFY(wheelKey >= -1 && wheelKey <= 127)
+
+A086 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:501
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_pixel_delta_x(target), 0)
+
+A087 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:502
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_pixel_delta_y(target), 0)
+
+A088 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:503
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_angle_delta_x(target), 0)
+
+A089 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:504
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_angle_delta_y(target), -120)
+
+A090 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:505
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_modifiers(target), 0)
+
+A091 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:506
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_surface(target), static_cast<int32_t>(SGB_SURFACE_PLOT))
+
+A092 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:507
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_wheel_inverted(target), 0)
+
+A093 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:514
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          // Gutter-local x is not a content coordinate: the press forwards the
+          // key with the invalid-tick sentinel and still absorbs. The matching
+          // release closes the gutter gesture.
+          auto gutter = pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton);
+          gutter.surface = songview::TimelineInputSurface::Gutter;
+
+Original expression:
+  QVERIFY(band.pointerPress(gutter))
+
+A094 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:515
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_pointer_count(target), 5)
+
+A095 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:516
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_surface(target), static_cast<int32_t>(SGB_SURFACE_GUTTER))
+
+A096 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:517
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_tick(target), SGB_INVALID_TICK)
+
+A097 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:518
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(band.pointerRelease(gutter))
+
+A098 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:521
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+          // Second press kind: double-click reopens the gesture and absorbs.
+
+Original expression:
+  QVERIFY(band.pointerDoubleClick(
+              pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::LeftButton)))
+
+A099 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:523
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_pointer_count(target), 7)
+
+A100 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:524
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_last_pointer_kind(target),
+                   static_cast<int32_t>(SGB_POINTER_DOUBLE_CLICK))
+
+A101 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:526
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(
+              band.pointerRelease(pointerInput(scenePos, globalPos, Qt::LeftButton, Qt::NoButton)))
+
+A102 | SwiftBandKeysTest::testPointerWheelLeaveForwarding | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:529
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QCOMPARE(bandkeys_leave_count(target), 1)
+
+A103 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:541
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+
+      // Press decline rules mirror PianoRoll::pointerPress: the gutter serves
+      // left presses only (it auditions by key), the plot serves
+      // left/right/middle only. Declined presses are recorded but never open a
+      // gesture. Driven on the scratch pair: the production band's deliveries
+      // belong to the production grid's surface.
+      void testPressDeclineRules()
+      {
+          QString error;
+          BandKeysRig rig(m_projectRoot, m_songA, error);
+
+Original expression:
+  QVERIFY2(rig.ok(), qUtf8Printable(error))
+
+A104 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:547
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const uint64_t target = rig.scratchTargetId();
+          songview::SwiftRollBand &band = rig.scratchBand();
+
+          auto *const rollInput = rig.quickWin().findChild<songview::TimelineInputItem *>(
+              QStringLiteral("timelineRollInput"));
+
+Original expression:
+  QVERIFY(rollInput != nullptr)
+
+A105 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:555
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          const QPointF scenePos =
+              rollInput->mapToScene(QPointF(rollInput->width() / 2, rollInput->height() / 2));
+          const QPoint globalPos = rig.quickWin().mapToGlobal(scenePos.toPoint());
+
+          // Right-button press on the gutter declines.
+          auto gutterRight = pointerInput(scenePos, globalPos, Qt::RightButton, Qt::RightButton);
+          gutterRight.surface = songview::TimelineInputSurface::Gutter;
+
+Original expression:
+  QVERIFY(!band.pointerPress(gutterRight))
+
+A106 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:559
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          // Middle-button press on the gutter declines for the same reason.
+          auto gutterMiddle = pointerInput(scenePos, globalPos, Qt::MiddleButton, Qt::MiddleButton);
+          gutterMiddle.surface = songview::TimelineInputSurface::Gutter;
+
+Original expression:
+  QVERIFY(!band.pointerPress(gutterMiddle))
+
+A107 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:561
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          // Exotic-button press on the plot declines.
+
+Original expression:
+  QVERIFY(!band.pointerPress(pointerInput(scenePos, globalPos, Qt::XButton1, Qt::XButton1)))
+
+A108 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:563
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QCOMPARE(bandkeys_pointer_count(target), 3)
+
+A109 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:564
+Disposition: GAP
+Mapping/reason: Swift SgcKeySurface records the arrival/verdict/handled fact this C++ query reads, but the counterpart exposes no predicate over it; this C++ site is the sole assertion. Preserve or migrate the predicate if the surface gains Swift-side checks.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(bandkeys_gesture_active(target), 0)
+
+A110 | SwiftBandKeysTest::testPressDeclineRules | src/checks/swiftbandkeys/tst_swiftbandkeys.cpp:565
+Disposition: NATIVE
+Mapping/reason: Observes the mounted native window/band/rig, or the host document through the native two-tier key path (scratch-band decline plus host fallback), on the real Quick surface. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!band.gestureActive())
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+      }
+
+    private:
+      QString m_projectRoot;
+      QString m_songA;
+  };
+
+  int runSwiftBandKeysCheck(const QString &projectRoot, const QString &songA, const QString &,
+                            const QStringList &qtArguments)
+  {
+      SwiftBandKeysTest test(projectRoot, songA);
+      QStringList arguments = {QStringLiteral("swiftbandkeys")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+  #include "tst_swiftbandkeys.moc"
+
+
+Swift assertion predicates
+No report.expect*/expectEqual calls and no guard-based check predicates exist
+in src/checks/swiftbandkeys/SwiftBandKeysCheck.swift: it implements the
+SgcKeySurface harness surface (bandkeys_surface_create_full/destroy,
+bandkeys_* fact queries, sgk_ delivery answers) whose recorded facts the C++
+sites assert. There are no S entries.
+
+Shared helper:
+No shared Swift fixture file carrying expects was identified for this lane.
+swiftcore report.expect*/expectEqual predicates belong to other lanes' proofs
+and are not inventoried here.

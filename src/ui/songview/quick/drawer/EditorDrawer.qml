@@ -581,11 +581,10 @@ FocusScope {
         id: modalLayer
 
         objectName: "drawerModalLayer"
-        x: 0
-        y: 0
-        width: drawerScope.width
-        height: drawerScope.height
-        z: 3
+        parent: drawerScope.Window.window ? drawerScope.Window.window.contentItem : null
+        anchors.fill: parent
+        visible: drawerScope.visible
+        z: 100
     }
 
     Connections {

@@ -1,0 +1,526 @@
+Assertion correspondence: selectionkey/gesturevelocity.cpp
+
+Reference revision: 1d2d8a819b851071e8b1ec5767832a17d9fc271e
+Original: src/checks/selectionkey/gesturevelocity.cpp
+Original SHA-256: 99548723bce4d9dad860a17c2fee784155745104e8fb44efe34362fda4004d32
+Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Swift SHA-256: 6d6d5461a57ced89902dae8964f17b8f992c5932c0117428ee96eec7e9a5a853
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including the paint-helper qFail and
+the tie-fixture QFAIL. Source context preserves setup, rows, loops, and guards
+between assertions verbatim. S identifiers identify exact Swift predicates in
+the counterpart, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of any converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+This file proves the velocity-plot gesture scenarios: the visible following
+node owns overlap hit priority across idle, hover, selected, and zoomed
+presentations and wins every press, while a selected duration-stem drag
+retains its captured selection and consumes edit keys until Escape restores
+it. The declared Swift counterpart exercises only the numeric-prompt
+transaction (drawerOriginalNumericPromptTransaction); it has no predicate for
+the velocity guard contract below, so no site here is MATCHED or PARTIAL. Pure
+document/selection-state predicates are GAP (migration work a presenter-level
+Swift check could in principle establish); every observation requiring native
+rendering, delivery, gesture, geometry, or fixture assembly is NATIVE.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution ownership
+SelectionKeyGestureTest velocity slots run on the fresh rig staged by
+stageWorld/stageVelocitySurface; entry point and lifecycle live in gesture.cpp.
+No Swift entry point executes this native guard. drawerOriginalNumericPrompt-
+Transaction is called by runProjectSessionSuite in
+src/checks/workspace/SessionChecks.swift; it builds a
+drawerAutomationAutomationFixture (CC10 pan rows 48=32, 96=64) and drives the
+production Swift AutomationPage prompt. That fixture struct, defined in
+src/checks/automation/AutomationPageChecks.swift, carries no report predicates
+of its own.
+
+Fixture, sequence and row constraints
+No data rows expand the sites below. Reserved gesture fixture ticks: routing
+notes at 24/60/96 with durations 48/24/24 (spans 24..72 / 60..84 / 96..120),
+so at canonical timeZoom 96 the earlier stem, following node, and unselected
+stem sit ~36 px apart; keys 106/105/104, tied key 103, velocity 70, CC10 lane
+point at the following tick. verifyNodePaintsAboveSelectedStem samples the
+captured framebuffer at the following-node pixel with tolerance 12. Escape
+sequencing is load-bearing: first Escape cancels the gesture and restores the
+captured selection, second Escape clears the remaining selection.
+
+Original assertion inventory and source sequence
+
+A001 | SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem | src/checks/selectionkey/gesturevelocity.cpp:57
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the node-pixel paint observation requires native framebuffer
+capture and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  // Velocity-plot gesture scenarios for the selection-keyboard-routing Qt
+  // Test: the visible following node owns overlap hit priority across idle,
+  // hover, selected, and zoomed presentations and wins every press, while a
+  // selected duration-stem drag retains its captured selection and consumes
+  // edit keys until Escape restores it.
+
+  #include "checks/selectionkey/gesturecheck.h"
+
+  #include "checks/support/quickframebuffer.h"
+
+  #include <QApplication>
+  #include <QColor>
+  #include <QImage>
+  #include <QPoint>
+  #include <QPointF>
+  #include <QRect>
+  #include <QSize>
+  #include <QtTest>
+
+  #include <cmath>
+
+  namespace {
+
+  int colorDistance(const QColor &a, const QColor &b)
+  {
+      return std::abs(a.red() - b.red()) + std::abs(a.green() - b.green()) +
+             std::abs(a.blue() - b.blue());
+  }
+
+  } // namespace
+
+  bool SelectionKeyGestureTest::verifyNodePaintsAboveSelectedStem(
+      const VelocityStemPoints &overlapPoints, const char *message)
+  {
+      // velocityquick.cpp paints the following node center with its opaque
+      // track color in idle, hover, selected, and zoomed states. Matching that
+      // color proves the visible node won the stack; merely differing from
+      // highlight would also accept an empty or background pixel.
+      constexpr int kNodeColorTolerance = 12;
+      const QColor expectedNodeColor = SongView::trackColor(kTrack);
+      checks::support::pumpQuick();
+      QString captureError;
+      const QImage frame =
+          checks::support::captureQuickBand(view(), QRect(QPoint{}, window()->size()), &captureError);
+      // Canonical viewport: windowPoint is already Quick-window-local, so the
+      // sampled node pixel reads straight out of the captured frame.
+      const QPoint sampleInView = windowPoint(*mVelocityInput, overlapPoints.followingNode);
+      const QRect sampleRect =
+          checks::support::devicePixelRect(frame, QRect(sampleInView, QSize(1, 1)));
+      const QColor nodePixel = frame.isNull() || !frame.rect().contains(sampleRect.center())
+                                   ? QColor{}
+                                   : frame.pixelColor(sampleRect.center());
+      const bool painted = !frame.isNull() && captureError.isEmpty() && expectedNodeColor.isValid() &&
+                           nodePixel.isValid() &&
+                           colorDistance(nodePixel, expectedNodeColor) <= kNodeColorTolerance;
+      if (!painted) {
+Original expression:
+  QTest::qFail(message, __FILE__, __LINE__)
+
+A002 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:69
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the stem/node geometry probe depends on native production layout
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+          return false;
+      }
+      return true;
+  }
+  void SelectionKeyGestureTest::overlapNodeTargetsVisibleNode()
+  {
+      if (!stageWorld("overlap-node", EditorDrawerPage::Velocity, kVelocitySectionHeight))
+          return;
+      if (!stageVelocitySurface())
+          return;
+      std::optional<VelocityStemPoints> points = velocityStemPoints();
+Original expression:
+  QVERIFY2(points.has_value(),
+               "production velocity geometry did not expose the test stems and node")
+
+A003 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:92
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the zoomed-geometry probe depends on native production layout and
+cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+
+      view().selectionModel().setNoteSelection({mWorld->notes[0]});
+      if (!verifyNodePaintsAboveSelectedStem(
+              *points, "following velocity node was not rendered above the selected earlier stem"))
+          return;
+
+      mouseMove(windowPoint(*mVelocityInput, points->followingNode));
+      if (!verifyNodePaintsAboveSelectedStem(
+              *points, "hovered following velocity node was not rendered above the selected stem"))
+          return;
+
+      view().selectionModel().setNoteSelection({mWorld->notes[0], mWorld->notes[1]});
+      mouseMove(windowPoint(*mVelocityInput, points->followingStem));
+      if (!verifyNodePaintsAboveSelectedStem(
+              *points, "selected following velocity node was not rendered above the selected stem"))
+          return;
+
+      const double initialZoom = view().camera().pxPerBeat();
+      view().setEditorTimeZoom(initialZoom * 2.0);
+      selectionkey::settle();
+      const std::optional<VelocityStemPoints> zoomedPoints = velocityStemPoints();
+Original expression:
+  QVERIFY2(zoomedPoints.has_value(),
+               "zoomed velocity geometry did not expose the overlapping stem and node")
+
+A004 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:102
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the restored-geometry probe depends on native production layout
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      if (!verifyNodePaintsAboveSelectedStem(
+              *zoomedPoints,
+              "zoomed selected velocity node was not rendered above the selected stem"))
+          return;
+
+      view().setEditorTimeZoom(initialZoom);
+      selectionkey::settle();
+      points = velocityStemPoints();
+Original expression:
+  QVERIFY2(points.has_value(),
+               "restored velocity geometry did not expose the overlapping stem and node")
+
+A005 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:117
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the live overlap-drag targeting observation requires native mouse
+delivery and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      view().selectionModel().setNoteSelection({mWorld->notes[0]});
+
+      const QByteArray overlapBeforeDrag = document().smf().write();
+      const uint64_t revisionBefore = document().revision();
+      const int undoDepthBefore = document().undoStack()->count();
+      const QPoint followingPress = windowPoint(*mVelocityInput, points->followingNode);
+      QPoint followingDrag = followingPress + QPoint(0, QApplication::startDragDistance() + 4);
+      followingDrag.setY(
+          std::min(followingDrag.y(),
+                   windowPoint(*mVelocityInput, mVelocityInput->bounds().bottomLeft()).y() - 2));
+      mouseMove(followingPress);
+      mousePress(Qt::LeftButton, followingPress);
+      mouseMove(followingDrag);
+Original expression:
+  QTRY_VERIFY2(view().userGestureActive() && noteSelectionIs({mWorld->notes[1]}),
+                   "beginning an overlap-node drag did not target the visible following node")
+
+A006 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:124
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; cancelling the overlap drag through production VelocityArea
+cancellation requires native delivery and cannot be established by a
+presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      // VelocityArea cancellation restores the selection captured before the
+      // press ({earlier}); the committed drag's node targeting is asserted
+      // above, so production cancellation stays untouched here.
+      QTest::keyClick(window(), Qt::Key_Escape);
+      mouseRelease(Qt::LeftButton, followingDrag);
+Original expression:
+  QVERIFY2(!view().userGestureActive() && noteSelectionIs({mWorld->notes[0]}) &&
+                   document().smf().write() == overlapBeforeDrag &&
+                   document().revision() == revisionBefore &&
+                   document().undoStack()->count() == undoDepthBefore,
+               "cancelling an overlap-node drag did not restore its pre-press selection")
+
+A007 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:132
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the click-replacement selection below is pure selection state a
+presenter-level Swift check could in principle assert, but none does. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      mouseMove(followingPress);
+      mousePress(Qt::LeftButton, followingPress);
+Original expression:
+  QTRY_VERIFY2(noteSelectionIs({mWorld->notes[1]}),
+                   "clicking the following overlap node did not replace the earlier stem selection")
+
+A008 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:137
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; overlap-note presence is pure document state a presenter-level
+Swift check could in principle assert, but none does. Original predicate and
+setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      mouseRelease(Qt::LeftButton, followingPress);
+      const auto followingBeforeArrow = selectionkey::noteById(document(), mWorld->notes[1]);
+      const auto earlierBeforeArrow = selectionkey::noteById(document(), mWorld->notes[0]);
+Original expression:
+  QVERIFY2(followingBeforeArrow.has_value() && earlierBeforeArrow.has_value(),
+               "an overlap note vanished before its arrow command")
+
+A009 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:142
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the arrow-moved-only-following positions below are pure document
+state a presenter-level Swift check could in principle assert, but none does.
+Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(window(), Qt::Key_Right);
+      const auto followingAfterArrow = selectionkey::noteById(document(), mWorld->notes[1]);
+      const auto earlierAfterArrow = selectionkey::noteById(document(), mWorld->notes[0]);
+Original expression:
+  QVERIFY2(followingAfterArrow.has_value() && earlierAfterArrow.has_value() &&
+                   followingAfterArrow->tick > followingBeforeArrow->tick &&
+                   earlierAfterArrow->tick == earlierBeforeArrow->tick,
+               "arrow after overlap-node click did not target only the following note")
+
+A010 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:151
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the tie-fixture assembly guard records its own native failure and
+a presenter-level Swift check cannot establish this native fixture
+precondition.
+Source context since previous assertion:
+  ;
+
+      QString tieError;
+      const std::vector<NoteId> tiedNodes = selectionkey::insertIsolatedNotes(
+          document(), kTrack, {{kLaterTick, kTiedKey, kLaterDuration, kVelocity}}, tieError);
+      if (tiedNodes.size() != 1)
+Original expression:
+  QFAIL(qPrintable(
+              QStringLiteral("could not create the node-overlap tie fixture: %1").arg(tieError)))
+
+A011 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; tie-fixture note retention is pure document state a
+presenter-level Swift check could in principle assert, but none does. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(selectionkey::noteExists(document(), mWorld->notes[2]) &&
+                   selectionkey::noteExists(document(), tiedNodes.front()),
+               "node-overlap tie fixture did not retain both coincident-velocity notes")
+
+A012 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:160
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; tied-node exposure depends on native production geometry and
+cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      selectionkey::settle();
+      const QPointF tiedNode(
+          view().camera().displayX(double(kLaterTick), 0.0, mVelocityInput->devicePixelRatio()),
+          mVelocityArea->axis().velocityToY(kVelocity));
+Original expression:
+  QVERIFY2(mVelocityInput->bounds().contains(tiedNode),
+               "production velocity geometry did not expose the tied nodes")
+
+A013 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:171
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the model-order priority selection below is pure selection state
+a presenter-level Swift check could in principle assert, but none does.
+Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QPoint tiedPress = windowPoint(*mVelocityInput, tiedNode);
+
+      // Equal unselected circles retain model-order priority: the later node
+      // wins. Selecting the earlier circle then retains the higher selected
+      // priority before model order is considered.
+      view().selectionModel().setNoteSelection({});
+      checks::support::pumpQuick();
+      mouseMove(tiedPress);
+      mousePress(Qt::LeftButton, tiedPress);
+Original expression:
+  QTRY_VERIFY2(noteSelectionIs({tiedNodes.front()}),
+                   "equal unselected velocity nodes did not retain later-model-order priority")
+
+A014 | SelectionKeyGestureTest::overlapNodeTargetsVisibleNode | src/checks/selectionkey/gesturevelocity.cpp:178
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the selected-tie-break selection below is pure selection state a
+presenter-level Swift check could in principle assert, but none does. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      mouseRelease(Qt::LeftButton, tiedPress);
+
+      view().selectionModel().setNoteSelection({mWorld->notes[2]});
+      checks::support::pumpQuick();
+      mousePress(Qt::LeftButton, tiedPress);
+Original expression:
+  QTRY_VERIFY2(noteSelectionIs({mWorld->notes[2]}),
+                   "selected velocity node did not retain priority over its tied sibling")
+
+A015 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the live keymap binding query has no Swift counterpart. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      mouseRelease(Qt::LeftButton, tiedPress);
+  }
+
+  void SelectionKeyGestureTest::velocityStemDragGuardsEdits()
+  {
+      const auto deleteKey = selectionkey::firstBinding(QStringLiteral("roll.delete"));
+Original expression:
+  QVERIFY2(deleteKey.has_value(), "roll.delete has no single-key binding")
+
+A016 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:192
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the stem/node geometry probe depends on native production layout
+and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+      if (!stageWorld("velocity-stem", EditorDrawerPage::Velocity, kVelocitySectionHeight))
+          return;
+      if (!stageVelocitySurface())
+          return;
+      const std::optional<VelocityStemPoints> points = velocityStemPoints();
+Original expression:
+  QVERIFY2(points.has_value(),
+               "production velocity geometry did not expose the test stems and node")
+
+A017 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:207
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the captured-selection retention observation requires a live
+native drag and cannot be established by a presenter-level Swift check.
+Source context since previous assertion:
+  ;
+
+      view().selectionModel().setNoteSelection({mWorld->notes[0], mWorld->notes[2]});
+      const QByteArray velocityBeforeGesture = document().smf().write();
+      const uint64_t revisionBefore = document().revision();
+      const int undoDepthBefore = document().undoStack()->count();
+      const QPoint earlierPress = windowPoint(*mVelocityInput, points->earlierStem);
+      QPoint earlierDrag = earlierPress + QPoint(0, QApplication::startDragDistance() + 4);
+      earlierDrag.setY(
+          std::min(earlierDrag.y(),
+                   windowPoint(*mVelocityInput, mVelocityInput->bounds().bottomLeft()).y() - 2));
+      mouseMove(earlierPress);
+      mousePress(Qt::LeftButton, earlierPress);
+      mouseMove(earlierDrag);
+Original expression:
+  QTRY_VERIFY2(view().userGestureActive() &&
+                       noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}),
+                   "selected velocity-stem drag did not retain its captured note selection")
+
+A018 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:212
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the document/selection-equality conjuncts below are pure state a
+presenter-level Swift check could in principle assert, but none does. The
+edit-key consumption during the live gesture itself remains a native
+obligation. Original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(window(), Qt::Key_Right);
+      selectionkey::deliverKey(window(), deleteKey->key(), deleteKey->keyboardModifiers());
+Original expression:
+  QVERIFY2(document().smf().write() == velocityBeforeGesture &&
+                   noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}) &&
+                   document().revision() == revisionBefore &&
+                   document().undoStack()->count() == undoDepthBefore,
+               "an edit key mutated selection or notes during a live velocity gesture")
+
+A019 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:219
+Disposition: NATIVE
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; first-Escape gesture cancellation through production code
+requires native delivery and cannot be established by a presenter-level Swift
+check.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(window(), Qt::Key_Escape);
+      mouseRelease(Qt::LeftButton, earlierDrag);
+Original expression:
+  QVERIFY2(!view().userGestureActive() && noteSelectionIs({mWorld->notes[0], mWorld->notes[2]}) &&
+                   document().smf().write() == velocityBeforeGesture &&
+                   document().revision() == revisionBefore &&
+                   document().undoStack()->count() == undoDepthBefore,
+               "first Escape did not cancel the velocity gesture and restore its selection")
+
+A020 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:225
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the cleared-selection state below is pure selection state a
+presenter-level Swift check could in principle assert, but none does. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QTest::keyClick(window(), Qt::Key_Escape);
+Original expression:
+  QVERIFY2(view().selectionModel().noteSelection().empty(),
+               "second Escape after a velocity gesture did not clear the remaining selection")
+
+A021 | SelectionKeyGestureTest::velocityStemDragGuardsEdits | src/checks/selectionkey/gesturevelocity.cpp:233
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift transaction has been
+established; the replacement-selection state below is pure selection state a
+presenter-level Swift check could in principle assert, but none does. Original
+predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+
+      view().selectionModel().setNoteSelection({mWorld->notes[0], mWorld->notes[2]});
+      const QPoint unselectedStem = windowPoint(*mVelocityInput, points->followingStem);
+      mouseMove(unselectedStem);
+      mousePress(Qt::LeftButton, unselectedStem);
+      mouseRelease(Qt::LeftButton, unselectedStem);
+Original expression:
+  QVERIFY2(noteSelectionIs({mWorld->notes[1]}),
+               "clicking an unselected velocity stem did not replace the note selection")
+
+Remaining original source (closing sequence and helper bodies):
+               "clicking an unselected velocity stem did not replace the note selection");
+  }
+Swift assertion predicates
+
+S001 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:19
+  report.expectEqual(1, notes.count, cppID: id, what: "the original selected fixture note exists")
+
+S002 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:29
+  report.expect(page.openPrompt(tick: 144, value: 64), cppID: id,
+                    message: "the original empty-tick numeric prompt opens")
+
+S003 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:32
+  report.expectEqual("12", page.promptDraft, cppID: id,
+                         what: "the production prompt retains the supplied numeric draft")
+
+S004 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:34
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                         what: "draft editing does not mutate the song")
+
+S005 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:36
+  report.expectEqual(selection, fixture.session.selectedNotes, cppID: id,
+                         what: "draft editing preserves note selection")
+
+S006 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:39
+  report.expect(!page.promptOpen, cppID: id, message: "cancellation closes the prompt")
+
+S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:40
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                         what: "cancellation leaves the original document unchanged")
+
+S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:42
+  report.expect(fixture.document.state == state, cppID: id,
+                    message: "draft and cancellation preserve the full song contents")

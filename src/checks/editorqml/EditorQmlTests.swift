@@ -78,16 +78,16 @@ enum EditorQmlLane {
             component: "src/ui/songview/quick/drawer/EditorDrawer.qml",
             drawnRoot: "editorDrawer"),
         "velocity-prompt": ReferencePaneIdentity(
-            component: "src/ui/songview/quick/drawer/VelocityPrompt.qml",
+            component: "src/ui/songview/quick/VelocityPrompt.qml",
             drawnRoot: "velocityPromptCard"),
         "voice-picker": ReferencePaneIdentity(
-            component: "src/ui/songview/quick/drawer/VoicePicker.qml",
+            component: "src/ui/songview/quick/VoicePickerPrompt.qml",
             drawnRoot: "drawerModalLayer"),
         "automation-tabs": ReferencePaneIdentity(
             component: "src/ui/songview/quick/drawer/AutomationPage.qml",
             drawnRoot: "automationPage"),
         "track-headers": ReferencePaneIdentity(
-            component: "src/ui/songview/quick/swiftroll/TrackHeaderBand.qml",
+            component: "src/ui/songview/quick/TrackHeaderBand.qml",
             drawnRoot: "timelineQuickTrackHeaders"),
     ]
 
@@ -1223,6 +1223,18 @@ public final class EditorQmlBootstrap: QmlInstantiableStatus {
         let wasPolling = presenter.isPolling
         presenter.stopPolling()
         return wasPolling
+    }
+
+    public func presentHeaderActivity(track: Int, left: Int, right: Int,
+                                      playing: Bool) -> Bool {
+        precondition((0..<16).contains(track) && (0...255).contains(left)
+                     && (0...255).contains(right))
+        guard let session else { return false }
+        var levels = Array(repeating: AudioActivityLevel(), count: 16)
+        levels[track] = AudioActivityLevel(left: UInt8(left), right: UInt8(right))
+        session.trackHeadersPresenter().advanceActivity(levels: levels,
+                                                        elapsedSeconds: 60, playing: playing)
+        return true
     }
 
     /// Restarts the production polling task. `true` means it is polling again.

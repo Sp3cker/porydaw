@@ -1,0 +1,262 @@
+Assertion correspondence: playback/publish.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/playback/publish.cpp
+Original SHA-256: 02acf58c6a31f99f242c500c87c724c75ea85d542a1206e8a09ad6ab675fdb27
+Swift counterpart: src/checks/playback/publish.swift
+Swift SHA-256: 9cf64e5a4b6e1e7dd6f9b6244162aaaedd01cbb85674fa35a006e85e8d79f2a4
+
+Purpose and status
+Each numbered entry records one original assertion/failure site, not one test
+method or one runtime execution. Loops/data rows reuse a site; their instances
+are described below. QFAIL/qFail guards and helper calls are part of the contract.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way;
+GAP means an equivalent Swift assertion is not established;
+NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
+only by the retained native path. None of these labels authorizes deletion or
+claims whole-case equivalence. Native passes do not prove the Swift replacement.
+
+Execution and ownership
+checkControllerPublication runs the actual AudioRenderEngine publication path; checkReplacementRows preserves the older direct-Sequencer tests. Both live in publish.swift; they run through runAudioControllerChecks and runPlaybackSuite respectively.
+
+Fixture, sequence and row constraints
+Original native tests use null-device callback scheduling, temporary MIDI load and real-time waits up to 2 s. Swift controller uses deterministic explicit render calls through the production AudioRenderEngine; direct Sequencer cases are lower-level supplementary coverage. Original lifetime case observes weak_ptr expiry; the Swift source/event comparisons do not prove reclamation. Original seek/publication limits are 20,000,000 ns.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Verification evidence
+Command: deno task verify --filter swiftcore --filter clickcheck --verbose
+Result: PASS 2/2 selected harnesses (22 unselected); swiftcore and clickcheck.
+Tested worktree HEAD: 59f48ea0e432c14a0da6f93684cc729d8b3c587b.
+Paired Swift content is pinned above. Shared helper/runner hashes are recorded below.
+This run establishes execution, not closure of PARTIAL/GAP entries or live
+C++/Swift differential parity. Checks for absent UI are not part of this run.
+
+Shared Swift sources used by this refactor (SHA-256)
+src/checks/audio/controllerfixture.swift: c9a1a81a199c1afdc1b7f9cb48365019c28703c96c44fa70e26e7a80947ea6a6
+src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
+src/checks/playback/transportfixture.swift: 65455d9bab9f44b842b89a32e8e736ddf072b4e8cf1ace82b848a32cd95e9042
+src/checks/audio/AudioControllerChecks.swift: d65ac344d7286b7027213b1a39e5881885c847cc85308b386b566b3eb39e148c
+src/checks/playback/PlaybackChecks.swift: 60178614265d11fc9cfa0a6ec46ec8f324afecfb20c99417a340e29ad348dfeb
+src/checks/playback/ResonanceSuppressionChecks.swift: a20761efc254f055672862b355aa7467985de554458814847905d2926dfeebb1
+
+Inherited native fixture assertions (not Swift parity credit)
+Source: src/checks/playback/tst_transport.cpp
+SHA-256: 9ae0f5a1037fd587686246459ae09086ee4c235e27ba5b9a60a391376296570f
+init:29 -- QVERIFY2(m_engine->init(&error), ...): forced-null initialization
+must succeed. NATIVE-SETUP: direct Swift renderer checks bypass the device.
+init:31 -- QVERIFY2(m_engine->usingNullBackend() && m_engine->nullBackendForced(), ...):
+forced-null selection must be reported. NATIVE-SETUP: bypassed by direct rendering.
+loadedSong:48 -- returns an empty pointer on encoding/write/load/publication
+failure; the per-case timeline assertions below check that return value.
+
+Original assertion inventory
+
+A001 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:21
+Disposition: NATIVE-SETUP
+Mapping/reason: Original loadedSong success for initial timeline. Swift uses in-memory AudioControllerCheckFixture.timeline or runPlaybackSuite's separately encoded/decoded fixture.
+Original expression:
+  QVERIFY2(first, "first ownership timeline built wrong")
+
+A002 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:24
+Disposition: NATIVE-SETUP
+Mapping/reason: Original loadedSong success for active timeline; direct Swift value construction differs.
+Original expression:
+  QVERIFY2(active, "active ownership timeline built wrong")
+
+A003 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:31
+Disposition: NATIVE-SETUP
+Mapping/reason: Original loadedSong success for superseded timeline; direct Swift value construction differs.
+Original expression:
+  QVERIFY2(superseded, "superseded ownership timeline built wrong")
+
+A004 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:36
+Disposition: NATIVE-SETUP
+Mapping/reason: Original loadedSong success for latest timeline; direct Swift value construction differs.
+Original expression:
+  QVERIFY2(latest, "latest ownership timeline built wrong")
+
+A005 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:38
+Disposition: GAP
+Mapping/reason: No Swift weak-lifetime assertion that active data stays alive across rapid publication.
+Original expression:
+  QVERIFY2(!activeLifetime.expired(),
+               "rapid timeline publications released the audio thread's active snapshot")
+
+A006 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:40
+Disposition: GAP
+Mapping/reason: No Swift assertion that superseded pending data is reclaimed.
+Original expression:
+  QVERIFY2(supersededLifetime.expired(), "superseded pending timeline remained retained")
+
+A007 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:44
+Disposition: NATIVE-SETUP
+Mapping/reason: Original loadedSong success for replacement timeline; direct Swift value construction differs.
+Original expression:
+  QVERIFY2(replacement, "replacement ownership timeline built wrong")
+
+A008 | TransportTest::timelineHandoffOwnership | src/checks/playback/publish.cpp:46
+Disposition: GAP
+Mapping/reason: No Swift assertion that replaced active data is reclaimed after callback acquisition and subsequent publication.
+Original expression:
+  QVERIFY2(activeLifetime.expired(), "replaced active timeline remained retained")
+
+A009 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:54
+Disposition: NATIVE-SETUP
+Mapping/reason: Original silent-song file loading; Swift controller uses an in-memory note timeline.
+Original expression:
+  QVERIFY2(timeline, "synthesized song built wrong")
+
+A010 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:55
+Disposition: MATCHED
+Mapping/reason: S002 asserts usedTrackCount==2 on the same two-track silent fixture before the seek sequence.
+Original expression:
+  QVERIFY2(timeline->usedTrackCount == 2, "synthesized song built wrong")
+
+A011 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:66
+Disposition: MATCHED
+Mapping/reason: S003 measures each of the original five alternating seek publications and requires every row to complete within 20 ms.
+Original expression:
+  QVERIFY2(slowestSeekNs <= 20'000'000, "seek blocked instead of publishing to the audio thread")
+
+A012 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:67
+Disposition: PARTIAL
+Mapping/reason: S004 preserves the original five alternating seeks and observes the latest midpoint seek after the production renderer executes one callback. Deterministic rendering does not prove null-device scheduling within the original two-second wait.
+Original expression:
+  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == midSong; }, 2000),
+               "audio thread did not apply the latest seek")
+
+A013 | TransportTest::seekPublishesWithoutBlocking | src/checks/playback/publish.cpp:70
+Disposition: PARTIAL
+Mapping/reason: S005 separately publishes seek(0) and observes playhead zero after the production renderer executes one callback. Deterministic rendering does not prove null-device scheduling within the original two-second wait.
+Original expression:
+  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
+               "audio thread did not apply the reset seek")
+
+A014 | TransportTest::stopCancelsPendingSeek | src/checks/playback/publish.cpp:79
+Disposition: NATIVE-SETUP
+Mapping/reason: Original file-loading precondition; AudioControllerCheckFixture builds a typed timeline.
+Original expression:
+  QVERIFY2(timeline, "synthesized song built wrong")
+
+A015 | TransportTest::stopCancelsPendingSeek | src/checks/playback/publish.cpp:83
+Disposition: PARTIAL
+Mapping/reason: S007 observes a positive cursor after starting the production renderer. Deterministic rendering does not prove null-device scheduling within the original two-second wait.
+Original expression:
+  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
+               "playback did not start for pending-seek cancellation check")
+
+A016 | TransportTest::stopCancelsPendingSeek | src/checks/playback/publish.cpp:87
+Disposition: PARTIAL
+Mapping/reason: S008 checks cursor==0 after midpoint seek, stop, and bounded production rendering; native callback scheduling remains unproved.
+Original expression:
+  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
+               "Stop did not cancel a pending seek")
+
+A017 | TransportTest::updateTimelineCarriesPendingSeek | src/checks/playback/publish.cpp:97
+Disposition: NATIVE-SETUP
+Mapping/reason: Original first file-loading precondition; Swift uses typed timeline.
+Original expression:
+  QVERIFY2(timeline, "synthesized song built wrong")
+
+A018 | TransportTest::updateTimelineCarriesPendingSeek | src/checks/playback/publish.cpp:103
+Disposition: NATIVE-SETUP
+Mapping/reason: Original replacement file-loading precondition; Swift uses typed timeline.
+Original expression:
+  QVERIFY2(replacement, "seek replacement timeline built wrong")
+
+A019 | TransportTest::updateTimelineCarriesPendingSeek | src/checks/playback/publish.cpp:108
+Disposition: PARTIAL
+Mapping/reason: S006 uses the original midpoint, a distinct program replacement, and one production render callback; it compares replacement events and midpoint cursor. Native callback scheduling remains unproved.
+Original expression:
+  QVERIFY2(QTest::qWaitFor(
+                   [&] {
+                       return engine().timeline() == replacement.get() &&
+                              engine().playheadSamples() == midSong;
+                   },
+                   2000),
+               "updateTimeline dropped a pending seek or retained old data")
+
+A020 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:123
+Disposition: NATIVE-SETUP
+Mapping/reason: Original live-case file-loading precondition. runPlaybackSuite writes and decodes its own two fixtures before checkReplacementRows.
+Original expression:
+  QVERIFY2(timeline, "synthesized song built wrong")
+
+A021 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:129
+Disposition: NATIVE-SETUP
+Mapping/reason: Original live replacement file-loading precondition; different Swift fixture.
+Original expression:
+  QVERIFY2(replacement, "live replacement timeline built wrong")
+
+A022 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:132
+Disposition: PARTIAL
+Mapping/reason: S009 observes a positive production-renderer cursor before the live replacement. Native callback scheduling remains unproved.
+Original expression:
+  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() > 0; }, 2000),
+               "playback did not start for live timeline replacement")
+
+A023 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:138
+Disposition: MATCHED
+Mapping/reason: S010 measures the production AudioRenderEngine publication call and requires it to complete within the original 20 ms bound.
+Original expression:
+  QVERIFY2(updateTimer.nsecsElapsed() <= 20'000'000,
+               "timeline replacement blocked instead of publishing to the audio thread")
+
+A024 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:140
+Disposition: PARTIAL
+Mapping/reason: S011 uses the production AudioRenderEngine and asserts replacement-event adoption plus cursor advancement after a render callback. Native callback scheduling remains unproved.
+Original expression:
+  QVERIFY2(QTest::qWaitFor(
+                   [&] {
+                       return engine().timeline() == replacement.get() &&
+                              engine().playheadSamples() > beforeUpdate;
+                   },
+                   2000),
+               "live timeline replacement did not adopt its data source")
+
+A025 | TransportTest::liveTimelineReplacementDoesNotBlock | src/checks/playback/publish.cpp:148
+Disposition: PARTIAL
+Mapping/reason: S012 stops after the live replacement and observes cursor zero after bounded production rendering. Native callback scheduling remains unproved.
+Original expression:
+  QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
+               "stop after live timeline replacement did not reset")
+
+Swift predicate index
+
+S001 | checkPublicationRequestContract | src/checks/playback/publish.swift:39
+The production renderer reports the original silent song loaded.
+
+S002 | checkPublicationRequestContract | src/checks/playback/publish.swift:40
+The original silent fixture has exactly two used tracks.
+
+S003 | checkPublicationRequestContract | src/checks/playback/publish.swift:45
+Each of five alternating seek publications completes within 20 ms.
+
+S004 | checkPublicationRequestContract | src/checks/playback/publish.swift:49
+One production render callback applies the latest midpoint seek.
+
+S005 | checkPublicationRequestContract | src/checks/playback/publish.swift:52
+One production render callback applies the reset seek.
+
+S006 | checkPublicationRequestContract | src/checks/playback/publish.swift:58
+A distinct program replacement carries the pending midpoint seek.
+
+S007 | checkPublicationRequestContract | src/checks/playback/publish.swift:64
+The production renderer advances before the pending-seek cancellation case.
+
+S008 | checkPublicationRequestContract | src/checks/playback/publish.swift:68
+Stop wins over the pending midpoint seek and resets the cursor.
+
+S009 | checkPublicationRequestContract | src/checks/playback/publish.swift:75
+The production renderer advances before live timeline replacement.
+
+S010 | checkPublicationRequestContract | src/checks/playback/publish.swift:77
+The production live-replacement publication completes within 20 ms.
+
+S011 | checkPublicationRequestContract | src/checks/playback/publish.swift:80
+The callback adopts the live replacement events and advances past the prior cursor.
+
+S012 | checkPublicationRequestContract | src/checks/playback/publish.swift:84
+Stop after live replacement resets the production renderer cursor.

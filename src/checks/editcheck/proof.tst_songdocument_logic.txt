@@ -1,0 +1,505 @@
+Assertion correspondence: editcheck/tst_songdocument_logic.cpp
+
+Reference revision: f2b0b0451b911e7f7faef860f26f04f63f460ffe
+Original: src/checks/editcheck/tst_songdocument_logic.cpp
+Original SHA-256: f7b940c2e589c8fc69d2a17ab0ab4db3e424db7d8d3bfbdff8c99995d2fe7c39
+Swift counterpart: src/checks/editcheck/NoteChecks.swift
+Swift SHA-256: 9cd49c319b9b161331451f67c3d9a85050aa0180a45226845d9708028792df39
+
+Scope
+All 60 original assertion sites are listed below. This file is NOT compiled
+into the checks binary (absent from src/checks/CMakeLists.txt). Its first 24
+sites are ScaleCheckTest bodies duplicated verbatim from the compiled
+src/checks/editcheck/tst_scale.cpp, which is the executed source of truth for
+those predicates; see proof.tst_scale.txt. No Swift scale predicate exists, so
+those 24 are GAP. The remaining 36 NoteIdentityCheckTest sites map to
+adoptionAndPairing in the Swift counterpart (cppIDs
+noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned and
+noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds). The legacy C++
+editcheck/noteidcheck suites are not registered in the current checkcatalog, so
+no native run of the NoteIdentity sites is claimed.
+
+Fixture and sequence
+Scale section reuses the 28-entry expectedScales table, the 12-root loop, and
+the 7-row diatonicDestinations data table exactly as in tst_scale.cpp.
+duplicateNoteFile builds a one-track fixture (note-on 60/100 at tick 24 twice,
+note-off at tick 48, end 72). parsedMidiLeavesIdsUnassigned round-trips it
+through a temporary file plus MidiTimeline::load. adoptedSmfRemintsForeignIds
+adopts it twice with an addNote between. identityDoesNotAffectEqualityOr
+Serialization stamps NoteId{1}/{2} and compares equality plus serialized bytes.
+timelineTransportsOnlyStampedNoteIds builds a MidiTimeline from the stamped
+file. Swift has no MidiTimeline-from-file path; its adoption predicates run on
+in-memory MidiFile/SongDocument fixtures.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Original assertion inventory
+
+A001 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:86
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:66; no Swift scale-table count predicate exists. See proof.tst_scale.txt A001.
+Original expression:
+  QCOMPARE(porydaw_scale::cScaleCount, int(expectedScales.size()));
+
+A002 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:88
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:68; no Swift display-order predicate exists. See proof.tst_scale.txt A002.
+Original expression:
+  QVERIFY(order != nullptr);
+
+A003 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:90
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:70; no Swift scale-identity ordering predicate exists. See proof.tst_scale.txt A003.
+Original expression:
+  QCOMPARE(static_cast<int>(expected.id), index);
+
+A004 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:91
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:71; no Swift scale-name predicate exists. See proof.tst_scale.txt A004.
+Original expression:
+  QCOMPARE(std::strcmp(porydaw_scale::scaleDisplayName(expected.id), expected.name), 0);
+
+A005 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:92
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:72; no Swift scale-mask predicate exists. See proof.tst_scale.txt A005.
+Original expression:
+  QCOMPARE(porydaw_scale::scaleMask(expected.id), expected.mask);
+
+A006 | ScaleCheckTest::table | src/checks/editcheck/tst_songdocument_logic.cpp:93
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:73; no Swift display-order predicate exists. See proof.tst_scale.txt A006.
+Original expression:
+  QCOMPARE(order[index], expected.id);
+
+A007 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:100
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:80; no Swift root-count predicate exists. See proof.tst_scale.txt A007.
+Original expression:
+  QCOMPARE(porydaw_scale::cRootCount, int(rootNames.size()));
+
+A008 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:102
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:82; no Swift root-name predicate exists. See proof.tst_scale.txt A008.
+Original expression:
+  QCOMPARE(std::strcmp(porydaw_scale::rootDisplayName(index), rootNames[size_t(index)]), 0);
+
+A009 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:103
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:83; no Swift default-scale predicate exists. See proof.tst_scale.txt A009.
+Original expression:
+  QCOMPARE(porydaw_scale::defaultScale(), porydaw_scale::ScaleId::major);
+
+A010 | ScaleCheckTest::rootsAndDefaults | src/checks/editcheck/tst_songdocument_logic.cpp:104
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:84; no Swift default-root predicate exists. See proof.tst_scale.txt A010.
+Original expression:
+  QCOMPARE(porydaw_scale::defaultRoot(), 0);
+
+A011 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:110
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:90; no Swift pitch-membership predicate exists. See proof.tst_scale.txt A011.
+Original expression:
+  QVERIFY(isScalePitch(ScaleId::major, 0, 60));
+
+A012 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:111
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:91; no Swift pitch-membership predicate exists. See proof.tst_scale.txt A012.
+Original expression:
+  QVERIFY(!isScalePitch(ScaleId::major, 0, 61));
+
+A013 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:112
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:92; no Swift transposed-membership predicate exists. See proof.tst_scale.txt A013.
+Original expression:
+  QVERIFY(isScalePitch(ScaleId::major, 2, 62));
+
+A014 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:113
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:93; no Swift transposed-membership predicate exists. See proof.tst_scale.txt A014.
+Original expression:
+  QVERIFY(!isScalePitch(ScaleId::major, 2, 60));
+
+A015 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:114
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:94; no Swift neighbor-pitch predicate exists. See proof.tst_scale.txt A015.
+Original expression:
+  QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 61), 62);
+
+A016 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:115
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:95; no Swift neighbor-pitch predicate exists. See proof.tst_scale.txt A016.
+Original expression:
+  QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 61), 60);
+
+A017 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:116
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:96; no Swift neighbor-boundary predicate exists. See proof.tst_scale.txt A017.
+Original expression:
+  QCOMPARE(firstScalePitchAbove(ScaleId::major, 0, 127), -1);
+
+A018 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:117
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:97; no Swift neighbor-boundary predicate exists. See proof.tst_scale.txt A018.
+Original expression:
+  QCOMPARE(firstScalePitchBelow(ScaleId::major, 0, 0), -1);
+
+A019 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:118
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:98; no Swift stepped-pitch predicate exists. See proof.tst_scale.txt A019.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 1), 62);
+
+A020 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:119
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:99; no Swift stepped-pitch predicate exists. See proof.tst_scale.txt A020.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 62, -1), 60);
+
+A021 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:120
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:100; no Swift stepped-pitch predicate exists. See proof.tst_scale.txt A021.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 60, 3), 65);
+
+A022 | ScaleCheckTest::membershipAndNeighbors | src/checks/editcheck/tst_songdocument_logic.cpp:121
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:101; no Swift stepped-pitch predicate exists. See proof.tst_scale.txt A022.
+Original expression:
+  QCOMPARE(nextScalePitch(ScaleId::major, 0, 67, -3), 62);
+
+A023 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_songdocument_logic.cpp:169
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:149; no Swift diatonic-resolution predicate exists. See proof.tst_scale.txt A023.
+Original expression:
+  QCOMPARE(result, accepted);
+
+A024 | ScaleCheckTest::diatonicDestinations | src/checks/editcheck/tst_songdocument_logic.cpp:170
+Disposition: GAP
+Swift: none identified
+Mapping/reason: Uncompiled duplicate of tst_scale.cpp:150; no Swift diatonic-destination predicate exists. See proof.tst_scale.txt A024.
+Original expression:
+  QCOMPARE(
+          QByteArray(reinterpret_cast<const char *>(destination.data()), int(destination.size())),
+          expected);
+
+A025 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:178
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Temporary-directory plumbing has no Swift equivalent; Swift round-trips in memory.
+Original expression:
+  QVERIFY(directory.isValid());
+
+A026 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:182
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Temporary-file open plumbing has no Swift equivalent; Swift round-trips in memory.
+Original expression:
+  QVERIFY(file.open());
+
+A027 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:183
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Temporary-file byte-count plumbing has no Swift equivalent; Swift round-trips in memory.
+Original expression:
+  QCOMPARE(file.write(bytes), qint64(bytes.size()));
+
+A028 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:187
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift decodes via MidiFile.decode with decode failure failing the suite through the nil-comparison predicate; the temporary-file read path itself is unproved.
+Original expression:
+  QVERIFY2(SmfFile::readFile(file.fileName(), &parsed, &error), qPrintable(error));
+
+A029 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:188
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts the raw parsed track count; Swift asserts the projected note count instead.
+Original expression:
+  QCOMPARE(parsed.tracks.size(), size_t(1));
+
+A030 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:189
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts the raw parsed event count; Swift asserts the projected note count instead.
+Original expression:
+  QCOMPARE(parsed.tracks.front().events.size(), size_t(3));
+
+A031 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:193
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift pairing predicates (three projected notes with exact durations) imply the two-note-on structure on a different fixture; per-event isNoteOn classification here is unproved.
+Original expression:
+  QVERIFY(first.isNoteOn());
+
+A032 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:194
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift pairing predicates (three projected notes with exact durations) imply the two-note-on structure on a different fixture; per-event isNoteOn classification here is unproved.
+Original expression:
+  QVERIFY(second.isNoteOn());
+
+A033 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:195
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift pairing predicates (first following matching end pairs exactly) imply the note-end role on a different fixture; per-event isNoteEnd classification here is unproved.
+Original expression:
+  QVERIFY(ordinary.isNoteEnd());
+
+A034 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:196
+Disposition: MATCHED
+Swift: S007 | src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift S007 asserts serialized MIDI carries no note identity (all decoded note-ons unassigned) under the same cppID, covering the first note-on here.
+Original expression:
+  QVERIFY(!first.noteId.isAssigned());
+
+A035 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:197
+Disposition: MATCHED
+Swift: S007 | src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift S007 asserts serialized MIDI carries no note identity (all decoded note-ons unassigned) under the same cppID, covering the second note-on here.
+Original expression:
+  QVERIFY(!second.noteId.isAssigned());
+
+A036 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:198
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The Swift no-identity predicate filters note-ons only; note-off identity is unproved.
+Original expression:
+  QVERIFY(!ordinary.noteId.isAssigned());
+
+A037 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:201
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift builds no MidiTimeline from a file; timeline loading is unproved.
+Original expression:
+  QVERIFY2(timeline, qPrintable(error));
+
+A038 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:207
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline event predicates; timeline note identity is unproved.
+Original expression:
+  QVERIFY(!event.noteId.isAssigned());
+
+A039 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:212
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline event predicates; the timeline note-on count is unproved.
+Original expression:
+  QCOMPARE(noteOns, 2);
+
+A040 | NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned | src/checks/editcheck/tst_songdocument_logic.cpp:213
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline event predicates; the timeline note-off identity observation is unproved.
+Original expression:
+  QVERIFY(ordinaryUnassigned);
+
+A041 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:222
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Every Swift adoption predicate executes on a constructed SongDocument, implying adoption succeeded; an explicit adoption-failure report path is unproved.
+Original expression:
+  QVERIFY2(document.adoptSmf(duplicateNoteFile(), song, &error), qPrintable(error));
+
+A042 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:235
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The "adoption remints unique document identities" predicate asserts count 3 on its own fixture; the two-note-on count here is unproved.
+Original expression:
+  QCOMPARE(original.size(), size_t(2));
+
+A043 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:236
+Disposition: MATCHED
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift S004 asserts adoption remints unique document identities (every adopted note assigned, set count 3) under the same cppID, covering assignedness of original[0] here.
+Original expression:
+  QVERIFY(original[0].isAssigned());
+
+A044 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:237
+Disposition: MATCHED
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift S004 asserts adoption remints unique document identities (every adopted note assigned, set count 3) under the same cppID, covering assignedness of original[1] here.
+Original expression:
+  QVERIFY(original[1].isAssigned());
+
+A045 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:238
+Disposition: MATCHED
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift S004 asserts adoption remints unique document identities (set count equals note count) under the same cppID, covering pairwise distinctness of the two adopted identities here.
+Original expression:
+  QVERIFY(original[0] != original[1]);
+
+A046 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:240
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate re-adopts an already adopted document; re-adoption is unproved.
+Original expression:
+  QVERIFY2(document.adoptSmf(document.smf(), song, &error), qPrintable(error));
+
+A047 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:243
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate covers the re-adopt plus addNote sequence; the resulting three-identity count is unproved.
+Original expression:
+  QCOMPARE(adopted.size(), size_t(3));
+
+A048 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:245
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The "adoption remints unique document identities" predicate asserts assignedness and uniqueness within one adoption; freshness against the pre-adopt identities is unproved.
+Original expression:
+  QVERIFY(id.isAssigned());
+
+A049 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:246
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The "adoption remints unique document identities" predicate asserts assignedness and uniqueness within one adoption; freshness against the pre-adopt identities is unproved.
+Original expression:
+  QVERIFY(std::find(original.begin(), original.end(), id) == original.end());
+
+A050 | NoteIdentityCheckTest::adoptedSmfRemintsForeignIds | src/checks/editcheck/tst_songdocument_logic.cpp:250
+Disposition: MATCHED
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift S004 asserts adoption remints unique document identities (set count equals note count) under the same cppID, covering pairwise distinctness of the re-adopted identities here.
+Original expression:
+  QVERIFY(adopted[left] != adopted[right]);
+
+A051 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:260
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift never constructs bare note identities; explicit assignedness of synthetic identities is unproved.
+Original expression:
+  QVERIFY(first.isAssigned());
+
+A052 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:261
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift never constructs bare note identities; explicit assignedness of synthetic identities is unproved.
+Original expression:
+  QVERIFY(second.isAssigned());
+
+A053 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:262
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no bare identity inequality predicate; synthetic identity distinctness is unproved.
+Original expression:
+  QVERIFY(first != second);
+
+A054 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:265
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: No Swift predicate asserts event equality ignoring identity; identity-blind equality is unproved.
+Original expression:
+  QVERIFY(file.tracks.front().events[0] == file.tracks.front().events[1]);
+
+A055 | NoteIdentityCheckTest::identityDoesNotAffectEqualityOrSerialization | src/checks/editcheck/tst_songdocument_logic.cpp:266
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: The "serialized MIDI carries no note identity" predicate asserts identities never serialize; exact byte equality of a stamped write against baseline is unproved.
+Original expression:
+  QCOMPARE(file.write(), baseline);
+
+A056 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:275
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift builds no MidiTimeline; timeline construction is unproved.
+Original expression:
+  QVERIFY(timeline);
+
+A057 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:289
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline event predicates; the timeline note-on count is unproved.
+Original expression:
+  QCOMPARE(noteOns, 2);
+
+A058 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:290
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline identity-transport predicates; stamped identity delivery is unproved.
+Original expression:
+  QVERIFY(firstSeen);
+
+A059 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:291
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline identity-transport predicates; stamped identity delivery is unproved.
+Original expression:
+  QVERIFY(secondSeen);
+
+A060 | NoteIdentityCheckTest::timelineTransportsOnlyStampedNoteIds | src/checks/editcheck/tst_songdocument_logic.cpp:292
+Disposition: GAP
+Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
+Mapping/reason: Swift has no timeline event predicates; the timeline note-off identity observation is unproved.
+Original expression:
+  QVERIFY(ordinaryUnassigned);
+
+Swift assertion predicates
+Every report.expect/expectEqual/fail call in the mapped Swift function:
+
+S001 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:35
+  report.expectEqual(3, notes.count,
+                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+                         what: "all note-ons projected")
+
+S002 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:38
+  report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
+                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
+                         what: "first following matching ends pair exactly")
+
+S003 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:41
+  report.expect(notes[2].isUnterminated,
+                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+                    message: "unterminated note is preserved")
+
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:44
+  report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
+                    cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
+                    message: "adoption remints unique document identities")
+
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:47
+  report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
+                    cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
+                    message: "typed tempo is removed from raw chunks")
+
+S006 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:50
+  report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
+                         document.state.tempo,
+                         cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                         what: "valid conductor tempo becomes typed state")
+
+S007 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:56
+  report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
+          .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
+          cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
+          message: "serialized MIDI carries no note identity")
+
+S008 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
+  report.expect(document.state.file.chunks[1].events[3].status == 0x80,
+                    cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
+                    message: "note-end status is retained during adoption")

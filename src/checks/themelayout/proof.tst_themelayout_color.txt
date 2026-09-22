@@ -1,0 +1,789 @@
+Assertion correspondence: themelayout/tst_themelayout_color.cpp
+
+Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
+Original: src/checks/themelayout/tst_themelayout_color.cpp
+Original SHA-256: a594fe67298004f6cbb8bc76f8dce1a2173b91b408a0b5b9b3414c78ec72fbaf
+Swift counterpart: none identified
+Swift SHA-256: n/a
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site in this file appears below, including the
+file-local helper guard and the menu/control contract helper whose sites fan
+out through themeCompleteness. The file exercises color math (Oklab and
+relative luminance against closed-form references), per-theme completeness and
+role contracts, grid-line contrast adjustment, lane/waveform legibility floors,
+and ThemeController settings repair/persistence. Source context preserves
+setup, data rows, loops, and guards between assertions verbatim.
+MATCHED means a corresponding Swift predicate was identified and would execute;
+PARTIAL means a related Swift predicate exists with a stated unproved condition;
+GAP means no equivalent Swift assertion is established;
+NATIVE means the site observes native window/rendering/harness state a
+presenter-level Swift check cannot establish. The theme/color/controller logic
+is GAP: a Swift port could establish it, but no Swift counterpart file covering
+this suite was identified. The two QTemporaryDir validity guards are NATIVE
+harness preconditions. No MATCHED or PARTIAL disposition is claimed anywhere
+in this file.
+
+Verification
+Command: deno task verify --filter themecheck --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+All cases in this file execute under themecheck via runThemeLayoutThemeCheck.
+
+Execution and ownership
+Native ownership only. runThemeLayoutThemeCheck (defined in
+src/checks/themelayout/themelayoutcheck.cpp) launches the themecheck lane;
+ThemeLayoutTest::init applies the vanilla theme and saves font/palette/
+stylesheet for every case. No Swift entry point executes any of this. Suite
+declarations live in src/checks/themelayout/tst_themelayout.h; no shared Swift
+fixture file exists. The file-local helpers themeForName, completeTheme,
+verifyMenuAndControlContracts, srgbToLinearReference, and oklabReference are
+value instruments, inventoried via the assertions that use them.
+
+Fixture, sequence and row constraints
+colorMath expands A019-A022 over 9 color rows (black, white, mid gray, pure
+RGB primaries, and three production tones). themeCompleteness expands A002-A018
+(the contract helper) plus A023-A030 over 3 theme rows (vanilla,
+dark-neutral-high, immaterial); A028-A030 additionally guard on the row's
+theme name. gridContrast expands A031-A038 over 9 rows (3 themes x contrast
+0/50/100) with branch guards: the defaultGridLineContrast row asserts identity
+and returns (A032); contrast 0 asserts reduced contrast and alpha (A033, A035);
+nonzero asserts increased contrast (A034) and alpha (A036); contrast 100
+additionally asserts the luminance moved away from the background (A037/A038).
+laneAndWaveformLegibility expands A039 over 24 rows (3 themes x 8
+role/surface pairs) with a 3.0 contrast floor. The last four entries expand
+over 3 mode rows. settingsRepair has no rows.
+Original setup, branch guards, and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory
+
+A001 | themeForName (file-local helper) | src/checks/themelayout/tst_themelayout_color.cpp:31
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+explicit failure guard fires when a data row names an unknown theme, so the
+helper can never silently substitute the wrong theme.
+Source context since previous assertion:
+  #include "checks/themelayout/tst_themelayout.h"
+
+  #include "ui/theme/color_math.h"
+  #include "ui/theme/themecontroller.h"
+
+  #include "ui/theme/themeresolver.h"
+
+  #include <QColor>
+  #include <QSettings>
+  #include <QTemporaryDir>
+  #include <QtTest>
+
+  #include <cstddef>
+
+  #include <array>
+  #include <cmath>
+  #include <utility>
+
+  namespace {
+
+  constexpr auto kContrastEpsilon = 1e-12;
+
+  const themes::Theme themeForName(const QString &name)
+  {
+      if (name == QStringLiteral("vanilla"))
+          return themes::vanilla();
+      if (name == QStringLiteral("dark-neutral-high"))
+          return themes::darkNeutralHigh();
+      if (name == QStringLiteral("immaterial"))
+          return themes::immaterial();
+Original expression:
+  QTest::qFail(qPrintable(QStringLiteral("unknown theme name: %1").arg(name)), __FILE__,
+               __LINE__);
+
+A002 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:49
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+menu-bar text/background contrast must reach 4.5 on every theme row.
+Source context since previous assertion:
+  ;
+      return themes::vanilla();
+  }
+
+  bool completeTheme(const themes::Theme &theme)
+  {
+      for (std::size_t index = 0; index < theme.colors.size(); ++index) {
+          const QColor color = theme.colors[index];
+          const auto role = static_cast<themes::Role>(index);
+          if (!color.isValid() || (role != themes::Role::song_view_grid && color.alpha() != 255))
+              return false;
+      }
+      return true;
+  }
+
+  void verifyMenuAndControlContracts(const themes::Theme &theme)
+  {
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(themes::Role::menu_bar_text),
+                                theme.color(themes::Role::menu_bar_background)) >= 4.5);
+
+A003 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:51
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+button-hover text/background contrast must reach 4.5 on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(themes::Role::button_hover_text),
+                                theme.color(themes::Role::button_hover_background)) >= 4.5);
+
+A004 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:53
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+button-pressed text/background contrast must reach 4.5 on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(themes::Role::button_pressed_text),
+                                theme.color(themes::Role::button_pressed_background)) >= 4.5);
+
+A005 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:55
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+combo drop-down pressed background must alias the button pressed background
+on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::combo_drop_down_pressed_background),
+           theme.color(themes::Role::button_pressed_background));
+
+A006 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:57
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+menu background must alias the item background on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::menu_background),
+           theme.color(themes::Role::item_background));
+
+A007 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:59
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+menu text must alias the item text on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::menu_text), theme.color(themes::Role::item_text));
+
+A008 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:60
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+menu hover background must alias the item hover background on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::menu_item_hover_background),
+           theme.color(themes::Role::item_hover_background));
+
+A009 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:62
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+menu hover text must alias the item hover text on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::menu_item_hover_text),
+           theme.color(themes::Role::item_hover_text));
+
+A010 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:64
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+menu hover text/background contrast must reach 4.5 on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(themes::Role::menu_item_hover_text),
+                                theme.color(themes::Role::menu_item_hover_background)) >= 4.5);
+
+A011 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:66
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+splitter hover background must alias the button pressed background on every
+theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::splitter_handle_hover_background),
+           theme.color(themes::Role::button_pressed_background));
+
+A012 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:68
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+input background must alias the combo background on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::input_background),
+           theme.color(themes::Role::combo_background));
+
+A013 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:70
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+input text must alias the combo text on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::input_text), theme.color(themes::Role::combo_text));
+
+A014 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:71
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+input outline must alias the combo outline on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::input_outline), theme.color(themes::Role::combo_outline));
+
+A015 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:72
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+spin-box background must alias the combo background on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::spin_box_background),
+           theme.color(themes::Role::combo_background));
+
+A016 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:74
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+spin-box text must alias the combo text on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::spin_box_text), theme.color(themes::Role::combo_text));
+
+A017 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:75
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+spin-box outline must alias the combo outline on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::spin_box_outline), theme.color(themes::Role::combo_outline));
+
+A018 | verifyMenuAndControlContracts (file-local helper, via ThemeLayoutTest::themeCompleteness) | src/checks/themelayout/tst_themelayout_color.cpp:76
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+combo text/background contrast must reach 4.5 on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(themes::Role::combo_text),
+                                theme.color(themes::Role::combo_background)) >= 4.5);
+
+A019 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:116
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+Oklab lightness must match the closed-form reference within 1e-12 on every
+color row.
+Source context since previous assertion:
+  ;
+  }
+
+  double srgbToLinearReference(double component)
+  {
+      return component <= 0.04045 ? component / 12.92 : std::pow((component + 0.055) / 1.055, 2.4);
+  }
+
+  themes::Oklab oklabReference(const QColor &color)
+  {
+      const QColor rgb = color.toRgb();
+      const double red = srgbToLinearReference(static_cast<double>(rgb.red()) / 255.0);
+      const double green = srgbToLinearReference(static_cast<double>(rgb.green()) / 255.0);
+      const double blue = srgbToLinearReference(static_cast<double>(rgb.blue()) / 255.0);
+      const double l = std::cbrt(0.4122214708 * red + 0.5363325363 * green + 0.0514459929 * blue);
+      const double m = std::cbrt(0.2119034982 * red + 0.6806995451 * green + 0.1073969566 * blue);
+      const double s = std::cbrt(0.0883024619 * red + 0.2817188376 * green + 0.6299787005 * blue);
+      return {0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+              1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+              0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s};
+  }
+
+  } // namespace
+
+  void ThemeLayoutTest::colorMath_data()
+  {
+      QTest::addColumn<QColor>("color");
+      const std::array colors{QColor(0, 0, 0),     QColor(255, 255, 255), QColor(128, 128, 128),
+                              QColor(255, 0, 0),   QColor(0, 255, 0),     QColor(0, 0, 255),
+                              QColor(24, 88, 192), QColor(200, 150, 50),  QColor(33, 33, 33)};
+      for (const QColor &color : colors)
+          QTest::newRow(color.name().toLatin1().constData()) << color;
+  }
+
+  void ThemeLayoutTest::colorMath()
+  {
+      QFETCH(QColor, color);
+      const themes::Oklab actual = themes::oklabFromColor(color);
+      const themes::Oklab expected = oklabReference(color);
+Original expression:
+  QVERIFY(std::abs(actual.lightness - expected.lightness) < kContrastEpsilon);
+
+A020 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:117
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+Oklab a channel must match the closed-form reference within 1e-12 on every
+color row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(actual.a - expected.a) < kContrastEpsilon);
+
+A021 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:118
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+Oklab b channel must match the closed-form reference within 1e-12 on every
+color row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(std::abs(actual.b - expected.b) < kContrastEpsilon);
+
+A022 | ThemeLayoutTest::colorMath | src/checks/themelayout/tst_themelayout_color.cpp:124
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+relative luminance must match the Rec.709-weighted reference within 1e-12 on
+every color row.
+Source context since previous assertion:
+  ;
+      const QColor rgb = color.toRgb();
+      const double expectedLuminance =
+          0.2126 * srgbToLinearReference(static_cast<double>(rgb.red()) / 255.0) +
+          0.7152 * srgbToLinearReference(static_cast<double>(rgb.green()) / 255.0) +
+          0.0722 * srgbToLinearReference(static_cast<double>(rgb.blue()) / 255.0);
+Original expression:
+  QVERIFY(std::abs(themes::relativeLuminance(color) - expectedLuminance) < kContrastEpsilon);
+
+A023 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:140
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; every
+role of the row's theme must be valid with full alpha (except the translucent
+grid role) before the contract helper runs.
+Source context since previous assertion:
+  ;
+  }
+
+  void ThemeLayoutTest::themeCompleteness_data()
+  {
+      QTest::addColumn<QString>("themeName");
+      const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
+                             QStringLiteral("immaterial")};
+      for (const QString &name : names)
+          QTest::newRow(name.toLatin1().constData()) << name;
+  }
+
+  void ThemeLayoutTest::themeCompleteness()
+  {
+      QFETCH(QString, themeName);
+      const themes::Theme theme = themeForName(themeName);
+Original expression:
+  QVERIFY(completeTheme(theme));
+
+A024 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:142
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+disabled-text legibility floor (contrast 1.3 against window text) must hold
+on every theme row.
+Source context since previous assertion:
+  ;
+      verifyMenuAndControlContracts(theme);
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(themes::Role::disabled_text),
+                                theme.color(themes::Role::window_text)) >= 1.3);
+
+A025 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:144
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+combo drop-down hover background must alias the button hover background on
+every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::combo_drop_down_hover_background),
+           theme.color(themes::Role::button_hover_background));
+
+A026 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:146
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+focus outline must alias the palette outline on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::focus_outline), theme.color(themes::Role::palette_outline));
+
+A027 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:147
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+tab pane background must alias the toolbar background on every theme row.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(theme.color(themes::Role::tab_pane_background),
+           theme.color(themes::Role::toolbar_background));
+
+A028 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:150
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+vanilla row, the grid role must equal the pinned translucent black
+(0x04,0x00,0x00,0x3F).
+Source context since previous assertion:
+  ;
+      if (themeName == QStringLiteral("vanilla"))
+Original expression:
+  QCOMPARE(theme.color(themes::Role::song_view_grid),
+           QColor::fromRgb(0x04, 0x00, 0x00, 0x3F));
+
+A029 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:153
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+dark-neutral-high row, the grid role must equal the pinned translucent black
+(0x03,0x03,0x03,0x54).
+Source context since previous assertion:
+  ;
+      if (themeName == QStringLiteral("dark-neutral-high"))
+Original expression:
+  QCOMPARE(theme.color(themes::Role::song_view_grid),
+           QColor::fromRgb(0x03, 0x03, 0x03, 0x54));
+
+A030 | ThemeLayoutTest::themeCompleteness | src/checks/themelayout/tst_themelayout_color.cpp:156
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+immaterial row, the grid role must equal the pinned translucent value
+(0x03,0x06,0x06,0x54).
+Source context since previous assertion:
+  ;
+      if (themeName == QStringLiteral("immaterial"))
+Original expression:
+  QCOMPARE(theme.color(themes::Role::song_view_grid),
+           QColor::fromRgb(0x03, 0x06, 0x06, 0x54));
+
+A031 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:180
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+contrast-adjusted theme must stay complete on every theme/contrast row.
+Source context since previous assertion:
+  ;
+  }
+
+  void ThemeLayoutTest::gridContrast_data()
+  {
+      QTest::addColumn<QString>("themeName");
+      QTest::addColumn<int>("contrast");
+      const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
+                             QStringLiteral("immaterial")};
+      for (const QString &name : names) {
+          for (const int contrast : {0, 50, 100})
+              QTest::newRow(
+                  (name + QStringLiteral("-") + QString::number(contrast)).toLatin1().constData())
+                  << name << contrast;
+      }
+  }
+
+  void ThemeLayoutTest::gridContrast()
+  {
+      QFETCH(QString, themeName);
+      QFETCH(int, contrast);
+      const themes::Theme theme = themeForName(themeName);
+      const themes::Theme adjusted = themes::withGridLineContrast(theme, contrast);
+Original expression:
+  QVERIFY(completeTheme(adjusted));
+
+A032 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:185
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+default-contrast row the adjustment must be the identity and the case returns
+early.
+Source context since previous assertion:
+  ;
+      const QColor originalGrid = theme.color(themes::Role::song_view_grid);
+      const QColor adjustedGrid = adjusted.color(themes::Role::song_view_grid);
+      const QColor background = theme.color(themes::Role::song_view_piano_roll_background);
+      if (contrast == themes::defaultGridLineContrast) {
+Original expression:
+  QCOMPARE(adjustedGrid, originalGrid);
+
+A033 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:191
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+contrast-0 row the adjusted grid must lose contrast against the background.
+Source context since previous assertion:
+  ;
+          return;
+      }
+      const double originalContrast = themes::contrastRatio(originalGrid, background);
+      const double adjustedContrast = themes::contrastRatio(adjustedGrid, background);
+      if (contrast == 0)
+Original expression:
+  QVERIFY(adjustedContrast < originalContrast);
+
+A034 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:193
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on
+nonzero non-default rows the adjusted grid must gain contrast.
+Source context since previous assertion:
+  ;
+      else
+Original expression:
+  QVERIFY(adjustedContrast > originalContrast);
+
+A035 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:195
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+contrast-0 row the adjusted grid alpha must drop below the original alpha.
+Source context since previous assertion:
+  ;
+      if (contrast == 0)
+Original expression:
+  QVERIFY(adjustedGrid.alpha() < originalGrid.alpha());
+
+A036 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:197
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on
+nonzero non-default rows the adjusted grid alpha must rise above the original
+alpha.
+Source context since previous assertion:
+  ;
+      else
+Original expression:
+  QVERIFY(adjustedGrid.alpha() > originalGrid.alpha());
+
+A037 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:203
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+contrast-100 row with a dark-side original, the adjusted luminance must move
+further from the background (darker).
+Source context since previous assertion:
+  ;
+      if (contrast == 100) {
+          const double originalLuminance = themes::relativeLuminance(originalGrid);
+          const double backgroundLuminance = themes::relativeLuminance(background);
+          const double adjustedLuminance = themes::relativeLuminance(adjustedGrid);
+          if (originalLuminance <= backgroundLuminance)
+Original expression:
+  QVERIFY(adjustedLuminance < originalLuminance);
+
+A038 | ThemeLayoutTest::gridContrast | src/checks/themelayout/tst_themelayout_color.cpp:205
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; on the
+contrast-100 row with a light-side original, the adjusted luminance must move
+further from the background (lighter).
+Source context since previous assertion:
+  ;
+          else
+Original expression:
+  QVERIFY(adjustedLuminance > originalLuminance);
+
+A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; each
+of the 24 theme role/surface rows must reach the 3.0 contrast floor.
+Source context since previous assertion:
+  ;
+      }
+  }
+
+  void ThemeLayoutTest::laneAndWaveformLegibility_data()
+  {
+      QTest::addColumn<QString>("themeName");
+      QTest::addColumn<int>("role");
+      QTest::addColumn<int>("surface");
+      const std::array names{QStringLiteral("vanilla"), QStringLiteral("dark-neutral-high"),
+                             QStringLiteral("immaterial")};
+      const std::array checks{
+          std::pair{themes::Role::song_view_edit_preview_outline,
+                    themes::Role::song_view_piano_roll_background},
+          std::pair{themes::Role::song_view_add_automation_lane_action,
+                    themes::Role::song_view_piano_roll_background},
+          std::pair{themes::Role::tab_selected_text,
+                    themes::Role::song_view_automation_tab_active_background},
+          std::pair{themes::Role::sample_waveform_ink, themes::Role::item_background},
+          std::pair{themes::Role::sample_crop_handle, themes::Role::item_background},
+          std::pair{themes::Role::sample_loop_handle, themes::Role::item_background},
+          std::pair{themes::Role::sample_loop_handle, themes::Role::item_alternate_background},
+          std::pair{themes::Role::sample_seam_end_ink, themes::Role::item_alternate_background},
+      };
+      for (const QString &name : names) {
+          for (const auto &[role, surface] : checks) {
+              const auto row = name + QStringLiteral("-") + QString::number(static_cast<int>(role)) +
+                               QStringLiteral("-") + QString::number(static_cast<int>(surface));
+              QTest::newRow(row.toLatin1().constData())
+                  << name << static_cast<int>(role) << static_cast<int>(surface);
+          }
+      }
+  }
+
+  void ThemeLayoutTest::laneAndWaveformLegibility()
+  {
+      QFETCH(QString, themeName);
+      QFETCH(int, role);
+      QFETCH(int, surface);
+      const themes::Theme theme = themeForName(themeName);
+Original expression:
+  QVERIFY(themes::contrastRatio(theme.color(static_cast<themes::Role>(role)),
+                                theme.color(static_cast<themes::Role>(surface))) >= 3.0);
+
+A040 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:252
+Disposition: NATIVE
+Mapping/reason: Native harness precondition: the scratch settings directory
+must be valid before the repair case writes into it. A presenter check cannot
+establish the native temporary directory.
+Source context since previous assertion:
+  ;
+  }
+
+  void ThemeLayoutTest::settingsRepair()
+  {
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid());
+
+A041 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:262
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; after
+restore, the bogus "custom" mode must repair to Vanilla while the valid
+contrast value survives.
+Source context since previous assertion:
+  ;
+      QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
+      settings.setValue(QStringLiteral("theme/mode"), QStringLiteral("custom"));
+      settings.setValue(QStringLiteral("theme/primary"), QStringLiteral("#000000"));
+      settings.setValue(QStringLiteral("theme/accent"), QStringLiteral("#FFFFFF"));
+      settings.setValue(QStringLiteral("theme/grid-line-contrast"), QStringLiteral("80"));
+
+      themes::ThemeController controller(*m_application, settings);
+      controller.restore();
+
+Original expression:
+  QCOMPARE(controller.committedSelection().mode, themes::ThemeMode::Vanilla);
+
+A042 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:263
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+stored grid-line contrast of 80 must survive the repair.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(controller.committedSelection().gridLineContrast, 80);
+
+A043 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:264
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+stored mode string must be rewritten to "vanilla".
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(settings.value(QStringLiteral("theme/mode")).toString(), QStringLiteral("vanilla"));
+
+A044 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:265
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+stale theme/primary key must be dropped by the repair.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!settings.contains(QStringLiteral("theme/primary")));
+
+A045 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:266
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+stale theme/accent key must be dropped by the repair.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!settings.contains(QStringLiteral("theme/accent")));
+
+A046 | ThemeLayoutTest::settingsRepair | src/checks/themelayout/tst_themelayout_color.cpp:267
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+stored grid-line contrast value must read back as 80.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 80);
+
+A047 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:287
+Disposition: NATIVE
+Mapping/reason: Native harness precondition: the scratch settings directory
+must be valid before the write/read round-trip.
+Source context since previous assertion:
+  ;
+  }
+
+  void ThemeLayoutTest::themePersistence_data()
+  {
+      QTest::addColumn<int>("mode");
+      QTest::addColumn<QString>("storedName");
+      QTest::newRow("vanilla") << static_cast<int>(themes::ThemeMode::Vanilla)
+                               << QStringLiteral("vanilla");
+      QTest::newRow("dark-neutral-high") << static_cast<int>(themes::ThemeMode::DarkNeutralHigh)
+                                         << QStringLiteral("dark-neutral-high");
+      QTest::newRow("immaterial") << static_cast<int>(themes::ThemeMode::Immaterial)
+                                  << QStringLiteral("immaterial");
+  }
+
+  void ThemeLayoutTest::themePersistence()
+  {
+      QFETCH(int, mode);
+      QFETCH(QString, storedName);
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid());
+
+A048 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:294
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+commit of the row's mode must succeed before the round-trip read.
+Source context since previous assertion:
+  ;
+      const QString settingsPath = directory.filePath(QStringLiteral("settings.ini"));
+      QSettings writeSettings(settingsPath, QSettings::IniFormat);
+      themes::ThemeController writeController(*m_application, writeSettings);
+      writeController.restore();
+      const auto themeMode = static_cast<themes::ThemeMode>(mode);
+      const themes::ThemeSelection selection{themeMode};
+Original expression:
+  QVERIFY(writeController.commit(selection));
+
+A049 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:301
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+fresh controller reading the same file must restore the row's mode.
+Source context since previous assertion:
+  ;
+      writeSettings.sync();
+
+      QSettings readSettings(settingsPath, QSettings::IniFormat);
+      themes::ThemeController readController(*m_application, readSettings);
+      readController.restore();
+      const themes::ThemeSelection &restored = readController.committedSelection();
+Original expression:
+  QCOMPARE(restored.mode, themeMode);
+
+A050 | ThemeLayoutTest::themePersistence | src/checks/themelayout/tst_themelayout_color.cpp:302
+Disposition: GAP
+Mapping/reason: No equivalent predicate in Swift has been established; the
+stored mode string must equal the row's stored name.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(readSettings.value(QStringLiteral("theme/mode")).toString(), storedName);
+
+Remaining original source (closing sequence and helper bodies):
+  }
+
+Swift assertion predicates
+None identified: no Swift counterpart file establishes predicates for this
+suite.
+
+Shared helper
+None: no Swift fixture file carries expects for this suite.

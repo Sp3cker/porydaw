@@ -1,0 +1,134 @@
+Assertion correspondence: audio/tst_audiotelemetry.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/audio/tst_audiotelemetry.cpp
+Original SHA-256: be59b9fc427b087715c7ff78ff2cfccf7c60639dafb2c883a912f38d3461f735
+Swift counterpart: src/checks/audio/tst_audiotelemetry.swift
+Swift SHA-256: 951b2a4e544cf71f7c759c95b3b3130480b8f7eeb62ca6b56c149c9ff38aff31
+
+Purpose and status
+Each numbered entry records one original assertion/failure site, not one test
+method or one runtime execution. Loops/data rows reuse a site; their instances
+are described below. QFAIL/qFail guards and helper calls are part of the contract.
+MATCHED means a corresponding Swift predicate was identified and executed;
+RETIRED-REPRESENTATION identifies an unreachable old implementation input with
+an explicit replacement-contract justification, not an omitted user behavior;
+PARTIAL means a related check exists but differs in a stated way;
+GAP means an equivalent Swift assertion is not established;
+NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
+only by the retained native path. None of these labels authorizes deletion or
+claims whole-case equivalence. Native passes do not prove the Swift replacement.
+
+Execution and ownership
+checkAudioVolumeClamps receives the same renderer from checkControllerControls; it leaves volume at 100 before subsequent rendering, preserving existing order.
+
+Fixture, sequence and row constraints
+packedActivity rows: silent=(0,0,0x0000), maximum=(255,255,0xffff), asymmetric=(0x5A,0xA5,0xa55a). pcmPan rows: center=(255,127,127 ->255,255), hard-left=(255,127,0 ->255,0), hard-right=(255,0,127 ->0,255), asymmetric-balance=(128,32,64 ->64,128), silent=(255,0,0 ->0,0). freshConsume loops over every track and both stereo components.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Verification evidence
+deno task verify --filter swiftcore --filter clickcheck --verbose -- PASS 2/2.
+The playback case executes all predicates in this pair; no failures remain.
+Raw-word-only implementation assertions are explicitly retired below, not
+claimed as executed Swift assertions. Source hashes are refreshed at final integration.
+
+Shared Swift sources used by this refactor (SHA-256)
+src/checks/audio/controllerfixture.swift: c9a1a81a199c1afdc1b7f9cb48365019c28703c96c44fa70e26e7a80947ea6a6
+src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
+src/checks/playback/transportfixture.swift: 65455d9bab9f44b842b89a32e8e736ddf072b4e8cf1ace82b848a32cd95e9042
+src/checks/audio/AudioControllerChecks.swift: d65ac344d7286b7027213b1a39e5881885c847cc85308b386b566b3eb39e148c
+src/checks/playback/PlaybackChecks.swift: 60178614265d11fc9cfa0a6ec46ec8f324afecfb20c99417a340e29ad348dfeb
+src/checks/playback/ResonanceSuppressionChecks.swift: a20761efc254f055672862b355aa7467985de554458814847905d2926dfeebb1
+
+Original assertion inventory
+
+A001 | AudioTelemetryTest::packedActivityPreservesByteOrder | src/checks/audio/tst_audiotelemetry.cpp:28
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes the original silent/maximum/asymmetric rows through AudioTelemetry.publish and consumes exact left/right bytes; the same expected packed word is reconstructed for the byte-order predicate. Private storage packing is no longer a public ABI.
+Original expression:
+  QCOMPARE(packedActivity(level), packed)
+
+A002 | AudioTelemetryTest::packedActivityPreservesByteOrder | src/checks/audio/tst_audiotelemetry.cpp:30
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes the original silent/maximum/asymmetric rows through AudioTelemetry.publish and consumes exact left/right bytes; the same expected packed word is reconstructed for the byte-order predicate. Private storage packing is no longer a public ABI.
+Original expression:
+  QCOMPARE(unpacked.left, left)
+
+A003 | AudioTelemetryTest::packedActivityPreservesByteOrder | src/checks/audio/tst_audiotelemetry.cpp:31
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes the original silent/maximum/asymmetric rows through AudioTelemetry.publish and consumes exact left/right bytes; the same expected packed word is reconstructed for the byte-order predicate. Private storage packing is no longer a public ABI.
+Original expression:
+  QCOMPARE(unpacked.right, right)
+
+A004 | AudioTelemetryTest::unpackConsumesOnlyActivityBytes | src/checks/audio/tst_audiotelemetry.cpp:37
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: V-1 representation retirement: the old standalone unpackedActivity(UInt32) accepted arbitrary upper bytes. Swift accepts typed UInt8 channel levels; its private peak words are constructed only from those two bytes, with no raw-word ingress. The 0xDEADBEEF input is not representable through the replacement contract. Exact valid-byte consumption is exercised by packedActivityPreservesByteOrder; no production test-only raw-word setter was added.
+Original expression:
+  QCOMPARE(unpacked.left, uint8_t{0xEF})
+
+A005 | AudioTelemetryTest::unpackConsumesOnlyActivityBytes | src/checks/audio/tst_audiotelemetry.cpp:38
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: V-1 representation retirement: the old standalone unpackedActivity(UInt32) accepted arbitrary upper bytes. Swift accepts typed UInt8 channel levels; its private peak words are constructed only from those two bytes, with no raw-word ingress. The 0xDEADBEEF input is not representable through the replacement contract. Exact valid-byte consumption is exercised by packedActivityPreservesByteOrder; no production test-only raw-word setter was added.
+Original expression:
+  QCOMPARE(unpacked.right, uint8_t{0xBE})
+
+A006 | AudioTelemetryTest::maxLevelIsComponentWise | src/checks/audio/tst_audiotelemetry.cpp:44
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes two simultaneous PCM channels with (24,220) and (220,24), then asserts both consumed components equal220 through the real production collector.
+Original expression:
+  QCOMPARE(combined.left, uint8_t{220})
+
+A007 | AudioTelemetryTest::maxLevelIsComponentWise | src/checks/audio/tst_audiotelemetry.cpp:45
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes two simultaneous PCM channels with (24,220) and (220,24), then asserts both consumed components equal220 through the real production collector.
+Original expression:
+  QCOMPARE(combined.right, uint8_t{220})
+
+A008 | AudioTelemetryTest::pcmPanRetainsEnvelope | src/checks/audio/tst_audiotelemetry.cpp:76
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes all five original envelope/pan rows through AudioTelemetry.publish and compares both output components individually against the original expected values.
+Original expression:
+  QCOMPARE(level.left, expectedLeft)
+
+A009 | AudioTelemetryTest::pcmPanRetainsEnvelope | src/checks/audio/tst_audiotelemetry.cpp:77
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry publishes all five original envelope/pan rows through AudioTelemetry.publish and compares both output components individually against the original expected values.
+Original expression:
+  QCOMPARE(level.right, expectedRight)
+
+A010 | AudioTelemetryTest::outputVolumeClamps | src/checks/audio/tst_audiotelemetry.cpp:83
+Disposition: MATCHED
+Mapping/reason: checkAudioVolumeClamps asserts initial100, in-range42, lower-1=>0, upper101=>100 using AudioRenderEngine.setOutputVolume and outputVolume.
+Original expression:
+  QCOMPARE(engine.outputVolume(), 100)
+
+A011 | AudioTelemetryTest::outputVolumeClamps | src/checks/audio/tst_audiotelemetry.cpp:85
+Disposition: MATCHED
+Mapping/reason: checkAudioVolumeClamps asserts initial100, in-range42, lower-1=>0, upper101=>100 using AudioRenderEngine.setOutputVolume and outputVolume.
+Original expression:
+  QCOMPARE(engine.outputVolume(), 42)
+
+A012 | AudioTelemetryTest::outputVolumeClamps | src/checks/audio/tst_audiotelemetry.cpp:87
+Disposition: MATCHED
+Mapping/reason: checkAudioVolumeClamps asserts initial100, in-range42, lower-1=>0, upper101=>100 using AudioRenderEngine.setOutputVolume and outputVolume.
+Original expression:
+  QCOMPARE(engine.outputVolume(), 0)
+
+A013 | AudioTelemetryTest::outputVolumeClamps | src/checks/audio/tst_audiotelemetry.cpp:89
+Disposition: MATCHED
+Mapping/reason: checkAudioVolumeClamps asserts initial100, in-range42, lower-1=>0, upper101=>100 using AudioRenderEngine.setOutputVolume and outputVolume.
+Original expression:
+  QCOMPARE(engine.outputVolume(), 100)
+
+A014 | AudioTelemetryTest::freshConsumeIsAllDark | src/checks/audio/tst_audiotelemetry.cpp:97
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry consumes a fresh AudioTelemetry, asserts MAX_TRACKS entries, then checks both components equal0 for every track.
+Original expression:
+  QCOMPARE(consumed[track].left, uint8_t{0})
+
+A015 | AudioTelemetryTest::freshConsumeIsAllDark | src/checks/audio/tst_audiotelemetry.cpp:98
+Disposition: MATCHED
+Mapping/reason: checkAudioActivityTelemetry consumes a fresh AudioTelemetry, asserts MAX_TRACKS entries, then checks both components equal0 for every track.
+Original expression:
+  QCOMPARE(consumed[track].right, uint8_t{0})

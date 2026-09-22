@@ -1,0 +1,347 @@
+Assertion correspondence: selectionkey/localinputtier_text.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/selectionkey/localinputtier_text.cpp
+Original SHA-256: 80adaaa8ce5a7eddfa1a779243b266c24be61bd830b111f4fd65f4f6f0d8b3d6
+Original removed from current checkout; use git show at reference.
+Swift counterpart: src/checks/selectionkey/localinputtier_text.swift
+Swift SHA-256: 6d6d5461a57ced89902dae8964f17b8f992c5932c0117428ee96eec7e9a5a853
+
+Scope: numericPromptOwnsKeys and velocityPromptOwnsKeys. Other historical text-surface methods are not covered by this scoped proof; this is not a file-retirement certificate.
+
+Production Swift: drawerOriginalNumericPromptTransaction reuses the original CC10 rows48=32,96=64, inserted prompt144 with initial64 and selected note24/key60/duration24. It checks draft12, no document mutation, preserved selection, and cancellation. Actual keyboard delivery, clipboard, focus, modal close and window routing require production host verification, not a fake Swift keyboard model. The historical velocityPromptOwnsKeys method explicitly asserts Space transport activation at lines 555 and 566, preserving numeric text and popup state. numericPromptOwnsKeys does not contain a Space assertion. These original keyboard assertions remain deferred, not satisfied by the Swift transaction check.
+
+Swift verification: deno task verify --filter swiftcore --verbose PASS (1 selected harness, 23 unselected), log /tmp/drawer-cpp-proxy-swift.log. This runs drawerOriginalNumericPromptTransaction.
+Keyboard routing is explicitly deferred by the user: ALL numeric inputs must yield Space to the application. The two editorqml numeric-Space rows fail and are not parity evidence. They run in a bare QuickTest window without RewriteWindow's production host arbitration. The original exception belongs in that existing host authority, not a second QML shortcut dispatcher. No host/focus implementation was changed in this task. The following original assertion inventory remains PARTIAL until exact source-to-predicate reconciliation and appropriate host verification are recorded. Do not delete original reference coverage based on this file.
+
+Original 272
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings")
+
+Original 284
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(quickWindow && automation, "the automation canvas surface is unavailable")
+
+Original 289
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(probe.has_value(), qUtf8Printable(coordinateDiagnostics))
+
+Original 290
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(probe->activateParameter(&coordinateDiagnostics),
+             qUtf8Printable(coordinateDiagnostics))
+
+Original 295
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(canvas)
+
+Original 304
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(laneIndex >= 0)
+
+Original 309
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(note.has_value(), "the fixture note was not created")
+
+Original 322
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(canvas->openValuePromptForInsertion(LaneHandle{laneIndex}, kEmptyTick, 64))
+
+Original 323
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QTRY_VERIFY(automation_valueprompt::promptVisible(chrome))
+
+Original 325
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QTRY_VERIFY2((prompt = automation_valueprompt::focusedTextInput(*quickWindow)),
+                 "the value prompt did not take active focus")
+
+Original 332
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(prompt && prompt->property("text").toString() == QStringLiteral("12"),
+             "the delivered digits did not land in the value prompt")
+
+Original 339
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"))
+
+Original 345
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(numericText == QStringLiteral("12") && copiedFrom == numericText &&
+                 copiedText == copiedFrom,
+             qPrintable(QStringLiteral("numeric Copy mismatch: field='%1' selected='%2' "
+                                       "clipboard='%3'")
+                            .arg(numericText, copiedFrom, copiedText)))
+
+Original 357
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(automation_valueprompt::promptVisible(chrome),
+             "the value prompt closed while arrow keys were delivered")
+
+Original 359
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(view.selectionModel().noteSelection() == std::vector<NoteId>{note->id},
+             "prompt arrow keys leaked into the note selection")
+
+Original 361
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(document.smf().write() == before,
+             "prompt arrow keys leaked a shared edit command into the song")
+
+Original 368
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(QMetaObject::invokeMethod(prompt, "selectAll"))
+
+Original 380
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(prompt && prompt->property("text").toString() == expectedAfterSolo,
+             qPrintable(QStringLiteral("numeric Solo-key contract mismatch: expected='%1' "
+                                       "actual='%2'")
+                            .arg(expectedAfterSolo,
+                                 prompt ? prompt->property("text").toString() : QString())))
+
+Original 385
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
+             qPrintable(QStringLiteral("Solo escaped the value prompt: action-delta=%1 "
+                                       "track-soloed=%2")
+                            .arg(m_counts.solo - soloBefore)
+                            .arg(view.trackSoloed(kTrack))))
+
+Original 390
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(document.smf().write() == before,
+             "value prompt typing mutated the automation lane or the song")
+
+Original 396
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
+
+Original 397
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(document.smf().write() == before, "cancelling the value prompt mutated the song")
+
+Original 399
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Automation, Qt::MouseFocusReason),
+             "could not refocus the automation band after the prompt")
+
+Original 402
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
+             "Solo did not resume after the value prompt closed")
+
+Original 405
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt")
+
+Original 416
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(solo.has_value() && copy.has_value(), "Solo/Copy have no single-key bindings")
+
+Original 422
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(note.has_value(), "the fixture note was not created")
+
+Original 432
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(quickWindow && rollInput, "the roll surface is unavailable")
+
+Original 448
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(rollInput->bounds().contains(rollPoint),
+             "production roll geometry did not expose the fixture note")
+
+Original 451
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(QRect(QPoint{}, quickWindow->size()).contains(rollPress),
+             "the note menu press left the Quick window")
+
+Original 465
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(menuSession && menuSession->isOpen(), "right-click did not open the note menu")
+
+Original 467
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(panel, "the note menu did not render a panel")
+
+Original 469
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(model, "the note menu has no typed model")
+
+Original 472
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(velocityRow >= 0, "the note menu has no velocity action")
+
+Original 473
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(quick_popup::clickMenuRow(*menuSession, velocityRow),
+             "the velocity menu row did not receive a real click")
+
+Original 479
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(popup && popup->isOpen() && canvas,
+             "the velocity action did not open the canvas prompt")
+
+Original 481
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QTRY_VERIFY2(quick_popup::inputHasActiveFocus(*canvas, QLatin1String("noteVelocityInput")),
+                 "the velocity prompt text input did not take active focus")
+
+Original 484
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(input, "the velocity prompt has no text input")
+
+Original 486
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QCOMPARE(input->property("text").toString(), initialText)
+
+Original 487
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QCOMPARE(input->property("selectedText").toString(), initialText)
+
+Original 492
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QCOMPARE(input->property("text").toString(), QStringLiteral("12"))
+
+Original 497
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(QMetaObject::invokeMethod(input, "selectAll"))
+
+Original 501
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(!copiedFrom.isEmpty() && QApplication::clipboard()->text() == copiedFrom &&
+                 m_counts.copy == copyBefore,
+             "Copy while the velocity prompt owns the keys did not stay local to the field")
+
+Original 506
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(QMetaObject::invokeMethod(input, "selectAll"))
+
+Original 510
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(input->property("text").toString() == QStringLiteral("12") &&
+                 m_counts.copy == copyBefore && m_counts.solo == soloBefore,
+             "Paste while the velocity prompt owned focus leaked to a background command")
+
+Original 516
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(QMetaObject::invokeMethod(input, "selectAll"))
+
+Original 528
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(input->property("text").toString() == expectedAfterSolo &&
+                 m_counts.solo == soloBefore && !view.trackSoloed(kTrack),
+             "Solo escaped the velocity prompt")
+
+Original 535
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(m_counts.solo == soloBefore && !view.trackSoloed(kTrack) && popup->isOpen(),
+             "a window command fired while the velocity prompt was open")
+
+Original 544
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(popup && popup->isOpen() && input->property("text").toString() == initialText &&
+                 view.selectionModel().noteSelection() == std::vector<NoteId>{note->id} &&
+                 document.smf().write() == before,
+             "arrow keys leaked out of the velocity prompt")
+
+Original 551
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY(QMetaObject::invokeMethod(input, "selectAll"))
+
+Original 555
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(playPause.count() == 1 && input->property("text").toString() == textBeforeSpace &&
+                 popup->isOpen() && input->property("activeFocus").toBool(),
+             qPrintable(QStringLiteral("Space in the velocity prompt did not toggle the transport: "
+                                       "triggers=%1 text='%2' open=%3 focused=%4")
+                            .arg(playPause.count())
+                            .arg(input->property("text").toString(), textBeforeSpace)
+                            .arg(popup->isOpen())
+                            .arg(input->property("activeFocus").toBool())))
+
+Original 566
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(playPause.count() == 2 && popup->isOpen(),
+             qPrintable(QStringLiteral("Space did not toggle the transport twice: triggers=%1")
+                            .arg(playPause.count())))
+
+Original 573
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QTRY_VERIFY2(!popup->isOpen(), "Escape did not close the velocity prompt")
+
+Original 574
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(document.smf().write() == before, "cancelling the velocity prompt mutated the song")
+
+Original 576
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::MouseFocusReason),
+             "could not refocus the roll band after the prompt")
+
+Original 579
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(m_counts.solo == soloBefore + 1 && view.trackSoloed(kTrack),
+             "Solo did not resume after the velocity prompt closed")
+
+Original 582
+Disposition: PARTIAL
+Mapping: Swift numeric transaction and existing QML numeric/prompt input cases; exact per-assertion equivalence still needs reconciliation. Native window/fixture setup is not implied by the Swift model check.
+QVERIFY2(!view.trackSoloed(kTrack), "Solo did not untoggle after the prompt")

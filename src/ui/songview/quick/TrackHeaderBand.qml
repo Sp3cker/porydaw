@@ -1,5 +1,6 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
-import Porydaw.Ui
 
 Item {
     id: root
@@ -9,7 +10,8 @@ Item {
     required property var model
     required property font controlFont
 
-    readonly property var appearance: model.appearance
+    readonly property var headersModel: model
+    readonly property var appearance: headersModel.appearance
     readonly property color buttonBackground: appearance.buttonBackground
     readonly property color buttonText: appearance.buttonText
     readonly property color buttonHoverBackground: appearance.buttonHoverBackground
@@ -29,6 +31,37 @@ Item {
     readonly property color scrollbarHandleHover: appearance.scrollbarHandleHover
     readonly property color reorderIndicator: appearance.reorderIndicator
 
+    width: bandRect.width
+    height: bandRect.height
+
+    FontMetrics {
+        id: normalTitleMetrics
+        font: Qt.font(root.headersModel.normalTitleFont)
+        onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
+    }
+
+    FontMetrics {
+        id: boldTitleMetrics
+        font: Qt.font(root.headersModel.boldTitleFont)
+        onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
+    }
+
+    FontMetrics {
+        id: subtitleMetrics
+        font: Qt.font(root.headersModel.subtitleFont)
+        onLineSpacingChanged: Qt.callLater(root.configureTextMetrics)
+    }
+
+    function configureTextMetrics() {
+        root.headersModel.configureTextMetrics(Math.round(normalTitleMetrics.lineSpacing),
+                                               Math.round(boldTitleMetrics.lineSpacing),
+                                               Math.round(subtitleMetrics.lineSpacing))
+    }
+
+    Component.onCompleted: {
+        root.headersModel.dragDistance = Qt.styleHints.startDragDistance
+        configureTextMetrics()
+    }
 
     function rowIndexForTrack(track) {
         if (track < 0)
@@ -41,10 +74,20 @@ Item {
         return -1
     }
 
+    function deliverWheel(event) {
+        const direction = event.inverted ? -1 : 1
+        root.headersModel.handleWheel(direction * event.angleDelta.x,
+                                      direction * event.angleDelta.y,
+                                      direction * event.pixelDelta.x,
+                                      direction * event.pixelDelta.y,
+                                      event.modifiers, event.phase)
+        event.accepted = true
+    }
+
     component TrackHeaderToggle: Item {
         id: toggle
 
-        required property rect controlRect
+        required property var controlRect
         required property int track
         required property string label
         required property string accessibleName
@@ -74,9 +117,9 @@ Item {
 
         function activate() {
             if (solo)
-                root.model.activateSolo(track)
+                root.headersModel.activateSolo(track)
             else
-                root.model.activateMute(track)
+                root.headersModel.activateMute(track)
         }
 
         function activateFromKeyboard(event) {
@@ -132,23 +175,23 @@ Item {
             Item {
                 id: trackHeaderRowArea
 
-                width: Math.max(0, trackHeaderViewport.width - root.model.scrollbarWidth)
+                width: Math.max(0, trackHeaderViewport.width - root.headersModel.scrollbarWidth)
                 height: parent.height
                 clip: true
 
                 Item {
                     id: translatedRows
 
-                    y: -root.model.scrollY
+                    y: -root.headersModel.scrollY
                     width: parent.width
-                    height: root.model.contentHeight
+                    height: root.headersModel.contentHeight
                     z: 2
 
                     Repeater {
                         id: trackHeaderRows
 
                         objectName: "timelineTrackHeaderRows"
-                        model: root.model
+                        model: root.headersModel.rows
 
                         delegate: Item {
                             id: trackHeaderRow
@@ -158,15 +201,16 @@ Item {
                             required property int track
                             required property string title
                             required property string subtitle
-                            required property rect titleRect
-                            required property rect subtitleRect
-                            required property point selectedTitleOffset
+                            required property var titleRect
+                            required property var subtitleRect
+                            required property var selectedTitleOffset
                             required property color baseColor
                             required property color overlayColor
                             required property color titleColor
                             required property color subtitleColor
-                            required property font titleFont
-                            required property font subtitleFont
+                            required property var titleFont
+                            required property var subtitleFont
+                            required property bool titleBold
                             required property bool muteChecked
                             required property bool soloChecked
                             required property bool muteHovered
@@ -180,9 +224,33 @@ Item {
                             required property real activityLeftHeight
                             required property real activityRightHeight
 
-                            y: index * root.model.rowHeight
+                            y: index * root.headersModel.rowHeight
                             width: translatedRows.width
-                            height: root.model.rowHeight
+                            height: root.headersModel.rowHeight
+
+                            property bool complete: false
+
+                            function publishSelectedTitleOffset() {
+                                if (!complete || isAddTrack || !titleBold)
+                                    return
+                                const label = boldTitleMetrics.elidedText(title, Text.ElideRight,
+                                                                          titleRect.width)
+                                const normal = normalTitleMetrics.tightBoundingRect(label)
+                                const bold = boldTitleMetrics.tightBoundingRect(label)
+                                root.headersModel.setSelectedTitleOffset(track,
+                                    normal.x + normal.width / 2 - bold.x - bold.width / 2,
+                                    normal.y + normal.height / 2 - bold.y - bold.height / 2)
+                            }
+
+                            onTitleChanged: publishSelectedTitleOffset()
+                            onTitleBoldChanged: publishSelectedTitleOffset()
+                            onTitleRectChanged: publishSelectedTitleOffset()
+                            onTitleFontChanged: publishSelectedTitleOffset()
+                            onTrackChanged: publishSelectedTitleOffset()
+                            Component.onCompleted: {
+                                complete = true
+                                publishSelectedTitleOffset()
+                            }
 
                             Rectangle {
                                 anchors.fill: parent
@@ -196,8 +264,8 @@ Item {
                             }
 
                             Item {
-                                width: root.model.activityWidth
-                                height: Math.max(0, trackHeaderRow.height - root.model.separatorWidth)
+                                width: root.headersModel.activityWidth
+                                height: Math.max(0, trackHeaderRow.height - root.headersModel.separatorWidth)
                                 visible: !trackHeaderRow.isAddTrack
 
                                 Rectangle {
@@ -224,9 +292,9 @@ Item {
                             }
 
                             Rectangle {
-                                y: Math.max(0, trackHeaderRow.height - root.model.separatorWidth)
+                                y: Math.max(0, trackHeaderRow.height - root.headersModel.separatorWidth)
                                 width: parent.width
-                                height: root.model.separatorWidth
+                                height: root.headersModel.separatorWidth
                                 color: root.buttonOutline
                             }
 
@@ -240,19 +308,16 @@ Item {
                                 visible: !trackHeaderRow.isAddTrack
                                 clip: contentWidth > width || contentHeight > height
                                 color: trackHeaderRow.titleColor
-                                font: trackHeaderRow.titleFont
+                                font: Qt.font(trackHeaderRow.titleFont)
                                 text: trackHeaderRow.title
                                 textFormat: Text.PlainText
                                 renderType: Text.NativeRendering
-                                elide: Text.ElideNone
+                                elide: Text.ElideRight
                                 maximumLineCount: 1
                                 verticalAlignment: Text.AlignVCenter
                             }
 
-                            // The subtitle box is the voice hit-test target: a double-click there
-                            // opens the voice editor, while a click behaves like the rest of the
-                            // header. Its ink never restyles because the row backdrop is not a
-                            // button fill.
+                            // The subtitle remains a voice hit target, not a button fill.
                             Text {
                                 x: trackHeaderRow.subtitleRect.x
                                 y: trackHeaderRow.subtitleRect.y
@@ -261,18 +326,18 @@ Item {
                                 visible: !trackHeaderRow.isAddTrack
                                 clip: contentWidth > width || contentHeight > height
                                 color: trackHeaderRow.subtitleColor
-                                font: trackHeaderRow.subtitleFont
+                                font: Qt.font(trackHeaderRow.subtitleFont)
                                 text: trackHeaderRow.subtitle
                                 textFormat: Text.PlainText
                                 renderType: Text.NativeRendering
-                                elide: Text.ElideNone
+                                elide: Text.ElideRight
                                 maximumLineCount: 1
                                 verticalAlignment: Text.AlignVCenter
                             }
 
                             TrackHeaderToggle {
                                 visible: !trackHeaderRow.isAddTrack
-                                controlRect: root.model.muteButtonRect
+                                controlRect: root.headersModel.muteButtonRect
                                 track: trackHeaderRow.track
                                 label: qsTr("M")
                                 accessibleName: qsTr("Mute")
@@ -284,7 +349,7 @@ Item {
 
                             TrackHeaderToggle {
                                 visible: !trackHeaderRow.isAddTrack
-                                controlRect: root.model.soloButtonRect
+                                controlRect: root.headersModel.soloButtonRect
                                 track: trackHeaderRow.track
                                 label: qsTr("S")
                                 accessibleName: qsTr("Solo")
@@ -302,7 +367,7 @@ Item {
                                 activeFocusOnTab: true
 
                                 function activate() {
-                                    root.model.activateAddTrack()
+                                    root.headersModel.activateAddTrack()
                                 }
 
                                 function activateFromKeyboard(event) {
@@ -352,56 +417,244 @@ Item {
                 }
             }
 
-            TimelineInputItem {
+            MouseArea {
+                id: headerInput
+
                 objectName: "timelineTrackHeadersInput"
                 width: trackHeaderRowArea.width
                 height: trackHeaderRowArea.height
                 z: 1
-                Accessible.description: accessibilityDescription
+                hoverEnabled: true
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                preventStealing: true
+                Accessible.description: qsTr("Track headers")
+
+                onPressed: (mouse) => {
+                    forceActiveFocus(Qt.MouseFocusReason)
+                    mouse.accepted = root.headersModel.beginPointer(mouse.x, mouse.y,
+                                                                    mouse.button, mouse.modifiers)
+                }
+                onPositionChanged: (mouse) => {
+                    if (pressed)
+                        root.headersModel.updatePointer(mouse.x, mouse.y, mouse.modifiers)
+                    else
+                        root.headersModel.updateHover(mouse.x, mouse.y)
+                }
+                onReleased: (mouse) => {
+                    mouse.accepted = root.headersModel.endPointer(mouse.x, mouse.y,
+                                                                  mouse.button, mouse.modifiers)
+                }
+                onDoubleClicked: (mouse) => {
+                    mouse.accepted = root.headersModel.doublePointer(mouse.x, mouse.y,
+                                                                     mouse.button, mouse.modifiers)
+                }
+                onCanceled: root.headersModel.inputCancelled(1) // PointerUngrabbed
+                onExited: {
+                    if (!pressed)
+                        root.headersModel.clearHover()
+                }
+
+                // As in TimelineScrollbar, exactly one handler owns diagonal input.
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: (event) => {
+                        if (event.pixelDelta.x === 0 && event.angleDelta.x === 0)
+                            root.deliverWheel(event)
+                    }
+                }
+
+                WheelHandler {
+                    orientation: Qt.Horizontal
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: (event) => {
+                        if (event.pixelDelta.x !== 0 || event.angleDelta.x !== 0)
+                            root.deliverWheel(event)
+                    }
+                }
             }
 
             Rectangle {
                 objectName: "timelineTrackHeaderReorderMarker"
-                y: Math.min(Math.max(0, root.model.reorderIndicatorY),
+                y: Math.min(Math.max(0, root.headersModel.reorderIndicatorY),
                             Math.max(0, trackHeaderRowArea.height - height))
                 width: trackHeaderRowArea.width
-                height: root.model.reorderIndicatorHeight
-                visible: root.model.reorderIndicatorVisible && height > 0
+                height: root.headersModel.reorderIndicatorHeight
+                visible: root.headersModel.reorderIndicatorVisible && height > 0
                 color: root.reorderIndicator
                 z: 3
             }
 
-            TimelineScrollbar {
+            // TimelineScrollbar's vertical chrome and gesture geometry, without
+            // its legacy TimelineGestureScrollbar and HoverHint C++ dependencies.
+            Item {
                 id: trackHeaderScrollBar
 
                 objectName: "timelineTrackHeaderScrollBar"
                 x: trackHeaderRowArea.width
-                width: Math.max(0, root.model.scrollbarWidth)
+                width: Math.max(0, root.headersModel.scrollbarWidth)
                 height: parent.height
-                orientation: Qt.Vertical
-                minimum: 0
-                value: root.model.scrollY
-                maximum: root.model.maximumScrollY
-                pageStep: root.model.viewportHeight
-                singleStep: root.model.rowHeight
-                minimumThumbLength: root.model.scrollbarMinimumThumbHeight
-                accessibleName: qsTr("Track headers")
-                handleColor: root.scrollbarHandle
-                handleHoverColor: root.scrollbarHandleHover
-                externalVisible: root.bandVisible
-                thumbObjectName: "timelineTrackHeaderScrollThumb"
                 z: 4
+                visible: root.bandVisible && scrollable
+                activeFocusOnTab: scrollable || activeFocus
 
-                onValueRequested: (value) => root.model.scrollY = value
-                onWheelRequested: (pixelX, pixelY, angleX, angleY, inverted) => {
-                    const pixelHorizontal = Math.abs(pixelX) > Math.abs(pixelY)
-                    const angleHorizontal = Math.abs(angleX) > Math.abs(angleY)
-                    if (pixelHorizontal || (pixelY === 0 && angleHorizontal))
+                readonly property real span: Math.max(0, root.headersModel.maximumScrollY)
+                readonly property bool scrollable: span > 0
+                readonly property real thumbLength: {
+                    if (!(height > 0) || !scrollable)
+                        return 0
+                    const pageStep = root.headersModel.viewportHeight
+                    const fraction = pageStep > 0 ? Math.min(1, pageStep / (span + pageStep)) : 0
+                    return Math.min(height, Math.max(root.headersModel.scrollbarMinimumThumbHeight,
+                                                    fraction * height))
+                }
+                readonly property real thumbTravel: Math.max(0, height - thumbLength)
+                readonly property real thumbPos: !scrollable || thumbTravel <= 0
+                                                 ? 0
+                                                 : Math.min(span, Math.max(0, root.headersModel.scrollY))
+                                                   / span * thumbTravel
+                property real dragStartValue: 0
+                property real dragStartPosition: 0
+                property real dragLastPosition: 0
+                property bool dragThresholdReached: false
+
+                onSpanChanged: rebaseDrag()
+                onThumbTravelChanged: rebaseDrag()
+
+                function requestScroll(value) {
+                    if (scrollable)
+                        root.headersModel.scrollY = Math.max(0, Math.min(span, value))
+                }
+
+                function requestLine(direction) {
+                    requestScroll(root.headersModel.scrollY
+                                  + direction * Math.max(0, root.headersModel.rowHeight))
+                }
+
+                function requestPage(direction) {
+                    requestScroll(root.headersModel.scrollY
+                                  + direction * Math.max(0, root.headersModel.viewportHeight))
+                }
+
+                function rebaseDrag() {
+                    if (!thumbMouse || !thumbMouse.pressed || !dragThresholdReached)
                         return
-                    const delta = pixelY !== 0 ? pixelY : angleY / 120 * root.model.rowHeight
-                    if (delta === 0)
+                    dragStartValue = Math.max(0, Math.min(span, root.headersModel.scrollY))
+                    dragStartPosition = dragLastPosition
+                }
+
+                Keys.onPressed: (event) => {
+                    if (event.key === Qt.Key_Up)
+                        requestLine(-1)
+                    else if (event.key === Qt.Key_Down)
+                        requestLine(1)
+                    else if (event.key === Qt.Key_Left || event.key === Qt.Key_Right) {
+                        // Cross-axis arrows stay consumed, as in TimelineScrollbar.
+                    } else if (event.key === Qt.Key_PageUp)
+                        requestPage(-1)
+                    else if (event.key === Qt.Key_PageDown)
+                        requestPage(1)
+                    else if (event.key === Qt.Key_Home)
+                        requestScroll(0)
+                    else if (event.key === Qt.Key_End)
+                        requestScroll(span)
+                    else
                         return
-                    root.model.scrollY = root.model.scrollY + (inverted ? delta : -delta)
+                    event.accepted = true
+                }
+
+                Accessible.role: Accessible.ScrollBar
+                Accessible.name: qsTr("Track headers")
+                Accessible.description: qsTr("Use arrow or page keys to scroll")
+                Accessible.focusable: activeFocusOnTab
+                Accessible.onIncreaseAction: requestLine(1)
+                Accessible.onDecreaseAction: requestLine(-1)
+                Accessible.onScrollUpAction: requestPage(-1)
+                Accessible.onScrollDownAction: requestPage(1)
+                Accessible.onScrollLeftAction: requestPage(-1)
+                Accessible.onScrollRightAction: requestPage(1)
+                Accessible.onPreviousPageAction: requestPage(-1)
+                Accessible.onNextPageAction: requestPage(1)
+
+                MouseArea {
+                    anchors.fill: parent
+                    enabled: trackHeaderScrollBar.scrollable
+
+                    onClicked: (mouse) => {
+                        if (mouse.y >= trackHeaderScrollBar.thumbPos
+                                && mouse.y < trackHeaderScrollBar.thumbPos
+                                             + trackHeaderScrollBar.thumbLength)
+                            return
+                        trackHeaderScrollBar.requestPage(mouse.y < trackHeaderScrollBar.thumbPos ? -1 : 1)
+                    }
+                }
+
+                WheelHandler {
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: (event) => {
+                        if (event.pixelDelta.x === 0 && event.angleDelta.x === 0)
+                            root.deliverWheel(event)
+                    }
+                }
+
+                WheelHandler {
+                    orientation: Qt.Horizontal
+                    acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
+                    onWheel: (event) => {
+                        if (event.pixelDelta.x !== 0 || event.angleDelta.x !== 0)
+                            root.deliverWheel(event)
+                    }
+                }
+
+                Rectangle {
+                    objectName: "timelineTrackHeaderScrollThumb"
+                    y: trackHeaderScrollBar.thumbPos
+                    width: parent.width
+                    height: trackHeaderScrollBar.thumbLength
+                    visible: trackHeaderScrollBar.scrollable && width > 0 && height > 0
+                    color: thumbHover.hovered ? root.scrollbarHandleHover : root.scrollbarHandle
+
+                    HoverHandler {
+                        id: thumbHover
+                    }
+                }
+
+                MouseArea {
+                    id: thumbMouse
+
+                    anchors.fill: parent
+                    enabled: trackHeaderScrollBar.scrollable && trackHeaderScrollBar.thumbTravel > 0
+                    hoverEnabled: false
+                    z: 1
+
+                    onPressed: (mouse) => {
+                        if (mouse.y < trackHeaderScrollBar.thumbPos
+                                || mouse.y >= trackHeaderScrollBar.thumbPos
+                                              + trackHeaderScrollBar.thumbLength) {
+                            mouse.accepted = false
+                            return
+                        }
+                        trackHeaderScrollBar.dragStartValue = Math.max(0,
+                            Math.min(trackHeaderScrollBar.span, root.headersModel.scrollY))
+                        trackHeaderScrollBar.dragStartPosition = mouse.y
+                        trackHeaderScrollBar.dragLastPosition = mouse.y
+                        trackHeaderScrollBar.dragThresholdReached = false
+                    }
+                    onPositionChanged: (mouse) => {
+                        if (!pressed)
+                            return
+                        trackHeaderScrollBar.dragLastPosition = mouse.y
+                        if (!trackHeaderScrollBar.dragThresholdReached) {
+                            if (Math.abs(mouse.y - trackHeaderScrollBar.dragStartPosition)
+                                    < Qt.styleHints.startDragDistance)
+                                return
+                            trackHeaderScrollBar.dragThresholdReached = true
+                        }
+                        if (trackHeaderScrollBar.thumbTravel <= 0)
+                            return
+                        trackHeaderScrollBar.requestScroll(trackHeaderScrollBar.dragStartValue
+                            + (mouse.y - trackHeaderScrollBar.dragStartPosition)
+                              / trackHeaderScrollBar.thumbTravel * trackHeaderScrollBar.span)
+                    }
                 }
             }
         }
@@ -417,17 +670,17 @@ Item {
             Item {
                 id: renameEditor
 
-                readonly property int rowIndex: root.rowIndexForTrack(root.model.renamingTrack)
-                x: root.model.renameEditorRect.x
-                y: rowIndex * root.model.rowHeight - root.model.scrollY
-                   + root.model.renameEditorRect.y
-                width: root.model.renameEditorRect.width
-                height: root.model.renameEditorRect.height
+                readonly property int rowIndex: root.rowIndexForTrack(root.headersModel.renamingTrack)
+                x: root.headersModel.renameEditorRect.x
+                y: rowIndex * root.headersModel.rowHeight - root.headersModel.scrollY
+                   + root.headersModel.renameEditorRect.y
+                width: root.headersModel.renameEditorRect.width
+                height: root.headersModel.renameEditorRect.height
                 visible: headerBand.visible && rowIndex >= 0
                 property bool finishing: false
 
                 function adoptRenameDraft() {
-                    renameInput.text = root.model.renameDraft
+                    renameInput.text = root.headersModel.renameDraft
                     renameInput.forceActiveFocus(Qt.PopupFocusReason)
                     renameInput.selectAll()
                 }
@@ -436,7 +689,7 @@ Item {
                     if (finishing || !visible)
                         return
                     finishing = true
-                    root.model.finishRename(commit, entered)
+                    root.headersModel.finishRename(commit, entered)
                 }
 
                 onVisibleChanged: {
@@ -453,15 +706,8 @@ Item {
                         adoptRenameDraft()
                 }
 
-                // The rename editor is its own hover group: while visible its
-                // passive claim is the leaf above the C++ header input, so the
-                // row's scope hint cannot leak through. The TextInput keeps
-                // its own press/selection behavior; this handler only
-                // publishes the Shift-click text-selection profile.
-                HoverHint {
-                    source: renameEditor
+                HoverHandler {
                     cursorShape: Qt.IBeamCursor
-                    profile: HintProfiles.TextSelection
                 }
 
                 Rectangle {
@@ -483,7 +729,7 @@ Item {
                     font: root.controlFont
                     selectByMouse: true
 
-                    onTextEdited: root.model.renameDraft = text
+                    onTextEdited: root.headersModel.renameDraft = text
                     onActiveFocusChanged: {
                         if (renameEditor.visible && !activeFocus && !renameEditor.finishing)
                             renameEditor.finishRename(true, false)
@@ -504,20 +750,19 @@ Item {
 
                     Accessible.role: Accessible.EditableText
                     Accessible.name: qsTr("Rename track")
-                    Accessible.description: root.model.renameDraft
+                    Accessible.description: root.headersModel.renameDraft
                     Accessible.focusable: true
                 }
 
                 Connections {
-                    target: root.model
+                    target: root.headersModel
 
-                    function onRenameChanged() {
-                        if (renameEditor.visible && renameInput.text !== root.model.renameDraft)
-                            renameInput.text = root.model.renameDraft
+                    function onRenameDraftChanged() {
+                        if (renameEditor.visible && renameInput.text !== root.headersModel.renameDraft)
+                            renameInput.text = root.headersModel.renameDraft
                     }
                 }
             }
         }
     }
-
 }

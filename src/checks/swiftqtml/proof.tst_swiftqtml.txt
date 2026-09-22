@@ -1,0 +1,1298 @@
+Assertion correspondence: swiftqtml/tst_swiftqtml.cpp
+
+Reference revision: d3ad6b2c592a76b37eb0c70ca6ae2ddf0d41b63c
+Original: src/checks/swiftqtml/tst_swiftqtml.cpp
+Original SHA-256: 3020c73db174adcb25b50fc03bd3877688724ea364fc82969e96f739944bcc35
+Swift counterpart: src/checks/swiftqtml/BridgeProbeCheck.swift
+Swift SHA-256: 1cab018b47609153dff1b9bd4743b9bd87d85251ff18fbb34f85bc8e85c53cd4
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards and helper
+predicates. Source context preserves setup, rows, loops, and guards between
+assertions verbatim. S identifiers identify Swift-side checks, listed after the
+inventory. MATCHED means a corresponding Swift check was identified and would
+execute through the named Swift entry point; PARTIAL means a related Swift
+check exists but leaves the stated condition unproved; NATIVE identifies a
+retained native-window/rendering or native harness obligation a
+presenter-level Swift check cannot establish; GAP means no equivalent Swift
+assertion is established (unsure PARTIAL vs GAP resolves to GAP; bookkeeping
+must not overclaim). Tallies: 97 sites (NATIVE 97). None of these labels authorizes
+deletion or claims whole-case equivalence.
+
+Verification
+Command: deno task verify --filter swiftqtml --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+SwiftQtMlTest mounts BridgeProbe.qml in a QQuickView, invokes root and
+presenter methods, and asserts delegate texts, serials, indexes, and Qt-message
+silence. Swift supplies the QML-bindable BridgeRow/BridgeProbe types plus the
+sqp_register_probe_types entry point; no Swift check function executes
+assertions. Swift is the type provider, and the C++ sites below are the only
+predicates. No shared Swift fixture file carries expects.
+
+Fixture, sequence and row constraints
+Default rows are 101/Alpha, 202/Beta, 303/Gamma. In-place mutation without a
+dataChanged signal must leave the copied delegate role unchanged (stale text,
+same serial); same-row replacement updates the text but keeps the serial.
+Insert/remove and reorder legs pin delegate indexes and serial stability
+(alpha/gamma keep serials across head-insert) vs renewal (reordered alpha gets
+a new serial). The reset leg pins stale-reference behavior (old key gone,
+fresh rows 901/902) while the presenter's selected row still acts on 202/Beta.
+The teardown leg destroys the view with a pending mutation and requires a
+fresh probe to reseed cleanly with no captured Qt messages.
+
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:212
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  #include "tst_swiftqtml.h"
+
+  #include <QAbstractItemModel>
+  #include <QCoreApplication>
+  #include <QEvent>
+  #include <QMetaObject>
+  #include <QMutex>
+  #include <QMutexLocker>
+  #include <QObject>
+  #include <QPointer>
+  #include <QQmlError>
+  #include <QQuickItem>
+  #include <QQuickView>
+  #include <QString>
+  #include <QStringList>
+  #include <QUrl>
+  #include <QVariant>
+  #include <QtLogging>
+  #include <QtTest/QTest>
+  #include <memory>
+
+  extern "C" void sqp_register_probe_types();
+
+  namespace {
+
+  QMutex messageMutex;
+  QStringList qtMessages;
+  QtMessageHandler previousMessageHandler = nullptr;
+
+  void probeMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &message)
+  {
+      const bool isFailureMessage =
+          type == QtWarningMsg || type == QtCriticalMsg || type == QtFatalMsg;
+      if (isFailureMessage) {
+          QMutexLocker lock(&messageMutex);
+          const QString source =
+              context.file ? QString::fromUtf8(context.file) : QStringLiteral("<unknown>");
+          qtMessages.append(QStringLiteral("Qt[%1] %2:%3: %4")
+                                .arg(int(type))
+                                .arg(source)
+                                .arg(context.line)
+                                .arg(message));
+      } else if (previousMessageHandler) {
+          previousMessageHandler(type, context, message);
+      }
+  }
+
+  void clearCapturedMessages()
+  {
+      QMutexLocker lock(&messageMutex);
+      qtMessages.clear();
+  }
+
+  QString capturedMessages()
+  {
+      QMutexLocker lock(&messageMutex);
+      return qtMessages.join(QLatin1Char('\n'));
+  }
+
+  // Identical double flush to selectionkey::settle() in
+  // src/checks/selectionkey/primitives.h. This target does not link the
+  // selectionkey harness objects.
+  void settle()
+  {
+      QCoreApplication::sendPostedEvents();
+      QCoreApplication::processEvents();
+      QCoreApplication::sendPostedEvents();
+      QCoreApplication::processEvents();
+  }
+
+  QString describeErrors(const QList<QQmlError> &errors)
+  {
+      QStringList descriptions;
+      descriptions.reserve(errors.size());
+      for (const QQmlError &error : errors)
+          descriptions.append(error.toString());
+      return descriptions.join(QLatin1Char('\n'));
+  }
+
+  std::unique_ptr<QQuickView> loadProbe(QString &error)
+  {
+      clearCapturedMessages();
+      auto view = std::make_unique<QQuickView>();
+      view->setResizeMode(QQuickView::SizeRootObjectToView);
+      view->resize(320, 240);
+      view->setSource(QUrl(QStringLiteral("qrc:/swiftqtml/BridgeProbe.qml")));
+      if (view->status() != QQuickView::Ready) {
+          error = describeErrors(view->errors());
+          return {};
+      }
+      settle();
+      return view;
+  }
+
+  bool invoke(QObject *root, const char *method)
+  {
+      return root && QMetaObject::invokeMethod(root, method, Qt::DirectConnection);
+  }
+
+  bool invokeString(QObject *object, const char *method, const QString &value)
+  {
+      return object &&
+             QMetaObject::invokeMethod(object, method, Qt::DirectConnection, Q_ARG(QString, value));
+  }
+
+  QObject *named(QObject *root, const QString &objectName)
+  {
+      return root ? root->findChild<QObject *>(objectName, Qt::FindChildrenRecursively) : nullptr;
+  }
+
+  QObject *delegateAt(QObject *root, int slot)
+  {
+      QObject *const probe = named(root, QStringLiteral("delegateProbe"));
+      if (!probe || slot < 0 || slot >= probe->property("count").toInt())
+          return nullptr;
+      QVariant result;
+      if (!QMetaObject::invokeMethod(probe, "itemAt", Qt::DirectConnection,
+                                     Q_RETURN_ARG(QVariant, result),
+                                     Q_ARG(QVariant, QVariant(slot)))) {
+          return nullptr;
+      }
+      return result.value<QQuickItem *>();
+  }
+
+  QObject *rowDelegate(QObject *root, int domainKey)
+  {
+      QObject *const probe = named(root, QStringLiteral("delegateProbe"));
+      const int count = probe ? probe->property("count").toInt() : 0;
+      for (int slot = 0; slot < count; ++slot) {
+          QObject *const delegate = delegateAt(root, slot);
+          if (delegate && delegate->property("domainKey").toInt() == domainKey)
+              return delegate;
+      }
+      return nullptr;
+  }
+
+  QObject *rowText(QObject *root, int domainKey)
+  {
+      auto *const delegate = qobject_cast<QQuickItem *>(rowDelegate(root, domainKey));
+      if (!delegate)
+          return nullptr;
+      const QString expectedName = QStringLiteral("rowText_%1").arg(domainKey);
+      for (QQuickItem *const child : delegate->childItems()) {
+          if (child && child->objectName() == expectedName)
+              return child;
+      }
+      return nullptr;
+  }
+
+  QString textOf(QObject *object)
+  {
+      return object ? object->property("text").toString() : QString();
+  }
+
+  int serialOf(QObject *object)
+  {
+      return object ? object->property("delegateSerial").toInt() : -1;
+  }
+
+  int indexOf(QObject *object)
+  {
+      return object ? object->property("index").toInt() : -1;
+  }
+
+  QString probeDiagnostics(QObject *root, const QQuickView *view)
+  {
+      QStringList details;
+      details.append(QStringLiteral("viewStatus=%1").arg(view ? int(view->status()) : -1));
+      if (QObject *const repeater = named(root, QStringLiteral("rowRepeater"))) {
+          details.append(QStringLiteral("repeaterCount=%1").arg(repeater->property("count").toInt()));
+          const QVariant modelValue = repeater->property("model");
+          details.append(
+              QStringLiteral("modelType=%1").arg(QString::fromLatin1(modelValue.metaType().name())));
+          QObject *const modelObject = modelValue.value<QObject *>();
+          if (auto *const model = qobject_cast<QAbstractItemModel *>(modelObject)) {
+              details.append(QStringLiteral("modelRowCount=%1").arg(model->rowCount()));
+              QStringList roles;
+              const auto roleNames = model->roleNames();
+              for (auto it = roleNames.cbegin(); it != roleNames.cend(); ++it)
+                  roles.append(
+                      QStringLiteral("%1=%2").arg(it.key()).arg(QString::fromUtf8(it.value())));
+              roles.sort();
+              details.append(QStringLiteral("roles=[%1]").arg(roles.join(QStringLiteral(", "))));
+          }
+      } else {
+          details.append(QStringLiteral("rowRepeater=<missing>"));
+      }
+      const QString messages = capturedMessages();
+      details.append(messages.isEmpty() ? QStringLiteral("qtMessages=<none>")
+                                        : QStringLiteral("qtMessages:\n%1").arg(messages));
+      return details.join(QLatin1Char('\n'));
+  }
+
+  } // namespace
+
+  void SwiftQtMlTest::initTestCase()
+  {
+      previousMessageHandler = qInstallMessageHandler(probeMessageHandler);
+      sqp_register_probe_types();
+  }
+
+  void SwiftQtMlTest::cleanupTestCase()
+  {
+      qInstallMessageHandler(previousMessageHandler);
+      previousMessageHandler = nullptr;
+  }
+
+  void SwiftQtMlTest::testPresenterPropertyBinding()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A002 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:216
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+      QObject *const presenter = named(root, QStringLiteral("bridgeProbe"));
+      QObject *const status = named(root, QStringLiteral("statusText"));
+
+Original expression:
+  QVERIFY(presenter != nullptr)
+
+A003 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:217
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(status != nullptr)
+
+A004 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:218
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(status), QStringLiteral("idle"))
+
+A005 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:220
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invokeString(presenter, "setStatusText", QStringLiteral("ready")))
+
+A006 | SwiftQtMlTest::testPresenterPropertyBinding | src/checks/swiftqtml/tst_swiftqtml.cpp:223
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QCOMPARE(textOf(status), QStringLiteral("ready"))
+
+A007 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:230
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testInPlaceRowMutation()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A008 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:232
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A009 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:237
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QObject *const middle = rowDelegate(root, 202);
+      QObject *const middleText = rowText(root, 202);
+
+Original expression:
+  QVERIFY2(middle != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A010 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:238
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(middleText != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A011 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:240
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const int originalSerial = serialOf(middle);
+
+Original expression:
+  QCOMPARE(textOf(middleText), QStringLiteral("Beta:20"))
+
+A012 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:242
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invoke(root, "mutateMiddleDirect"))
+
+A013 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:247
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      // QListModel has emitted no dataChanged signal, so its copied delegate
+      // role remains unchanged even though the BridgeRow object was mutated.
+
+Original expression:
+  QCOMPARE(textOf(middleText), QStringLiteral("Beta:20"))
+
+A014 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:248
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(serialOf(middle), originalSerial)
+
+A015 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:250
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invoke(root, "replaceMiddleSameRow"))
+
+A016 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:253
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QCOMPARE(textOf(middleText), QStringLiteral("Beta direct:20"))
+
+A017 | SwiftQtMlTest::testInPlaceRowMutation | src/checks/swiftqtml/tst_swiftqtml.cpp:254
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(serialOf(middle), originalSerial)
+
+A018 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:261
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testRowReplacement()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A019 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:263
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A020 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:267
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QObject *const oldDelegate = rowDelegate(root, 202);
+
+Original expression:
+  QVERIFY2(oldDelegate != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A021 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:270
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const int originalSerial = serialOf(oldDelegate);
+
+
+Original expression:
+  QVERIFY(invoke(root, "replaceMiddleWithNewRow"))
+
+A022 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:275
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QObject *const replacement = rowDelegate(root, 404);
+      QObject *const replacementText = rowText(root, 404);
+
+Original expression:
+  QVERIFY2(replacement != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A023 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:276
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(replacementText != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A024 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:277
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(replacementText), QStringLiteral("Delta:44"))
+
+A025 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:278
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(serialOf(replacement), originalSerial)
+
+A026 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:280
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+
+A027 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:283
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("202:Beta"))
+
+A028 | SwiftQtMlTest::testRowReplacement | src/checks/swiftqtml/tst_swiftqtml.cpp:284
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(replacementText), QStringLiteral("Delta:44"))
+
+A029 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:291
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testInsertRemovePreservesTargets()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A030 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:293
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A031 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:298
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QObject *const alpha = rowDelegate(root, 101);
+      QObject *const gamma = rowDelegate(root, 303);
+
+Original expression:
+  QVERIFY2(alpha != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A032 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:299
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(gamma != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A033 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:303
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const int alphaSerial = serialOf(alpha);
+      const int gammaSerial = serialOf(gamma);
+
+
+Original expression:
+  QVERIFY(invoke(root, "insertHeadRemoveMiddle"))
+
+A034 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:307
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QObject *const repeater = named(root, QStringLiteral("rowRepeater"));
+
+Original expression:
+  QVERIFY(repeater != nullptr)
+
+A035 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:308
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(repeater->property("count").toInt(), 3)
+
+A036 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:309
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowDelegate(root, 100) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A037 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:310
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowDelegate(root, 101) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A038 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:311
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowDelegate(root, 303) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A039 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:312
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(indexOf(rowDelegate(root, 100)), 0)
+
+A040 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:313
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(indexOf(rowDelegate(root, 101)), 1)
+
+A041 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:314
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(indexOf(rowDelegate(root, 303)), 2)
+
+A042 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:315
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(rowDelegate(root, 202) == nullptr)
+
+A043 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:316
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(serialOf(rowDelegate(root, 101)), alphaSerial)
+
+A044 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:317
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(serialOf(rowDelegate(root, 303)), gammaSerial)
+
+A045 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:319
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+
+A046 | SwiftQtMlTest::testInsertRemovePreservesTargets | src/checks/swiftqtml/tst_swiftqtml.cpp:321
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("303:Gamma"))
+
+A047 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:328
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testReorderTargetsIntendedRow()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A048 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:330
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A049 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:334
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QObject *const alpha = rowDelegate(root, 101);
+
+Original expression:
+  QVERIFY2(alpha != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A050 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:337
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const int originalSerial = serialOf(alpha);
+
+
+Original expression:
+  QVERIFY(invoke(root, "removeInsertFirstToLast"))
+
+A051 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:340
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QVERIFY2(rowDelegate(root, 202) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A052 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:341
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowDelegate(root, 303) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A053 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:342
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowDelegate(root, 101) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A054 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:343
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(indexOf(rowDelegate(root, 202)), 0)
+
+A055 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:344
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(indexOf(rowDelegate(root, 303)), 1)
+
+A056 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:345
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(indexOf(rowDelegate(root, 101)), 2)
+
+A057 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:346
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(serialOf(rowDelegate(root, 101)) != originalSerial)
+
+A058 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:347
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+
+A059 | SwiftQtMlTest::testReorderTargetsIntendedRow | src/checks/swiftqtml/tst_swiftqtml.cpp:349
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("101:Alpha"))
+
+A060 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:356
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testResetWithStaleQmlReference()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A061 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:358
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A062 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:361
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QVERIFY(invoke(root, "resetWithFreshRows"))
+
+A063 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:363
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QVERIFY(rowDelegate(root, 202) == nullptr)
+
+A064 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:364
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowText(root, 901) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A065 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:365
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(rowText(root, 902) != nullptr, qUtf8Printable(probeDiagnostics(root, view.get())))
+
+A066 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:366
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(rowText(root, 901)), QStringLiteral("Fresh A:91"))
+
+A067 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:367
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(rowText(root, 902)), QStringLiteral("Fresh B:92"))
+
+A068 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:369
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invoke(named(root, QStringLiteral("bridgeProbe")), "actViaSelectedRow"))
+
+A069 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:372
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("actionLogText"))), QStringLiteral("202:Beta"))
+
+A070 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:373
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(rowText(root, 901)), QStringLiteral("Fresh A:91"))
+
+A071 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:374
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(rowText(root, 902)), QStringLiteral("Fresh B:92"))
+
+A072 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:375
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(view->status(), QQuickView::Ready)
+
+A073 | SwiftQtMlTest::testResetWithStaleQmlReference | src/checks/swiftqtml/tst_swiftqtml.cpp:376
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(capturedMessages(), QString())
+
+A074 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:383
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testPendingMutationThenTeardown()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A075 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:385
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A076 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:389
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+      QPointer<QObject> presenter(named(root, QStringLiteral("bridgeProbe")));
+
+Original expression:
+  QVERIFY(!presenter.isNull())
+
+A077 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:390
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(invoke(root, "mutateMiddleDirect"))
+
+A078 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:397
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+      QQuickView *const doomedView = view.release();
+      doomedView->deleteLater();
+      QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+      QCoreApplication::processEvents();
+      settle();
+
+Original expression:
+  QVERIFY(presenter.isNull())
+
+A079 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:399
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const QString doomedMessages = capturedMessages();
+
+Original expression:
+  QCOMPARE(doomedMessages, QString())
+
+A080 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:402
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+      auto freshView = loadProbe(error);
+
+Original expression:
+  QVERIFY2(freshView != nullptr, qUtf8Printable(error))
+
+A081 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:404
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const freshRoot = freshView->rootObject();
+
+Original expression:
+  QVERIFY(invoke(freshRoot, "seedDefaultRows"))
+
+A082 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:406
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QVERIFY2(rowText(freshRoot, 202) != nullptr,
+               qUtf8Printable(probeDiagnostics(freshRoot, freshView.get())))
+
+A083 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:408
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(rowText(freshRoot, 202)), QStringLiteral("Beta:20"))
+
+A084 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:409
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(named(freshRoot, QStringLiteral("actionLogText"))), QString())
+
+A085 | SwiftQtMlTest::testPendingMutationThenTeardown | src/checks/swiftqtml/tst_swiftqtml.cpp:410
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(capturedMessages(), QString())
+
+A086 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:417
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void SwiftQtMlTest::testObjectReturnCapability()
+  {
+      QString error;
+      auto view = loadProbe(error);
+
+Original expression:
+  QVERIFY2(view != nullptr, qUtf8Printable(error))
+
+A087 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:419
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      QObject *const root = view->rootObject();
+
+Original expression:
+  QVERIFY(invoke(root, "seedDefaultRows"))
+
+A088 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:422
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+
+Original expression:
+  QVERIFY(invoke(root, "inspectMadeRow"))
+
+A089 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:424
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("returnedTitleText"))), QStringLiteral("Returned"))
+
+A090 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:427
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+      QObject *const state = named(root, QStringLiteral("probeState"));
+
+Original expression:
+  QVERIFY(state != nullptr)
+
+A091 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:428
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(invoke(root, "inspectSelectedPresent"))
+
+A092 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:430
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QCOMPARE(state->property("selectedIsNull").toBool(), false)
+
+A093 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:431
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("selectedTitleText"))), QStringLiteral("Beta"))
+
+A094 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:433
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+
+Original expression:
+  QVERIFY(invoke(root, "inspectSelectedMissing"))
+
+A095 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:435
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      settle();
+
+Original expression:
+  QCOMPARE(state->property("selectedIsNull").toBool(), true)
+
+A096 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:436
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(textOf(named(root, QStringLiteral("selectedTitleText"))), QStringLiteral("<null>"))
+
+A097 | SwiftQtMlTest::testObjectReturnCapability | src/checks/swiftqtml/tst_swiftqtml.cpp:437
+Disposition: NATIVE
+Mapping/reason: Native QML mounting/rendering/delegate-identity observation on a QQuickView BridgeProbe surface (loads, invokes, serials, texts, captured Qt messages). Swift BridgeRow/BridgeProbe supply the QML-bindable types only and predicate nothing. A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(capturedMessages(), QString())
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+
+      // Static M0 boundary assertion: object-argument slot invocation is
+      // Unsupported (crashes) at this pin+patch. The evidence home is the M0
+      // capability probe table in docs/plans/qtbridge-integration-contract.md.
+      // On 2026-09-19, two pre-isolation parent-process runs observed SIGSEGV
+      // from invoke(root, "attemptObjectArgumentCall"); lldb stopped in QtQml
+      // OUTLINED_FUNCTION_2 while its accessor dereferenced a dead/garbage
+      // object. Do not execute that process-killing probe in this check.
+  }
+
+  int runSwiftQtMlCheck(const QString &projectRoot, const QString &songA, const QString &songB,
+                        const QStringList &qtArguments)
+  {
+      Q_UNUSED(projectRoot)
+      Q_UNUSED(songA)
+      Q_UNUSED(songB)
+
+      SwiftQtMlTest test;
+      QStringList arguments = {QStringLiteral("swiftqtml")};
+      arguments.append(qtArguments);
+      return QTest::qExec(&test, arguments);
+  }
+
+
+Swift assertion predicates
+No report.expect*/expectEqual calls and no guard-based check predicates exist
+in src/checks/swiftqtml/BridgeProbeCheck.swift: it defines the QML-bindable
+BridgeRow/BridgeProbe types and the sqp_register_probe_types entry point only.
+There are no S entries.
+
+Shared helper:
+No shared Swift fixture file carrying expects was identified for this lane.
+swiftcore report.expect*/expectEqual predicates belong to other lanes' proofs
+and are not inventoried here.

@@ -1,0 +1,1358 @@
+Assertion correspondence: rollcheck/static/gate.cpp
+
+Reference revision: 90446f5dbbb9f9d9f9000d7819c42c1b8b2c5389
+Original: src/checks/rollcheck/static/gate.cpp
+Original SHA-256: 78ee6803e1c397aaa0e035fdcda0ae63f87e72ac8be9336e62aa1ee4718b4620
+Swift counterpart: src/checks/rollcheck/static/camera.swift
+Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+S identifiers identify exact Swift predicates, listed after the inventory.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+No MATCHED site is claimed. The gated/ready camera-channel holds and
+movements (scrollX, pxPerBeat) are PARTIAL against the related Swift
+wheel/pan/zoom predicates; the edit-cursor set/read-back sites have no related
+Swift predicate and are GAP; fixture creation, readiness, surface
+enablement/visibility/presence, control-text sync, native event delivery, and
+tooltip hover geometry are NATIVE.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy header/camera/playhead harnesses are not registered in this checkout.
+Their C++ sources are reference inventories only, never current execution evidence.
+
+Execution and ownership
+runEditorCameraChecks is called in its previous suite position, and
+checkGridCameraWheel runs between checkViewport and checkProjection under
+EditorGridCameraChecks (see proof.camera.txt); those execute the 41 S
+predicates below. No Swift function executes the gate slots. The original slots
+run under PianoRollStaticTest (static/tst_pianorollstatic.h) on the GateFixture
+(static/fixtures.h, fixtures.cpp): a deliberately local loading-stage SongTab
+with roll/ruler/scrollbar/controls/division/feel/tooltip/ruler/headers/event-list/drawer
+surfaces. File-local helpers stage readiness (bindMidiStage, bindVoicegroup),
+deliver native events (sendRulerClick, sendScrollbarWheel, sendRollWheel), and
+read native surface state (controlsMatchRuler, allFixedSurfacesEnabled,
+gridControlState, unchangedGridControlState).
+
+Fixture, sequence and row constraints
+tooltipFloatsBelowRuler_data expands the tooltip slot into division/feel rows.
+Every slot gates on fixture.create, then layers bindMidiStage/bindVoicegroup
+readiness. Gated-vs-ready pairs replay the same native event (ruler click,
+scrollbar wheel, roll wheel) and compare editCursorTick, camera scrollX or
+pxPerBeat, and the gesture-active flag across the transition. Tooltip delivery
+waits through QTest::qWaitFor on per-control visibility, enablement, size, and
+scene guards before hover/leave sequences assert floating geometry below the
+ruler row.
+
+Original assertion inventory and source sequence
+
+A001 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:197
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  #include "checks/rollcheck/static/tst_pianorollstatic.h"
+
+  #include <QCoreApplication>
+  #include <QCursor>
+  #include <QEnterEvent>
+  #include <QPointer>
+  #include <QQuickItem>
+  #include <QQuickWindow>
+  #include <QScopeGuard>
+  #include <QWheelEvent>
+  #include <QWindow>
+  #include <QtTest>
+
+  #include <array>
+
+  #include "checks/rollcheck/static/fixtures.h"
+  #include "checks/support/eventsynth.h"
+  #include "core/smf.h"
+  #include "core/tracklimits.h"
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/songview/quick/eventlistcontroller.h"
+  #include "ui/songview/quick/timelineinputitem.h"
+  #include "ui/songview/quick/timelinequickview.h"
+  #include "ui/songview/timeruler.h"
+  #include "ui/songview/trackheadermodel.h"
+
+  namespace checks::rollcheck::staticcheck {
+  namespace {
+
+  bool bindMidiStage(GateFixture &fixture)
+  {
+      SmfFile smf;
+      SongInfo info;
+      info.label = fixture.tab()->name().value();
+      fixture.tab()->applyMidiStage(info, std::move(smf), track_limits::kHardwareCapacity);
+      return fixture.tab()->presentationError().isEmpty();
+  }
+
+  bool bindVoicegroup(GateFixture &fixture)
+  {
+      const auto identity =
+          VoicegroupId::create(QStringLiteral("sound/voicegroups/loading_probe.inc"), QString());
+      if (!identity)
+          return false;
+      fixture.tab()->applyVoicegroupBound(*identity);
+      return true;
+  }
+
+  void sendRulerClick(songview::TimelineInputItem &input, SongView &view)
+  {
+      const auto band = view.timelineBandLayout().geometry(songview::TimelineBand::Ruler);
+      QQuickWindow *const window = input.window();
+      if (!band || !window)
+          return;
+      const QPointF point(view.camera().leadPadPx() + 140.0, band->rect.height() * 3.0 / 4.0);
+      QTest::mouseClick(window, Qt::LeftButton, Qt::NoModifier, input.mapToScene(point).toPoint());
+  }
+
+  void sendScrollbarWheel(QQuickItem &bar)
+  {
+      QQuickWindow *const window = bar.window();
+      if (!window)
+          return;
+      const QPointF local(bar.width() / 2.0, bar.height() / 2.0);
+      const QPointF scene = bar.mapToScene(local);
+      QWheelEvent event(scene, window->mapToGlobal(scene.toPoint()), QPoint(), QPoint(0, -120),
+                        Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+      QCoreApplication::sendEvent(window, &event);
+  }
+
+  void sendRollWheel(songview::TimelineInputItem &input)
+  {
+      QQuickWindow *const window = input.window();
+      if (!window)
+          return;
+      const QPointF scene = input.mapToScene(QPointF(80.0, 100.0));
+      QWheelEvent event(scene, window->mapToGlobal(scene.toPoint()), QPoint(), QPoint(0, 120),
+                        Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+      QCoreApplication::sendEvent(window, &event);
+  }
+
+  bool controlsMatchRuler(const GateFixture &fixture)
+  {
+      const auto *ruler = fixture.ruler();
+      const auto *division = fixture.divisionControl();
+      const auto *feel = fixture.feelControl();
+      return ruler && division && feel && ruler->gridControlsEnabled() &&
+             division->property("controlText").toString() == ruler->divisionText() &&
+             feel->property("controlText").toString() == ruler->feelText() &&
+             division->property("controlToolTip").toString() == ruler->divisionToolTip() &&
+             feel->property("controlToolTip").toString() == ruler->feelToolTip();
+  }
+  bool allFixedSurfacesEnabled(const GateFixture &fixture)
+  {
+      if (!fixture.view() || !fixture.rollInput() || !fixture.rulerInput() ||
+          !fixture.horizontalScrollbar() || !fixture.eventListController() || !fixture.drawer() ||
+          !fixture.headers() || !fixture.headersInput() || !fixture.controls() ||
+          !fixture.divisionControl() || !fixture.feelControl())
+          return false;
+      const auto *quick = fixture.view()->findChild<songview::TimelineQuickView *>(
+          QStringLiteral("timelineQuickCanvas"));
+      QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+      if (!root || !fixture.rollInput()->isEnabled() || !fixture.rulerInput()->isEnabled() ||
+          !fixture.horizontalScrollbar()->isVisible() ||
+          !fixture.horizontalScrollbar()->isEnabled() ||
+          fixture.headersInput()->interaction() != fixture.headers() ||
+          !fixture.headersInput()->isEnabled() || !fixture.controls()->isEnabled() ||
+          !fixture.divisionControl()->isEnabled() || !fixture.feelControl()->isEnabled())
+          return false;
+      const auto *verticalScrollbar =
+          root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"));
+      const auto *otherEvents =
+          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
+      const auto *eventListInput =
+          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineEventListInput"));
+      if (!verticalScrollbar || !verticalScrollbar->isVisible() || !verticalScrollbar->isEnabled() ||
+          !otherEvents || !otherEvents->isEnabled() || !eventListInput ||
+          !eventListInput->isEnabled())
+          return false;
+      constexpr std::array drawerNames{
+          "drawerVoiceChangesHandleInput",
+          "drawerVelocityHandleInput",
+          "drawerAutomationHandleInput",
+          "drawerBarInput",
+          "drawerDetentInput",
+      };
+      for (const char *name : drawerNames) {
+          const auto *input =
+              root->findChild<songview::TimelineInputItem *>(QString::fromLatin1(name));
+          if (!input || !input->isEnabled())
+              return false;
+      }
+      return true;
+  }
+
+  struct GridControlState {
+      QString divisionText;
+      QString feelText;
+      QString divisionToolTip;
+      QString feelToolTip;
+      QString divisionControlText;
+      QString feelControlText;
+      QString divisionControlToolTip;
+      QString feelControlToolTip;
+      QVariantMap appearance;
+      bool controlsEnabled = false;
+      bool divisionEnabled = false;
+      bool feelEnabled = false;
+  };
+
+  GridControlState gridControlState(const GateFixture &fixture)
+  {
+      const auto *ruler = fixture.ruler();
+      const auto *controls = fixture.controls();
+      const auto *division = fixture.divisionControl();
+      const auto *feel = fixture.feelControl();
+      if (!ruler || !controls || !division || !feel)
+          return {};
+      return {ruler->divisionText(),
+              ruler->feelText(),
+              ruler->divisionToolTip(),
+              ruler->feelToolTip(),
+              division->property("controlText").toString(),
+              feel->property("controlText").toString(),
+              division->property("controlToolTip").toString(),
+              feel->property("controlToolTip").toString(),
+              ruler->gridControlAppearance(),
+              controls->isEnabled(),
+              division->isEnabled(),
+              feel->isEnabled()};
+  }
+
+  bool unchangedGridControlState(const GateFixture &fixture, const GridControlState &before)
+  {
+      const GridControlState after = gridControlState(fixture);
+      return after.divisionText == before.divisionText && after.feelText == before.feelText &&
+             after.divisionToolTip == before.divisionToolTip &&
+             after.feelToolTip == before.feelToolTip &&
+             after.divisionControlText == before.divisionControlText &&
+             after.feelControlText == before.feelControlText &&
+             after.divisionControlToolTip == before.divisionControlToolTip &&
+             after.feelControlToolTip == before.feelControlToolTip &&
+             after.appearance == before.appearance &&
+             after.controlsEnabled == before.controlsEnabled &&
+             after.divisionEnabled == before.divisionEnabled &&
+             after.feelEnabled == before.feelEnabled;
+  }
+
+  } // namespace
+
+  void PianoRollStaticTest::freshTabStaysGated()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A002 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:198
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.tab()->isReady())
+
+A003 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:199
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.rollInput()->isEnabled())
+
+A004 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:200
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.rulerInput()->isEnabled())
+
+A005 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:201
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.horizontalScrollbar()->isVisible())
+
+A006 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:202
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.horizontalScrollbar()->isEnabled())
+
+A007 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:203
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.eventListController())
+
+A008 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:204
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.drawer())
+
+A009 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:205
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.headersInput()->isEnabled())
+
+A010 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:206
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(fixture.headersInput()->interaction(), fixture.headers())
+
+A011 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:207
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.controls()->isEnabled())
+
+A012 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:208
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.divisionControl()->isEnabled())
+
+A013 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:209
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.feelControl()->isEnabled())
+
+A014 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:210
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(controlsMatchRuler(fixture))
+
+A015 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:214
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
+          QStringLiteral("timelineQuickCanvas"));
+      QQuickItem *const root = quick ? quick->rootObject() : nullptr;
+Original expression:
+  QVERIFY(root)
+
+A016 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:221
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      auto *const verticalScrollbar =
+          root->findChild<QQuickItem *>(QStringLiteral("timelineRollScrollBar"));
+      auto *const otherEvents =
+          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineOtherEventsInput"));
+      auto *const eventListInput =
+          root->findChild<songview::TimelineInputItem *>(QStringLiteral("timelineEventListInput"));
+Original expression:
+  QVERIFY(verticalScrollbar)
+
+A017 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:222
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(verticalScrollbar->isVisible())
+
+A018 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:223
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(verticalScrollbar->isEnabled())
+
+A019 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:224
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(otherEvents)
+
+A020 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:225
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(otherEvents->isEnabled())
+
+A021 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:226
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(eventListInput)
+
+A022 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:227
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(eventListInput->isEnabled())
+
+A023 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:238
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      constexpr std::array drawerNames{
+          "drawerVoiceChangesHandleInput",
+          "drawerVelocityHandleInput",
+          "drawerAutomationHandleInput",
+          "drawerBarInput",
+          "drawerDetentInput",
+      };
+      for (const char *name : drawerNames) {
+          auto *const input =
+              root->findChild<songview::TimelineInputItem *>(QString::fromLatin1(name));
+Original expression:
+  QVERIFY2(input, name)
+
+A024 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:239
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(input->isEnabled())
+
+A025 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:242
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      }
+      fixture.view()->setEditCursorTick(96);
+Original expression:
+  QCOMPARE(fixture.view()->editCursorTick(), uint64_t(96))
+
+A026 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:245
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Tick before = fixture.view()->editCursorTick();
+      sendRulerClick(*fixture.rulerInput(), *fixture.view());
+Original expression:
+  QCOMPARE(fixture.view()->editCursorTick(), before)
+
+A027 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:246
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view()->userGestureActive())
+
+A028 | PianoRollStaticTest::freshTabStaysGated | src/checks/rollcheck/static/gate.cpp:249
+Disposition: PARTIAL
+Mapping/reason: Related predicates S033, S034 in src/checks/rollcheck/static/camera.swift; the Swift wheel-zoom predicates use synthetic inputs and publish on zoom, so they do not establish the gated native roll-wheel zoom hold below.
+Source context since previous assertion:
+  ;
+      const double zoom = fixture.view()->camera().pxPerBeat();
+      sendRollWheel(*fixture.rollInput());
+Original expression:
+  QVERIFY(qFuzzyCompare(fixture.view()->camera().pxPerBeat(), zoom))
+
+A029 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:256
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::midiStageStaysGated()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A030 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:257
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A031 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:258
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.tab()->isReady())
+
+A032 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:259
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.view()->timeline())
+
+A033 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:260
+Disposition: GAP
+Mapping/reason: No related Swift predicate in src/checks/rollcheck/static/camera.swift has been established for this observation; the original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(fixture.view()->editCursorTick(), uint64_t(0))
+
+A034 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:261
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(controlsMatchRuler(fixture))
+
+A035 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:262
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(allFixedSurfacesEnabled(fixture))
+
+A036 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:265
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Tick cursor = fixture.view()->editCursorTick();
+      sendRulerClick(*fixture.rulerInput(), *fixture.view());
+Original expression:
+  QCOMPARE(fixture.view()->editCursorTick(), cursor)
+
+A037 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:268
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005, S006, S035, S036, S037 in src/checks/rollcheck/static/camera.swift; the Swift horizontal pan/clamp predicates use synthetic EditorCamera inputs, so they do not establish the gated native scrollbar-wheel scroll hold below.
+Source context since previous assertion:
+  ;
+      const double scroll = fixture.view()->camera().scrollX();
+      sendScrollbarWheel(*fixture.horizontalScrollbar());
+Original expression:
+  QVERIFY(qFuzzyCompare(fixture.view()->camera().scrollX(), scroll))
+
+A038 | PianoRollStaticTest::midiStageStaysGated | src/checks/rollcheck/static/gate.cpp:271
+Disposition: PARTIAL
+Mapping/reason: Related predicates S033, S034 in src/checks/rollcheck/static/camera.swift; the Swift wheel-zoom predicates use synthetic inputs and publish on zoom, so they do not establish the gated native roll-wheel zoom hold below.
+Source context since previous assertion:
+  ;
+      const double zoom = fixture.view()->camera().pxPerBeat();
+      sendRollWheel(*fixture.rollInput());
+Original expression:
+  QVERIFY(qFuzzyCompare(fixture.view()->camera().pxPerBeat(), zoom))
+
+A039 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:278
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::voicegroupBoundReadiesTab()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A040 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:279
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A041 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:280
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(bindVoicegroup(fixture))
+
+A042 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:281
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.tab()->isReady())
+
+A043 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:282
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(controlsMatchRuler(fixture))
+
+A044 | PianoRollStaticTest::voicegroupBoundReadiesTab | src/checks/rollcheck/static/gate.cpp:283
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QTRY_VERIFY(allFixedSurfacesEnabled(fixture))
+
+A045 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:290
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A046 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:291
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A047 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:293
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const GridControlState before = gridControlState(fixture);
+Original expression:
+  QVERIFY(!before.divisionText.isEmpty())
+
+A048 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:294
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(bindVoicegroup(fixture))
+
+A049 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:295
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(fixture.tab()->isReady())
+
+A050 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:296
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(unchangedGridControlState(fixture, before))
+
+A051 | PianoRollStaticTest::gridControlsDoNotRestyleAcrossReadiness | src/checks/rollcheck/static/gate.cpp:297
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(controlsMatchRuler(fixture))
+
+A052 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:304
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::gatedAndReadyRulerScrub()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A053 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:305
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A054 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:308
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Tick gated = fixture.view()->editCursorTick();
+      sendRulerClick(*fixture.rulerInput(), *fixture.view());
+Original expression:
+  QCOMPARE(fixture.view()->editCursorTick(), gated)
+
+A055 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:309
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view()->userGestureActive())
+
+A056 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:310
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(bindVoicegroup(fixture))
+
+A057 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:313
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      const Tick ready = fixture.view()->editCursorTick();
+      sendRulerClick(*fixture.rulerInput(), *fixture.view());
+Original expression:
+  QVERIFY(fixture.view()->editCursorTick() != ready)
+
+A058 | PianoRollStaticTest::gatedAndReadyRulerScrub | src/checks/rollcheck/static/gate.cpp:314
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(!fixture.view()->userGestureActive())
+
+A059 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:321
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::gatedAndReadyScrollbarWheel()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A060 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:322
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A061 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:325
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005, S006, S035, S036, S037 in src/checks/rollcheck/static/camera.swift; the Swift horizontal pan/clamp predicates use synthetic EditorCamera inputs, so they do not establish the gated native scrollbar-wheel scroll hold below.
+Source context since previous assertion:
+  ;
+      const double gated = fixture.view()->camera().scrollX();
+      sendScrollbarWheel(*fixture.horizontalScrollbar());
+Original expression:
+  QVERIFY(qFuzzyCompare(fixture.view()->camera().scrollX(), gated))
+
+A062 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:326
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(bindVoicegroup(fixture))
+
+A063 | PianoRollStaticTest::gatedAndReadyScrollbarWheel | src/checks/rollcheck/static/gate.cpp:329
+Disposition: PARTIAL
+Mapping/reason: Related predicates S005, S006, S035, S036, S037 in src/checks/rollcheck/static/camera.swift; the Swift horizontal pan/clamp predicates use synthetic EditorCamera inputs, so they do not establish the ready native scrollbar-wheel scroll movement below.
+Source context since previous assertion:
+  ;
+      const double ready = fixture.view()->camera().scrollX();
+      sendScrollbarWheel(*fixture.horizontalScrollbar());
+Original expression:
+  QVERIFY(!qFuzzyCompare(fixture.view()->camera().scrollX(), ready))
+
+A064 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:336
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::gatedAndReadyRollZoom()
+  {
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A065 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:337
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A066 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:340
+Disposition: PARTIAL
+Mapping/reason: Related predicates S033, S034 in src/checks/rollcheck/static/camera.swift; the Swift wheel-zoom predicates use synthetic inputs and publish on zoom, so they do not establish the gated native roll-wheel zoom hold below.
+Source context since previous assertion:
+  ;
+      const double gated = fixture.view()->camera().pxPerBeat();
+      sendRollWheel(*fixture.rollInput());
+Original expression:
+  QVERIFY(qFuzzyCompare(fixture.view()->camera().pxPerBeat(), gated))
+
+A067 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:341
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(bindVoicegroup(fixture))
+
+A068 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:344
+Disposition: PARTIAL
+Mapping/reason: Related predicates S033, S034 in src/checks/rollcheck/static/camera.swift; the Swift wheel-zoom predicates use synthetic inputs and publish on zoom, so they do not establish the ready native roll-wheel zoom movement below.
+Source context since previous assertion:
+  ;
+      const double ready = fixture.view()->camera().pxPerBeat();
+      sendRollWheel(*fixture.rollInput());
+Original expression:
+  QVERIFY(!qFuzzyCompare(fixture.view()->camera().pxPerBeat(), ready))
+
+A069 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:359
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+  }
+
+  void PianoRollStaticTest::tooltipFloatsBelowRuler_data()
+  {
+      QTest::addColumn<bool>("division");
+      QTest::newRow("division") << true;
+      QTest::newRow("feel") << false;
+  }
+
+  void PianoRollStaticTest::tooltipFloatsBelowRuler()
+  {
+      QFETCH(bool, division);
+      GateFixture fixture;
+      QString error;
+Original expression:
+  QVERIFY2(fixture.create(error), qPrintable(error))
+
+A070 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:360
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY2(bindMidiStage(fixture), qPrintable(fixture.tab()->presentationError()))
+
+A071 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:361
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(bindVoicegroup(fixture))
+
+A072 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:390
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      auto *const quick = fixture.view()->findChild<songview::TimelineQuickView *>(
+          QStringLiteral("timelineQuickCanvas"));
+      const QPointer<songview::TimelineQuickView> guardedQuick = quick;
+      const QPointer<QQuickItem> guardedCanvasRoot = quick ? quick->rootObject() : nullptr;
+      const QPointer<QQuickWindow> guardedQuickWindow = quick ? quick->quickWindow() : nullptr;
+      const QPointer<QWindow> guardedHostWindow = fixture.tab()->windowHandle();
+      const QPointer<QQuickItem> guardedControls = fixture.controls();
+      const QPointer<QQuickItem> guardedDivisionControl = fixture.divisionControl();
+      const QPointer<QQuickItem> guardedFeelControl = fixture.feelControl();
+      const QPointer<QQuickItem> guardedToolTip = fixture.toolTip();
+      const auto sceneReady = [&] {
+          return guardedQuick && guardedCanvasRoot && guardedQuickWindow && guardedHostWindow &&
+                 guardedControls && guardedDivisionControl && guardedFeelControl && guardedToolTip &&
+                 fixture.tab()->isVisible() && fixture.tab()->windowHandle() == guardedHostWindow &&
+                 guardedHostWindow->isExposed() && guardedQuickWindow->isVisible() &&
+                 guardedQuickWindow->isExposed() && guardedCanvasRoot->isVisible() &&
+                 guardedCanvasRoot->width() > 0.0 && guardedCanvasRoot->height() > 0.0 &&
+                 guardedToolTip->window() == guardedQuickWindow;
+      };
+      const auto usableControl = [&sceneReady,
+                                  &guardedQuickWindow](const QPointer<QQuickItem> &control) {
+          return sceneReady() && control->isVisible() && control->isEnabled() &&
+                 control->width() > 0.0 && control->height() > 0.0 &&
+                 control->window() == guardedQuickWindow;
+      };
+      if (!QTest::qWaitFor([&] {
+              return usableControl(guardedDivisionControl) && usableControl(guardedFeelControl);
+          })) {
+Original expression:
+  QFAIL("ready ruler tooltip Quick surface did not become input-ready")
+
+A073 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:451
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      const QPointer<QQuickItem> guardedControl =
+          division ? guardedDivisionControl : guardedFeelControl;
+  #ifdef Q_OS_WIN
+      const QPoint originalCursorPosition = QCursor::pos();
+      const auto restoreCursor =
+          qScopeGuard([originalCursorPosition] { QCursor::setPos(originalCursorPosition); });
+  #endif
+      bool windowEntered = false;
+      const auto setHover = [&guardedCanvasRoot, &guardedQuickWindow,
+                             &windowEntered](const QPointer<QQuickItem> &control, bool entering) {
+          if (!guardedCanvasRoot || !guardedQuickWindow || !control)
+              return false;
+          QQuickItem *const canvasRoot = guardedCanvasRoot.data();
+          QQuickWindow *const quickWindow = guardedQuickWindow.data();
+          const QPoint windowPosition =
+              (entering
+                   ? control->mapToScene(QPointF(control->width() / 2.0, control->height() / 2.0))
+                   : canvasRoot->mapToScene(
+                         QPointF(canvasRoot->width() / 2.0, canvasRoot->height() / 2.0)))
+                  .toPoint();
+  #ifdef Q_OS_WIN
+          // QTest's QWindow mouse moves do not move the native cursor. Keep it
+          // over the control so Windows cannot send a leave during the tooltip delay.
+          QCursor::setPos(quickWindow->mapToGlobal(windowPosition));
+  #endif
+          if (entering) {
+              if (!windowEntered) {
+                  const QPointF point(windowPosition);
+                  QEnterEvent enter(point, point, QPointF(quickWindow->mapToGlobal(windowPosition)));
+                  QCoreApplication::sendEvent(quickWindow, &enter);
+                  windowEntered = true;
+              }
+              if (!checks::events::primeMouseMove(*quickWindow, *control, windowPosition))
+                  return false;
+          }
+          QTest::mouseMove(quickWindow, windowPosition);
+          return true;
+      };
+      const auto hoverDiagnostic = [&sceneReady, &guardedQuickWindow,
+                                    &guardedToolTip](const QPointer<QQuickItem> &control) {
+          return QObject::tr(
+                     "ruler tooltip did not appear while hovering the %1 control "
+                     "(scene-ready=%2 hovered=%3 visible=%4 enabled=%5 size=%6x%7 window=%8 "
+                     "tooltip-visibleForControl=%9 tooltip-text-empty=%10 tooltip-size=%11x%12)")
+              .arg(control ? control->objectName() : QStringLiteral("<destroyed>"))
+              .arg(sceneReady())
+              .arg(control && control->property("hovered").toBool())
+              .arg(control && control->isVisible())
+              .arg(control && control->isEnabled())
+              .arg(control ? control->width() : 0.0)
+              .arg(control ? control->height() : 0.0)
+              .arg(control && control->window() == guardedQuickWindow)
+              .arg(guardedToolTip && guardedToolTip->property("visibleForControl").toBool())
+              .arg(guardedToolTip && guardedToolTip->property("toolTipText").toString().isEmpty())
+              .arg(guardedToolTip ? guardedToolTip->width() : 0.0)
+              .arg(guardedToolTip ? guardedToolTip->height() : 0.0);
+      };
+
+      if (!usableControl(guardedControl)) {
+Original expression:
+  QFAIL("ready ruler tooltip Quick control was destroyed before hover delivery")
+
+A074 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:455
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      if (!setHover(guardedControl, true)) {
+          setHover(guardedControl, false);
+Original expression:
+  QFAIL(qUtf8Printable(QObject::tr("could not deliver ruler hover to the %1 control")
+                                   .arg(guardedControl->objectName())))
+
+A075 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:461
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      if (!QTest::qWaitFor(
+              [&] { return sceneReady() && guardedControl && guardedToolTip->isVisible(); })) {
+          setHover(guardedControl, false);
+Original expression:
+  QFAIL(qUtf8Printable(hoverDiagnostic(guardedControl)))
+
+A076 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:464
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      if (!sceneReady() || !guardedControl || !guardedToolTip->isVisible()) {
+Original expression:
+  QFAIL("ready ruler tooltip Quick scene was destroyed after hover delivery")
+
+A077 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:475
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      const QRectF tooltipRect(guardedToolTip->mapToItem(guardedCanvasRoot, QPointF(0, 0)),
+                               guardedToolTip->size());
+      const qreal rowBottom = guardedControls->mapToItem(guardedCanvasRoot, QPointF(0, 0)).y() +
+                              rulerBandHeight(*fixture.view());
+      // Room below the row exists, so the tooltip must float there instead
+      // of covering the row or spilling past the canvas.
+      if (rowBottom + tooltipRect.height() <= guardedCanvasRoot->height()) {
+          if (tooltipRect.top() < rowBottom - 0.5) {
+              setHover(guardedControl, false);
+Original expression:
+  QFAIL("ruler tooltip covered the ruler row instead of floating below it")
+
+A078 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:479
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          }
+          if (tooltipRect.bottom() > guardedCanvasRoot->height() + 0.5) {
+              setHover(guardedControl, false);
+Original expression:
+  QFAIL("ruler tooltip spilled past the Quick canvas below the ruler row")
+
+A079 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:483
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          }
+          if (tooltipRect.left() < -0.5 || tooltipRect.right() > guardedCanvasRoot->width() + 0.5) {
+              setHover(guardedControl, false);
+Original expression:
+  QFAIL("ruler tooltip left the Quick canvas while floating below the row")
+
+A080 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:487
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          }
+      }
+      if (!setHover(guardedControl, false)) {
+Original expression:
+  QFAIL(qUtf8Printable(QObject::tr("could not deliver ruler hover leave from the %1 control")
+                                   .arg(guardedControl->objectName())))
+
+A081 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:493
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+      }
+      if (!QTest::qWaitFor(
+              [&] { return sceneReady() && guardedControl && !guardedToolTip->isVisible(); })) {
+          if (!sceneReady() || !guardedControl || !guardedToolTip) {
+Original expression:
+  QFAIL("ready ruler tooltip Quick scene was destroyed while awaiting hover leave")
+
+A082 | PianoRollStaticTest::tooltipFloatsBelowRuler | src/checks/rollcheck/static/gate.cpp:495
+Disposition: NATIVE
+Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation.
+Source context since previous assertion:
+  ;
+          } else {
+Original expression:
+  QFAIL("ruler tooltip stayed visible after the hover left the control")
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+          }
+      }
+  }
+
+  } // namespace checks::rollcheck::staticcheck
+
+
+Swift assertion predicates
+
+S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
+  report.expect(near(compact.snapshot.viewportWidth, 50) &&
+                    near(compact.snapshot.minHScroll, -48) &&
+                    near(compact.snapshot.maxHScroll, 0),
+                    cppID: cameraTransformID,
+                    message: "caller-resolved minimum viewport produces observable camera bounds")
+
+S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
+  report.expect(near(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
+                    message: "tick/content transforms round-trip with a fractional offset")
+
+S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
+  report.expect(near(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
+                    message: "horizontal restoration preserves fractional offsets")
+
+S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
+  report.expect(near(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+                    cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
+
+S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
+  report.expect(near(camera.snapshot.scrollX, -48) && near(camera.snapshot.minHScroll, -48),
+                    cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
+
+S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
+  report.expect(near(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
+                    message: "bound timeline end reaches the plot origin")
+
+S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
+  report.expect(near(viewportCamera.snapshot.scrollX, -48),
+                    cppID: cameraTransformID,
+                    message: "bound viewport shrink reclamps the changed pre-roll floor")
+
+S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
+  report.expect(near(viewportCamera.snapshot.scrollX, 10.25),
+                    cppID: cameraTransformID,
+                    message: "bound viewport updates preserve a legal fractional offset")
+
+S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
+  report.expect(zoom.zoomChanged && zoom.scrollChanged &&
+                    near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
+                    message: "interactive time zoom preserves its tick anchor")
+
+S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
+  report.expect(near(clampedTimeZoom.snapshot.scrollX, 64) &&
+                    !near(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
+                    cppID: cameraZoomID,
+                    message: "time zoom reaches its bound when the pointer anchor is unreachable")
+
+S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
+  report.expect(near(camera.snapshot.pixelsPerBeat, 48) &&
+                    near(camera.snapshot.keyHeight, 16) && near(camera.snapshot.scrollX, 10.5) &&
+                    near(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
+                    message: "unanchored restoration keeps valid fractional camera state")
+
+S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
+  report.expect(near(sanitized.snapshot.pixelsPerBeat, 32) &&
+                    near(sanitized.snapshot.keyHeight, 12) &&
+                    near(sanitized.snapshot.scrollX, 0) && near(sanitized.snapshot.scrollY, 0),
+                    cppID: cameraZoomID,
+                    message: "restoration sanitizes non-finite transient view-state values independently")
+
+S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
+  report.expect(near(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
+                    message: "content shrink reclamps the horizontal offset")
+
+S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
+  report.expect(near(camera.snapshot.viewportWidth, 800) && near(camera.snapshot.scrollY, 0),
+                    cppID: cameraTransformID,
+                    message: "viewport growth reclamps vertical content")
+
+S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
+  report.expect(near(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
+                    message: "an unbound timeline homes to its lead pad")
+
+S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
+  report.expect(near(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
+                    message: "unbound viewport updates follow the resolved home")
+
+S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
+  report.expect(chromatic.visibleRowCount == 128 && (0..<128).allSatisfy { pitch in
+          chromatic.row(forPitch: pitch) == 127 - pitch &&
+              chromatic.visiblePitch(at: 127 - pitch) == pitch
+      }, cppID: cameraPitchID,
+      message: "chromatic pitch mapping remains bijective across the full MIDI range")
+
+S018 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:108
+  report.expect(folded.visiblePitch(at: 0) == 67 && folded.row(forPitch: 60) == 2 &&
+                    folded.row(forPitch: 61) == PitchProjection.hiddenRow &&
+                    folded.nearestVisiblePitch(to: 62) == 60 &&
+                    folded.nearestVisiblePitch(to: 100) == 67 &&
+                    folded.nearestVisiblePitch(to: -5) == 60 &&
+                    emptyProjection.nearestVisiblePitch(to: 60) == nil,
+                    cppID: cameraPitchID,
+                    message: "pitch rows and nearest lookup preserve production ordering")
+
+S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:116
+  report.expect(folded.row(atY: 10, keyHeight: 10, scrollY: 0, dpr: 2) == 1 &&
+                    folded.pitch(atY: 29.75, keyHeight: 10, scrollY: 0, dpr: 2) == 60,
+                    cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
+
+S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
+  report.expect(near(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
+                         10) &&
+                    folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
+                    folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
+                    cppID: cameraPitchID,
+                    message: "fractional DPR snapping defines the inverse row boundary")
+
+S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
+  report.expect(near(projectedContent.snapshot.scrollY, 15),
+                    cppID: cameraPitchID,
+                    message: "pitch projection shrink reclamps the vertical offset")
+
+S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
+  report.expect(near(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
+                    message: "vertical bounds derive from projected row height")
+
+S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
+  report.expect(near(anchoredRow, resultingRow), cppID: cameraZoomID,
+                    message: "pitch zoom preserves its row anchor when bounds permit")
+
+S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
+  report.expect(near(clampedPitchZoom.snapshot.scrollY, 0) &&
+                    near(clampedPitchZoom.snapshot.maxVScroll, 0) &&
+                    !near(rowAfterBoundedZoom, rowBeforeBoundedZoom),
+                    cppID: cameraZoomID,
+                    message: "pitch zoom reaches its bound when the row anchor is unreachable")
+
+S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
+  report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
+                    cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
+
+S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
+  report.expect(!pitchCamera.ensureKeyVisible(61), cppID: cameraPitchID,
+                    message: "hidden pitches do not move the camera")
+
+S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:173
+  report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
+                    near(reveal.snapshot.scrollX, 573.3333333333),
+                    cppID: cameraTransformID,
+                    message: "tick reveal uses the production one-third anchor")
+
+S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:178
+  report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
+                                               preferEnd: false, dpr: 1) &&
+                    near(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
+                    message: "a fitting range on the physical right boundary stays visible")
+
+S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:182
+  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                              preferEnd: false, dpr: 1) &&
+                    near(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
+                    message: "wide range reveal prefers its requested leading edge")
+
+S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:187
+  report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
+                                              preferEnd: true, dpr: 1) &&
+                    near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
+                    message: "wide range reveal honors the requested trailing edge")
+
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:220
+  report.expect(
+              after.pixelsPerBeat > before.pixelsPerBeat
+                  && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
+                  && counters.camera == publications + 1,
+              cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
+
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:233
+  report.expect(
+          session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
+          cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
+
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:248
+  report.expect(
+          gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
+              && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
+                      angleZoom * pow(1.0015, 120), tolerance: 1e-7),
+          cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
+
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:253
+  report.expect(
+          counters.camera == 2,
+          cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
+
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:263
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
+
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:278
+  report.expect(
+          gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
+              && minimumPublications == 1 && counters.camera == minimumPublications,
+          cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
+
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:295
+  report.expect(
+          gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
+              && maximumPublications == 1 && counters.camera == maximumPublications,
+          cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
+
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:306
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
+
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:318
+  report.expect(
+          pitchAfter.keyHeight > pitchBefore.keyHeight
+              && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
+              && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
+
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:329
+  report.expect(
+          session.camera.snapshot == pitchMomentum && counters.camera == 0,
+          cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
+
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
+  report.expect(
+          gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
+          cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")

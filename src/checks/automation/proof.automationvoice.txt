@@ -1,0 +1,2708 @@
+Assertion correspondence: automation/automationvoice.cpp
+
+Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
+Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
+Original: src/checks/automation/automationvoice.cpp
+Original SHA-256: e2351f563326c4e210c19c12286ac488dccf15aa4b58929ce646af10c18b8c7a
+Swift counterpart: src/checks/drawerpresentation/voice.swift
+Swift SHA-256: 4be64f4b56f360242cddcb87a5345b1eff2508791f26c64ddc8eea645108abf4
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+All 134 sites in this file are GAP: voiceHorizontalPreviewCommitsAndUndoes, voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit, voiceAltDragUsesFineSnap, voiceCollisionAndStaleRevision, voiceEscapeAndUngrabCancel, and voiceDuplicateOccurrenceMovesSingleIdentity exercise voice change lane editing, horizontal previewing, fine snapping with Alt, collision resolution, and cancellation.
+MATCHED identifies equivalent model predicates; execution must still be verified.
+PARTIAL identifies related Swift predicates with an explicit unproved condition.
+NATIVE identifies retained native-window/rendering or native setup obligations;
+it does not establish coverage of the converted Swift window.
+GAP identifies an original predicate without a replacement assertion.
+Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Converted-window command: deno task verify:qml --verbose
+The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
+Their sources are reference inventories only, never current execution evidence.
+
+Execution ownership
+The legacy AutomationEditingTest voice suite tested voice change event interaction inside the automation drawer. In the converted Swift suite, drawerVoiceInteraction in src/checks/drawerpresentation/voice.swift exercises voice change event editing, dragging, and collision semantics.
+
+Fixture, sequence and row constraints
+Tests exercise drag preview and commit for program change events, collision avoidance when moving past adjacent voice changes, Alt fine snapping, Escape cancellation, and mouse ungrab recovery. Loops verify voice change ticks and program values before and after undo.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Original assertion inventory and source sequence
+
+A001 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:73
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+  #include "checks/automation/tst_automationediting.h"
+
+  #include <algorithm>
+  #include <cmath>
+  #include <cstdint>
+  #include <limits>
+  #include <variant>
+  #include <vector>
+
+  #include <QApplication>
+  #include <QtTest>
+
+  #include "ui/editordrawer/automationcanvas.h"
+  #include "ui/editordrawer/automationpage.h"
+  #include "ui/editordrawer/editordrawer.h"
+  #include "ui/layout.h"
+  #include "ui/songview/quick/timelinequickscene.h"
+
+  namespace {
+
+  constexpr Tick kSourceTick = 48;
+  constexpr uint8_t kPanController = 10;
+  constexpr Tick kTargetTick = 192;
+
+  Tick snappedVoiceTick(const SongView &view, qreal x, bool fine)
+  {
+      const double rawTick = view.camera().tickAtContentX(std::max<qreal>(0.0, x));
+      return view.grid().snapTick(std::max(0.0, rawTick), fine);
+  }
+
+  void writeVoicePoints(SongDocument &document,
+                        const std::vector<SongDocument::LanePointValue> &points)
+  {
+      document.writeLanePoints(0, DOC_CC_VOICE, 0, CoreTimeDefaults::kNoTick, points);
+  }
+
+  bool hasVoicePoint(const SongDocument &document, Tick tick, int value)
+  {
+      const std::vector<DocLanePoint> points = document.lanePoints(0, DOC_CC_VOICE);
+      return std::any_of(points.cbegin(), points.cend(), [tick, value](const DocLanePoint &point) {
+          return point.tick == tick && point.value == value;
+      });
+  }
+
+  int voicePointCount(const SongDocument &document, Tick tick, int value)
+  {
+      const std::vector<DocLanePoint> points = document.lanePoints(0, DOC_CC_VOICE);
+      return int(
+          std::count_if(points.cbegin(), points.cend(), [tick, value](const DocLanePoint &point) {
+              return point.tick == tick && point.value == value;
+          }));
+  }
+
+  int markerCountAt(const songview::TimelineQuickLayerData &layer, qreal x)
+  {
+      return int(std::count_if(layer.rects.cbegin(), layer.rects.cend(), [x](const auto &marker) {
+          return std::abs(marker.rect.center().x() - x) <= layout::singlePixel();
+      }));
+  }
+
+  void showVoiceChanges(SongView &view)
+  {
+      view.setDrawerActivePage(EditorDrawerPage::VoiceChanges);
+      view.setDrawerSectionVisible(EditorDrawerPage::VoiceChanges, true);
+      view.setDrawerSectionHeight(EditorDrawerPage::VoiceChanges, 160);
+  }
+
+  } // namespace
+
+  void AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes()
+  {
+      showVoiceChanges(tab().view());
+
+Original expression:
+  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+
+A002 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:75
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+
+Original expression:
+  QVERIFY(pan.valid());
+
+A003 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:78
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      writeVoicePoints(tab().document(), {{24, 5}, {kSourceTick, 6}});
+      songview::TimelineQuickScene *const scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A004 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:79
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voicePointCount(tab().document(), 24, 5), 1);
+
+A005 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:80
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(24).x()),
+                   1);
+
+A006 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:83
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   1);
+
+A007 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:86
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voicePointCount(tab().document(), kSourceTick, 6), 1);
+
+A008 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:91
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      const QPointF source = voicePoint(24);
+      const QPointF target = voicePoint(72);
+      const Tick destination = snappedVoiceTick(tab().view(), target.x(), false);
+
+Original expression:
+  QVERIFY(destination != 24);
+
+A009 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:95
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const auto markersBefore = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A010 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:96
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A011 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:102
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), target);
+
+
+Original expression:
+  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
+                  markersBefore.revision);
+
+A012 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:104
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+
+A013 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:105
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(tab().view().userGestureActive());
+
+A014 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:106
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::SizeHorCursor);
+
+A015 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:108
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const auto previewMarkers = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
+
+Original expression:
+  QCOMPARE(markerCountAt(previewMarkers, voicePoint(destination).x()), 1);
+
+A016 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:112
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
+
+
+Original expression:
+  QCOMPARE(documentChanged.count(), 1);
+
+A017 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:113
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), 1);
+
+A018 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:114
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().revision(), frozen.revision + 1);
+
+A019 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:115
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
+
+A020 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:116
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
+
+A021 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:117
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(tab().document().smf().write() != frozen.smf);
+
+A022 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:118
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!hasVoicePoint(tab().document(), 24, 5));
+
+A023 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:119
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(hasVoicePoint(tab().document(), kSourceTick, 6));
+
+A024 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:120
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(hasVoicePoint(tab().document(), destination, 5));
+
+A025 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:121
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(int(tab().document().lanePoints(0, DOC_CC_VOICE).size()), 2);
+
+A026 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:122
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A027 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:123
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A028 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:124
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A029 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:125
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+
+A030 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:127
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+
+Original expression:
+  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
+
+A031 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:128
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().smf().write(), frozen.smf);
+
+A032 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:134
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit()
+  {
+      showVoiceChanges(tab().view());
+
+Original expression:
+  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+
+A033 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:136
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+
+Original expression:
+  QVERIFY(pan.valid());
+
+A034 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:139
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      writeVoicePoints(tab().document(), {{kSourceTick, 7}});
+      songview::TimelineQuickScene *const scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A035 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:140
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   1);
+
+A036 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:146
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPointF source = voicePoint(kSourceTick);
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A037 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:147
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A038 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:152
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, source);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+
+A039 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:157
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      const QPointF vertical = source + QPointF(0, QApplication::startDragDistance() + 2);
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), vertical);
+
+Original expression:
+  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+
+A040 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:159
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, vertical);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+
+A041 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:166
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      const QPointF empty = voicePoint(144);
+      const QPointF draggedEmpty = empty + QPointF(QApplication::startDragDistance() + 2, 0);
+      mousePress(voiceChangeInput(), Qt::LeftButton, empty);
+      mouseMove(voiceChangeInput(), draggedEmpty);
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, draggedEmpty);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+
+A042 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:167
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A043 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:168
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A044 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:169
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A045 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:175
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::voiceAltDragUsesFineSnap()
+  {
+      showVoiceChanges(tab().view());
+
+Original expression:
+  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+
+A046 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:177
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+
+Original expression:
+  QVERIFY(pan.valid());
+
+A047 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:180
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      writeVoicePoints(tab().document(), {{kSourceTick, 8}});
+      songview::TimelineQuickScene *const scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A048 | AutomationEditingTest::voiceAltDragUsesFineSnap | src/checks/automation/automationvoice.cpp:181
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   1);
+
+A049 | std::abs | src/checks/automation/automationvoice.cpp:200
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPointF source = voicePoint(kSourceTick);
+      QPointF target;
+      Tick fineTick = 0;
+      Tick normalTick = 0;
+      for (int x = int(std::ceil(voiceChangeInput().bounds().left()));
+           x < int(std::floor(voiceChangeInput().bounds().right())); ++x) {
+          const Tick fine = snappedVoiceTick(tab().view(), x, true);
+          const Tick normal = snappedVoiceTick(tab().view(), x, false);
+          if (fine != normal && fine != kSourceTick &&
+              std::abs(qreal(x) - source.x()) >= QApplication::startDragDistance()) {
+              target = {qreal(x), voiceChangeInput().bounds().center().y()};
+              fineTick = fine;
+              normalTick = normal;
+              break;
+          }
+      }
+
+Original expression:
+  QVERIFY(fineTick != normalTick);
+
+A050 | std::abs | src/checks/automation/automationvoice.cpp:203
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A051 | std::abs | src/checks/automation/automationvoice.cpp:204
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A052 | std::abs | src/checks/automation/automationvoice.cpp:211
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+
+      mousePress(voiceChangeInput(), Qt::LeftButton, source, Qt::AltModifier);
+      mouseMove(voiceChangeInput(), target, Qt::AltModifier);
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target, Qt::AltModifier);
+
+
+Original expression:
+  QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
+
+A053 | std::abs | src/checks/automation/automationvoice.cpp:212
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), frozen.edits + 1);
+
+A054 | std::abs | src/checks/automation/automationvoice.cpp:213
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().revision(), frozen.revision + 1);
+
+A055 | std::abs | src/checks/automation/automationvoice.cpp:214
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
+
+A056 | std::abs | src/checks/automation/automationvoice.cpp:215
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
+
+A057 | std::abs | src/checks/automation/automationvoice.cpp:216
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(hasVoicePoint(tab().document(), fineTick, 8));
+
+A058 | std::abs | src/checks/automation/automationvoice.cpp:217
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!hasVoicePoint(tab().document(), normalTick, 8));
+
+A059 | std::abs | src/checks/automation/automationvoice.cpp:218
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A060 | std::abs | src/checks/automation/automationvoice.cpp:219
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A061 | std::abs | src/checks/automation/automationvoice.cpp:220
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A062 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:226
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::voiceCollisionAndStaleRevision()
+  {
+      showVoiceChanges(tab().view());
+
+Original expression:
+  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+
+A063 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:228
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+
+Original expression:
+  QVERIFY(pan.valid());
+
+A064 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:235
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPointF source = voicePoint(kSourceTick);
+      const QPointF target = voicePoint(kTargetTick);
+      const Tick destination = snappedVoiceTick(tab().view(), target.x(), false);
+
+      writeVoicePoints(tab().document(), {{kSourceTick, 9}, {kTargetTick, 10}});
+      songview::TimelineQuickScene *const scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A065 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:236
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   1);
+
+A066 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:239
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kTargetTick).x()),
+                   1);
+
+A067 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:244
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A068 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:245
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A069 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:251
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState collisionFrozen =
+          frozenDocumentState(documentChanged.count(), edited.count());
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), target);
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
+
+Original expression:
+  QCOMPARE(documentChanged.count(), collisionFrozen.documentChanges + 1);
+
+A070 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:252
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), collisionFrozen.edits + 1);
+
+A071 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:253
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().revision(), collisionFrozen.revision + 1);
+
+A072 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:254
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->count(), collisionFrozen.undoCount + 1);
+
+A073 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:255
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->index(), collisionFrozen.undoIndex + 1);
+
+A074 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:256
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(int(tab().document().lanePoints(0, DOC_CC_VOICE).size()), 1);
+
+A075 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:257
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(hasVoicePoint(tab().document(), destination, 9));
+
+A076 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:258
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+
+A077 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:259
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A078 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:260
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A079 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:261
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A080 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:264
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      writeVoicePoints(tab().document(), {{kSourceTick, 11}});
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   1);
+
+A081 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:274
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState staleFrozen =
+          frozenDocumentState(documentChanged.count(), edited.count());
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), target);
+      tab().document().addLanePoint(0, kPanController, 333, 42);
+      const QByteArray externalSmf = tab().document().smf().write();
+      const uint64_t externalRevision = tab().document().revision();
+
+Original expression:
+  QCOMPARE(documentChanged.count(), staleFrozen.documentChanges + 1);
+
+A082 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:275
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), staleFrozen.edits + 1);
+
+A083 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:277
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
+
+Original expression:
+  QCOMPARE(tab().document().smf().write(), externalSmf);
+
+A084 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:278
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().revision(), externalRevision);
+
+A085 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:279
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(documentChanged.count(), staleFrozen.documentChanges + 1);
+
+A086 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:280
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), staleFrozen.edits + 1);
+
+A087 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:281
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(hasVoicePoint(tab().document(), kSourceTick, 11));
+
+A088 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:282
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A089 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:283
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A090 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:284
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A091 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:290
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::voiceEscapeAndUngrabCancel()
+  {
+      showVoiceChanges(tab().view());
+
+Original expression:
+  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+
+A092 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:292
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+
+Original expression:
+  QVERIFY(pan.valid());
+
+A093 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:298
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      writeVoicePoints(tab().document(), {{kSourceTick, 12}});
+      const QPointF source = voicePoint(kSourceTick);
+      const QPointF target = voicePoint(kTargetTick);
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A094 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:299
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A095 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:302
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      songview::TimelineQuickScene *const scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A096 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:303
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   1);
+
+A097 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:312
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState escapeFrozen =
+          frozenDocumentState(documentChanged.count(), edited.count());
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), target);
+      keyClick(Qt::Key_Escape);
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == escapeFrozen);
+
+A098 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:313
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A099 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:314
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A100 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:315
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A101 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:316
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+
+A102 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:322
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      const FrozenDocumentState ungrabFrozen =
+          frozenDocumentState(documentChanged.count(), edited.count());
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), target);
+
+Original expression:
+  QTRY_VERIFY(quickWindow().mouseGrabberItem() == &voiceChangeInput());
+
+A103 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:324
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      voiceChangeInput().ungrabMouse();
+
+Original expression:
+  QTRY_VERIFY(!quickWindow().mouseGrabberItem());
+
+A104 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:326
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == ungrabFrozen);
+
+A105 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:327
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A106 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:328
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A107 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:329
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A108 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:330
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
+
+A109 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:336
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+  }
+
+  void AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity()
+  {
+      showVoiceChanges(tab().view());
+
+Original expression:
+  QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
+
+A110 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:338
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const LaneHandle pan = findRow({EditorAutomationRowKind::ControlChange, 0, kPanController});
+
+Original expression:
+  QVERIFY(pan.valid());
+
+A111 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:341
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      writeVoicePoints(tab().document(), {{kSourceTick, 13}, {kSourceTick, 13}});
+      songview::TimelineQuickScene *const scene = quickScene();
+
+Original expression:
+  QVERIFY(scene);
+
+A112 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:347
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const QPointF source = voicePoint(kSourceTick);
+      const QPointF target = voicePoint(72);
+      const Tick destination = snappedVoiceTick(tab().view(), target.x(), false);
+      QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
+      QSignalSpy edited(&tab(), &SongTab::edited);
+
+Original expression:
+  QTRY_COMPARE(markerCountAt(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers),
+                                 voicePoint(kSourceTick).x()),
+                   2);
+
+A113 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:350
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(documentChanged.isValid());
+
+A114 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:351
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(edited.isValid());
+
+A115 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:358
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count(), edited.count());
+      const auto markersBefore = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
+
+      mousePress(voiceChangeInput(), Qt::LeftButton, source);
+      mouseMove(voiceChangeInput(), target);
+
+
+Original expression:
+  QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers).revision >
+                  markersBefore.revision);
+
+A116 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:360
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
+
+A117 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:362
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+      const auto previewMarkers = scene->layer(songview::TimelineQuickLayer::VoiceChangesMarkers);
+
+Original expression:
+  QCOMPARE(markerCountAt(markersBefore, source.x()), 2);
+
+A118 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:363
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(markerCountAt(previewMarkers, source.x()), 1);
+
+A119 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:364
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(markerCountAt(markersBefore, voicePoint(destination).x()), 0);
+
+A120 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:365
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(markerCountAt(previewMarkers, voicePoint(destination).x()), 1);
+
+A121 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:366
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(previewMarkers.rects.size(), markersBefore.rects.size());
+
+A122 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:369
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+      mouseRelease(voiceChangeInput(), Qt::LeftButton, target);
+
+Original expression:
+  QCOMPARE(documentChanged.count(), frozen.documentChanges + 1);
+
+A123 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:370
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(edited.count(), frozen.edits + 1);
+
+A124 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:371
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().revision(), frozen.revision + 1);
+
+A125 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:372
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
+
+A126 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:373
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
+
+A127 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:374
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voicePointCount(tab().document(), kSourceTick, 13), 1);
+
+A128 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:375
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(voicePointCount(tab().document(), destination, 13), 1);
+
+A129 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:376
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(int(tab().document().lanePoints(0, DOC_CC_VOICE).size()), 2);
+
+A130 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:377
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!tab().view().userGestureActive());
+
+A131 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:378
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->isPanning());
+
+A132 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:379
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
+
+A133 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:380
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
+
+A134 | AutomationEditingTest::voiceDuplicateOccurrenceMovesSingleIdentity | src/checks/automation/automationvoice.cpp:381
+Disposition: GAP
+Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Source context since previous assertion:
+
+
+Original expression:
+  QCOMPARE(tab().document().smf().write(), frozen.smf);
+
+Remaining original source (closing sequence and helper bodies):
+
+  }
+
+
+Swift assertion predicates
+The S entries are exact predicates called by the paired Swift suite. Their presence alone
+does not close any A entry. Preserve their surrounding setup and order in the paired source.
+
+S001 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:13
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceProjectionID,
+                         what: "every DOC_CC_VOICE event of the primary track publishes a marker")
+
+S002 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:15
+  report.expectEqual(3, page.publishedMarkers.count, cppID: drawerVoiceProjectionID,
+                         what: "the projection keeps one marker per change")
+
+S003 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:17
+  report.expect(page.publishedMarkers.allSatisfy { !$0.identity.isEmpty }, cppID: drawerVoiceProjectionID,
+                    message: "every marker carries its occurrence identity")
+
+S004 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:19
+  report.expectEqual(3, Set(page.markerIdentities).count, cppID: drawerVoiceProjectionID,
+                         what: "the identities are distinct per occurrence")
+
+S005 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:26
+  report.expectEqual(fixture.markerX(tick), marker.x, cppID: drawerVoiceProjectionID,
+                             what: "marker \(tick) draws at the shared camera's projection")
+
+S006 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:28
+  report.expect(marker.label.hasPrefix(String(format: "%03d", expectedProgram)),
+                        cppID: drawerVoiceProjectionID,
+                        message: "marker \(tick) labels its own program slot "
+                            + "(\"\(marker.label)\")")
+
+S007 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:32
+  report.expect(marker.lineBottom > marker.lineTop, cppID: drawerVoiceProjectionID,
+                        message: "marker \(tick) draws a vertical rule")
+
+S008 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:34
+  report.expect(marker.lineWidth > 0, cppID: drawerVoiceProjectionID,
+                        message: "marker \(tick) draws a rule of a real width")
+
+S009 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:36
+  report.expect((marker.labelRect["width"] as? Double ?? 0) > 0, cppID: drawerVoiceProjectionID,
+                        message: "marker \(tick) publishes a label box with a real width")
+
+S010 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:38
+  report.expect(!marker.offscreen, cppID: drawerVoiceProjectionID,
+                        message: "marker \(tick) is inside the visible plot")
+
+S011 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:45
+  report.expectEqual(2 + tail, page.heldSpans.count, cppID: drawerVoiceProjectionID,
+                         what: "each program section publishes one held span "
+                             + "(timeline ends at \(fixture.session.timeline.lengthTicks))")
+
+S012 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:48
+  report.expect(page.trackAvailable, cppID: drawerVoiceProjectionID,
+                    message: "a resolved track publishes the band's tracking facts")
+
+S013 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:50
+  report.expect(!page.readoutText.isEmpty, cppID: drawerVoiceProjectionID,
+                    message: "the context readout names the program at the context tick")
+
+S014 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:52
+  report.expect(page.readoutVisible, cppID: drawerVoiceProjectionID,
+                    message: "the readout is published for a presented track")
+
+S015 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:59
+  report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceProjectionID,
+                         what: "a press inside the marker hit radius takes that marker")
+
+S016 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:63
+  report.expect(!page.hasGesture, cppID: drawerVoiceProjectionID,
+                    message: "a press beyond the marker hit radius starts no marker gesture")
+
+S017 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:71
+  report.expect(page.hoverVisible, cppID: drawerVoiceProjectionID,
+                    message: "a background hover publishes its slot label")
+
+S018 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:73
+  report.expect(page.hoverText.hasPrefix("→ "), cppID: drawerVoiceProjectionID,
+                    message: "the hover label keeps the legacy arrow prefix")
+
+S019 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:75
+  report.expectEqual(before, page.publishedMarkers.map(\.label), cppID: drawerVoiceProjectionID,
+                         what: "a hover repaints no marker label")
+
+S020 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:80
+  report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
+                    message: "a marker hover publishes no background label")
+
+S021 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:82
+  report.expectEqual(48, Tick(page.hoverTick), cppID: drawerVoiceProjectionID,
+                         what: "the marker hover publishes its own tick")
+
+S022 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:84
+  report.expectEqual(21, page.hoverHintProfile, cppID: drawerVoiceProjectionID,
+                         what: "a marker hover advertises fine marker movement")
+
+S023 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:87
+  report.expectEqual(12, page.hoverHintProfile, cppID: drawerVoiceProjectionID,
+                         what: "leaving the marker restores horizontal-scroll instructions")
+
+S024 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:90
+  report.expect(!page.hoverVisible, cppID: drawerVoiceProjectionID,
+                    message: "leaving the plot clears the hover")
+
+S025 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:96
+  report.expect(!page.trackAvailable, cppID: drawerVoiceProjectionID,
+                    message: "no selected track publishes the unavailable state")
+
+S026 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:98
+  report.expectEqual(0, page.markerIdentities.count, cppID: drawerVoiceProjectionID,
+                         what: "no selected track publishes no marker")
+
+S027 | drawerVoiceMarkerProjection | src/checks/drawerpresentation/voice.swift:100
+  report.expectEqual("No track selected", page.plotMessage, cppID: drawerVoiceProjectionID,
+                         what: "the plot names the missing track")
+
+S028 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:110
+  report.expect(label.hasPrefix(String(format: "%03d ", slot)), cppID: drawerVoiceLabelID,
+                    message: "a slot label starts with its zero-padded program number "
+                        + "(\"\(label)\")")
+
+S029 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:115
+  report.expect(label.contains(symbol), cppID: drawerVoiceLabelID,
+                        message: "a named slot label carries its source symbol")
+
+S030 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:117
+  report.expect(label.contains("(\(type))"), cppID: drawerVoiceLabelID,
+                        message: "a named slot label carries its declared type in parentheses")
+
+S031 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:120
+  report.expect(label.contains(type), cppID: drawerVoiceLabelID,
+                        message: "a slot with no source symbol names its declared type "
+                            + "(\"\(label)\")")
+
+S032 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:124
+  report.expectEqual("→ \(label)", VoiceLanePolicy.hoverLabel(label), cppID: drawerVoiceLabelID,
+                         what: "the hover spelling is the label with the legacy arrow")
+
+S033 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:126
+  report.expectEqual("", VoiceLanePolicy.hoverLabel(""), cppID: drawerVoiceLabelID,
+                         what: "an unresolvable slot publishes no hover label at all")
+
+S034 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:129
+  report.expectEqual("Sample", voiceTypeName(macro: BankVoiceMacro.directSound),
+                         cppID: drawerVoiceLabelID, what: "Direct Sound is the Sample type")
+
+S035 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:131
+  report.expectEqual("Sample (fixed pitch)",
+                         voiceTypeName(macro: BankVoiceMacro.directSoundNoResample),
+                         cppID: drawerVoiceLabelID, what: "the no-resample form names its fixed pitch")
+
+S036 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:134
+  report.expectEqual("Sample (reverse)", voiceTypeName(macro: BankVoiceMacro.directSoundAlt),
+                         cppID: drawerVoiceLabelID, what: "the alternate form names its reverse playback")
+
+S037 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:136
+  report.expectEqual("Square 1", voiceTypeName(macro: BankVoiceMacro.square1), cppID: drawerVoiceLabelID,
+                         what: "the square-1 macro names Square 1")
+
+S038 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:138
+  report.expectEqual("Square 2", voiceTypeName(macro: BankVoiceMacro.square2), cppID: drawerVoiceLabelID,
+                         what: "the square-2 macro names Square 2")
+
+S039 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:140
+  report.expectEqual("Wave", voiceTypeName(macro: BankVoiceMacro.programmableWave),
+                         cppID: drawerVoiceLabelID, what: "the wave macro names Wave")
+
+S040 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:142
+  report.expectEqual("Noise", voiceTypeName(macro: BankVoiceMacro.noise), cppID: drawerVoiceLabelID,
+                         what: "the noise macro names Noise")
+
+S041 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:144
+  report.expectEqual("Drumkit", voiceTypeName(macro: BankVoiceMacro.keysplitAll),
+                         cppID: drawerVoiceLabelID, what: "the drumkit macro names Drumkit")
+
+S042 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:146
+  report.expectEqual("", voiceTypeName(macro: nil), cppID: drawerVoiceLabelID,
+                         what: "no macro names no type")
+
+S043 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:151
+  report.expectEqual(String(format: "%03d", 7), VoiceLanePolicy.label(slot: 7, view: blank),
+                         cppID: drawerVoiceLabelID,
+                         what: "a blank slot publishes only its program number")
+
+S044 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:154
+  report.expectEqual("", VoiceLanePolicy.label(slot: -1, view: blank), cppID: drawerVoiceLabelID,
+                         what: "a missing slot publishes no label at all")
+
+S045 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:156
+  report.expectEqual("", VoiceLanePolicy.label(slot: session.bankSlots.count, view: nil),
+                         cppID: drawerVoiceLabelID, what: "an out-of-range slot publishes no label")
+
+S046 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:164
+  report.expect(true, cppID: drawerVoiceLabelID,
+                        message: "the staged bank publishes no blank slot to drive")
+
+S047 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:171
+  report.fail(drawerVoiceLabelID, "the blank-slot fixture published no marker at tick 48")
+
+S048 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:174
+  report.expect(marker.slotBlank, cppID: drawerVoiceLabelID,
+                    message: "a change into a blank slot publishes blank truth")
+
+S049 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:176
+  report.expectEqual("", marker.symbol, cppID: drawerVoiceLabelID,
+                         what: "a blank slot publishes no symbol")
+
+S050 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:178
+  report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: drawerVoiceLabelID,
+                         what: "a blank slot's marker label is its program number")
+
+S051 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:181
+  report.expect(fixture.page.contextBlank, cppID: drawerVoiceLabelID,
+                    message: "the context readout publishes the blank truth too")
+
+S052 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:183
+  report.expectEqual(blankIndex, fixture.page.contextSlot, cppID: drawerVoiceLabelID,
+                         what: "the blank context names the blank slot")
+
+S053 | drawerVoiceSlotLabels | src/checks/drawerpresentation/voice.swift:185
+  report.expectEqual("", fixture.page.contextSymbol, cppID: drawerVoiceLabelID,
+                         what: "the blank context publishes no symbol")
+
+S054 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:196
+  report.expectEqual(programs[0], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 0,
+                                                           points: points),
+                         cppID: drawerVoiceContextID, what: "tick 0 resolves the opening program")
+
+S055 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:199
+  report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 48,
+                                                           points: points),
+                         cppID: drawerVoiceContextID, what: "a change takes effect at its own tick")
+
+S056 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:202
+  report.expectEqual(programs[1], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 119,
+                                                           points: points),
+                         cppID: drawerVoiceContextID, what: "the context holds until the next change")
+
+S057 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:205
+  report.expectEqual(programs[2], VoiceLanePolicy.slot(firstProgram: programs[0], tick: 120,
+                                                           points: points),
+                         cppID: drawerVoiceContextID, what: "the late change takes effect at its tick")
+
+S058 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:208
+  report.expectEqual(48, VoiceLanePolicy.endTick(after: 0, points: points), cppID: drawerVoiceContextID,
+                         what: "the opening span ends at the first change")
+
+S059 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:210
+  report.expectEqual(nil, VoiceLanePolicy.endTick(after: 120, points: points), cppID: drawerVoiceContextID,
+                         what: "the last span runs to the song's end")
+
+S060 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:218
+  report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
+                         what: "the stopped context resolves at the published edit cursor")
+
+S061 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:220
+  report.expectEqual(VoiceLanePolicy.label(slot: programs[1],
+                                               view: fixture.session.bankSlots[programs[1]]),
+                         page.readoutText, cppID: drawerVoiceContextID,
+                         what: "the readout names the edit cursor's program")
+
+S062 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:224
+  report.expectEqual(cursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
+                         what: "cursor-only publication rebuilds no marker content")
+
+S063 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:226
+  report.expectEqual(cursorDocument, fixture.snapshot, cppID: drawerVoiceContextID,
+                         what: "cursor-only publication changes no document or history state")
+
+S064 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:231
+  report.expectEqual(programs[0], page.presentedContextSlot, cppID: drawerVoiceContextID,
+                         what: "the playing context resolves at the shared tick, not the cursor")
+
+S065 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:233
+  report.expect(page.presentedPlaying, cppID: drawerVoiceContextID,
+                    message: "the presentation publishes its own playing state")
+
+S066 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:236
+  report.expectEqual(programs[1], page.presentedContextSlot, cppID: drawerVoiceContextID,
+                         what: "a rounded playing tick crosses into the next span")
+
+S067 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:238
+  report.expectEqual(96, page.presentedContextTick, cppID: drawerVoiceContextID,
+                         what: "the presented tick is the rounded shared tick")
+
+S068 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:243
+  report.expectEqual(programs[1], page.contextSlot, cppID: drawerVoiceContextID,
+                         what: "the stopped context returns to the edit cursor")
+
+S069 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:247
+  report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
+                         what: "a moved edit cursor re-resolves the stopped context")
+
+S070 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:249
+  report.expectEqual(laterCursorBuilds, page.contentBuildCount, cppID: drawerVoiceContextID,
+                         what: "a later cursor-only publication remains readout-only")
+
+S071 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:255
+  report.expectEqual([0], page.markerTicks, cppID: drawerVoiceContextID,
+                         what: "the secondary track publishes only its own change")
+
+S072 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:257
+  report.expectEqual(programs[2], page.contextSlot, cppID: drawerVoiceContextID,
+                         what: "the readout follows the newly selected track")
+
+S073 | drawerVoiceCurrentVoiceContext | src/checks/drawerpresentation/voice.swift:261
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceContextID,
+                         what: "returning to the primary track restores its markers")
+
+S074 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:271
+  report.expectEqual(points.map { VoiceOccurrence($0).text }, page.markerIdentities,
+                         cppID: drawerVoiceIdentityID,
+                         what: "a marker's identity is its lane occurrence's own identity")
+
+S075 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:274
+  report.expect(page.markerIdentities.allSatisfy {
+          $0.split(separator: ".").count == 4
+      }, cppID: drawerVoiceIdentityID,
+                    message: "an identity names chunk, event index, tick and value")
+
+S076 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:283
+  report.expectEqual(VoiceOccurrence(first),
+                         VoiceLanePolicy.occurrence(VoiceOccurrence(first), in: [first, second]),
+                         cppID: drawerVoiceIdentityID,
+                         what: "the identity resolves the occurrence it names")
+
+S077 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:287
+  report.expectEqual(VoiceOccurrence(second),
+                         VoiceLanePolicy.occurrence(at: 48, in: [first, second]),
+                         cppID: drawerVoiceIdentityID,
+                         what: "the tick lookup takes the document's last event at that tick")
+
+S078 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:293
+  report.expect(VoiceLanePolicy.occurrence(mutated, in: [first, second]) == nil,
+                    cppID: drawerVoiceIdentityID,
+                    message: "a different value is never accepted as the frozen occurrence")
+
+S079 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:296
+  report.expectEqual(first.eventIndex,
+                         VoiceLanePolicy.occurrence(VoiceOccurrence(first),
+                                                    in: points + [first])?.eventIndex,
+                         cppID: drawerVoiceIdentityID,
+                         what: "the resolved occurrence keeps the document's event index")
+
+S080 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:307
+  report.expectEqual(VoiceOccurrence(points[1]), frozen, cppID: drawerVoiceIdentityID,
+                         what: "the press freezes the marker's own occurrence")
+
+S081 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:310
+  report.expectEqual(before, page.markerIdentities, cppID: drawerVoiceIdentityID,
+                         what: "a camera scroll changes no marker identity")
+
+S082 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:312
+  report.expect(page.publishedMarkers[1].x != x, cppID: drawerVoiceIdentityID,
+                    message: "a camera scroll does move the projection")
+
+S083 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:314
+  report.expectEqual(frozen, page.frozenOccurrence, cppID: drawerVoiceIdentityID,
+                         what: "the frozen occurrence survives a camera scroll")
+
+S084 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:317
+  report.expect(!page.hasGesture, cppID: drawerVoiceIdentityID,
+                    message: "the release ends the gesture without a draft")
+
+S085 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:327
+  report.expect(page.acceptPicker(), cppID: drawerVoiceIdentityID,
+                    message: "an insertion between the changes lands in the document")
+
+S086 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:329
+  report.expectEqual(4, page.markerIdentities.count, cppID: drawerVoiceIdentityID,
+                         what: "the inserted occurrence joins the projection")
+
+S087 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:331
+  report.expectEqual(4, Set(page.markerIdentities).count, cppID: drawerVoiceIdentityID,
+                         what: "the inserted occurrence has an identity of its own")
+
+S088 | drawerVoiceOccurrenceIdentity | src/checks/drawerpresentation/voice.swift:333
+  report.expectEqual(earlier,
+                         page.publishedMarkers.filter { Tick($0.tick) <= 48 }.map(\.identity),
+                         cppID: drawerVoiceIdentityID,
+                         what: "the occurrences before the edit keep their identity")
+
+S089 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:345
+  report.expect(!baseline.canUndo, cppID: drawerVoiceInsertionID,
+                    message: "the fixture starts with no undoable edit")
+
+S090 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:348
+  report.expect(page.pointerDoubleClick(x: fixture.markerX(96), y: 10), cppID: drawerVoiceInsertionID,
+                    message: "the double-click on the empty lane opens the picker")
+
+S091 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:350
+  report.expect(page.hasPicker, cppID: drawerVoiceInsertionID,
+                    message: "the double-click on the empty lane opens the picker")
+
+S092 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:352
+  report.expectEqual("Insert voice change", page.pickerTitle, cppID: drawerVoiceInsertionID,
+                         what: "an empty-lane target opens the insertion title")
+
+S093 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:354
+  report.expectEqual(96, page.pickerTargetTick, cppID: drawerVoiceInsertionID,
+                         what: "the captured tick is the press's snapped tick")
+
+S094 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:356
+  report.expect(page.pickerTargetIdentity == nil, cppID: drawerVoiceInsertionID,
+                    message: "an empty-lane target carries no occurrence")
+
+S095 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:358
+  report.expectEqual(programs[1], page.pickerProgram, cppID: drawerVoiceInsertionID,
+                         what: "the picker opens on the slot the context resolves to")
+
+S096 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:360
+  report.expect(page.interactionActive, cppID: drawerVoiceInsertionID,
+                    message: "an open picker reports an active interaction")
+
+S097 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:362
+  report.expectEqual(3, page.markerIdentities.count, cppID: drawerVoiceInsertionID,
+                         what: "the open picker publishes no marker of its own")
+
+S098 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:368
+  report.expect(page.pickerRowPrograms.contains(programs[2]), cppID: drawerVoiceInsertionID,
+                    message: "the filter keeps the row it names")
+
+S099 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:370
+  report.expect(!page.pickerRowValues.isEmpty, cppID: drawerVoiceInsertionID,
+                    message: "the filter publishes the rows it matched")
+
+S100 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:372
+  report.expect(page.pickerRowValues.allSatisfy {
+          $0.label.range(of: filter, options: .caseInsensitive) != nil
+      }, cppID: drawerVoiceInsertionID, message: "every visible row matches the filter")
+
+S101 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:376
+  report.expectEqual(programs[2], page.pickerProgram, cppID: drawerVoiceInsertionID,
+                         what: "the row press selects the filtered program")
+
+S102 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:378
+  report.expect(page.acceptPicker(), cppID: drawerVoiceInsertionID,
+                    message: "accepting the picker writes the captured target")
+
+S103 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:380
+  report.expectEqual(4, fixture.lanePoints().count, cppID: drawerVoiceInsertionID,
+                         what: "the insertion adds exactly one lane event")
+
+S104 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:382
+  report.expectEqual(programs[2],
+                         VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints())?.value,
+                         cppID: drawerVoiceInsertionID, what: "the inserted event carries the chosen slot")
+
+S105 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:385
+  report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceInsertionID,
+                         what: "the insertion is one revision")
+
+S106 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:387
+  report.expect(fixture.snapshot.canUndo, cppID: drawerVoiceInsertionID,
+                    message: "the insertion records one history entry")
+
+S107 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:389
+  report.expectEqual([0, 48, 96, 120], page.markerTicks, cppID: drawerVoiceInsertionID,
+                         what: "the projection rebuilds around the new occurrence")
+
+S108 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:391
+  report.expect(!page.hasPicker, cppID: drawerVoiceInsertionID,
+                    message: "acceptance closes the picker")
+
+S109 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:393
+  report.expect(!page.interactionActive, cppID: drawerVoiceInsertionID,
+                    message: "acceptance releases the follow-scroll gate")
+
+S110 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:400
+  report.fail(drawerVoiceInsertionID, "undo failed: \(error)")
+
+S111 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:403
+  report.expect(VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints()) == nil,
+                    cppID: drawerVoiceInsertionID, message: "undo removes the inserted occurrence")
+
+S112 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:405
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceInsertionID,
+                         what: "undo rebuilds the projection without the insertion")
+
+S113 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:410
+  report.fail(drawerVoiceInsertionID, "redo failed: \(error)")
+
+S114 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:413
+  report.expectEqual(programs[2],
+                         VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints())?.value,
+                         cppID: drawerVoiceInsertionID, what: "redo restores the inserted occurrence")
+
+S115 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:416
+  report.expect(page.markerTicks.contains(96), cppID: drawerVoiceInsertionID,
+                    message: "redo republishes the restored marker")
+
+S116 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:424
+  report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
+                    message: "accepting the value the document already holds writes nothing")
+
+S117 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:426
+  report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceInsertionID,
+                         what: "the same-value acceptance leaves the document untouched")
+
+S118 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:432
+  report.expect(!page.pickerHasMatch, cppID: drawerVoiceInsertionID,
+                    message: "an unmatched filter publishes no match")
+
+S119 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:434
+  report.expectEqual(0, page.pickerRowValues.count, cppID: drawerVoiceInsertionID,
+                         what: "an unmatched filter publishes no row")
+
+S120 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:436
+  report.expectEqual(-1, page.pickerIndex, cppID: drawerVoiceInsertionID,
+                         what: "an unmatched filter publishes no current row")
+
+S121 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:438
+  report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
+                    message: "an unmatched filter cannot be accepted")
+
+S122 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice.swift:440
+  report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceInsertionID,
+                         what: "the refused acceptance leaves the document untouched")
+
+S123 | expect | src/checks/drawerpresentation/voice.swift:477
+  report.expect(condition(), cppID: "drawerpresentation/DrawerPresentationTest::voicePickerTransactions",
+                        message: "voice.cpp:\(line)")
+
+S124 | value | src/checks/drawerpresentation/voice.swift:542
+  report.expect(page.pickerIndex == 127 && page.pickerProgram == 127,
+                    cppID: "voice-picker/navigation-boundaries",
+                    message: "Down at the final row preserves program127")
+
+S125 | value | src/checks/drawerpresentation/voice.swift:546
+  report.expect(page.pickerIndex == 126 && page.pickerProgram == 126,
+                    cppID: "voice-picker/navigation-boundaries",
+                    message: "Up from the final row selects the preceding program")
+
+S126 | value | src/checks/drawerpresentation/voice.swift:551
+  report.expect(page.pickerIndex == 0 && page.pickerProgram == 0,
+                    cppID: "voice-picker/navigation-boundaries",
+                    message: "Up at the first row preserves program0")
+
+S127 | value | src/checks/drawerpresentation/voice.swift:555
+  report.expect(page.pickerIndex == 1 && page.pickerProgram == 1,
+                    cppID: "voice-picker/navigation-boundaries",
+                    message: "Down from the first row selects the following program")
+
+S128 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:571
+  report.expectEqual("Change voice", page.pickerTitle, cppID: drawerVoiceReplacementID,
+                         what: "a marker target opens the change title")
+
+S129 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:573
+  report.expectEqual(target.text, page.pickerTargetIdentity, cppID: drawerVoiceReplacementID,
+                         what: "the captured identity is the pressed occurrence")
+
+S130 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:575
+  report.expectEqual(48, page.pickerTargetTick, cppID: drawerVoiceReplacementID,
+                         what: "the captured tick is the marker's own tick")
+
+S131 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:577
+  report.expectEqual(target.value, page.pickerProgram, cppID: drawerVoiceReplacementID,
+                         what: "the picker opens on the marker's current program")
+
+S132 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:582
+  report.expect(page.acceptPicker(), cppID: drawerVoiceReplacementID,
+                    message: "accepting the picker replaces the captured occurrence's value")
+
+S133 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:584
+  report.expectEqual(programs[2],
+                         VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints())?.value,
+                         cppID: drawerVoiceReplacementID, what: "the change at tick 48 carries the new slot")
+
+S134 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:587
+  report.expectEqual(3, fixture.lanePoints().count, cppID: drawerVoiceReplacementID,
+                         what: "a value replacement adds no event")
+
+S135 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:589
+  report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceReplacementID,
+                         what: "the replacement is one revision")
+
+S136 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:591
+  report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceReplacementID,
+                    message: "the replacement records one history entry")
+
+S137 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:593
+  report.expect(page.publishedMarkers.contains {
+          Tick($0.tick) == 48 && $0.label.hasPrefix(String(format: "%03d", programs[2]))
+      }, cppID: drawerVoiceReplacementID,
+         message: "the projection's marker label follows the replaced slot")
+
+S138 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:601
+  report.expect(page.hasPicker, cppID: drawerVoiceReplacementID, message: "the picker reopens")
+
+S139 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:602
+  report.expect(page.handleEscape(), cppID: drawerVoiceReplacementID,
+                    message: "Escape claims the key while the picker is open")
+
+S140 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:604
+  report.expect(!page.hasPicker, cppID: drawerVoiceReplacementID, message: "Escape closes the picker")
+
+S141 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:605
+  report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceReplacementID,
+                         what: "Escape writes nothing")
+
+S142 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:607
+  report.expect(!page.handleEscape(), cppID: drawerVoiceReplacementID,
+                    message: "Escape is unhandled once nothing is open")
+
+S143 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:612
+  report.expect(!page.hasPicker, cppID: drawerVoiceReplacementID,
+                    message: "an outside press dismisses the picker")
+
+S144 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:614
+  report.expect(!page.hasGesture, cppID: drawerVoiceReplacementID,
+                    message: "the dismissing press starts no gesture")
+
+S145 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:617
+  report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceReplacementID,
+                         what: "the dismissed press and its release write nothing")
+
+S146 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:626
+  report.expectEqual(heldAtCapture, staleTarget, cppID: drawerVoiceReplacementID,
+                         what: "the capture names the occurrence the document held then")
+
+S147 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:630
+  report.expect(!page.hasPicker, cppID: drawerVoiceReplacementID,
+                    message: "a document change cancels the open picker")
+
+S148 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:633
+  report.expect(!page.acceptPicker(), cppID: drawerVoiceReplacementID,
+                    message: "an acceptance after the cancellation writes nothing")
+
+S149 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:635
+  report.expectEqual(rewrote, fixture.snapshot, cppID: drawerVoiceReplacementID,
+                         what: "the stale acceptance leaves the rewrite as the only change")
+
+S150 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:637
+  report.expect(page.pickerTargetIdentity == nil, cppID: drawerVoiceReplacementID,
+                    message: "the cancelled capture is gone instead of retargeted")
+
+S151 | drawerVoicePickerValueReplacement | src/checks/drawerpresentation/voice.swift:639
+  report.expectEqual(programs[2],
+                         VoiceLanePolicy.occurrence(at: 0, in: fixture.lanePoints())?.value,
+                         cppID: drawerVoiceReplacementID, what: "the rewrite itself stands")
+
+S152 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:660
+  report.expectEqual(incremental.map(\.identity), redrawn.map(\.identity),
+                             cppID: drawerVoiceMoveID, what: "drag and redraw preserve tied marker order")
+
+S153 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:662
+  report.expectEqual(incremental.map(\.label), redrawn.map(\.label),
+                             cppID: drawerVoiceMoveID, what: "drag and redraw agree on label elision")
+
+S154 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:666
+  report.expectEqual(before.labelRect[component] as? Double,
+                                     after.labelRect[component] as? Double, cppID: drawerVoiceMoveID,
+                                     what: "drag and redraw agree on label \(component)")
+
+S155 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:670
+  report.expectEqual(before.offscreen, after.offscreen, cppID: drawerVoiceMoveID,
+                                 what: "drag and redraw agree on offscreen labels")
+
+S156 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:680
+  report.expect(!page.dragActive, cppID: drawerVoiceMoveID,
+                    message: "a move below the activation distance stays pending")
+
+S157 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:683
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMoveID,
+                         what: "a drag below the activation distance commits nothing")
+
+S158 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:685
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceMoveID,
+                         what: "the untouched occurrence keeps its tick")
+
+S159 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:690
+  report.expect(page.hasGesture, cppID: drawerVoiceMoveID, message: "the press owns a gesture")
+
+S160 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:691
+  report.expectEqual(48, page.frozenOccurrence?.tick, cppID: drawerVoiceMoveID,
+                         what: "the frozen occurrence is the pressed marker")
+
+S161 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:693
+  report.expect(page.interactionActive, cppID: drawerVoiceMoveID,
+                    message: "the live gesture reports an active interaction")
+
+S162 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:696
+  report.expect(page.dragActive, cppID: drawerVoiceMoveID,
+                    message: "the drag activates past its activation distance")
+
+S163 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:699
+  report.fail(drawerVoiceMoveID, "the activated drag published no preview tick")
+
+S164 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:702
+  report.expect(preview != 48, cppID: drawerVoiceMoveID,
+                    message: "the preview tick drafts away from the frozen tick")
+
+S165 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:704
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceMoveID,
+                         what: "motion is preview only and mutates nothing")
+
+S166 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:706
+  report.expectEqual(preview, page.markerTicks[1], cppID: drawerVoiceMoveID,
+                         what: "the projection draws the marker at the preview tick")
+
+S167 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:709
+  report.expect(!page.hasGesture && !page.interactionActive, cppID: drawerVoiceMoveID,
+                    message: "the release ends the gesture and its interaction")
+
+S168 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:711
+  report.expectEqual(preview, fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
+                         what: "the release commits the preview tick")
+
+S169 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:713
+  report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceMoveID,
+                         what: "the move is one revision")
+
+S170 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:715
+  report.expect(fixture.snapshot.canUndo, cppID: drawerVoiceMoveID,
+                    message: "the move records one history entry")
+
+S171 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:717
+  report.expect(VoiceLanePolicy.occurrence(at: 48, in: fixture.lanePoints()) == nil,
+                    cppID: drawerVoiceMoveID, message: "the source tick no longer holds the occurrence")
+
+S172 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:723
+  report.fail(drawerVoiceMoveID, "undo failed: \(error)")
+
+S173 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:726
+  report.expectEqual(48, fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
+                         what: "undo restores the moved occurrence's tick")
+
+S174 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:728
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceMoveID,
+                         what: "undo rebuilds the projection at the restored tick")
+
+S175 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:733
+  report.fail(drawerVoiceMoveID, "redo failed: \(error)")
+
+S176 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:736
+  report.expectEqual(preview, fixture.lanePoints()[1].tick, cppID: drawerVoiceMoveID,
+                         what: "redo reapplies the move")
+
+S177 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:745
+  report.expectEqual(preview, page.dragPreviewTick, cppID: drawerVoiceMoveID,
+                         what: "the draft returns to the frozen tick")
+
+S178 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:748
+  report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceMoveID,
+                         what: "a release back on the frozen tick commits nothing")
+
+S179 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:760
+  report.expect(staleDraft != nil && staleDraft != preview, cppID: drawerVoiceMoveID,
+                    message: "the stale drag had drafted another tick before the release")
+
+S180 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:762
+  report.expectEqual(rewritten, fixture.snapshot, cppID: drawerVoiceMoveID,
+                         what: "a drag whose revision moved under it commits nothing")
+
+S181 | drawerVoiceMarkerDragTransactions | src/checks/drawerpresentation/voice.swift:764
+  report.expectEqual(programs[2],
+                         VoiceLanePolicy.occurrence(at: 0, in: fixture.lanePoints())?.value,
+                         cppID: drawerVoiceMoveID, what: "the concurrent rewrite is the one that stands")
+
+S182 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:776
+  report.fail(drawerVoiceKeyboardID, "the picker did not open")
+
+S183 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:779
+  report.expectEqual(suite.bankSlots.count, page.pickerRowValues.count, cppID: drawerVoiceKeyboardID,
+                         what: "an empty filter publishes every bank row")
+
+S184 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:781
+  report.expectEqual(programs[1], page.pickerProgram, cppID: drawerVoiceKeyboardID,
+                         what: "the picker opens on the context slot the target captured")
+
+S185 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:783
+  report.expectEqual(programs[1], page.pickerIndex, cppID: drawerVoiceKeyboardID,
+                         what: "the published row index follows the current program")
+
+S186 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:787
+  report.expectEqual(first + 1, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+                         what: "the down arrow moves to the next visible program")
+
+S187 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:790
+  report.expectEqual(first, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+                         what: "the up arrow returns to the previous program")
+
+S188 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:793
+  report.expectEqual(page.pickerRowPrograms.first ?? -1, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+                         what: "the navigation clamps at the first row")
+
+S189 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:796
+  report.expectEqual(page.pickerRowPrograms.last ?? -1, page.pickerProgram, cppID: drawerVoiceKeyboardID,
+                         what: "the navigation clamps at the last row")
+
+S190 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:798
+  report.expectEqual(page.pickerRowPrograms.count - 1, page.pickerIndex, cppID: drawerVoiceKeyboardID,
+                         what: "the row index follows the clamped program")
+
+S191 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:801
+  report.expectEqual(page.pickerRowPrograms[1], page.pickerProgram, cppID: drawerVoiceKeyboardID,
+                         what: "a row press selects exactly that row's program")
+
+S192 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:803
+  report.expect(page.pickerRowValues[1].selected, cppID: drawerVoiceKeyboardID,
+                    message: "the selected row publishes its own state")
+
+S193 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:805
+  report.expectEqual(1, page.pickerRowValues.filter(\.selected).count, cppID: drawerVoiceKeyboardID,
+                         what: "exactly one row is selected")
+
+S194 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:812
+  report.expect(page.pickerRowPrograms.contains(programs[0]), cppID: drawerVoiceKeyboardID,
+                        message: "a name filter keeps the slot that carries it")
+
+S195 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:814
+  report.expect(page.pickerRowValues.allSatisfy {
+              $0.label.lowercased().contains(name.lowercased())
+          }, cppID: drawerVoiceKeyboardID, message: "every row matched by name really carries the name")
+
+S196 | drawerVoicePickerKeyboardPolicy | src/checks/drawerpresentation/voice.swift:819
+  report.expect(!page.hasPicker, cppID: drawerVoiceKeyboardID, message: "the picker closes")
+
+S197 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:832
+  report.expect(!page.hasPicker, cppID: drawerVoiceCancellationID,
+                    message: "the container's cancellation closes the picker")
+
+S198 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:834
+  report.expect(!page.interactionActive, cppID: drawerVoiceCancellationID,
+                    message: "cancellation releases the follow-scroll gate")
+
+S199 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:836
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+                         what: "the cancelled picker wrote nothing")
+
+S200 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:843
+  report.expect(page.dragActive, cppID: drawerVoiceCancellationID, message: "the drag is live")
+
+S201 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:845
+  report.expect(!page.hasGesture && !page.interactionActive, cppID: drawerVoiceCancellationID,
+                    message: "cancellation ends the live drag")
+
+S202 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:847
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceCancellationID,
+                         what: "the cancelled drag restores the projection from the document")
+
+S203 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:849
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+                         what: "the cancelled drag commits nothing")
+
+S204 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:854
+  report.expectEqual(3, page.publishedMarkers.count, cppID: drawerVoiceCancellationID,
+                         what: "the projection survives the cancellation")
+
+S205 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:859
+  report.expect(page.hasMenu, cppID: drawerVoiceCancellationID, message: "the menu is open")
+
+S206 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:862
+  report.expect(!page.hasMenu, cppID: drawerVoiceCancellationID,
+                    message: "a track switch cancels the captured menu")
+
+S207 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:864
+  report.expect(!page.activateMenuAction(actionId: VoiceChangesPagePolicy.deleteMarkerAction),
+                    cppID: drawerVoiceCancellationID, message: "the cancelled menu fires no row")
+
+S208 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:866
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+                         what: "the track switch wrote nothing")
+
+S209 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:868
+  report.expectEqual([0], page.markerTicks, cppID: drawerVoiceCancellationID,
+                         what: "the projection re-derives for the new track")
+
+S210 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:877
+  report.expect(!page.dragActive, cppID: drawerVoiceCancellationID,
+                    message: "a hide cancels the in-flight drag")
+
+S211 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:879
+  report.expectEqual(48, page.markerTicks[1], cppID: drawerVoiceCancellationID,
+                         what: "the hidden page's projection is back on the document")
+
+S212 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:885
+  report.expect(!page.hasPicker && !page.hasMenu && !page.hasGesture, cppID: drawerVoiceCancellationID,
+                    message: "detach cancels every interaction")
+
+S213 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:887
+  report.expectEqual(0, page.markerIdentities.count, cppID: drawerVoiceCancellationID,
+                         what: "detach publishes no marker")
+
+S214 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:889
+  report.expectEqual(0, page.heldSpans.count, cppID: drawerVoiceCancellationID,
+                         what: "detach publishes no held span")
+
+S215 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:891
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceCancellationID,
+                         what: "detach wrote nothing")
+
+S216 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:896
+  report.expect(!gutterFixture.page.pointerPress(x: 10, y: 10, surface: 0, button: 1,
+                                                     modifiers: 0),
+                    cppID: drawerVoiceCancellationID,
+                    message: "a gutter press is not consumed by the page")
+
+S217 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:900
+  report.expect(!gutterFixture.page.hasGesture, cppID: drawerVoiceCancellationID,
+                    message: "a gutter press starts no gesture")
+
+S218 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:902
+  report.expect(!gutterFixture.page.hasPicker, cppID: drawerVoiceCancellationID,
+                    message: "a gutter press opens no picker")
+
+S219 | drawerVoiceCancellationPaths | src/checks/drawerpresentation/voice.swift:904
+  report.expect(!gutterFixture.page.interactionActive, cppID: drawerVoiceCancellationID,
+                    message: "a gutter press reports no interaction")
+
+S220 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:918
+  report.expectEqual(builds + 1, page.contentBuildCount, cppID: drawerVoiceHistoryID,
+                         what: "one committed edit rebuilds the projection exactly once")
+
+S221 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:924
+  report.fail(drawerVoiceHistoryID, "undo failed: \(error)")
+
+S222 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:927
+  report.expect(page.contentBuildCount > editedBuilds, cppID: drawerVoiceHistoryID,
+                    message: "undo rebuilds every affected page")
+
+S223 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:929
+  report.expectEqual([0, 48, 120], page.markerTicks, cppID: drawerVoiceHistoryID,
+                         what: "undo removes the inserted marker")
+
+S224 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:931
+  report.expectEqual(VoiceLanePolicy.label(slot: programs[0],
+                                               view: fixture.session.bankSlots[programs[0]]),
+                         page.contextLabel(at: page.contextSlot), cppID: drawerVoiceHistoryID,
+                         what: "undo restores the context the readout resolves")
+
+S225 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:939
+  report.fail(drawerVoiceHistoryID, "redo failed: \(error)")
+
+S226 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:942
+  report.expect(page.contentBuildCount > undoneBuilds, cppID: drawerVoiceHistoryID,
+                    message: "redo rebuilds the projection again")
+
+S227 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:944
+  report.expectEqual([0, 48, 96, 120], page.markerTicks, cppID: drawerVoiceHistoryID,
+                         what: "redo republishes the full marker set")
+
+S228 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:952
+  report.expectEqual(identities, page.markerIdentities, cppID: drawerVoiceHistoryID,
+                         what: "an equal refresh leaves every marker identity in place")
+
+S229 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:954
+  report.expectEqual(publishedMarkers.count, page.markers.count, cppID: drawerVoiceHistoryID,
+                         what: "an equal refresh publishes the same marker count")
+
+S230 | drawerVoiceUndoRedoRefresh | src/checks/drawerpresentation/voice.swift:956
+  report.expect(zip(publishedMarkers, page.markers.asArray).allSatisfy { $0 === $1 },
+                    cppID: drawerVoiceHistoryID,
+                    message: "an equal refresh replaces no published marker row")
+
+S231 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:972
+  report.expectEqual(programs[0], page.presentedContextSlot, cppID: drawerVoiceDiagnosticsID,
+                         what: "the playing context opens on the first program span")
+
+S232 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:982
+  report.expectEqual(presentations + UInt64(ticks.count), page.playheadPresentationCount,
+                         cppID: drawerVoiceDiagnosticsID,
+                         what: "every distinct shared presentation is consumed once")
+
+S233 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:989
+  report.expectEqual(roundingBase, page.playheadPresentationCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "a position rounding to an already presented tick presents nothing")
+
+S234 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:992
+  report.expectEqual(roundingBase, page.playheadPresentationCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "an equal presentation is not consumed twice")
+
+S235 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:994
+  report.expectEqual(builds, page.contentBuildCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "playhead-only movement inside one span rebuilds no content")
+
+S236 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:996
+  report.expectEqual(contextChanges, page.contextChangeCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "no span was crossed inside the span itself")
+
+S237 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:998
+  report.expectEqual(programs[0], page.presentedContextSlot, cppID: drawerVoiceDiagnosticsID,
+                         what: "the presented context stayed in its own span")
+
+S238 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1000
+  report.expectEqual(readout, page.readoutText, cppID: drawerVoiceDiagnosticsID,
+                         what: "the readout names the same program throughout the span")
+
+S239 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1002
+  report.expectEqual(documentFacts, fixture.snapshot, cppID: drawerVoiceDiagnosticsID,
+                         what: "playhead movement mutates no document and consumes no redo")
+
+S240 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1008
+  report.expectEqual(settled, page.playheadPresentationCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "an equal presentation is not consumed twice")
+
+S241 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1013
+  report.expectEqual(programs[1], page.presentedContextSlot, cppID: drawerVoiceDiagnosticsID,
+                         what: "crossing a span updates the context indicator")
+
+S242 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1015
+  report.expectEqual(builds + 1, page.contentBuildCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "crossing a span rebuilds the projection exactly once")
+
+S243 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1017
+  report.expectEqual(contextChanges + 1, page.contextChangeCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "one context change is counted")
+
+S244 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1019
+  report.expect(page.readoutText.hasPrefix(String(format: "%03d", programs[1])),
+                    cppID: drawerVoiceDiagnosticsID, message: "the readout names the new span's program")
+
+S245 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1025
+  report.expectEqual(programs[2], page.presentedContextSlot, cppID: drawerVoiceDiagnosticsID,
+                         what: "the stopped context follows the edit cursor")
+
+S246 | drawerVoicePlayheadDiagnostics | src/checks/drawerpresentation/voice.swift:1027
+  report.expectEqual(builds + 2, page.contentBuildCount, cppID: drawerVoiceDiagnosticsID,
+                         what: "the playing-to-stopped transition rebuilds once")
+
+S247 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1036
+  report.expectEqual(1, TimelineSnapPolicy.clockTicks(division: 24, extendedClocks: false),
+                         cppID: drawerVoiceFineSnapID,
+                         what: "a 24-tick division names one tick per clock")
+
+S248 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1039
+  report.expectEqual(4, TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: false),
+                         cppID: drawerVoiceFineSnapID,
+                         what: "a 96-tick division names four ticks per clock")
+
+S249 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1042
+  report.expectEqual(2, TimelineSnapPolicy.clockTicks(division: 96, extendedClocks: true),
+                         cppID: drawerVoiceFineSnapID,
+                         what: "extended clocks halve the ticks per clock")
+
+S250 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1045
+  report.expectEqual(1, TimelineSnapPolicy.clockTicks(division: 1, extendedClocks: false),
+                         cppID: drawerVoiceFineSnapID, what: "the clock stride never falls below one tick")
+
+S251 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1050
+  report.expectEqual(4, TimelineSnapPolicy.fineSnap(5.9, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+                         what: "a position inside a clock cell snaps to its floor")
+
+S252 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1052
+  report.expectEqual(8, TimelineSnapPolicy.fineSnap(6, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+                         what: "an exact tie rounds up, as the legacy lattice does")
+
+S253 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1054
+  report.expectEqual(8, TimelineSnapPolicy.fineSnap(6.1, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+                         what: "a position past the midpoint snaps up")
+
+S254 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1056
+  report.expectEqual(0, TimelineSnapPolicy.fineSnap(-3, clockTicks: 4), cppID: drawerVoiceFineSnapID,
+                         what: "the lattice is anchored at zero")
+
+S255 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1058
+  report.expectEqual(TimeDefaults.maxTick,
+                         TimelineSnapPolicy.fineSnap(Double(TimeDefaults.maxTick), clockTicks: 4),
+                         cppID: drawerVoiceFineSnapID, what: "the lattice clamps to the song's tick domain")
+
+S256 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1070
+  report.expect(clock >= 1, cppID: drawerVoiceFineSnapID,
+                    message: "the fixture document publishes its own clock stride")
+
+S257 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1078
+  report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), page.dragPreviewTick,
+                         cppID: drawerVoiceFineSnapID,
+                         what: "the alt drag previews the legacy clock lattice")
+
+S258 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1081
+  report.expect((page.dragPreviewTick ?? 1) % Tick(clock) == 0, cppID: drawerVoiceFineSnapID,
+                    message: "the alt preview lands on the clock lattice itself")
+
+S259 | drawerVoiceAltFineClockLattice | src/checks/drawerpresentation/voice.swift:1084
+  report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock),
+                         fixture.lanePoints().first { $0.value == dragged.value }?.tick,
+                         cppID: drawerVoiceFineSnapID,
+                         what: "the released alt drag commits the clock-lattice tick")
+
+S260 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1102
+  report.expectEqual(occupied.tick, page.dragPreviewTick, cppID: drawerVoiceCollisionID,
+                         what: "the dragged preview lands on the occupied tick")
+
+S261 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1107
+  report.expectEqual(2, points.count, cppID: drawerVoiceCollisionID,
+                         what: "a move onto an occupied tick leaves one occurrence there")
+
+S262 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1109
+  report.expectEqual(moving.value,
+                         VoiceLanePolicy.occurrence(at: occupied.tick, in: points)?.value,
+                         cppID: drawerVoiceCollisionID, what: "the moved occurrence wins the destination")
+
+S263 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1112
+  report.expect(VoiceLanePolicy.occurrence(at: moving.tick, in: points) == nil,
+                    cppID: drawerVoiceCollisionID, message: "the source tick no longer holds a change")
+
+S264 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1114
+  report.expectEqual(baseline.revision + 1, fixture.snapshot.revision, cppID: drawerVoiceCollisionID,
+                         what: "the collision is one revision")
+
+S265 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1116
+  report.expect(fixture.snapshot.canUndo && !baseline.canUndo, cppID: drawerVoiceCollisionID,
+                    message: "the collision records exactly one history entry")
+
+S266 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1124
+  report.fail(drawerVoiceCollisionID, "undo failed: \(error)")
+
+S267 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1128
+  report.expectEqual(3, restored.count, cppID: drawerVoiceCollisionID,
+                         what: "a single undo restores both occurrences")
+
+S268 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1130
+  report.expectEqual(programs[1], VoiceLanePolicy.occurrence(at: 48, in: restored)?.value,
+                         cppID: drawerVoiceCollisionID, what: "the moved occurrence is back at its tick")
+
+S269 | drawerVoiceCollisionDragOutcome | src/checks/drawerpresentation/voice.swift:1132
+  report.expectEqual(programs[2],
+                         VoiceLanePolicy.occurrence(at: occupied.tick, in: restored)?.value,
+                         cppID: drawerVoiceCollisionID, what: "the displaced occurrence is back too")
+
+S270 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1143
+  report.expect(true, cppID: drawerVoiceCollisionID,
+                        message: "the staged bank publishes no blank slot to commit")
+
+S271 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1151
+  report.fail(drawerVoiceCollisionID, "the picker did not open for the blank-slot commit")
+
+S272 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1156
+  report.fail(drawerVoiceCollisionID,
+                      "the blank slot \(blankIndex) publishes no row for its own number")
+
+S273 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1162
+  report.expect(page.acceptPicker(), cppID: drawerVoiceCollisionID,
+                    message: "the picker commits the slot the bank holds no parsed voice for")
+
+S274 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1164
+  report.expectEqual(blankIndex,
+                         VoiceLanePolicy.occurrence(at: 96, in: fixture.lanePoints())?.value,
+                         cppID: drawerVoiceCollisionID, what: "the lane holds the blank slot's number")
+
+S275 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1169
+  report.fail(drawerVoiceCollisionID, "the blank-slot change publishes no marker")
+
+S276 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1172
+  report.expect(marker.slotBlank, cppID: drawerVoiceCollisionID,
+                    message: "the committed blank slot publishes blank truth")
+
+S277 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1174
+  report.expectEqual("", marker.symbol, cppID: drawerVoiceCollisionID,
+                         what: "the committed blank slot publishes no symbol")
+
+S278 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1176
+  report.expectEqual(String(format: "%03d", blankIndex), marker.label, cppID: drawerVoiceCollisionID,
+                         what: "the committed blank slot's label stays its program number")
+
+S279 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1180
+  report.expect(fixture.page.contextBlank, cppID: drawerVoiceCollisionID,
+                    message: "the readout publishes the blank truth for that context")
+
+S280 | drawerVoiceBlankSlotCommit | src/checks/drawerpresentation/voice.swift:1182
+  report.expectEqual(String(format: "%03d", blankIndex), fixture.page.readoutText,
+                         cppID: drawerVoiceCollisionID,
+                         what: "the readout of a blank context is the program number alone")
+
+S281 | hold | src/checks/drawerpresentation/voice.swift:1200
+  report.fail(drawerVoiceAuditionID, "the audition program is absent from the picker")
+
+S282 | hold | src/checks/drawerpresentation/voice.swift:1211
+  report.expectEqual([[first, 60, 112], [first, 60, 0],
+                          [first, 60, 112], [first, 60, 0],
+                          [second, 60, 112], [second, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "held program replacement releases once before the next note")
+
+S283 | hold | src/checks/drawerpresentation/voice.swift:1219
+  report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "filter invalidation releases the sounding program")
+
+S284 | hold | src/checks/drawerpresentation/voice.swift:1227
+  report.expectEqual([[second, 60, 112], [second, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "same-value acceptance releases without a musical edit")
+
+S285 | hold | src/checks/drawerpresentation/voice.swift:1229
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceAuditionID,
+                         what: "audition, filtering and same-value acceptance leave document/history unchanged")
+
+S286 | hold | src/checks/drawerpresentation/voice.swift:1238
+  report.expectEqual([[first, 60, 112], [first, 60, 0],
+                          [second, 60, 112], [second, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "picker and callback replacement release through the old owner")
+
+S287 | hold | src/checks/drawerpresentation/voice.swift:1241
+  report.expect(!page.auditionAvailable, cppID: drawerVoiceAuditionID,
+                    message: "removing the real callback removes audition availability")
+
+S288 | hold | src/checks/drawerpresentation/voice.swift:1249
+  report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "stale track cancellation releases without a duplicate note-off")
+
+S289 | hold | src/checks/drawerpresentation/voice.swift:1256
+  report.expectEqual([[second, 60, 112], [second, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "workspace cancellation releases its held voice")
+
+S290 | hold | src/checks/drawerpresentation/voice.swift:1264
+  report.expectEqual([[first, 60, 112], [first, 60, 0]], calls,
+                         cppID: drawerVoiceAuditionID, what: "document teardown releases the final held program")
+
+S291 | hold | src/checks/drawerpresentation/voice.swift:1266
+  report.expectEqual(baseline, fixture.snapshot, cppID: drawerVoiceAuditionID,
+                         what: "picker replacement and teardown write no musical state")
+
+Shared helper: src/checks/automation/AutomationPageChecks.swift
+SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+src/checks/automation/AutomationPageChecks.swift:381
+  report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

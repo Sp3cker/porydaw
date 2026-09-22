@@ -1,0 +1,109 @@
+Assertion correspondence: audio/tst_resonancetiming.cpp
+
+Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
+Original: src/checks/audio/tst_resonancetiming.cpp
+Original SHA-256: e5ac67cfd7333076c094fdbfd027ad6777290d5157857fbc22f401898b2964c4
+Swift counterpart: src/checks/audio/tst_resonancetiming.swift
+Swift SHA-256: 6cc03a763d913818054ae51c73cb4d37c6d79474ac202bdda02f965543e7aa8a
+
+Purpose and status
+Each numbered entry records one original assertion/failure site, not one test
+method or one runtime execution. Loops/data rows reuse a site; their instances
+are described below. QFAIL/qFail guards and helper calls are part of the contract.
+MATCHED means a corresponding Swift predicate was identified and executed;
+PARTIAL means a related check exists but differs in a stated way;
+GAP means an equivalent Swift assertion is not established;
+NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
+only by the retained native path. None of these labels authorizes deletion or
+claims whole-case equivalence. Native passes do not prove the Swift replacement.
+
+Execution and ownership
+resonanceTimingChecks is called by runResonanceSuppressionChecks; uses audio/resonancefixture.swift.
+
+Fixture, sequence and row constraints
+release: 1 kHz/-15 dB for 3 s, 8 s gap, then 1.5 s; probe bins 42/43 before re-gate and 50 ms signal windows. plateau: 60 s source, sample bin 43 after 8 s and 59 s. attack: onset 1 s, 150 ms timing, first 63% crossing searched every 10 ms. hop limits: 4 s at 48 kHz/bin43/onset1s and 44.1 kHz/bin46/onset0s, 512-frame chunks. Both rates are distinct loop instances.
+Original setup, branch guards and helper implementations at the reference
+revision remain authoritative; this inventory does not replace those sources.
+
+Verification evidence
+Current assertion-gap closure is in progress. The earlier audio-only 7/7 run
+predates the expanded Swift predicates and does not certify this file's current
+content. Latest combined verification and refreshed source hashes are required
+before this pairing is complete.
+
+Shared Swift sources used by this refactor (SHA-256)
+src/checks/audio/controllerfixture.swift: c9a1a81a199c1afdc1b7f9cb48365019c28703c96c44fa70e26e7a80947ea6a6
+src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
+src/checks/playback/transportfixture.swift: 65455d9bab9f44b842b89a32e8e736ddf072b4e8cf1ace82b848a32cd95e9042
+src/checks/audio/AudioControllerChecks.swift: d65ac344d7286b7027213b1a39e5881885c847cc85308b386b566b3eb39e148c
+src/checks/playback/PlaybackChecks.swift: 60178614265d11fc9cfa0a6ec46ec8f324afecfb20c99417a340e29ad348dfeb
+src/checks/playback/ResonanceSuppressionChecks.swift: a20761efc254f055672862b355aa7467985de554458814847905d2926dfeebb1
+
+Original assertion inventory
+
+A001 | ResonanceTimingTest::releaseRecoversAcrossGap | src/checks/audio/tst_resonancetiming.cpp:53
+Disposition: MATCHED
+Mapping/reason: resonanceTimingChecks/releaseRecoversAcrossGap: recovered42>=-1 && recovered43>=-1 before second tone.
+Original expression:
+  QVERIFY2(recoveredBin42 >= -1.0 && recoveredBin43 >= -1.0,
+               qUtf8Printable(QStringLiteral("release must recover the tone bins to within 1 dB of 0 "
+                                             "in 8 seconds (bin42 %1 dB, bin43 %2 dB)")
+                                  .arg(recoveredBin42, 0, 'f', 2)
+                                  .arg(recoveredBin43, 0, 'f', 2)))
+
+A002 | ResonanceTimingTest::releaseRecoversAcrossGap | src/checks/audio/tst_resonancetiming.cpp:58
+Disposition: MATCHED
+Mapping/reason: Same case: old>10 && best<=old*0.3 for the re-gate signal bound.
+Original expression:
+  QVERIFY2(oldReduction > 10.0 && bestRecovery <= oldReduction * 0.3,
+               qUtf8Printable(QStringLiteral("re-gated tone onset must start far below the engaged "
+                                             "plateau (old %1 dB, best %2 dB)")
+                                  .arg(oldReduction, 0, 'f', 2)
+                                  .arg(bestRecovery, 0, 'f', 2)))
+
+A003 | ResonanceTimingTest::plateauHoldsSixtySeconds | src/checks/audio/tst_resonancetiming.cpp:89
+Disposition: MATCHED
+Mapping/reason: resonanceTimingChecks emits the original method name through its expect helper and preserves the original predicate and input scenario. No live dual-run sweep is claimed.
+Original expression:
+  QVERIFY2(std::abs(early - late) <= 0.1,
+               qUtf8Printable(QStringLiteral("sustained 60-second tone plateau must hold within 0.1 "
+                                             "dB (early %1 dB, late %2 dB)")
+                                  .arg(early, 0, 'f', 3)
+                                  .arg(late, 0, 'f', 3)))
+
+A004 | ResonanceTimingTest::attackReachesSixtyThreePercent | src/checks/audio/tst_resonancetiming.cpp:114
+Disposition: MATCHED
+Mapping/reason: resonanceTimingChecks emits the original method name through its expect helper and preserves the original predicate and input scenario. No live dual-run sweep is claimed.
+Original expression:
+  QVERIFY2(t63 >= 0.075 && t63 <= 0.225,
+               qUtf8Printable(QStringLiteral("150 ms attack t63 must be within +/- 50 percent (got "
+                                             "%1 s; final reduction %2 dB)")
+                                  .arg(t63, 0, 'f', 3)
+                                  .arg(finalReduction, 0, 'f', 2)))
+
+A005 | ResonanceTimingTest::hopStepCapAt48kHz | src/checks/audio/tst_resonancetiming.cpp:143
+Disposition: MATCHED
+Mapping/reason: resonanceTimingChecks emits the original method name through its expect helper and preserves the original predicate and input scenario. No live dual-run sweep is claimed.
+Original expression:
+  QVERIFY2(largestStep <= (102400.0 / 48000.0) + 1.0e-3,
+               qUtf8Printable(QStringLiteral("per-hop gain change must not exceed the 2.1333 dB step "
+                                             "cap (got %1 dB)")
+                                  .arg(largestStep, 0, 'f', 4)))
+
+A006 | ResonanceTimingTest::rateParameterizedLawHoldsAt44kHz | src/checks/audio/tst_resonancetiming.cpp:181
+Disposition: MATCHED
+Mapping/reason: rateParameterizedLawHoldsAt44kHz, rate==44100 loop: abs(binGainDb(46)+25)<=1.
+Original expression:
+  QVERIFY2(std::abs(suppressor.binGainDb(46) - (-25.0)) <= 1.0,
+               qUtf8Printable(QStringLiteral("44.1 kHz plateau must reach the -25 dB ceiling (got %1 "
+                                             "dB)")
+                                  .arg(suppressor.binGainDb(46), 0, 'f', 2)))
+
+A007 | ResonanceTimingTest::rateParameterizedLawHoldsAt44kHz | src/checks/audio/tst_resonancetiming.cpp:185
+Disposition: MATCHED
+Mapping/reason: Same rate loop: largest<=102400/rate+1e-3.
+Original expression:
+  QVERIFY2(largestStep <= (102400.0 / 44100.0) + 1.0e-3,
+               qUtf8Printable(QStringLiteral("44.1 kHz per-hop gain change must not exceed the 2.322 "
+                                             "dB step cap (got %1 dB)")
+                                  .arg(largestStep, 0, 'f', 4)))

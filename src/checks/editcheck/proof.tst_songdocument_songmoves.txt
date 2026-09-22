@@ -1,0 +1,1810 @@
+Assertion correspondence: editcheck/tst_songdocument_songmoves.cpp
+
+Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
+Original: src/checks/editcheck/tst_songdocument_songmoves.cpp
+Original SHA-256: e6a0f92a7a1b66e31af1c5cc57fb1a0c2cef8f97dca7b385cc28e69eb9e016f7
+Swift counterpart: src/checks/editcheck/NoteChecks.swift
+Swift SHA-256: 9cd49c319b9b161331451f67c3d9a85050aa0180a45226845d9708028792df39
+Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
+Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below in file order, including fixture and
+setup guards. Source context preserves setup, rows, loops, and guards between
+assertions verbatim. S identifiers identify exact Swift predicates, listed after
+the inventory. MATCHED identifies an equivalent Swift predicate that would
+execute; execution must still be verified. PARTIAL identifies a related Swift
+predicate with an explicit unproved condition. NATIVE identifies retained
+native-window/rendering or native setup obligations; it does not establish
+coverage of any converted surface. GAP identifies an original predicate without
+an equivalent Swift assertion. Unsure PARTIAL-versus-GAP calls were resolved to
+GAP. None of these labels authorizes deletion or claims whole-case equivalence.
+
+Fixture, sequence and row constraints
+Collision-reject case is synthetic: five scenarios crossed with both selection orders (reverse false/true) over a conductor plus single-program fixture (end tick 200). Scenarios cover plain moves, leftward moves, same-pitch batch collisions, resize-left into collision, and a second scenario-4 resize variant; each asserts full SavedDocState mismatch emptiness, then redoes into pairing consistency and undoes back to identical bytes. The second synthetic block exercises merge-grouped moves (two grouped moves share one undo entry), an inverse move pair that must not consume an entry, identity lookup by noteId, and a tick-1 clamp.
+Corpus cases (noteMoveOverlap/Merge/Batch/Collision/Rejects) enumerate every staged EditableTrack row. Each row loads a fresh SongDocument, selects the first editable track exactly as native addSongRows, and works at distantBase = max chunk end + 100*ticksPerClock with step = ticksPerClock. Literal offsets: overlap 88/90/92/94 steps, merge 100/102 steps, batch firstTick = base+110 steps with a +20-step partner, collision 138/140/142 steps, rejects firstTick = base+110 steps. Batch pitch destinations {118,114}, nudge destinations {119,115}/{120,116}, out-of-range pitch 130, and merge-flag grouping are literal.
+
+Execution and ownership
+runNoteEditsSuite (movementAndResize, insertionAndCollision, compatibilityRegressions) and runDocumentHistorySuite (gestureAndIdentityHistory), dispatched through pdcSuiteRun. Synthetic fixtures are built by baseFile plus direct addNotes/moveNotes/resizeNotes calls; no shared editcheck fixture file carries expects for these suites.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+Legacy editcheck is not registered in the current check catalog; no native run
+or live C++/Swift differential parity is claimed.
+
+Original assertion inventory
+
+A001 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:17
+Disposition: PARTIAL
+Swift: S007 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S007 fails the suite if synthetic rejection-fixture insertion fails; unproved: the SmfFile/makeDocument optional-unwrap path for this scenario fixture.
+Source context since previous assertion:
+  #include "checks/editcheck/tst_songdocument.h"
+
+  #include <QtTest>
+
+  #include <algorithm>
+
+  #include "checks/editcheck/tst_songdocument_support.h"
+
+  void EditCheckTest::noteMoveCollisionRejects()
+  {
+      using namespace songdocument_test;
+      for (int scenario = 0; scenario < 5; ++scenario) {
+          for (bool reverse : {false, true}) {
+              SmfFile smf;
+              smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
+              auto fixture = makeDocument(smf);
+
+Original expression:
+  QVERIFY(fixture)
+
+A002 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:23
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+              auto &doc = fixture->document;
+              if (scenario == 1 || scenario == 4)
+                  doc.addNotes(0, {{20, 60, 10, 81}, {40, 60, 10, 92}});
+              else
+                  doc.addNotes(0, {{20, 1, 20, 81}, {20, 2, 20, 92}});
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A003 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:38
+Disposition: MATCHED
+Swift: S008 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift S008 asserts conflicting pitch destinations reject the whole operation (revision unchanged) under the same cppID noteMoveCollisionRejects; exact match.
+Source context since previous assertion:
+  ;
+              doc.addNote(0, 150, 70, 10, 80);
+              doc.undoStack()->undo();
+              const SavedDocState saved = captureDocState(doc);
+              const auto original = saved.notes;
+              auto selected = original;
+              if (reverse)
+                  std::reverse(selected.begin(), selected.end());
+              if (scenario == 0)
+                  doc.moveNotes(selected, 0, -2);
+              else if (scenario == 1)
+                  doc.moveNotes(selected, -50, 0);
+              else if (scenario == 4)
+                  doc.resizeNotesLeft(selected, -30);
+              else
+
+Original expression:
+  QVERIFY(!doc.moveNotesToPitches(
+                      selected, std::vector<uint8_t>(selected.size(), scenario == 2 ? 3 : 1), 0))
+
+A004 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:40
+Disposition: PARTIAL
+Swift: S008 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S008 asserts revision unchanged after the conflicting-pitch rejection under the same cppID; unproved: full SavedDocState mismatch emptiness (notes/bytes/ordering) — only revision is asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY2(docStateMismatch(doc, saved).isEmpty(),
+                       qPrintable(docStateMismatch(doc, saved)))
+
+A005 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:43
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+              doc.undoStack()->redo();
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A006 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:45
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim's tick (noteMoveBatch); unproved: full serialized-bytes equality after this method's undo, and same-method coverage.
+Source context since previous assertion:
+  ;
+              doc.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(doc.smf().write(), saved.bytes)
+
+A007 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:51
+Disposition: PARTIAL
+Swift: S007 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S007 fails the suite if synthetic rejection-fixture insertion fails; unproved: the SmfFile/makeDocument optional-unwrap path for this second-block fixture.
+Source context since previous assertion:
+  ;
+          }
+      }
+      SmfFile smf;
+      smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
+      auto fixture = makeDocument(smf);
+
+Original expression:
+  QVERIFY(fixture)
+
+A008 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:57
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+      auto &doc = fixture->document;
+      doc.addNotes(0, {{20, 1, 10, 81}, {40, 2, 10, 92}});
+      doc.undoStack()->clear();
+      const auto before = doc.smf().write();
+      doc.moveNotes(doc.notesForTrack(0), 1, 0, true);
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A009 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:59
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+      doc.moveNotes(doc.notesForTrack(0), 1, 0, true);
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A010 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:60
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(doc.undoStack()->count(), 1)
+
+A011 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:63
+Disposition: PARTIAL
+Swift: S020 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: PARTIAL. Related Swift S020 asserts return to group origin restores state (documentPublicationNetZero); unproved: byte equality after the inverse merge-grouped move and the shared-undo-entry grouping itself.
+Source context since previous assertion:
+  ;
+      const auto moved = doc.smf().write();
+      doc.moveNotes(doc.notesForTrack(0), -100, -2, true);
+
+Original expression:
+  QCOMPARE(doc.smf().write(), moved)
+
+A012 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:65
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: byte equality with pre-move bytes under noteMoveCollisionRejects.
+Source context since previous assertion:
+  ;
+      doc.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(doc.smf().write(), before)
+
+A013 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:67
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts redo restores the edited pitch under noteMoveMerge; unproved: byte equality with moved bytes under noteMoveCollisionRejects.
+Source context since previous assertion:
+  ;
+      doc.undoStack()->redo();
+
+Original expression:
+  QCOMPARE(doc.smf().write(), moved)
+
+A014 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:68
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A015 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:69
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate performs this successful batch pitch move or observes its boolean: Swift moveNotes returns Void and rejection-only S008 does not cover success; unproved: return value and post-move state.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(doc.moveNotesToPitches(doc.notesForTrack(0), {4, 5}, 0))
+
+A016 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:70
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A017 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:75
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+
+      doc.undoStack()->clear();
+      DocNote note = doc.notesForTrack(0).front();
+      doc.moveNotes({note}, -100, 0, true);
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A018 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:76
+Disposition: PARTIAL
+Swift: S022 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: PARTIAL. Related Swift S022 asserts undo and redo restore stable note identity (documentDuplicateIdentities); unproved: findNote-by-noteId lookup success after the grouped move.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(doc.findNote(note.noteId, &note))
+
+A019 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:78
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: movementAndResize/compatibilityRegressions assert specific post-operation pairing outcomes (trimmed tick/duration, identities, unterminated flags, end-event bytes); the exhaustive native endpoint/ordering/channel/coverage invariant is not asserted.
+Source context since previous assertion:
+  ;
+      doc.moveNotes({note}, 1, 0, true);
+
+Original expression:
+  QVERIFY(notePairsConsistent(doc, 0))
+
+A020 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:79
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(doc.undoStack()->count(), 2)
+
+A021 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:80
+Disposition: PARTIAL
+Swift: S022 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: PARTIAL. Related Swift S022 asserts undo and redo restore stable note identity (documentDuplicateIdentities); unproved: findNote-by-noteId lookup success and the Tick(1) clamp is already PARTIAL at A022.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(doc.findNote(note.noteId, &note))
+
+A022 | EditCheckTest::noteMoveCollisionRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:81
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Clamping is asserted for leading resize (Tick(29) with duration floor); the tick-1 move clamp itself is not asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(note.tick, Tick(1))
+
+A023 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:93
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate stages corpus rows: these suites use synthetic baseFile fixtures and never invoke coreEditCorpusSongs; unproved: corpus song eligibility.
+Source context since previous assertion:
+  ;
+  }
+
+  void EditCheckTest::noteMoveOverlap_data()
+  {
+      addSongRows(SongCapability::EditableTrack);
+  }
+
+  void EditCheckTest::noteMoveOverlap()
+  {
+      QFETCH(QString, songLabel);
+      const SongInfo song = songForLabel(songLabel);
+
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(),
+               "noteMoveOverlap: corpus staged no song eligible for this required contract")
+
+A024 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:98
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if synthetic fixture insertion fails; unproved: the corpus MIDI decode/load path (document.load), replaced by synthetic construction.
+Source context since previous assertion:
+  ;
+
+      SongDocument document;
+      QString error;
+
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A025 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:100
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate classifies editable tracks: the synthetic fixture fixes track 0 by construction; unproved: first-editable-track classification.
+Source context since previous assertion:
+  ;
+      const int track = songdocument_test::firstEditableTrack(document);
+
+Original expression:
+  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
+
+A026 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:108
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-move findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+      const uint64_t base = songdocument_test::distantBase(document);
+      const uint32_t step = document.ticksPerClock();
+
+      document.addNote(track, base + step * 90, 71, step * 4, 100);
+      document.addNote(track, base + step * 88, 70, step * 4, 100);
+      DocNote moving;
+      DocNote stationary;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 88, 70, &moving))
+
+A027 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:110
+Disposition: PARTIAL
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S002 asserts the same move's trim outcome (survivor tick) under noteMoveOverlap; unproved: moved-note presence lookup at the new pitch.
+Source context since previous assertion:
+  ;
+      document.moveNotes({moving}, 0, 1);
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 88, 71, &moving))
+
+A028 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:111
+Disposition: PARTIAL
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S002 asserts the same move's trim outcome under noteMoveOverlap; unproved: moved-note duration preservation (step * 4).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 4)
+
+A029 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:112
+Disposition: MATCHED
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift S002 asserts the trimmed survivor's tick (edited note wins, stationary tail survives) under the same cppID noteMoveOverlap; tick values differ per the documented synthetic/corpus fixture substitution.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 92, 71, &stationary))
+
+A030 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:113
+Disposition: PARTIAL
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S002 asserts the survivor tick under noteMoveOverlap; unproved: trimmed survivor duration value (only S003 asserts a trim duration, under noteMoveCollision).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 2)
+
+A031 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:115
+Disposition: PARTIAL
+Swift: S010 + S011 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S010/S011 assert leading-resize clamp and minimum-duration outcomes on the synthetic fixture; unproved: this trailing-resize presence lookup under noteMoveOverlap.
+Source context since previous assertion:
+  ;
+      document.resizeNotes({moving}, step * 4);
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 88, 71, &moving))
+
+A032 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:116
+Disposition: PARTIAL
+Swift: S011 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S011 asserts resize minimum duration under noteResizeStopsAtNextSelectedStart; unproved: this trailing-resize duration value (step * 8) under noteMoveOverlap.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 8)
+
+A033 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:117
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence (every findNote-adjacent predicate asserts presence or values); unproved: swallowed-note disappearance.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, base + step * 92, 71, &stationary))
+
+A034 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:119
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: post-add presence lookup and its interaction with the earlier trim.
+Source context since previous assertion:
+  ;
+      document.addNote(track, base + step * 94, 71, step * 4, 100);
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 88, 71, &moving))
+
+A035 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:120
+Disposition: PARTIAL
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S002 asserts the trim-outcome family under noteMoveOverlap; unproved: re-trimmed duration value (step * 6) after the second overlap.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 6)
+
+A036 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:121
+Disposition: PARTIAL
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S002 asserts the trim-outcome family under noteMoveOverlap; unproved: second stationary-note presence lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 94, 71, &stationary))
+
+A037 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:122
+Disposition: PARTIAL
+Swift: S002 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S002 asserts the trim-outcome family under noteMoveOverlap; unproved: second stationary-note duration value.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 4)
+
+A038 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:124
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo presence restore under noteMoveOverlap.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 88, 71, &moving))
+
+A039 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:125
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo duration value (step * 8) under noteMoveOverlap.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 8)
+
+A040 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:126
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence after undo; unproved: post-undo disappearance lookup.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, base + step * 94, 71, &stationary))
+
+A041 | EditCheckTest::noteMoveOverlap | src/checks/editcheck/tst_songdocument_songmoves.cpp:128
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same moves; raw chunk tick ordering is not asserted.
+Source context since previous assertion:
+  ;
+      document.undoStack()->redo();
+
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A042 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:140
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate stages corpus rows: these suites use synthetic baseFile fixtures and never invoke coreEditCorpusSongs; unproved: corpus song eligibility.
+Source context since previous assertion:
+  ;
+  }
+
+  void EditCheckTest::noteMoveMerge_data()
+  {
+      addSongRows(SongCapability::EditableTrack);
+  }
+
+  void EditCheckTest::noteMoveMerge()
+  {
+      QFETCH(QString, songLabel);
+      const SongInfo song = songForLabel(songLabel);
+
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(),
+               "noteMoveMerge: corpus staged no song eligible for this required contract")
+
+A043 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:145
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if synthetic fixture insertion fails; unproved: the corpus MIDI decode/load path (document.load), replaced by synthetic construction.
+Source context since previous assertion:
+  ;
+
+      SongDocument document;
+      QString error;
+
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A044 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:147
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate classifies editable tracks: the synthetic fixture fixes track 0 by construction; unproved: first-editable-track classification.
+Source context since previous assertion:
+  ;
+      const int track = songdocument_test::firstEditableTrack(document);
+
+Original expression:
+  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
+
+A045 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:156
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-move findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+      const uint64_t base = songdocument_test::distantBase(document);
+      const uint32_t step = document.ticksPerClock();
+
+      document.addNote(track, base + step * 100, 70, step * 4, 100);
+      document.addNote(track, base + step * 100, 69, step * 2, 100);
+      const int before = document.undoStack()->count();
+      DocNote moving;
+      DocNote stationary;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 69, &moving))
+
+A046 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:158
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: merge-absorption presence lookup (stationary at base + 102 steps).
+Source context since previous assertion:
+  ;
+      document.moveNotes({moving}, 0, 1, true);
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 102, 70, &stationary))
+
+A047 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:159
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: merged duration value (step * 2).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 2)
+
+A048 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:160
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: moving-note presence lookup after the merge move.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 70, &moving))
+
+A049 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:162
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+      document.moveNotes({moving}, 0, 1, true);
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before + 1)
+
+A050 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:163
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: presence lookup after the second merge-grouped move.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 71, &moving))
+
+A051 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:164
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: duration value after the second move.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 2)
+
+A052 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:165
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: stationary presence lookup after the second move.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 70, &stationary))
+
+A053 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:166
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts the redo-restored edited pitch under noteMoveMerge; unproved: stationary duration value (step * 4).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 4)
+
+A054 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:168
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo presence restore under noteMoveMerge.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 69, &moving))
+
+A055 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:169
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo stationary restore under noteMoveMerge.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 70, &stationary))
+
+A056 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:170
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo duration value (step * 4) under noteMoveMerge.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 4)
+
+A057 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:172
+Disposition: MATCHED
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift S006 asserts redo restores the edited pitch under the same cppID noteMoveMerge; pitch values differ per the documented synthetic/corpus fixture substitution.
+Source context since previous assertion:
+  ;
+      document.undoStack()->redo();
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 100, 71, &moving))
+
+A058 | EditCheckTest::noteMoveMerge | src/checks/editcheck/tst_songdocument_songmoves.cpp:175
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+      document.didSave(document.captureSaveSnapshot(), true);
+      document.moveNotes({moving}, 0, 1, true);
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before + 2)
+
+A059 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:187
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate stages corpus rows: these suites use synthetic baseFile fixtures and never invoke coreEditCorpusSongs; unproved: corpus song eligibility.
+Source context since previous assertion:
+  ;
+  }
+
+  void EditCheckTest::noteMoveBatch_data()
+  {
+      addSongRows(SongCapability::EditableTrack);
+  }
+
+  void EditCheckTest::noteMoveBatch()
+  {
+      QFETCH(QString, songLabel);
+      const SongInfo song = songForLabel(songLabel);
+
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(),
+               "noteMoveBatch: corpus staged no song eligible for this required contract")
+
+A060 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:192
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if synthetic fixture insertion fails; unproved: the corpus MIDI decode/load path (document.load), replaced by synthetic construction.
+Source context since previous assertion:
+  ;
+
+      SongDocument document;
+      QString error;
+
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A061 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:194
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate classifies editable tracks: the synthetic fixture fixes track 0 by construction; unproved: first-editable-track classification.
+Source context since previous assertion:
+  ;
+      const int track = songdocument_test::firstEditableTrack(document);
+
+Original expression:
+  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
+
+A062 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:202
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-move findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+      const uint64_t base = songdocument_test::distantBase(document);
+      const uint32_t step = document.ticksPerClock();
+      const uint64_t firstTick = base + step * 110;
+      document.addNote(track, firstTick, 115, step * 4, 100);
+      document.addNote(track, firstTick + step * 20, 117, step * 2, 90);
+      DocNote first;
+      DocNote second;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 115, &first))
+
+A063 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:203
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-move partner findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 117, &second))
+
+A064 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:207
+Disposition: PARTIAL
+Swift: S005 + S016 | src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S005/S016 assert undo-restore and end-form preservation across move and history under noteMoveBatch; unproved: the moveNotesToPitches boolean itself (Swift moveNotes returns Void) and the edited pitch spot values.
+Source context since previous assertion:
+  ;
+
+      const int before = document.undoStack()->count();
+      const QByteArray beforeBytes = document.smf().write();
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({first, second}, {uint8_t(118), uint8_t(114)}, 0))
+
+A065 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:208
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before + 1)
+
+A066 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:209
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve note-end form under noteMoveBatch; unproved: edited-pitch presence lookup (firstTick, 118).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 118, &first))
+
+A067 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:210
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve note-end form under noteMoveBatch; unproved: moved duration value (step * 4).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(first.duration, step * 4)
+
+A068 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:211
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve note-end form and release velocity under noteMoveBatch; unproved: note-on velocity value (100).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(first.velocity, uint8_t(100))
+
+A069 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:212
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence (every findNote-adjacent predicate asserts presence or values); unproved: vacated-pitch disappearance.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, firstTick, 115, &first))
+
+A070 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:213
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve note-end form under noteMoveBatch; unproved: partner presence lookup at the edited pitch (114).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 114, &second))
+
+A071 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:214
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve note-end form under noteMoveBatch; unproved: partner duration value (step * 2).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(second.duration, step * 2)
+
+A072 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:215
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve note-end form and release velocity under noteMoveBatch; unproved: partner note-on velocity value (90).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(second.velocity, uint8_t(90))
+
+A073 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:216
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence (every findNote-adjacent predicate asserts presence or values); unproved: vacated-pitch disappearance.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, firstTick + step * 20, 117, &second))
+
+A074 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:219
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim tick under noteMoveBatch; unproved: full serialized-bytes equality.
+Source context since previous assertion:
+  ;
+      const QByteArray movedBytes = document.smf().write();
+      document.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(document.smf().write(), beforeBytes)
+
+A075 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:220
+Disposition: MATCHED
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift S005 asserts one undo restores the collision victim's tick under the same cppID noteMoveBatch; coordinates differ per the documented synthetic/corpus fixture substitution.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 115, &first))
+
+A076 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:221
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts the first note's tick restore; unproved: partner (second-note) restore lookup.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 117, &second))
+
+A077 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:223
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form including across redo under noteMoveBatch; unproved: full serialized-bytes equality.
+Source context since previous assertion:
+  ;
+      document.undoStack()->redo();
+
+Original expression:
+  QCOMPARE(document.smf().write(), movedBytes)
+
+A078 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:224
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form including across redo under noteMoveBatch; unproved: post-redo edited-pitch presence lookups.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 118, &first))
+
+A079 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:225
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form including across redo under noteMoveBatch; unproved: post-redo partner presence lookup.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 114, &second))
+
+A080 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:229
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form across moves under noteMoveBatch; unproved: the nudge-merge boolean (Swift moveNotes returns Void) and resulting pitch lookups.
+Source context since previous assertion:
+  ;
+
+      const int nudgeBefore = document.undoStack()->count();
+      const QByteArray nudgeStart = document.smf().write();
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({first, second}, {uint8_t(119), uint8_t(115)}, 0, true))
+
+A081 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:230
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: nudged-pitch presence lookup (119).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 119, &first))
+
+A082 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:231
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: nudged partner presence lookup (115).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 115, &second))
+
+A083 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:232
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: the second nudge-merge boolean and merge-group entry sharing.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({first, second}, {uint8_t(120), uint8_t(116)}, 0, true))
+
+A084 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:233
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), nudgeBefore + 1)
+
+A085 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:234
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: post-merge presence lookup (120).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 120, &first))
+
+A086 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:235
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: post-merge partner presence lookup (116).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 116, &second))
+
+A087 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:237
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim under noteMoveBatch; unproved: byte equality with nudge-start bytes.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(document.smf().write(), nudgeStart)
+
+A088 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:238
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim under noteMoveBatch; unproved: nudge-undo presence restore (118, not the original 115).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 118, &first))
+
+A089 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:239
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim under noteMoveBatch; unproved: nudge-undo partner restore (114).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 114, &second))
+
+A090 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:243
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: the up-move boolean and resulting pitch lookups (119/115).
+Source context since previous assertion:
+  ;
+
+      document.undoStack()->setClean();
+      const QByteArray inverseStart = document.smf().write();
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({first, second}, {uint8_t(119), uint8_t(115)}, 0, true))
+
+A091 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:245
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: post-move presence lookup (119).
+Source context since previous assertion:
+  ;
+      const int afterUp = document.undoStack()->index();
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 119, &first))
+
+A092 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:246
+Disposition: PARTIAL
+Swift: S016 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S016 asserts move and history preserve end form under noteMoveBatch; unproved: post-move partner presence lookup (115).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 115, &second))
+
+A093 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:247
+Disposition: PARTIAL
+Swift: S016 + S020 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: PARTIAL. Related Swift S016 (end form across moves) and S020 (return to group origin restores state); unproved: inverse-move boolean, pitch lookups, and merge-group entry sharing.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({first, second}, {uint8_t(118), uint8_t(114)}, 0, true))
+
+A094 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:248
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->index(), afterUp)
+
+A095 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:249
+Disposition: PARTIAL
+Swift: S020 | src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
+Mapping/reason: PARTIAL. Related Swift S020 asserts return to group origin restores state; unproved: pitch spot lookup (118) and history entry-sharing for the inverse pair.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 118, &first))
+
+A096 | EditCheckTest::noteMoveBatch | src/checks/editcheck/tst_songdocument_songmoves.cpp:251
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim under noteMoveBatch; unproved: byte equality with inverse-start bytes.
+Source context since previous assertion:
+  ;
+      document.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(document.smf().write(), inverseStart)
+
+A097 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:263
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate stages corpus rows: these suites use synthetic baseFile fixtures and never invoke coreEditCorpusSongs; unproved: corpus song eligibility.
+Source context since previous assertion:
+  ;
+  }
+
+  void EditCheckTest::noteMoveCollision_data()
+  {
+      addSongRows(SongCapability::EditableTrack);
+  }
+
+  void EditCheckTest::noteMoveCollision()
+  {
+      QFETCH(QString, songLabel);
+      const SongInfo song = songForLabel(songLabel);
+
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(),
+               "noteMoveCollision: corpus staged no song eligible for this required contract")
+
+A098 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:268
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if synthetic fixture insertion fails; unproved: the corpus MIDI decode/load path (document.load), replaced by synthetic construction.
+Source context since previous assertion:
+  ;
+
+      SongDocument document;
+      QString error;
+
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A099 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:270
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate classifies editable tracks: the synthetic fixture fixes track 0 by construction; unproved: first-editable-track classification.
+Source context since previous assertion:
+  ;
+      const int track = songdocument_test::firstEditableTrack(document);
+
+Original expression:
+  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
+
+A100 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:276
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same moves; raw chunk tick ordering is not asserted.
+Source context since previous assertion:
+  ;
+      const uint64_t base = songdocument_test::distantBase(document);
+      const uint32_t step = document.ticksPerClock();
+
+      document.addNote(track, base + step * 140, 119, step * 4, 100);
+      document.addNote(track, base + step * 138, 118, step * 4, 100);
+
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A101 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:279
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-move findNote lookups at corpus coordinates.
+Source context since previous assertion:
+  ;
+      DocNote moving;
+      DocNote stationary;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 138, 118, &moving))
+
+A102 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:280
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-move stationary findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 140, 119, &stationary))
+
+A103 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:289
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the same collision move's trim duration under noteMoveCollision; unproved: the moveNotesToPitches boolean (Swift moveNotes returns Void).
+Source context since previous assertion:
+  ;
+      // Batch pitch moves rewrite the selected note-on and may mint its
+      // identity. The trimmed, unselected neighbor must retain its identity.
+      const NoteId stationaryId = stationary.noteId;
+      const QByteArray collisionStart = document.smf().write();
+      const int collisionStartIndex = document.undoStack()->index();
+
+      // Tail kept: a pitch move onto another note's head trims the
+      // covered note instead of swallowing it.
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({moving}, {uint8_t(119)}, 0))
+
+A104 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:290
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same moves; raw chunk tick ordering is not asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A105 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:291
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the same collision move's trim duration under noteMoveCollision; unproved: moved-note presence lookup at the edited pitch.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 138, 119, &moving))
+
+A106 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:292
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the victim trim duration under noteMoveCollision; unproved: moved-note duration preservation (step * 4).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 4)
+
+A107 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:293
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the survivor trim duration under noteMoveCollision; unproved: survivor presence tick lookup (base + 142 steps).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 142, 119, &stationary))
+
+A108 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:294
+Disposition: PARTIAL
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S004 asserts stationary trim preserves identity under documentCrossingIdentities; unproved: same-method identity assertion under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.noteId, stationaryId)
+
+A109 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:295
+Disposition: MATCHED
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: Swift S003 asserts the tail trim preserves surviving duration under the same cppID noteMoveCollision; values differ per the documented synthetic/corpus fixture substitution.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 2)
+
+A110 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:296
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence (every findNote-adjacent predicate asserts presence or values); unproved: vacated-pitch disappearance.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, base + step * 138, 118, &moving))
+
+A111 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:297
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence (every findNote-adjacent predicate asserts presence or values); unproved: covered-note disappearance.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, base + step * 140, 119, &stationary))
+
+A112 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:302
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo presence restore under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+      // The trim is part of the move's own undo command: one undo
+      // puts both notes back at their original keys and durations.
+      document.undoStack()->undo();
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 138, 118, &moving))
+
+A113 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:303
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo duration value (step * 4) under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 4)
+
+A114 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:304
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo stationary restore under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 140, 119, &stationary))
+
+A115 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:305
+Disposition: PARTIAL
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S004 asserts trim preserves identity under documentCrossingIdentities; unproved: identity persistence across this undo under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.noteId, stationaryId)
+
+A116 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:306
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the collision victim under noteMoveBatch; unproved: same-method undo stationary duration (step * 4) under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.duration, step * 4)
+
+A117 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:311
+Disposition: PARTIAL
+Swift: S006 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S006 asserts redo restores the edited pitch under noteMoveMerge; unproved: same-method redo presence under noteMoveCollision.
+Source context since previous assertion:
+  ;
+      document.undoStack()->redo();
+
+      // Fully covered: moving forward across all of the trimmed
+      // note removes it.
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 138, 119, &moving))
+
+A118 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:312
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the trim outcome of the same collision family under noteMoveCollision; unproved: stepped-move boolean and full-removal outcome.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.moveNotesToPitches({moving}, {uint8_t(119)}, int64_t(step) * 2))
+
+A119 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:313
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same moves; raw chunk tick ordering is not asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(songdocument_test::tracksSorted(document.smf()))
+
+A120 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:314
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the trim duration under noteMoveCollision; unproved: post-step presence lookup at the new tick.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 140, 119, &moving))
+
+A121 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:315
+Disposition: PARTIAL
+Swift: S003 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S003 asserts the trim duration under noteMoveCollision; unproved: post-step duration value (step * 4).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(moving.duration, step * 4)
+
+A122 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:320
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim under noteMoveBatch; unproved: byte equality after undo-to-index traversal.
+Source context since previous assertion:
+  ;
+      const QByteArray collisionEnd = document.smf().write();
+      const int collisionEndIndex = document.undoStack()->index();
+      while (document.undoStack()->index() > collisionStartIndex)
+          document.undoStack()->undo();
+
+Original expression:
+  QCOMPARE(document.smf().write(), collisionStart)
+
+A123 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:321
+Disposition: PARTIAL
+Swift: S005 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S005 asserts one undo restores the victim under noteMoveBatch; unproved: post-traversal stationary presence lookup.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, base + step * 140, 119, &stationary))
+
+A124 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:322
+Disposition: PARTIAL
+Swift: S004 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S004 asserts stationary trim preserves identity under documentCrossingIdentities; unproved: same-method identity assertion under noteMoveCollision.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(stationary.noteId, stationaryId)
+
+A125 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:325
+Disposition: PARTIAL
+Swift: S006 + S016 | src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S006 (redo restores edited pitch) and S016 (redo preserves end form); unproved: byte equality with collision-end bytes.
+Source context since previous assertion:
+  ;
+      while (document.undoStack()->index() < collisionEndIndex)
+          document.undoStack()->redo();
+
+Original expression:
+  QCOMPARE(document.smf().write(), collisionEnd)
+
+A126 | EditCheckTest::noteMoveCollision | src/checks/editcheck/tst_songdocument_songmoves.cpp:326
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate asserts note absence (every findNote-adjacent predicate asserts presence or values); unproved: post-redo absence of the fully covered note.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.findNote(track, base + step * 142, 119, &stationary))
+
+A127 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:338
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate stages corpus rows: these suites use synthetic baseFile fixtures and never invoke coreEditCorpusSongs; unproved: corpus song eligibility.
+Source context since previous assertion:
+  ;
+  }
+
+  void EditCheckTest::noteMoveRejects_data()
+  {
+      addSongRows(SongCapability::EditableTrack);
+  }
+
+  void EditCheckTest::noteMoveRejects()
+  {
+      QFETCH(QString, songLabel);
+      const SongInfo song = songForLabel(songLabel);
+
+Original expression:
+  QVERIFY2(!song.midPath.isEmpty(),
+               "noteMoveRejects: corpus staged no song eligible for this required contract")
+
+A128 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:343
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if synthetic fixture insertion fails; unproved: the corpus MIDI decode/load path (document.load), replaced by synthetic construction.
+Source context since previous assertion:
+  ;
+
+      SongDocument document;
+      QString error;
+
+Original expression:
+  QVERIFY2(document.load(song, &error), qPrintable(error))
+
+A129 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:345
+Disposition: GAP
+Swift: none
+Mapping/reason: GAP. No Swift predicate classifies editable tracks: the synthetic fixture fixes track 0 by construction; unproved: first-editable-track classification.
+Source context since previous assertion:
+  ;
+      const int track = songdocument_test::firstEditableTrack(document);
+
+Original expression:
+  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
+
+A130 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:353
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-rejection findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+      const uint64_t base = songdocument_test::distantBase(document);
+      const uint32_t step = document.ticksPerClock();
+      const uint64_t firstTick = base + step * 110;
+      document.addNote(track, firstTick, 115, step * 4, 100);
+      document.addNote(track, firstTick + step * 20, 117, step * 2, 90);
+      DocNote first;
+      DocNote second;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 115, &first))
+
+A131 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:354
+Disposition: PARTIAL
+Swift: S001 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S001 fails the suite if fixture insertion fails; unproved: explicit pre-rejection partner findNote lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 117, &second))
+
+A132 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:358
+Disposition: PARTIAL
+Swift: S008 + S015 | src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S008 (revision unchanged on conflicting-pitch rejection) and S015 (full state unchanged on collision rejection); unproved: out-of-range pitch (130) rejection specifically.
+Source context since previous assertion:
+  ;
+
+      const QByteArray baseline = document.smf().write();
+      const int before = document.undoStack()->count();
+
+Original expression:
+  QVERIFY(!document.moveNotesToPitches({first}, {uint8_t(130)}, 0))
+
+A133 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:359
+Disposition: PARTIAL
+Swift: S009 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S009 asserts zero movement creates no entry under noteMoveRejects; unproved: empty-pitches arity rejection specifically.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.moveNotesToPitches({first}, {}, 0))
+
+A134 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:360
+Disposition: PARTIAL
+Swift: S009 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S009 asserts zero movement creates no entry under noteMoveRejects; unproved: empty-notes arity rejection specifically.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(!document.moveNotesToPitches({}, {uint8_t(118)}, 0))
+
+A135 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:361
+Disposition: PARTIAL
+Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize / compatibilityRegressions / gestureAndIdentityHistory
+Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions/gestureAndIdentityHistory; the exact QUndoStack entry count/index is never asserted.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.undoStack()->count(), before)
+
+A136 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:362
+Disposition: PARTIAL
+Swift: S008 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
+Mapping/reason: PARTIAL. Related Swift S008 asserts revision unchanged after rejection under noteMoveRejects; unproved: full serialized-bytes equality with baseline (S015 asserts state equality only under noteBatchCollisionRejects).
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QCOMPARE(document.smf().write(), baseline)
+
+A137 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:363
+Disposition: PARTIAL
+Swift: S015 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S015 asserts a rejected collision leaves state, revision, dirty flag, redo, and identities unchanged; unproved: post-rejection presence spot lookups at corpus coordinates.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick, 115, &first))
+
+A138 | EditCheckTest::noteMoveRejects | src/checks/editcheck/tst_songdocument_songmoves.cpp:364
+Disposition: PARTIAL
+Swift: S015 | src/checks/editcheck/NoteChecks.swift :: compatibilityRegressions
+Mapping/reason: PARTIAL. Related Swift S015 asserts a rejected collision leaves state, revision, dirty flag, redo, and identities unchanged; unproved: post-rejection partner presence spot lookup at corpus coordinates.
+Source context since previous assertion:
+  ;
+
+Original expression:
+  QVERIFY(document.findNote(track, firstTick + step * 20, 117, &second))
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+Swift assertion predicates
+Every report.expect/expectEqual/fail call in the mapped Swift functions:
+
+S001 | movementAndResize | src/checks/editcheck/NoteChecks.swift:115
+  report.fail(noteEditsBasicID, "fixture insertion failed")
+
+S002 | movementAndResize | src/checks/editcheck/NoteChecks.swift:120
+  report.expectEqual(Tick(2), trimmed?.tick,
+                         cppID: "editcheck/EditCheckTest::noteMoveOverlap",
+                         what: "edited note wins and stationary tail survives")
+
+S003 | movementAndResize | src/checks/editcheck/NoteChecks.swift:123
+  report.expectEqual(Tick(2), trimmed?.duration,
+                         cppID: "editcheck/EditCheckTest::noteMoveCollision",
+                         what: "tail trim preserves surviving duration")
+
+S004 | movementAndResize | src/checks/editcheck/NoteChecks.swift:126
+  report.expectEqual(ids[0], trimmed?.id,
+                         cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
+                         what: "stationary trim preserves identity")
+
+S005 | movementAndResize | src/checks/editcheck/NoteChecks.swift:130
+  report.expectEqual(Tick(0), document.note(ids[0])?.tick,
+                         cppID: "editcheck/EditCheckTest::noteMoveBatch",
+                         what: "one undo restores collision victim")
+
+S006 | movementAndResize | src/checks/editcheck/NoteChecks.swift:134
+  report.expectEqual(UInt8(70), document.note(ids[1])?.pitch,
+                         cppID: "editcheck/EditCheckTest::noteMoveMerge",
+                         what: "redo restores edited pitch")
+
+S007 | movementAndResize | src/checks/editcheck/NoteChecks.swift:143
+  report.fail("editcheck/EditCheckTest::noteMoveCollisionRejects",
+                      "rejection fixture insertion failed")
+
+S008 | movementAndResize | src/checks/editcheck/NoteChecks.swift:149
+  report.expectEqual(revision, rejectionDocument.revision,
+                         cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
+                         what: "conflicting pitch destinations reject whole operation")
+
+S009 | movementAndResize | src/checks/editcheck/NoteChecks.swift:153
+  report.expectEqual(revision, rejectionDocument.revision,
+                         cppID: "editcheck/EditCheckTest::noteMoveRejects",
+                         what: "zero movement creates no entry")
+
+S010 | movementAndResize | src/checks/editcheck/NoteChecks.swift:158
+  report.expectEqual(Tick(29), document.note(ids[2])?.tick,
+                         cppID: noteEditsBasicID,
+                         what: "leading resize clamps to one tick")
+
+S011 | movementAndResize | src/checks/editcheck/NoteChecks.swift:161
+  report.expectEqual(Tick(1), document.note(ids[2])?.duration,
+                         cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
+                         what: "resize enforces minimum duration")
+
+S012 | movementAndResize | src/checks/editcheck/NoteChecks.swift:165
+  report.expectEqual(UInt64(30), document.note(ids[2])?.endTick,
+                         cppID: noteEditsBasicID,
+                         what: "leading resize preserves note end")
+
+S013 | movementAndResize | src/checks/editcheck/NoteChecks.swift:173
+  report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+                      "unterminated fixture was not projected")
+
+S014 | movementAndResize | src/checks/editcheck/NoteChecks.swift:178
+  report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
+                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
+                    message: "moving an unterminated note does not invent an end")
+
+S015 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:249
+  report.expect(rejection.state == before && rejection.revision == revision &&
+          rejection.isDirty == dirty && rejection.history.canRedo == redo &&
+          Set(rejection.notes(in: 0).map(\.id)) == Set(selected),
+          cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
+          message: "unchanged selected participant rejects collision without consuming redo")
+
+S016 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:271
+  report.expect(originalEnd == endPayload && movedEnd == shiftedEndPayload(endPayload, pitch: 66) &&
+              undoneEnd == endPayload && redoneEnd == shiftedEndPayload(endPayload, pitch: 66),
+              cppID: "editcheck/EditCheckTest::noteMoveBatch",
+              message: "move and history preserve the original note-end form and release velocity")
+
+S017 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:283
+  report.expect(noteEndPayload(resized, id: id) ==
+              .channel(status: 0x80, data0: 65, data1: 47),
+              cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
+              message: "resize retains explicit note-off bytes")
+
+S018 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:299
+  report.expect(retainedEnd == .channel(status: 0x80, data0: 67, data1: 39),
+          cppID: "editcheck/EditCheckTest::noteMoveOverlap",
+          message: "collision trim retains the stationary note's end-event bytes")
+
+S019 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:332
+  report.expect(document.note(ids[0])?.tick == 0 && document.note(ids[1])?.pitch == 71,
+                    cppID: "editcheck/EditCheckTest::documentMergedOverlapPublication",
+                    message: "group rebuilds from origin and restores passed neighbor")
+
+S020 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:336
+  report.expect(document.note(ids[1])?.pitch == 69 && document.note(ids[0])?.duration == 4,
+                    cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
+                    message: "return to group origin restores state")
+
+S021 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:339
+  report.expect(changes == 4,
+                    cppID: "editcheck/EditCheckTest::documentLoadPublication",
+                    message: "each real call including return-to-origin publishes once")
+
+S022 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:347
+  report.expectEqual(beforeUndo, document.note(ids[0])?.id,
+                         cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
+                         what: "undo and redo restore stable note identity")
+
+S023 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:350
+  report.expect(document.note(ids[0])?.id == ids[0] && document.note(ids[1])?.id == ids[1],
+                    cppID: "editcheck/EditCheckTest::documentDuplicationOwnership",
+                    message: "document-scoped identities remain owned after history crossing")
+
+S024 | gestureAndIdentityHistory | src/checks/editcheck/NoteChecks.swift:353
+  report.expect(remaps.allSatisfy { $0 == nil },
+                    cppID: "editcheck/EditCheckTest::documentRemapsAndRaw",
+                    message: "note-only mutations publish without a track remap")
+
+S025 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:77
+  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
+                      "overlapping edited participants were accepted")
+
+S026 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:80
+  report.expectEqual(initialRevision, document.revision,
+                             cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
+                             what: "rejected batch leaves revision unchanged")
+
+S027 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:84
+  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
+                      "unexpected rejection: \(error)")
+
+S028 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:92
+  report.expect(duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
+                    cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
+                    message: "exact duplicate insertions receive distinct identities")
+
+S029 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:95
+  report.expectEqual(2, document.notes(in: 0).filter {
+          $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
+      }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
+      what: "exact duplicate insertions remain distinct notes")
+
+S030 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:102
+  report.expectEqual(revisionBeforeNoOp, document.revision,
+                         cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
+                         what: "empty delete is a no-op")
+
+Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
+Shared SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
+rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
+at the tip and asserts equal traversal counts with exact restored SongState and
+DocumentIdentity. The range/raw suites invoke these helpers (see their proofs);
+the suites paired here use synthetic fixtures and do not invoke them. Their one
+report predicate is:
+  report.expect(count == replayed && document.state == restoredState &&
+      document.history.currentIdentity == restoredIdentity, cppID: cppID,
+      message: "counting public undo entries restores the exact state and identity")

@@ -1,0 +1,1583 @@
+Assertion correspondence: workspace/selftest_workspace.cpp
+
+Reference revision: 8d10130da34cfa9e1912d22fb11cdd427173e0b2
+Original: src/checks/workspace/selftest_workspace.cpp
+Original SHA-256: 7e8750596686faf010e813ba80fbbd0d2bc8cb4d94f5a6b01aa2b3bb92b270fb
+Swift counterpart: src/checks/workspace/SessionChecks.swift
+Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+
+Status and evidence
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below in file order, including fixture
+guards and assert-carrying helpers. Source context preserves setup, rows,
+loops, and guards between assertions verbatim. S identifiers identify exact
+Swift predicates in the paired counterpart, listed after the inventory.
+MATCHED identifies an equivalent Swift predicate that would execute for the
+original site; PARTIAL identifies a related Swift predicate with an explicit
+unproved condition; GAP identifies an original predicate with no equivalent
+Swift assertion established; NATIVE identifies a native window, workspace,
+tab, audio engine, settings, widget, dialog, timer, or rendering/harness
+observation that a presenter-level Swift check cannot establish as executed
+here. NATIVE marks sites whose expression names native-harness objects or
+values produced through them; GAP marks portable value/codec/model
+comparisons a presenter-level check could in principle establish.
+WorkspaceEditorCodecSelfTest covers the EditorViewState settings codec (codecRows over eight data rows) plus livePersistenceAndFinalClose, which round-trips full/bare editor states through a real MainWindow, poisons the lane blob, and verifies the playhead timer stops on final close.
+selftest_workspace.cpp contributes 41 sites: 0 MATCHED, 0 PARTIAL, 28 GAP, 13 NATIVE. The paired
+counterpart drives the disjoint DocumentSession/ProjectService/bank-history
+suite; it never opens a MainWindow, workspace tab, transport, scale control,
+or editor-codec flow, so no workspace-flow predicate is matched here.
+Bookkeeping does not overclaim: unsure cases are recorded as GAP, never
+PARTIAL.
+
+Verification
+Command: deno task verify --filter swiftcore --verbose
+Result: pending integrated run; source hashes pin the tree inspected here.
+
+Execution and ownership
+Native execution owns every site below: the QtTest suites declared in
+src/checks/workspace/tst_workspacesessions.h (WorkspaceEditorCodecSelfTest) run against a real
+MainWindow with the Null audio backend and a staged fixture project copy
+(workspace_test::ProjectCopy; fixture.h/fixture.cpp carries no assertion
+sites). On the Swift side, pdcSuiteRun in
+src/checks/support/corecheck/CoreCheckSupport.swift dispatches suites 10 and 11 to
+runProjectSessionSuite and runBankHistorySuite; no Swift entry point opens a
+workspace, tab, transport, scale control, or editor-codec flow. All 185
+paired predicates live in SessionChecks.swift itself (private in-file
+helpers such as makeMidiFixture, stageTestProject,
+savedMidiCompilesAfterDocumentSave, mouseHintOwnershipChecks,
+editorSelectionCommandChecks, releaseEditorBankHistorySemantics, and
+historyTransitionRegressions); no separate shared-fixture file carries
+expects for this pairing.
+
+Fixture, sequence and row constraints
+codecRows_data expands eight rows (empty, full, bare, invalid-json, empty-blob, array, wrong-type, grammar) into one codecRows site sequence each; the full row additionally loops over three active pages, and the grammar row loops laneHeight raw values {0, 99999999}. init/cleanup clear QSettings and reset the ProjectCopy. poisonLaneBlob only succeeds when a JSON-object blob key exists. livePersistenceAndFinalClose sequences full, bare, poisoned, then repaired editor states with QTRY store-sync polling.
+
+Original assertion inventory
+
+A001 | WorkspaceEditorCodecSelfTest::init | src/checks/workspace/selftest_workspace.cpp:117
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  #include "checks/workspace/tst_workspacesessions.h"
+
+  #include <QtTest>
+
+  #include <QJsonArray>
+  #include <QJsonDocument>
+  #include <QJsonObject>
+  #include <QJsonParseError>
+  #include <QSettings>
+  #include <QTemporaryDir>
+  #include <QTimer>
+
+  #include <map>
+  #include <set>
+  #include <utility>
+  #include <vector>
+
+  #include "mainwindow.h"
+  #include "ui/editorviewstate.h"
+  #include "ui/layout.h"
+  #include "ui/newsongwizard.h"
+  #include "ui/settingsdialog.h"
+  #include "ui/songtab.h"
+  #include "ui/songview.h"
+  #include "ui/workspaceui.h"
+
+  namespace {
+
+  QString laneBlobKey(QSettings &settings)
+  {
+      for (const QString &key : settings.allKeys()) {
+          const QVariant value = settings.value(key);
+          if (value.typeId() == QMetaType::QByteArray &&
+              QJsonDocument::fromJson(value.toByteArray()).isObject())
+              return key;
+      }
+      return {};
+  }
+
+  QByteArray laneBlob(QSettings &settings)
+  {
+      const QString key = laneBlobKey(settings);
+      return key.isEmpty() ? QByteArray{} : settings.value(key).toByteArray();
+  }
+
+  bool poisonLaneBlob(QSettings &settings, const QVariant &value)
+  {
+      const QString key = laneBlobKey(settings);
+      if (key.isEmpty())
+          return false;
+      settings.setValue(key, value);
+      settings.sync();
+      return true;
+  }
+
+  bool compactJsonObject(const QByteArray &bytes)
+  {
+      QJsonParseError error;
+      const QJsonDocument document = QJsonDocument::fromJson(bytes, &error);
+      return !bytes.contains('\n') && error.error == QJsonParseError::NoError && document.isObject();
+  }
+
+  bool lanesDefaulted(const EditorViewState &state)
+  {
+      const EditorViewState defaults;
+      return state.laneHeight == defaults.laneHeight && state.laneHeights.empty() &&
+             state.laneRanges.empty() && state.emptyLanes.empty() && state.hiddenLanes().empty();
+  }
+
+  EditorViewState fullState()
+  {
+      const int minimum = layout::fontPx(7.0 / 3.0);
+      const int maximum = layout::fontPx(32.0 / 3.0);
+      const EditorAutomationRowId tempo{};
+      const EditorAutomationRowId cc074{EditorAutomationRowKind::ControlChange, 0, 74};
+      const EditorAutomationRowId cc107{EditorAutomationRowKind::ControlChange, 1, 7};
+      const EditorAutomationRowId cc001{EditorAutomationRowKind::ControlChange, 0, 1};
+      const EditorAutomationRowId cc310{EditorAutomationRowKind::ControlChange, 3, 10};
+      auto state = EditorViewState{};
+      state.velocity = {true, 173};
+      state.automation = {false, 64};
+      state.voiceChanges = {true, 97};
+      state.activePage = EditorDrawerPage::Velocity;
+      state.laneHeight = minimum + 11;
+      state.laneHeights = {{tempo, minimum}, {cc074, maximum}};
+      state.laneRanges = {{tempo, 90}, {cc107, 64}};
+      state.emptyLanes = {cc001, cc310};
+      state.hideLane(cc074);
+      state.hideLane(cc107);
+      state.hideLane(cc074);
+      return state;
+  }
+
+  EditorViewState bareState()
+  {
+      EditorViewState state = fullState();
+      state.velocity.height.reset();
+      state.automation.height.reset();
+      state.voiceChanges.height.reset();
+      state.activePage = EditorDrawerPage::VoiceChanges;
+      return state;
+  }
+
+  } // namespace
+
+  WorkspaceEditorCodecSelfTest::WorkspaceEditorCodecSelfTest(QString projectRoot, QString songLabel)
+      : m_songLabel(std::move(songLabel))
+      , m_project(std::move(projectRoot))
+  {}
+
+  void WorkspaceEditorCodecSelfTest::init()
+  {
+      QSettings settings;
+      settings.clear();
+      settings.sync();
+      QString error;
+Original expression:
+  QVERIFY2(m_project.reset(error), qPrintable(error))
+
+A002 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:144
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+  }
+
+  void WorkspaceEditorCodecSelfTest::cleanup()
+  {
+      QSettings settings;
+      settings.clear();
+      settings.sync();
+  }
+
+  void WorkspaceEditorCodecSelfTest::codecRows_data()
+  {
+      QTest::addColumn<QString>("scenario");
+      QTest::newRow("empty-defaults") << QStringLiteral("empty");
+      QTest::newRow("full-three-pages") << QStringLiteral("full");
+      QTest::newRow("optional-heights") << QStringLiteral("bare");
+      QTest::newRow("invalid-json") << QStringLiteral("invalid-json");
+      QTest::newRow("empty-lane-blob") << QStringLiteral("empty-blob");
+      QTest::newRow("non-object-json") << QStringLiteral("array");
+      QTest::newRow("wrong-typed-lane-blob") << QStringLiteral("wrong-type");
+      QTest::newRow("row-grammar-and-clamps") << QStringLiteral("grammar");
+  }
+
+  void WorkspaceEditorCodecSelfTest::codecRows()
+  {
+      QFETCH(QString, scenario);
+      QTemporaryDir directory;
+Original expression:
+  QVERIFY(directory.isValid())
+
+A003 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:155
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QSettings store(directory.filePath(QStringLiteral("editorviewstate.ini")),
+                      QSettings::IniFormat);
+      QSettings reloaded(directory.filePath(QStringLiteral("editorviewstate.ini")),
+                         QSettings::IniFormat);
+      const EditorViewState full = fullState();
+      const EditorViewState bare = bareState();
+      const int minimum = layout::fontPx(7.0 / 3.0);
+      const int maximum = layout::fontPx(32.0 / 3.0);
+
+      if (scenario == QStringLiteral("empty")) {
+Original expression:
+  QVERIFY(loadEditorViewState(store) == EditorViewState{})
+
+A004 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:167
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          return;
+      }
+      if (scenario == QStringLiteral("full")) {
+          for (const EditorDrawerPage page :
+               {EditorDrawerPage::Velocity, EditorDrawerPage::VoiceChanges,
+                EditorDrawerPage::Automations}) {
+              EditorViewState state = full;
+              state.activePage = page;
+              saveEditorViewState(store, state);
+              store.sync();
+              reloaded.sync();
+Original expression:
+  QVERIFY(loadEditorViewState(reloaded) == state)
+
+A005 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:168
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(compactJsonObject(laneBlob(reloaded)))
+
+A006 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:176
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          }
+          return;
+      }
+      if (scenario == QStringLiteral("bare")) {
+          saveEditorViewState(store, bare);
+          store.sync();
+          reloaded.sync();
+Original expression:
+  QVERIFY(loadEditorViewState(reloaded) == bare)
+
+A007 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:177
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(compactJsonObject(laneBlob(reloaded)))
+
+A008 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:184
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          return;
+      }
+
+      saveEditorViewState(store, full);
+      store.sync();
+      if (scenario == QStringLiteral("invalid-json"))
+Original expression:
+  QVERIFY(poisonLaneBlob(store, QByteArray("{ not json")))
+
+A009 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:186
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      else if (scenario == QStringLiteral("empty-blob"))
+Original expression:
+  QVERIFY(poisonLaneBlob(store, QByteArray{}))
+
+A010 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:188
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      else if (scenario == QStringLiteral("array"))
+Original expression:
+  QVERIFY(poisonLaneBlob(store, QByteArray("[1,2]")))
+
+A011 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:190
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      else if (scenario == QStringLiteral("wrong-type"))
+Original expression:
+  QVERIFY(poisonLaneBlob(store, QStringLiteral("seventy-four")))
+
+A012 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:210
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      else {
+          const EditorAutomationRowId tempo{};
+          const EditorAutomationRowId cc074{EditorAutomationRowKind::ControlChange, 0, 74};
+          const EditorAutomationRowId cc107{EditorAutomationRowKind::ControlChange, 1, 7};
+          const EditorAutomationRowId cc001{EditorAutomationRowKind::ControlChange, 0, 1};
+          const EditorAutomationRowId cc080{EditorAutomationRowKind::ControlChange, 0, 80};
+          auto heights = QJsonObject{{"tempo", minimum + 2}, {"cc:0:74", 5},    {"cc:0:80", 99999999},
+                                     {"cc:00:7", 12},        {"voice:0:5", 12}, {"cc:16:7", 12},
+                                     {"cc:0:300", 12},       {"nonsense", 12}};
+          auto ranges = QJsonObject{{"tempo", 90}, {"cc:1:7", 64}, {"cc:2:3", 128}, {"cc:3:4", -1}};
+          auto empty =
+              QJsonArray{QJsonObject{{"track", 0}, {"cc", 1}}, QJsonObject{{"track", 16}, {"cc", 1}},
+                         QJsonObject{{"track", 2}, {"cc", 300}}, QJsonValue(QStringLiteral("bad"))};
+          auto hidden =
+              QJsonArray{QJsonObject{{"track", 1}, {"cc", 7}}, QJsonObject{{"track", 0}, {"cc", 74}},
+                         QJsonObject{{"track", 1}, {"cc", 7}}};
+          const QJsonObject blob{{"laneHeight", 5},       {"laneHeights", heights},
+                                 {"laneRanges", ranges},  {"emptyLanes", empty},
+                                 {"hiddenLanes", hidden}, {"unheardOf", true}};
+Original expression:
+  QVERIFY(poisonLaneBlob(store, QJsonDocument(blob).toJson(QJsonDocument::Compact)))
+
+A013 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:212
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const EditorViewState decoded = loadEditorViewState(store);
+Original expression:
+  QVERIFY(decoded.drawerState() == full.drawerState())
+
+A014 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:213
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(decoded.laneHeight, minimum)
+
+A015 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:217
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          const std::map<EditorAutomationRowId, int> expectedLaneHeights{
+              {tempo, minimum + 2}, {cc074, minimum}, {cc080, maximum}};
+          const std::map<EditorAutomationRowId, uint8_t> expectedLaneRanges{{tempo, 90}, {cc107, 64}};
+Original expression:
+  QVERIFY(decoded.laneHeights == expectedLaneHeights)
+
+A016 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:218
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(decoded.laneRanges == expectedLaneRanges)
+
+A017 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:219
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(decoded.emptyLanes == std::set<EditorAutomationRowId>{cc001})
+
+A018 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:220
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(decoded.hiddenLanes() == std::vector<EditorAutomationRowId>({cc107, cc074}))
+
+A019 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:223
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          for (int raw : {0, 99999999}) {
+              saveEditorViewState(store, full);
+Original expression:
+  QVERIFY(poisonLaneBlob(
+                  store,
+                  QJsonDocument(QJsonObject{{"laneHeight", raw}}).toJson(QJsonDocument::Compact)))
+
+A020 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:227
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+              const EditorViewState clamped = loadEditorViewState(store);
+Original expression:
+  QVERIFY(clamped.drawerState() == full.drawerState())
+
+A021 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:228
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(clamped.laneHeights.empty() && clamped.laneRanges.empty() &&
+                      clamped.emptyLanes.empty() && clamped.hiddenLanes().empty())
+
+A022 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:230
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(clamped.laneHeight, raw == 0 ? 0 : maximum)
+
+A023 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:235
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+          }
+          return;
+      }
+      const EditorViewState corrupted = loadEditorViewState(store);
+Original expression:
+  QVERIFY(corrupted.drawerState() == full.drawerState())
+
+A024 | WorkspaceEditorCodecSelfTest::codecRows | src/checks/workspace/selftest_workspace.cpp:236
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(lanesDefaulted(corrupted))
+
+A025 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:243
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+  }
+
+  void WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose()
+  {
+      MainWindow window;
+      window.m_persistSession = false;
+Original expression:
+  QVERIFY(window.m_audioOk && window.m_audio.usingNullBackend() &&
+              window.m_audio.backendName() == QStringLiteral("Null"))
+
+A026 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:247
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      QSettings store;
+      store.sync();
+Original expression:
+  QVERIFY(laneBlobKey(store).isEmpty())
+
+A027 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:249
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      auto *workspace = window.m_workspace.get();
+Original expression:
+  QVERIFY(workspace)
+
+A028 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:251
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      workspace->requestProjectOpenAt(m_project.root());
+Original expression:
+  QVERIFY(workspace_test::waitForProject(*workspace))
+
+A029 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:261
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      const ProjectState &project = workspace->projectState();
+      NewSongWizard::ProjectData data;
+      data.songs = project.snapshot.songs();
+      data.players = project.snapshot.players();
+      data.voicegroupArgs = project.catalog.groupArgs;
+      data.canCreateVoicegroup = project.catalog.perFileVoicegroups;
+      NewSongWizard wizard(data, &window);
+      Q_UNUSED(wizard);
+      const std::optional<SongName> name = workspace_test::songName(m_songLabel);
+Original expression:
+  QVERIFY(name)
+
+A030 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:263
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      SongTab *tab = workspace_test::openReady(*workspace, *name);
+Original expression:
+  QVERIFY(tab)
+
+A031 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:273
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      const SongTarget songTarget{tab->document().cfg(), tab->document().label()};
+      SettingsDialog dialog(window.m_engineSettings, songTarget, project.catalog.groupArgs, false,
+                            &window);
+      Q_UNUSED(dialog);
+      SongView &view = tab->view();
+      const EditorViewState original = view.editorViewState();
+      const EditorViewState full = fullState();
+      const EditorViewState bare = bareState();
+      view.setEditorViewState(full);
+Original expression:
+  QTRY_VERIFY([&] {
+          store.sync();
+          return loadEditorViewState(store) == full && view.editorViewState() == full;
+      }())
+
+A032 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:278
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      view.setEditorViewState(bare);
+Original expression:
+  QTRY_VERIFY([&] {
+          store.sync();
+          return loadEditorViewState(store) == bare;
+      }())
+
+A033 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:283
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QString blobKey = laneBlobKey(store);
+Original expression:
+  QVERIFY(poisonLaneBlob(store, QByteArray("{ not json")))
+
+A034 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:286
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      const QByteArray poisoned = store.value(blobKey).toByteArray();
+      const EditorViewState corrupted = loadEditorViewState(store);
+Original expression:
+  QVERIFY(corrupted.drawerState() == bare.drawerState())
+
+A035 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:287
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+Original expression:
+  QVERIFY(lanesDefaulted(corrupted))
+
+A036 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:288
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(store.value(blobKey).toByteArray(), poisoned)
+
+A037 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:290
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      view.setDrawerSectionHeight(EditorDrawerPage::Velocity, layout::fontPx(7.0 / 3.0) + 7);
+Original expression:
+  QTRY_VERIFY([&] {
+          store.sync();
+          return compactJsonObject(laneBlob(store)) &&
+                 loadEditorViewState(store) == view.editorViewState();
+      }())
+
+A038 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:296
+Disposition: GAP
+Mapping/reason: No equivalent predicate in the paired Swift counterpart has been established; original predicate and setup below remain an open obligation.
+Source context since previous assertion:
+  ;
+      view.setEditorViewState(original);
+Original expression:
+  QTRY_VERIFY([&] {
+          store.sync();
+          return loadEditorViewState(store) == original;
+      }())
+
+A039 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:301
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      window.startPlayback();
+Original expression:
+  QTRY_VERIFY(window.m_playheadTimer->isActive())
+
+A040 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:304
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+      const SongName closing = tab->name();
+      window.m_workspace->requestCloseSelectedTab();
+Original expression:
+  QTRY_VERIFY(!window.m_workspace->songTabFor(closing) && !window.m_playheadTimer->isActive())
+
+A041 | WorkspaceEditorCodecSelfTest::livePersistenceAndFinalClose | src/checks/workspace/selftest_workspace.cpp:305
+Disposition: NATIVE
+Mapping/reason: Original native-harness obligation (window, workspace, tab, audio engine, settings, widget, dialog, timer, or rendering state, or a value produced through them). A presenter-level Swift check cannot establish this observation as executed here.
+Source context since previous assertion:
+  ;
+Original expression:
+  QCOMPARE(window.m_workspace->openTabCount(), qsizetype(0))
+
+Remaining original source (closing sequence and helper bodies):
+  ;
+  }
+
+Swift assertion predicates
+
+S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/SessionChecks.swift:287
+  report.expectEqual(Int32(1), compileResult, cppID: cppID,
+                         what: "actual mid2agb exit result for the persisted edited MIDI and flags")
+
+S002 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:298
+  report.expectEqual("", hints.text, cppID: id,
+                         what: "inactive windows reject hint claims")
+
+S003 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:305
+  report.expectEqual(nodeHint, hints.text, cppID: id,
+                         what: "replaced source cannot clear an identical-profile new owner")
+
+S004 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:308
+  report.expectEqual("", hints.text, cppID: id,
+                         what: "empty profile replaces and clears prior visible hint")
+
+S005 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:312
+  report.expect(hints.text != nodeHint, cppID: id,
+                    message: "replacing the node profile changes the presented instructions")
+
+S006 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:315
+  report.expectEqual("", hints.text, cppID: id,
+                         what: "current source lifecycle clear removes hint")
+
+S007 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:319
+  report.expectEqual("", hints.text, cppID: id,
+                         what: "window deactivation clears an owned hint")
+
+S008 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:322
+  report.expectEqual("", hints.text, cppID: id,
+                         what: "reactivation never resurrects cached ownership")
+
+S009 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:326
+  report.expectEqual("", hints.text, cppID: id,
+                         what: "unknown profile clears rather than retaining unrelated instructions")
+
+S010 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:356
+  report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
+                    && router.isAvailable(.cut), cppID: id,
+                    message: "automation range owns semantic edit availability")
+
+S011 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:359
+  report.expectEqual(EditKeyDecision.execute.rawValue,
+                         router.route(.delete, autoRepeat: true).rawValue,
+                         cppID: id, what: "range Delete retains canonical repeat execution")
+
+S012 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:362
+  report.expectEqual(revision, document.revision, cppID: id,
+                         what: "availability and key arbitration never mutate the document")
+
+S013 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:364
+  report.expectEqual(EditKeyDecision.consume.rawValue,
+                         router.route(.transposeUp, autoRepeat: false).rawValue,
+                         cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
+
+S014 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:368
+  report.expectEqual(revision, document.revision, cppID: id,
+                         what: "lane transpose does not mutate a simultaneous note selection")
+
+S015 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:371
+  report.expectEqual([Tick(72)], document.lanePoints(
+          track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
+          cppID: id, what: "range Delete removes only points in the selected interval")
+
+S016 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:374
+  report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                    message: "time selection deletion leaves simultaneously selected notes intact")
+
+S017 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:378
+  report.expectEqual(afterDelete, document.revision, cppID: id,
+                         what: "empty selected range deletion never falls through to notes")
+
+S018 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:380
+  report.expect(document.note(selectedNote.id) != nil, cppID: id,
+                    message: "empty range still owns the operation target")
+
+S019 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:383
+  report.expect(page.selection == nil, cppID: id,
+                    message: "canonical clear-selection command clears the automation range")
+
+S020 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:385
+  report.expectEqual(EditKeyDecision.execute.rawValue,
+                         router.route(.delete, autoRepeat: false).rawValue,
+                         cppID: id, what: "note selection becomes the target after range clear")
+
+S021 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:389
+  report.expect(document.note(selectedNote.id) == nil, cppID: id,
+                    message: "shared note deletion remains reachable after range clear")
+
+S022 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:396
+  report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
+                    && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
+                    cppID: id, message: "track range deletes both its notes and automation points")
+
+S023 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:399
+  report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
+                    message: "track range leaves outside notes intact")
+
+S024 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:410
+  report.expectEqual(EditKeyDecision.consume.rawValue,
+                         router.route(.delete, autoRepeat: false).rawValue,
+                         cppID: id, what: "a live pointer gesture consumes semantic deletion")
+
+S025 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:414
+  report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
+                         what: "direct activation cannot bypass pointer gesture arbitration")
+
+S026 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:450
+  report.expectEqual("mus_session_test", detached.source.label,
+                             cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
+                             what: "published project snapshot survives source registry replacement")
+
+S027 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:471
+  report.expectEqual("mus_session_test", retained.source.label,
+                                 cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
+                                 what: "failed replacement open retains the worker's prior project")
+
+S028 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:489
+  report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                        cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
+                        message: "unknown label reaches the native playable-song rejection")
+
+S029 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:500
+  report.expectEqual("mus_session_test", session.document.source.label,
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
+                             what: "DocumentSession adopts the requested song source")
+
+S030 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:509
+  report.expectEqual(false, session.document.isDirty,
+                         cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
+                         what: "opened session starts clean")
+
+S031 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:516
+  report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
+                         cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
+                         what: "initial timeline matches canonical state factory projection")
+
+S032 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:529
+  report.expect(chunkMetasStripped,
+                    cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                    message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
+
+S033 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:532
+  report.expectEqual(1, session.document.state.tempo.count,
+                         cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
+                         what: "authoritative tempo point count in state")
+
+S034 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:538
+  report.expectEqual(UInt64(24_000), initialSampleAt24,
+                         cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
+                         what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
+
+S035 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:563
+  report.expect(publishedChangeCount > 0,
+                    cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
+                    message: "document mutation invokes session presenter callback")
+
+S036 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:566
+  report.expect(lastPublishedTimeline != nil,
+                    cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
+                    message: "immutable playback publication callback received updated timeline")
+
+S037 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:572
+  report.expectEqual(UInt64(19_200), editedSampleAt24,
+                         cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
+                         what: "state factory projection computes exact 19200 samples for edited tempo")
+
+S038 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:583
+  report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
+                         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                         what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
+
+S039 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:586
+  report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
+                    cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                    message: "extended clocks change an observable note-release sample")
+
+S040 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:595
+  report.expectEqual(UInt64(20_000), configuredGate60,
+                         cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                         what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
+
+S041 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:598
+  report.expect(defaultGate60 != configuredGate60,
+                    cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                    message: "exact gate changes an observable note-release sample")
+
+S042 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:607
+  report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
+                             cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                             what: "undo config restores default gate release scheduling")
+
+S043 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:610
+  report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                             cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                             what: "timeline remains at 150 BPM prior to tempo undo")
+
+S044 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:617
+  report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
+                             cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
+                             what: "undo tempo restores initial 120 BPM timing")
+
+S045 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:624
+  report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
+                             cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
+                             what: "redo tempo restores 150 BPM timing")
+
+S046 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:630
+  report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
+                             cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
+                             what: "redo config reproduces exact-gate event timing")
+
+S047 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:649
+  report.expect(
+          publishedChangeCount == publicationStart + 1
+              && publishedChanges.last?.domains == [.cursor]
+              && publishedChanges.last?.revision == preRevision
+              && publishedChanges.last?.trackRemap == nil,
+          cppID: statePublicationID,
+          message: "cursor-only mutation publishes exactly the cursor domain")
+
+S048 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:658
+  report.expectEqual(publicationStart, publishedChangeCount,
+                         cppID: statePublicationID,
+                         what: "equal cursor assignment publishes nothing")
+
+S049 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:664
+  report.expect(
+          publishedChangeCount == publicationStart + 1
+              && publishedChanges.last?.domains == [.mixState],
+          cppID: statePublicationID,
+          message: "mute mutation publishes exactly the mix-state domain")
+
+S050 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:671
+  report.expect(
+          publishedChangeCount == publicationStart + 1
+              && publishedChanges.last?.domains == [.mixState],
+          cppID: statePublicationID,
+          message: "solo mutation publishes exactly the mix-state domain")
+
+S051 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:679
+  report.expectEqual(publicationStart, publishedChangeCount,
+                         cppID: statePublicationID,
+                         what: "equal mute and solo assignments publish nothing")
+
+S052 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:708
+  report.expect(publishedChangeCount == publicationStart + 1 && observedCompletedBatch,
+                    cppID: statePublicationID,
+                    message: "nested throwing batch publishes completed state exactly once")
+
+S053 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:713
+  report.expect(
+          session.document.revision == preRevision
+              && session.document.isDirty == preDirty
+              && session.document.history.currentIdentity == preIdentity
+              && session.document.history.canUndo == preCanUndo
+              && session.document.history.canRedo == preCanRedo
+              && publishedPlaybackCount == prePlaybackCount,
+          cppID: statePublicationID,
+          message: "session-only changes preserve revision, dirty/history, and playback publication")
+
+S054 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:728
+  report.expectEqual(false, session.selectedNotes.contains(note1),
+                             cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
+                             what: "selection reconciler prunes dead note IDs when notes are deleted")
+
+S055 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:737
+  report.expect(otherSongCfgBefore != nil,
+                    cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                    message: "fixture exposes the other song's midi.cfg line")
+
+S056 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:747
+  report.expectEqual(Tick(72), preSaveLoopStart,
+                         cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                         what: "the loop-start edit is present before save")
+
+S057 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:756
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "edited song save confirms clean state")
+
+S058 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:763
+  report.expectEqual(
+          otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
+          cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+          what: "save preserves the other song's complete midi.cfg line bytes")
+
+S059 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:772
+  report.expect(legacyContent?.contains("\"protected\": true") == true,
+                    cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
+                    message: "save leaves legacy sidecar JSON untouched")
+
+S060 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:783
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "edit after save is dirty")
+
+S061 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:787
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "undo to the saved state is clean")
+
+S062 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:791
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "redo away from the saved state is dirty")
+
+S063 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:795
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "cleanup undo returns to the saved state")
+
+S064 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:811
+  report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
+                             cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
+                             what: "reopen reproduces saved authoritative 150 BPM timing")
+
+S065 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:814
+  report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                             what: "reopen reproduces settings-sensitive note-release timing")
+
+S066 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:817
+  report.expectEqual(preSaveFile, reopened.document.state.file,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "note and non-tempo metadata streams survive save/reopen")
+
+S067 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:820
+  report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "loop-start marker survives save/reopen")
+
+S068 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:823
+  report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "loop-end marker survives save/reopen")
+
+S069 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:827
+  report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "raw config flags survive save/reopen")
+
+S070 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:830
+  report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "voicegroup argument survives save/reopen")
+
+S071 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:833
+  report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "master volume survives save/reopen")
+
+S072 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:836
+  report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "reverb survives save/reopen")
+
+S073 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:839
+  report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
+                             cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
+                             what: "priority survives save/reopen")
+
+S074 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:842
+  report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
+                             what: "exact-gate setting survives save/reopen")
+
+S075 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:845
+  report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
+                             cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
+                             what: "extended-clock setting survives save/reopen")
+
+S076 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:854
+  report.expectEqual(false, reopenedHasTempoMeta,
+                             cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
+                             what: "tempo metas remain stripped while authoritative timing persists")
+
+S077 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:873
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "stale snapshot completion leaves the newer document dirty")
+
+S078 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:877
+  report.expectEqual(true, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "undoing only the newer edit remains dirty")
+
+S079 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:881
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
+                             what: "undoing both post-save edits returns to the saved state")
+
+S080 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:897
+  report.expect(song1.bank.bankToken != 0,
+                        cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+                        message: "opened song has non-zero bank token")
+
+S081 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:900
+  report.expectEqual(song1.bank.bankToken, song2.bank.bankToken,
+                             cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
+                             what: "songs sharing the same voicegroup reuse the native bank lease")
+
+S082 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:933
+  report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
+                             what: "failed stage preserves MIDI file bytes")
+
+S083 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:935
+  report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
+                             what: "failed stage preserves voicegroup file bytes")
+
+S084 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:937
+  report.expectEqual(true, session.document.isDirty, cppID: cppID,
+                             what: "failed stage leaves document dirty")
+
+S085 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:939
+  report.expectEqual(true, session.bankDirty, cppID: cppID,
+                             what: "failed stage leaves bank dirty")
+
+S086 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:950
+  report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
+                        cppID: reconcileID,
+                        message: "reconcile stage reports the native playable-song failure")
+
+S087 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:968
+  report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
+                            cppID: midiID,
+                            message: "MIDI stage reports its missing source file")
+
+S088 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:989
+  report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
+                            cppID: voicegroupID,
+                            message: "voicegroup stage reports its missing source file")
+
+S089 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1013
+  report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                        cppID: saveID,
+                        message: "save stage reports the unwritable destination")
+
+S090 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1029
+  report.expect(
+                  operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
+                  cppID: cppID,
+                  message: "playable label reaches native voicegroup resolution and is rejected")
+
+S091 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1039
+  report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
+                             cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
+                             what: "native service publishes a project-relative normalized bank identity")
+
+S092 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1042
+  report.expectEqual("mus_session_test", normalized.source.label,
+                             cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
+                             what: "native service round-trips the accepted playable song label")
+
+S093 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1065
+  report.expectEqual(true, firstDocumentClosed,
+                             cppID: lifetimeID,
+                             what: "first document closes cleanly")
+
+S094 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1071
+  report.expectEqual(true, session.isClosed,
+                         cppID: lifetimeID,
+                         what: "first document marks isClosed without closing its project service")
+
+S095 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1079
+  report.expect(labels.contains("mus_session_test") &&
+                        labels.contains("mus_session_test2"),
+                        cppID: lifetimeID,
+                        message: "project song labels remain available after document close")
+
+S096 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1096
+  report.expectEqual("mus_session_test2", secondLabel,
+                             cppID: lifetimeID,
+                             what: "same project service opens a second document without reopening")
+
+S097 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1099
+  report.expectEqual(true, secondDocumentClosed,
+                             cppID: lifetimeID,
+                             what: "second document closes cleanly")
+
+S098 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1120
+  report.expectEqual(ProjectServiceError.serviceClosed, error,
+                             cppID: lifetimeID,
+                             what: "explicit project service close owns worker shutdown")
+
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1165
+  report.expect(session.bankSlots.count >= 4,
+                    cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                    message: "published bank has slot views")
+
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1168
+  report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
+                         cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                         what: "slot 0 is editable square 1")
+
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1171
+  report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
+                         cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                         what: "slot 3 is initially blank")
+
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1195
+  report.expectEqual(true, session.bankDirty,
+                             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                             what: "bank edit dirties bank")
+
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1198
+  report.expectEqual(scalarEditedSlots, session.bankSlots,
+                             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                             what: "scalar edit changes the requested voice and preserves every other slot")
+
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1201
+  report.expect(result.lease.bankToken != oldToken,
+                        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                        message: "applied bank edit mints a fresh lease")
+
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1204
+  report.expectEqual(oldToken, oldLease.bankToken,
+                             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                             what: "superseded lease retains its bank token and stays valid")
+
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1207
+  report.expect(
+              bankPublications.count == 1
+                  && bankPublications[0].domains == [.bank, .dirty, .history],
+              cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+              message: "bank edit publishes bank, dirty, and history exactly once")
+
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1218
+  report.expectEqual(originalSlots, session.bankSlots,
+                             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                             what: "undo restores the complete original bank view")
+
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1221
+  report.expect(
+              bankPublications.count == 1
+                  && bankPublications[0].domains == [.bank, .dirty, .history],
+              cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+              message: "bank undo publishes bank, dirty, and history exactly once")
+
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1232
+  report.expectEqual(scalarEditedSlots, session.bankSlots,
+                             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                             what: "redo restores the scalar edit without changing other slots")
+
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1235
+  report.expect(
+              bankPublications.count == 1
+                  && bankPublications[0].domains == [.bank, .dirty, .history],
+              cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+              message: "bank redo publishes bank, dirty, and history exactly once")
+
+S111 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1269
+  report.expect(operationFailureMessage(error) != nil,
+                            cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                            message: "preview filesystem failure reaches the public service error type")
+
+S112 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1277
+  report.expectEqual(previewSlots, session.bankSlots,
+                         cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                         what: "preview failure preserves every visible bank slot")
+
+S113 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1280
+  report.expectEqual(previewDirty, session.bankDirty,
+                         cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                         what: "preview failure preserves visible dirty state")
+
+S114 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1283
+  report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
+                         cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
+                         what: "preview failure leaves source file bytes unchanged")
+
+S115 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1298
+  report.expect(materialized.materializationToken != nil,
+                        cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                        message: "blank slot materialization issues a single-shot token")
+
+S116 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1301
+  report.expectEqual(materializedSlots, session.bankSlots,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                             what: "blank materialization publishes the requested voice and preserves other slots")
+
+S117 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1309
+  report.expectEqual(beforeMaterializationSlots, session.bankSlots,
+                             cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
+                             what: "undo restores the complete pre-materialization bank view")
+
+S118 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1317
+  report.expectEqual(materializedSlots, session.bankSlots,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
+                             what: "redo rematerializes the voice without changing other slots")
+
+S119 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1339
+  report.expectEqual(Int32(25), session.bankSlots[0].voice?.pan,
+                             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                             what: "second pan edit applied")
+
+S120 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1347
+  report.expectEqual(Int32(15), session.bankSlots[0].voice?.pan,
+                             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                             what: "undo reverts merged pan edits to origin in one step")
+
+S121 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1366
+  report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
+                        cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+                        message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
+
+S122 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1388
+  report.expectEqual(ProjectServiceError.bankConflict, error,
+                             cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                             what: "stale expected voice triggers bankConflict")
+
+S123 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1395
+  report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
+                         cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                         what: "initial conflict leaves canUndo unchanged")
+
+S124 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1398
+  report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
+                         cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
+                         what: "initial conflict leaves canRedo unchanged")
+
+S125 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1411
+  report.expectEqual(ProjectServiceError.bankConflict, error,
+                             cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
+                             what: "materializing occupied slot triggers bankConflict")
+
+S126 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1427
+  report.expectEqual(ProjectServiceError.bankConflict, error,
+                             cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
+                             what: "unknown token triggers bankConflict")
+
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1453
+  report.expectEqual(false, session.document.isDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                             what: "unified save marks the song clean")
+
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1456
+  report.expectEqual(false, session.bankDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                             what: "unified save marks the bank clean")
+
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1459
+  report.expect(
+              bankPublications.count == 1
+                  && bankPublications[0].domains == [.bank, .dirty, .history],
+              cppID: "swiftcore/DocumentSession::bankPublicationDomains",
+              message: "unified bank save publishes bank, dirty, and history exactly once")
+
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1464
+  report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
+                        cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                        message: "unified save changes persisted MIDI bytes")
+
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1467
+  report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
+                        cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                        message: "unified save changes persisted bank bytes")
+
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1478
+  report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                             what: "fresh reopen reads the unified song edit from disk")
+
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1481
+  report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
+                             what: "fresh reopen reads the unified bank edits and preserved slots from disk")
+
+S134 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1525
+  report.expectEqual(Optional(Data(staleSnapshot.bytes)),
+                                 bytes(at: session.document.source.midiPath),
+                                 cppID: queuedSaveID,
+                                 what: "queued save writes the captured stale MIDI snapshot")
+
+S135 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1529
+  report.expectEqual(newerIdentity, session.document.history.currentIdentity,
+                                 cppID: queuedSaveID,
+                                 what: "save completion preserves the newer document identity")
+
+S136 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1532
+  report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                                 what: "stale save completion cannot clean the newer edit")
+
+S137 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1534
+  report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                                 what: "queued native bank write publishes its clean receipt")
+
+S138 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1536
+  report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                                 cppID: queuedSaveID,
+                                 what: "queued bank save preserves the edited bank voice")
+
+S139 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1545
+  report.expectEqual(Optional(Data(newerSnapshot.bytes)),
+                                 bytes(at: session.document.source.midiPath),
+                                 cppID: queuedSaveID,
+                                 what: "retry writes the newer MIDI snapshot")
+
+S140 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1549
+  report.expectEqual(false, session.document.isDirty, cppID: queuedSaveID,
+                                 what: "newer-state retry marks the document clean")
+
+S141 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1553
+  report.expect(undidNewer && session.document.note(newerNote) == nil
+                  && session.document.note(staleNote) != nil,
+                  cppID: queuedSaveID,
+                  message: "first undo removes only the newer note")
+
+S142 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1558
+  report.expect(undidStale && session.document.note(staleNote) == nil,
+                            cppID: queuedSaveID,
+                            message: "second undo removes the stale note")
+
+S143 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1561
+  report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
+                                 what: "undoing past the retry save point is dirty")
+
+S144 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1563
+  report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
+                                 what: "note undos leave the saved bank clean")
+
+S145 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1565
+  report.expectEqual(savedVoice, session.bankSlots[0].voice,
+                                 cppID: queuedSaveID,
+                                 what: "note undos leave the saved bank edit applied")
+
+S146 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1568
+  report.expectEqual(savedBankBytes, bytes(at: bankPath), cppID: queuedSaveID,
+                                 what: "note undos leave saved bank bytes intact")
+
+S147 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1586
+  report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                             what: "adjacent release edit reaches the production bank view")
+
+S148 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1589
+  report.expectEqual(true, session.bankDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                             what: "adjacent release edit dirties the bank")
+
+S149 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1592
+  report.expectEqual(documentWasDirty, session.document.isDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
+                             what: "adjacent release edit does not dirty the document")
+
+S150 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1602
+  report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                             what: "lower release bound reaches the production bank view")
+
+S151 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1605
+  report.expectEqual(true, session.bankDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                             what: "lower-bound bank edit dirties the bank")
+
+S152 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1608
+  report.expectEqual(documentWasDirty, session.document.isDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
+                             what: "lower-bound bank edit does not dirty the document")
+
+S153 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1617
+  report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                             what: "upper release bound reaches the production bank view")
+
+S154 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1620
+  report.expectEqual(true, session.bankDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                             what: "upper-bound bank edit dirties the bank")
+
+S155 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1623
+  report.expectEqual(documentWasDirty, session.document.isDirty,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
+                             what: "upper-bound bank edit does not dirty the document")
+
+S156 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1630
+  report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
+                             cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                             what: "opening another song reuses the unsaved shared-bank record")
+
+S157 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1633
+  report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
+                             cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                             what: "another song publishes the unsaved shared-bank edit")
+
+S158 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1636
+  report.expectEqual(true, switched.bankDirty,
+                             cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
+                             what: "another song preserves shared-bank dirty state")
+
+S159 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1665
+  report.expect(operationFailureMessage(error) != nil,
+                            cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                            message: "catalog outage reaches the native service error boundary")
+
+S160 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1673
+  report.expectEqual(retainedToken, session.bankLease.bankToken,
+                         cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                         what: "catalog outage retains the last valid bank lease")
+
+S161 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1676
+  report.expectEqual(retainedSlots, session.bankSlots,
+                         cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                         what: "catalog outage retains the last valid bank slots")
+
+S162 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1679
+  report.expectEqual(retainedDirty, session.bankDirty,
+                         cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
+                         what: "catalog outage retains bank dirty state")
+
+S163 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1706
+  report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                             cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
+                             what: "round-trip scalar edit preserves every other bank slot")
+
+S164 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1714
+  report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
+                        cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                        message: "successful bank save publishes a refreshed native bank")
+
+S165 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1717
+  report.expectEqual(false, roundtripSession.bankDirty,
+                             cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                             what: "successful bank save publishes a clean record")
+
+S166 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1720
+  report.expect(editedBytes != originalBytes,
+                        cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
+                        message: "successful bank save changes persisted bank bytes")
+
+S167 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1727
+  report.expectEqual(originalSlots, roundtripSession.bankSlots,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                             what: "undo after save restores the complete original bank")
+
+S168 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1733
+  report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                             what: "saving the undo restores original voicegroup bytes")
+
+S169 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1740
+  report.expectEqual(editedSlots, roundtripSession.bankSlots,
+                             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                             what: "redo after saving the undo restores the edited bank and other slots")
+
+S170 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1746
+  report.expectEqual(editedBytes, bytes(at: roundtripBankPath),
+                             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                             what: "saving the redo reproduces edited voicegroup bytes")
+
+S171 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1756
+  report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
+                             cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
+                             what: "final undo/save restores original voicegroup bytes")
+
+S172 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1785
+  report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
+                            cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                            message: "failed bank save reports its unwritable source")
+
+S173 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1788
+  report.expectEqual(true, roundtripSession.bankDirty,
+                                 cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                                 what: "failed bank save retains the dirty bank record")
+
+S174 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1791
+  report.expectEqual(true, roundtripSession.document.isDirty,
+                                 cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
+                                 what: "failed ordered save retains the dirty document record")
+
+S175 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1819
+  report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
+                            cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
+                            message: "unknown identity is reported as a hard native error")
+
+S176 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1862
+  report.expectEqual(
+              ProjectServiceError.operationFailed("A bank transition is already in progress."),
+              result.1,
+              cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+              what: "session gate refuses a second transition while the first is pending")
+
+S177 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1867
+  report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
+                             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                             what: "coordinator publishes only the applied transition")
+
+S178 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1870
+  report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
+                             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+                             what: "coordinator adopts the applied transition lease")
+
+S179 | releaseEditorBankHistorySemantics | src/checks/workspace/SessionChecks.swift:1933
+  report.expect(appliedThroughBankPipeline && undone
+                  && session.bankSlots[0].voice?.release == original.release
+                  && !session.document.isDirty,
+                  cppID: cppID,
+                  message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
+
+S180 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2044
+  report.expect(result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
+              cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+              message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
+
+S181 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2075
+  report.expect(result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
+              cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
+              message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
+
+S182 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2093
+  report.expect(staleRedoRemoved && !staleRedoDocument.history.canRedo &&
+          staleRedoDocument.state.config.priority == 6,
+          cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+          message: "stale bank redo entry is removed without mutating document state")
+
+S183 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2108
+  report.expect(staleRemoved && staleUndoDocument.state.config.priority == 0,
+          cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+          message: "stale bank undo entry is removed so the next undo reaches document history")
+
+S184 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2120
+  report.expect(hardAction.calls == 2 && hardDocument.state.config.priority == 4 &&
+          hardDocument.history.canUndo,
+          cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
+          message: "hard bank failure keeps the entry available and does not cross it")
+
+S185 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2132
+  report.expect(cancelling.state.config.priority == 0,
+          cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
+          message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
