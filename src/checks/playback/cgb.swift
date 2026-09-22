@@ -7,6 +7,8 @@ import PorydawPlaybackNative
 func checkControllerCgbPublication(_ report: CheckReport) throws {
     for preview in [false, true] {
         let cgbRig = try AudioControllerCheckFixture(cgb: true)
+        // Square-2 encodes its duty cycle in the pointer's low bits; it is never dereferenced.
+        cgbRig.voices[2].wavePointer = UnsafeMutablePointer<UInt32>(bitPattern: 2)
         let original = cgbPublicationTimeline()
         cgbRig.renderer.bind(timeline: original, voicegroup: cgbRig.voices, settings: AudioSettings())
         if preview { cgbRig.renderer.audition.previewNote(track: 0, key: 60, velocity: 127) }

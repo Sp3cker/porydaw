@@ -14,6 +14,21 @@ Rows (sample,looping,sorted keyed-on keys): pass-1-tied-note-sounds=(200000,true
 Execution: tst_loop.swift:93 runPairedLoopChecks -> PlaybackChecks.swift:30 runPlaybackSuite -> CoreCheckSupport.swift:99 pdc_suite_run(3) -> checkcatalog.cpp:155-159 --swiftcore -> swift_core_check target (src/checks/CMakeLists.txt:104-115). Native engine bridge: native_check.cpp:67-91,191-206 owns M4AEngine and checks::SustainVoicegroup; transportfixture.swift:26-59 creates/destroys it and inspects actual PCM channels. Original .cpp/.h were already omitted from native CMake/catalog; the header was only included by its original .cpp.
 Verification: recorded baseline deno task verify --filter swiftcore --filter clickcheck --verbose: PASS 2/2 selected (24 total, 22 skipped), swiftcore 1.83s, before subsequent shared-loader changes. The parallel retirement agent did not run the post-deletion check; the integrated result is above.
 
+Focused Swift verification
+Command: deno task verify --filter swiftcore --qt xcmdEdits playback eventEdits
+Result: PASS; SwiftCoreTest 5 passed and 0 failed, swiftcore 1/24 selected
+harnesses. playback executed the paired loop assertions on the current tree.
+Legacy native source suites are not registered in the current checkcatalog;
+no native loopcheck/primecheck execution is claimed.
+
+Shared fixture provenance
+The engine bridge uses checks::SustainVoicegroup from playback/sustainvoicegroup.h.
+Its program 2 override is unused by these fixtures (loop program 0; prime 5/7/9).
+src/checks/playback/transportfixture.swift SHA-256: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
+src/checks/playback/PlaybackChecks.swift SHA-256: 7e1cc988b6542fc2fdcdcb377a7b73b2369df0c4901dfe460b0986fefb7f1bfe
+src/checks/playback/sustainvoicegroup.h SHA-256: 2605285c630cfa4cf37212ac02a59140adb17d5fcaa5567ac48fd0c55abbffe5
+src/checks/support/corecheck/native_check.cpp SHA-256: 5093b74731d2bc0c64ee6793df3649d97b280b6146cc97844ea6a54704c75815
+
 Original assertion inventory
 
 A001 | LoopTest::init | src/checks/playback/tst_loop.cpp:123

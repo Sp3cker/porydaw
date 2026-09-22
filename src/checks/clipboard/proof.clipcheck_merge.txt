@@ -4,7 +4,7 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/clipboard/clipcheck_merge.cpp
 Original SHA-256: c33ff2f6f7d2ff5ad5b68dc2c4a065f62bb94a1fff364d304bec1ee5e80f6b64
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 4b61ad28147aa39f77d093b5ccdd291bd51a534639e2cc8c0c4716ccbc74534e
+Swift SHA-256: 979259674abbd4893b3094b4bfdfc725454f3513fd7715ed3408adf10e318a67
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -493,45 +493,45 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift:1283
+S001 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift:1284
   report.expect(forward == ["0:70:24", "24:60:48"] &&
           result?.nextCursor == 72 && undone,
           cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
           message: "TPQN rescaling feeds production note paste and records one reversible edit")
 
-S002 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift:1426
+S002 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift:1427
   report.expect(merged && oneUndo,
           cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
           message: "one production range merge applies last-wins exact-tick lane and tempo replacement and undoes atomically")
 
-S003 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1444
+S003 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1445
   report.expect(emptyResult == nil && coreTimeBytes(emptyDocument) == emptyBefore &&
           emptyDocument.history.currentIdentity == emptyIdentity,
           cppID: "clipcheck/ClipCheckTest::emptyLaneMergeIsNoop",
           message: "an empty lane merge returns no cursor and changes neither document nor history")
 
-S004 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1460
+S004 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1461
   report.expect(forward == ["0:60:24", "96:60:24"] &&
           first?.nextCursor == 96 && second?.nextCursor == 192 && firstUndo && secondUndo,
           cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
           message: "time paste advances by span and each tile is one undo entry")
-S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1710
+S005 | runClipboardCodecSuite | src/checks/editcheck/TimeChecks.swift:1711
   report.expectEqual(
           downExpected,
           ClipboardCodec.rescale(downInput, sourceTicksPerBeat: 48, destinationTicksPerBeat: 24),
           cppID: "clipmimecheck/ClipMimeTest::rescaleFamilies[down_48_to_24_round_up_last_wins]",
           what: "half-up down-scaled clip with stable last-wins collisions")
-S006 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift:1280
+S006 | crossTpbClipboardPaste | src/checks/editcheck/TimeChecks.swift:1281
   report.expectEqual(1, undoDelta,
           cppID: "clipcheck/ClipCheckTest::crossTpbNotePaste",
           what: "TPQN-scaled note paste adds exactly one history entry")
 
-S007 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift:1423
+S007 | timeRangeClipboardMerge | src/checks/editcheck/TimeChecks.swift:1424
   report.expectEqual(1, mergeHistoryDelta,
           cppID: "clipcheck/ClipCheckTest::mergeTimeRangeAndUndo",
           what: "range merge adds exactly one history entry")
 
-S008 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1464
+S008 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1465
   report.expectEqual(2, (firstUndo ? 1 : 0) + (secondUndo ? 1 : 0),
           cppID: "clipcheck/ClipCheckTest::tiledTimePasteUndoesOneTileAtATime",
           what: "two tiled pastes add exactly two history entries")

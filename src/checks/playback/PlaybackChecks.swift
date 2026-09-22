@@ -26,9 +26,11 @@ func runPlaybackSuite(_ report: CheckReport) {
               path: projectionPath, cppID: mappingID, report: report) else { return }
     checkEngineTrackMapping(projectionTimeline, report: report)
     checkNoteIdentities(report)
+    checkMidiEngineBounds(report)
 
     guard runPairedLoopChecks(fixtureRoot: fixtureRoot, report: report) else { return }
     guard runPairedPrimeChecks(fixtureRoot: fixtureRoot, report: report) else { return }
+    runPolyphonyEngineChecks(report)
 
     let defaultPath = URL(fileURLWithPath: fixtureRoot)
         .appendingPathComponent("swiftcore-controller-default.mid").path

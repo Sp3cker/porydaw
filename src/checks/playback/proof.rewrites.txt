@@ -29,14 +29,23 @@ nil and vector size/empty to count/isEmpty. The original is pinned above.
 Execution: swiftcore case 7 (src/checks/support/corecheck/CoreCheckSupport.swift:122-126,
 SHA-256 5e70b54876d85d2ac9fc1d2abc8be490910bd2d2c964ecb41e5f404af3044180)
 invokes runXcmdEditsSuite (src/checks/editcheck/EventChecks.swift:28-39,
-SHA-256 ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092),
+SHA-256 c8aa71925950b7ab746177e857954ba5c88f9bf4ac03d8fef2d29c1b21d5f3bf),
 which invokes runXcmdRewritesOriginalChecks (rewrites.swift:161-171), calling
 all nine methods. src/checks/CMakeLists.txt:104-128 compiles these Swift
-sources into swift_core_check (SHA-256 e4bb047346ec548a679cbe4631c635fbcfa7c04fd5eccd49e08d1b0ffd82d278).
+sources into swift_core_check (SHA-256 dcb9da64b9b4d9899268e94fa5e141cd2e608a2540437f8d48d8932028e19989).
 Historical checkpoint recorded before this retirement: deno task verify --filter
 swiftcore --filter clickcheck --verbose: PASS 2/2 selected (24 total), swiftcore
 1.83s. Post-deletion Swift execution is recorded above;
 no current native xcmdcheck execution or differential parity is claimed.
+
+Focused Swift verification
+Command: deno task verify --filter swiftcore --qt xcmdEdits playback eventEdits
+Result: PASS; SwiftCoreTest 5 passed and 0 failed, swiftcore 1/24 selected
+harnesses. xcmdEdits executed the paired XCMD rewrite assertions on the current tree.
+The current build does not register the old xcmdcheck native harness; no native
+execution or live differential parity is claimed.
+
+Original assertion inventory
 
 A001 | XcmdTest::addOnEmptyTrackEmitsCanonicalPair | src/checks/playback/rewrites.cpp:14
 Disposition: MATCHED

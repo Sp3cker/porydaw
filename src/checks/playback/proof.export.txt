@@ -29,11 +29,20 @@ compiled into swift_core_check by src/checks/CMakeLists.txt.
 Runner source SHA-256: src/checks/support/corecheck/CoreCheckSupport.swift
 5e70b54876d85d2ac9fc1d2abc8be490910bd2d2c964ecb41e5f404af3044180
 src/checks/editcheck/EventChecks.swift
-ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
+c8aa71925950b7ab746177e857954ba5c88f9bf4ac03d8fef2d29c1b21d5f3bf
 src/checks/CMakeLists.txt
-e4bb047346ec548a679cbe4631c635fbcfa7c04fd5eccd49e08d1b0ffd82d278
+dcb9da64b9b4d9899268e94fa5e141cd2e608a2540437f8d48d8932028e19989
 Verification: deno task verify --filter swiftcore --verbose — PASS 1/24
 (23 skipped), 9.64s, before this source-only retirement; post-deletion result above.
+
+Focused Swift verification
+Command: deno task verify --filter swiftcore --qt xcmdEdits playback eventEdits
+Result: PASS; SwiftCoreTest 5 passed and 0 failed, swiftcore 1/24 selected
+harnesses. xcmdEdits executed the paired XCMD export assertions on the current tree.
+The current build does not register the old xcmdcheck native harness; no native
+execution or live differential parity is claimed.
+
+Original assertion inventory
 
 A001 | XcmdTest::sharedSelectorRebuiltAsSameTickPairs | src/checks/playback/export.cpp:33
 Disposition: MATCHED

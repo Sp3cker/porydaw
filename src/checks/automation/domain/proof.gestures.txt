@@ -15,6 +15,21 @@ Retirement: 67 original assertion sites, 66 MATCHED and 1 RETIRED-REPRESENTATION
 Fixture and execution: Five original slots cover sweep stepping and ramp finish, trailing held-value restoration, Pan neutral snap, node drag and phantom outcomes, and point-range/pencil replacements. Inline Swift fixtures exercise a 24-tick division lattice, point and held-span replacements, a production empty Modulation lane with engine-default lead-in 0, and a past-last-point lane with a real held value 20. The source-pinned inventory below preserves the original loops, fixture values, and assertion order.
 History caveat: Swift exercises document undo/redo through public history APIs and asserts restored observable state; no test-only history accessors or C++ undo-stack index correspondence is claimed.
 Registered run path: src/checks/automation/AutomationPageChecks.swift:361-365 :: runAutomationPageChecks → runProjectSessionSuite → projectSession (swiftcore suite 10 via pdcSuiteRun); gesture core seams also run in eventEdits (suite 6). The Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
+Verification evidence
+2026-09-22 focused Swift runs on the source hashes above:
+deno task verify --filter swiftcore --qt timeEdits eventEdits: exit 0;
+SwiftCoreTest 4 passed, 0 failed. These suites cover adjacent edit seams, not
+the gesture assertions in this file.
+deno task verify --filter swiftcore --qt playback projectSession: exit 0;
+SwiftCoreTest 4 passed, 0 failed. projectSession calls runProjectSessionSuite,
+which calls runAutomationPageChecks and all five paired gesture functions below,
+including the supplemental awaited-history regression. The owning Swift suite
+passed on these hashes; 66 sites are MATCHED and one is
+RETIRED-REPRESENTATION because the production empty-lane pencil restores
+the parameter default 0 where the C++ fixture supplies lead-in 20.
+This is focused Swift evidence, not a whole-tree pass; the last whole-tree run
+was 23/24 because the separate swiftrollgated native Quick-window readiness
+check failed.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -244,7 +259,7 @@ Disposition: MATCHED
 Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationNodeDragAndPhantomOutcomes, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration.
 Swift counterpart expression:
   report.expect(!plainPress.finish().changed, cppID: drawerAutomationNodeDragID,
-                    message: "the stationary delete reports no move")
+                  message: "a stroke that never moved the node changes nothing")
 Original expression:
   QVERIFY(!unchanged.changed)
 
@@ -670,7 +685,7 @@ stronger predicates remain in the paired file and retain their suite execution o
 
 Supplemental awaited-history regression (not an original assertion)
 src/checks/automation/domain/gestures.swift :: coreAutomationPanUndoRegression
-Two separate Pan writes produce0:112,12:64,72:15,108:64. AutomationNodeResolver/AutomationCommit move the first value to63. One awaited undo restores all four occurrences; a separate second undo removes the second write. Redo restores the moved state.
+Two separate Pan writes produce 0:112,12:64,72:15,108:64. AutomationNodeResolver/AutomationCommit move the first value to63. One awaited undo restores all four occurrences; a separate second undo removes the second write. Redo restores the moved state.
 The source values reproduce the production QML undo failure, not new literal
 assertions attributed to the original C++ check. Original trackheaderraster
 asserts cursor/playhead subtitle transitions; original panNeutralSnap asserts
@@ -678,8 +693,7 @@ neutral value mapping. Their original inventories are unchanged.
 AutomationPageChecks.runAutomationPageChecks invokes this async scenario through its suite-owned RunLoop-pumping helper. The Qt Quick test lane must separately await ApplicationSession Tasks
 through its existing RunLoop-pumping history helper; a Qt-only tryCompare does
 not itself demonstrate that the Swift Task has completed.
-Supplemental verification command: deno task verify --filter swiftcore --verbose.
-The earlier centralized run passed both awaited-history regressions before this
-ownership-only relocation. Re-run that command for the current paired-file hash.
+The focused projectSession run above includes this awaited-history regression
+on the current paired-file hash. A full swiftcore rerun is not claimed here.
 QML verification is separate: deno task verify:qml --verbose. A model pass does
 not establish Qt-loop Task scheduling or native rendered acceptance.

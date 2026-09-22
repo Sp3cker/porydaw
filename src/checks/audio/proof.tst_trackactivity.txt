@@ -28,7 +28,9 @@ trackactivitycheck --filter resonancecheck --filter resonancecheck-timing
 --verbose — PASS 3/24 (21 skipped). No retirement certification is claimed.
 
 Execution ownership
-runTrackActivityChecks runs before the track-header model cases. All ten original
+runProjectSessionSuite (workspace/SessionChecks.swift:422, 1057) invokes
+runTrackHeadersChecks (trackheaders/TrackHeadersChecks.swift:6-8), which runs
+runTrackActivityChecks before the track-header model cases. All ten original
 policy scenarios are ported with the same inputs, loop bounds, and tolerances.
 
 Original assertion inventory and source sequence

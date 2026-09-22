@@ -104,6 +104,7 @@ if(APPLE)
     add_library(swift_core_check STATIC
         support/corecheck/CoreCheckSupport.swift
         midi/MidiChecks.swift
+        midi/MidiEngineBoundsChecks.swift
         playback/PlaybackChecks.swift
         audio/controllerfixture.swift
         audio/tst_clicktransport.swift
@@ -113,6 +114,7 @@ if(APPLE)
         playback/transportfixture.swift
         playback/tst_loop.swift
         playback/tst_prime.swift
+        polyphony/polyphonyengine.swift
         playback/tst_xcmd.swift
         keyboard/tst_velocitymodel.swift
         editcheck/tst_songdocument_songraw.swift

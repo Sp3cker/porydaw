@@ -159,6 +159,29 @@ void SwiftRollGatedTest::songTabsGeometryAndSelection()
              "the selected state stops before the inset close control");
     QCOMPARE(changedPixels(selectedFrame, otherFrame, thirdBody), 0);
 
+    // The supplied close SVG must paint a contrasting glyph inside its control.
+    const QRect closePixels =
+        QRectF(closeRect.topLeft() * dpr, closeRect.size() * dpr).toAlignedRect();
+    const QPoint samplePoint{closePixels.left() + qRound(2 * dpr),
+                             closePixels.top() + qRound(2 * dpr)};
+    QVERIFY(selectedFrame.rect().contains(closePixels));
+    QVERIFY(selectedFrame.rect().contains(samplePoint));
+    const QRgb closeBackground = selectedFrame.pixel(samplePoint);
+    int glyphPixels = 0;
+    const int inset = qMax(1, qRound(4 * dpr));
+    for (int y = closePixels.top() + inset; y < closePixels.bottom() - inset; ++y) {
+        for (int x = closePixels.left() + inset; x < closePixels.right() - inset; ++x) {
+            const QRgb pixel = selectedFrame.pixel(x, y);
+            if (qAbs(qRed(pixel) - qRed(closeBackground)) +
+                    qAbs(qGreen(pixel) - qGreen(closeBackground)) +
+                    qAbs(qBlue(pixel) - qBlue(closeBackground)) >
+                24)
+                ++glyphPixels;
+        }
+    }
+    QVERIFY2(glyphPixels > qMax(4, qRound(dpr * dpr * 4)),
+             "close SVG did not render a visible glyph inside its control");
+
     // The grid renders inside the clipped page stack: the selected page's note
     // faces are painted below the strip.
     const auto rendered = scene.firstVisibleNote(secondId);

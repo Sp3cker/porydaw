@@ -3,49 +3,53 @@ Assertion correspondence: midi/tst_midiengine.cpp
 Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midiengine.cpp
 Original SHA-256: 6260d911943cb93de174b2061578b626bf4c717e05ddf0ac17e038218ffc1648
-Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: 7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce
+Swift counterpart: src/checks/midi/MidiEngineBoundsChecks.swift
+Swift SHA-256: 0f650ff53b5dfeb7c65673ed9d9cd2a116ca2d8a94a6bb36ddcb4635176523d5
+Swift entry point: src/checks/playback/PlaybackChecks.swift
+Entry point SHA-256: 7e1cc988b6542fc2fdcdcb377a7b73b2369df0c4901dfe460b0986fefb7f1bfe
+Shared engine fixture: src/checks/playback/transportfixture.swift
+Fixture SHA-256: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies an equivalent Swift predicate that would execute for the same
-logical observation; execution must still be verified.
+MATCHED identifies an equivalent Swift predicate executed for the same
+logical observation. The Swift check calls the retained native M4A engine;
+this is not a pure-Swift engine implementation or a live differential run.
 PARTIAL identifies a related Swift predicate with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 
 Verification
-Command: deno task verify --filter midienginecheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The midienginecheck lane is a native-only Qt check (Invalid MIDI
-programs/keys cannot change a voice or start PCM channels). Its C++ sources
-are reference inventories for the bounds contract below, never Swift execution
-evidence.
+Command: deno task verify --filter swiftcore --qt playback
+Result: PASS; SwiftCoreTest 3 passed and 0 failed, swiftcore 1/24 selected
+harnesses. The registered midienginecheck remains a separate native Qt check;
+it was not run or used as Swift execution evidence.
 
 Execution ownership
-No Swift entry point executes these bounds checks. runMidiCodecSuite and
-runMusicalSemanticsSuite exercise the MIDI codec, musical semantics, and
-mid2agb equivalence only; neither initializes an M4AEngine, installs a
-keysplit voicegroup, issues out-of-range program changes or note-ons, or
-inspects PCM channel status. The paired observations remain native-only.
+runPlaybackSuite calls checkMidiEngineBounds. Each of its two scenarios uses
+a fresh 48 kHz PlaybackCheckEngine with zeroed 128-entry voice/subgroup/split
+tables and program 5 configured as VOICE_KEYSPLIT, matching the native fixture.
+The Swift assertions inspect the real M4AEngine track and every PCM channel.
 
 Fixture, sequence and row constraints
 EngineFixture initializes the engine at 48000 Hz and installs a keysplit
 voicegroup with program 5 selected. programChangesRejectOutOfRangeValues
 issues programs 5 (accepted), 128 and 255 (rejected). noteOnsRejectOutOfRangeKeys
 issues note-on 128/255 and note-off 255, then A003 expands one QVERIFY site
-over every PCM channel (TOTAL_PCM_CHANNELS). Original setup and helper bodies
+over every PCM channel (TOTAL_PCM_CHANNELS). The Swift check preserves those
+inputs, ordering and per-channel expansion. Original setup and helper bodies
 at the reference revision remain authoritative.
 
 Original assertion inventory and source sequence
 
 A001 | checks::MidiEngineBoundsTest::programChangesRejectOutOfRangeValues | src/checks/midi/tst_midiengine.cpp:52
-Disposition: GAP
-Mapping/reason: No equivalent Swift assertion established. Swift m4a_engine call sites use in-range programs and keys only; no Swift predicate observes out-of-range program/key rejection, program retention, or PCM channel silence.
+Disposition: MATCHED
+Swift: S001 | src/checks/midi/MidiEngineBoundsChecks.swift :: checkMidiEngineBounds
+Mapping/reason: S001 asserts currentProgram is 5 immediately after the same valid program change on a fresh keysplit engine.
 Source context since previous assertion:
   #include "checks/midi/tst_midiengine.h"
   #include "checks/fwd.hpp"
@@ -103,8 +107,9 @@ Original expression:
   QCOMPARE(int(fixture.engine().tracks[0].currentProgram), 5)
 
 A002 | checks::MidiEngineBoundsTest::programChangesRejectOutOfRangeValues | src/checks/midi/tst_midiengine.cpp:55
-Disposition: GAP
-Mapping/reason: No equivalent Swift assertion established. Swift m4a_engine call sites use in-range programs and keys only; no Swift predicate observes out-of-range program/key rejection, program retention, or PCM channel silence.
+Disposition: MATCHED
+Swift: S002 | src/checks/midi/MidiEngineBoundsChecks.swift :: checkMidiEngineBounds
+Mapping/reason: S002 asserts currentProgram stays 5 after invalid changes to 128 and 255 on that engine.
 Source context since previous assertion:
   ;
       m4a_engine_program_change(&fixture.engine(), 0, 128);
@@ -114,8 +119,9 @@ Original expression:
   QCOMPARE(int(fixture.engine().tracks[0].currentProgram), 5)
 
 A003 | checks::MidiEngineBoundsTest::noteOnsRejectOutOfRangeKeys | src/checks/midi/tst_midiengine.cpp:71
-Disposition: GAP
-Mapping/reason: No equivalent Swift assertion established. Swift m4a_engine call sites use in-range programs and keys only; no Swift predicate observes out-of-range program/key rejection, program retention, or PCM channel silence.
+Disposition: MATCHED
+Swift: S003 | src/checks/midi/MidiEngineBoundsChecks.swift :: checkMidiEngineBounds
+Mapping/reason: S003 checks CHN_ON is clear on every PCM channel after the original 128/255 note-ons and 255 note-off, with a fresh keysplit engine and program 5.
 Source context since previous assertion:
   ;
   }
@@ -153,6 +159,12 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-None identified: no report.expect*/expectEqual call in src/checks/midi/MidiChecks.swift carries a
-midienginecheck cppID or observes M4AEngine program/key bounds. All three
-original sites above are GAP.
+S001 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift:35
+  report.expectEqual(UInt8(5), engine.pointee.tracks.0.currentProgram,
+                     cppID: programID, what: "valid program selects keysplit voice")
+S002 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift:39
+  report.expectEqual(UInt8(5), engine.pointee.tracks.0.currentProgram,
+                     cppID: programID, what: "invalid programs retain selection")
+S003 | checkMidiEngineBounds | src/checks/midi/MidiEngineBoundsChecks.swift:52
+  report.expect(channels[index].status & playbackCheckChannelOn == 0,
+                cppID: keyID, message: "PCM channel \(index) remains off")
