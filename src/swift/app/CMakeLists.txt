@@ -63,6 +63,9 @@ add_library(PorydawApp STATIC
     drawer/automation/AutomationEdits.swift
     drawer/automation/AutomationSelectionCommands.swift
     drawer/automation/AutomationScene.swift
+    drawer/automation/AutomationHandles.swift
+    drawer/automation/AutomationContentPublication.swift
+    drawer/automation/AutomationOverlayPublication.swift
     drawer/automation/AutomationInteraction.swift
     drawer/automation/AutomationModal.swift
     drawer/automation/AutomationTapTempo.swift
