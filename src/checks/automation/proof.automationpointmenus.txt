@@ -6,7 +6,7 @@ Original SHA-256: b15a2e6646fb4e2878367a6ef67473926f9ac2522c626266ce2c0907553553
 Swift counterpart: src/checks/automation/automationpointmenus.swift
 Swift SHA-256: 822fea2845eaa09f0131e003db1155aba4da35f14af27e633887b7c426017630
 Additional Swift counterpart: src/checks/automation/automationpointmenus_gap.swift
-Additional Swift SHA-256: 01c8254ad33d7c0ceeae80c424f4ab92372d66eb520006cb494f43e3f4407f58
+Additional Swift SHA-256: 24bc60e8c63d18b52522df4a958778cd3449ed639c4622aa98bfcfcaea6aedc9
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -1630,7 +1630,10 @@ Swift expression:
 
 S010 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:33
 Swift expression:
-  report.expectEqual(before.revision + 1, fixture.document.revision, cppID: drawerAutomationPromptID,
+  report.expect(fixture.document.state == beforeState && !fixture.document.history.canUndo
+                        && (try? fixture.document.state.file.encoded()) == beforeBytes,
+                    cppID: id, message: "A015 undo restores the exact serialized document and history state")
+
                          what: "one acceptance is one document revision")
 
 S011 | drawerAutomationPromptTransactions | src/checks/automation/automationpointmenus.swift:35
@@ -1875,7 +1878,10 @@ Swift expression:
 
 S065 | drawerAutomationPointMenuRetargetGapChecks | src/checks/automation/automationpointmenus_gap.swift:151
 Swift expression:
-  report.expect(fixture.undo() && fixture.snapshot == before
+  report.expect(fixture.undo() && !fixture.document.history.canUndo
+                        && (try? fixture.document.state.file.encoded()) == beforeBytes,
+                    cppID: id, message: "A067-A079 one undo restores retargeted Delete and exact bytes")
+
                         && (try? fixture.document.state.file.encoded()) == beforeBytes,
                     cppID: id, message: "A067-A079 one undo restores retargeted Delete and exact bytes")
 
@@ -1962,7 +1968,10 @@ Swift expression:
 
 S085 | drawerAutomationPointPromptParameterSwitchGapChecks | src/checks/automation/automationpointmenus_gap.swift:222
 Swift expression:
-  report.expect(fixture.document.state == beforeState && fixture.snapshot == before
+  report.expect(fixture.document.state == beforeState && !fixture.document.history.canUndo
+                        && (try? fixture.document.state.file.encoded()) == beforeBytes,
+                    cppID: id, message: "A224 undo restores exact serialized document and history state")
+
                         && (try? fixture.document.state.file.encoded()) == beforeBytes,
                     cppID: id, message: "A224 undo restores exact serialized document and history state")
 

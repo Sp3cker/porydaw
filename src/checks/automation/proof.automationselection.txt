@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationselection.cpp
 Original SHA-256: 589378ab1a0351dd4c2b1963fb45a91b9973abf2ea95ae2456cb8cb11d706ef8
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 1f0cf096d7b3a4bb0c30c655ab10a9b67c08aaa5a44ab209607875cebaef335c
+Swift SHA-256: a954589aafa20b60e460c6ed65ae1c8262f30e3ff0b38bc9b6d445a90e726207
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -1603,7 +1603,9 @@ Swift expression:
 
 S059 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:296
 Swift expression:
-  report.expect(fixture.page.selection?.range == TimeRange(startTick: 24, endTick: 96),
+  report.expect(fixture.document.state == initialState && !fixture.document.history.canUndo,
+                    cppID: id, message: "A024 undo restores the complete mixed document and history position")
+
                     cppID: id, message: "A025 Pan band publishes the same dragged tick range")
 
 S060 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:298
