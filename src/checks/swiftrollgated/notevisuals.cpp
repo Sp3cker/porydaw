@@ -1,6 +1,6 @@
 #include "tst_swiftrollgated.h"
 
-#include "app/RewriteWindow.h"
+#include "nativefixture.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
@@ -39,7 +39,6 @@ struct PublishedNote {
 
 struct VisibleNote {
     PublishedNote note;
-    QQuickItem *item = nullptr;
     QRect deviceRect;
 };
 
@@ -103,7 +102,7 @@ std::optional<VisibleNote> visibleNote(QQuickItem *fills, const QRectF &plotScen
         const QRect deviceRect = deviceRectFor(item, image);
         const int area = deviceRect.width() * deviceRect.height();
         if (deviceRect.width() >= 5 && deviceRect.height() >= 5 && area > bestArea) {
-            best = VisibleNote{note, item, deviceRect};
+            best = VisibleNote{note, deviceRect};
             bestArea = area;
         }
     }
@@ -228,7 +227,7 @@ std::optional<VisibleNote> thinnedVisibleNote(QQuickItem *fills, const QRectF &p
         const int ring = fittedFrameThickness(rect, ringRequest, 0);
         const int border = fittedFrameThickness(rect, borderRequest, ring);
         if (ring > 0 && border > 0 && border < borderRequest)
-            return VisibleNote{note, item, rect};
+            return VisibleNote{note, rect};
     }
     return std::nullopt;
 }
@@ -240,23 +239,13 @@ void SwiftRollGatedTest::noteRasterParity()
     if (m_mode != QStringLiteral("swiftrollgated"))
         QSKIP("note raster parity belongs to the swiftrollgated surface");
 
-    RewriteWindow window;
-    QVERIFY(window.isReady());
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
-    QVERIFY(session != nullptr);
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
-
-    QQuickView *const view = window.gridView();
-    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
-    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(root != nullptr);
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-    QVERIFY(grid != nullptr);
+    gridcheck::NativeScene scene;
+    QString openError;
+    QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
+    QObject *const session = scene.session;
+    QQuickView *const view = scene.view;
+    QQuickItem *const root = scene.root;
+    QObject *const grid = scene.grid;
     QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
 
     QQuickItem *const plot =
@@ -268,6 +257,7 @@ void SwiftRollGatedTest::noteRasterParity()
     const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
     QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, plotScene) > 0, 5'000);
 
+    QVERIFY(gridcheck::awaitFrame(view));
     const QImage unselectedImage = view->grabWindow();
     QVERIFY(!unselectedImage.isNull());
     QString summaryError;
@@ -304,9 +294,15 @@ void SwiftRollGatedTest::noteRasterParity()
         QMetaObject::invokeMethod(session, "performGridCommand", Q_ARG(int, kSelectAllCommand)));
     QTRY_VERIFY_WITH_TIMEOUT(publishedSelectionContains(grid, unselected->note.id), 5'000);
 
+    QVERIFY(gridcheck::awaitFrame(view));
     const QImage selectedImage = view->grabWindow();
     QVERIFY(!selectedImage.isNull());
-    const QRect selectedRect = deviceRectFor(unselected->item, selectedImage);
+    // Model publication may replace delegates. Keep the note identity, not a
+    // pointer into the previous frame's delegate tree.
+    QQuickItem *const selectedItem =
+        gridcheck::visualDescendant(fills, QStringLiteral("gridNote_%1").arg(unselected->note.id));
+    QVERIFY(selectedItem && selectedItem->isVisible());
+    const QRect selectedRect = deviceRectFor(selectedItem, selectedImage);
     const int ringRequest =
         (std::max)(1, qRound(grid->property("baseFontPx").toDouble() * kSelectionRingFontFraction *
                              selectedImage.devicePixelRatio()));
@@ -356,6 +352,7 @@ void SwiftRollGatedTest::noteRasterParity()
     const QRectF smallPlotScene = plot->mapRectToScene(plot->boundingRect());
     QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, smallPlotScene) > 0, 5'000);
 
+    QVERIFY(gridcheck::awaitFrame(view));
     const QImage smallImage = view->grabWindow();
     QVERIFY(!smallImage.isNull());
     QString smallSummaryError;

@@ -14,7 +14,6 @@
 #include <QQuickItem>
 #include <QQuickView>
 #include <QQuickWindow>
-#include <QSignalSpy>
 #include <QVariant>
 #include <QWheelEvent>
 #include <QtTest/QTest>
@@ -170,6 +169,10 @@ bool TabScene::open(const QString &projectRoot, const QString &songLabel, QStrin
         return false;
     }
     m_view = m_window.gridView();
+    if (!gridcheck::activateWindow(m_view) || !gridcheck::awaitFrame(m_view)) {
+        *error = QStringLiteral("the production Quick window did not become input/render ready");
+        return false;
+    }
     m_content = m_view->contentItem();
     m_root = qobject_cast<QQuickItem *>(m_view->rootObject());
     m_controller = m_session->property("songTabs").value<QObject *>();
@@ -335,7 +338,7 @@ bool TabScene::openSong(const QString &label, int *tabId, QString *error)
             QStringLiteral("the tab opened for %1 did not publish its rendered grid").arg(label);
         return false;
     }
-    return true;
+    return awaitFrame(error);
 }
 
 bool TabScene::narrowUntilStripOverflows(QString *error)
@@ -458,13 +461,7 @@ bool TabScene::clickDialogButton(const QString &name, QString *error)
 
 bool TabScene::awaitFrame(QString *error)
 {
-    QSignalSpy frameSwapped(m_view, &QQuickWindow::frameSwapped);
-    if (!frameSwapped.isValid()) {
-        *error = QStringLiteral("the QQuickView does not report swapped frames");
-        return false;
-    }
-    m_view->update();
-    if (!QTest::qWaitFor([&frameSwapped] { return frameSwapped.count() > 0; }, kSettleTimeoutMs)) {
+    if (!gridcheck::awaitFrame(m_view)) {
         *error = QStringLiteral("the QQuickView did not render a frame");
         return false;
     }

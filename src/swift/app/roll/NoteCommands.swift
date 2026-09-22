@@ -146,7 +146,7 @@ final class NoteCommands {
         guard !notes.isEmpty,
               notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) })
         else { return }
-        session.document.moveNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
+        session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
     }
 
     private func nudge(_ direction: Int, snapTicks: Tick) {
@@ -163,13 +163,13 @@ final class NoteCommands {
         }
         let delta = Int64(destination) - Int64(anchor)
         guard delta != 0 else { return }
-        session.document.moveNotes(notes.map(\.id), byTicks: delta, byKeys: 0)
+        session.document.nudgeNotes(notes.map(\.id), byTicks: delta, byKeys: 0)
     }
 
     private func resizeTrailing(_ delta: Int64) {
         let notes = selectedNotes()
         guard !notes.isEmpty else { return }
-        session.document.resizeNotes(notes.map(\.id), edge: .trailing, byTicks: delta)
+        session.document.resizeNoteLengths(notes.map(\.id), byTicks: delta)
     }
 
     private func toggleMute() {

@@ -1,6 +1,7 @@
 #include "tst_swiftrollgated.h"
 
 #include "app/RewriteWindow.h"
+#include "nativefixture.h"
 
 #include "ui/theme/themeruntime.h"
 
@@ -56,6 +57,27 @@ bool colorsNear(const QColor &actual, const QColor &expected)
            std::abs(actual.red() - expected.red()) <= kChannelTolerance &&
            std::abs(actual.green() - expected.green()) <= kChannelTolerance &&
            std::abs(actual.blue() - expected.blue()) <= kChannelTolerance;
+}
+
+bool activateWindow(QQuickWindow *window)
+{
+    QWindow *host = window;
+    while (host->parent())
+        host = host->parent();
+    host->raise();
+    host->requestActivate();
+    if (!QTest::qWaitForWindowActive(host, 5'000))
+        return false;
+    window->requestActivate();
+    return QTest::qWaitFor([window] { return QGuiApplication::focusWindow() == window; }, 5'000);
+}
+
+bool awaitFrame(QQuickWindow *window)
+{
+    // Published model state may precede queued delegate updates and a render.
+    QSignalSpy swapped(window, &QQuickWindow::frameSwapped);
+    window->update();
+    return QTest::qWaitFor([&swapped] { return !swapped.isEmpty(); }, 5'000);
 }
 
 } // namespace gridcheck
@@ -386,24 +408,14 @@ void SwiftRollGatedTest::selectionReticleRasterTranslucency()
     if (m_mode != QStringLiteral("swiftrollgated"))
         QSKIP("selection reticle raster belongs to the swiftrollgated surface");
 
-    RewriteWindow window;
-    QVERIFY(window.isReady());
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
-    QVERIFY(session != nullptr);
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
-
-    QQuickView *const view = window.gridView();
-    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
-    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(root != nullptr);
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-    QVERIFY(grid != nullptr);
+    gridcheck::NativeScene scene;
+    QString openError;
+    QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
+    QQuickView *const view = scene.view;
+    QQuickItem *const root = scene.root;
+    QObject *const grid = scene.grid;
     QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
+    QVERIFY(gridcheck::awaitFrame(view));
 
     QQuickItem *const plot = visualDescendant(root, QStringLiteral("timelineQuickRollPlot"));
     QQuickItem *const input = visualDescendant(root, QStringLiteral("swiftRollInput"));
@@ -426,6 +438,7 @@ void SwiftRollGatedTest::selectionReticleRasterTranslucency()
     QVERIFY(reticle.height() > 80);
     QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
 
+    QVERIFY(gridcheck::awaitFrame(view));
     const QImage baseline = view->grabWindow();
     QVERIFY(!baseline.isNull());
     const auto probes = distinctInteriorProbes(baseline, reticle);
@@ -444,6 +457,7 @@ void SwiftRollGatedTest::selectionReticleRasterTranslucency()
     QTest::mouseMove(view, finish, 20);
     QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
 
+    QVERIFY(gridcheck::awaitFrame(view));
     const QImage during = view->grabWindow();
     QVERIFY(!during.isNull());
     QCOMPARE(during.size(), baseline.size());

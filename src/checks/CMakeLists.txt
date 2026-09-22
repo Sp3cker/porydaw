@@ -80,6 +80,8 @@ qt_add_executable(porydaw_checks
     swiftrollgated/gesturechecks.cpp
     swiftrollgated/clipboardchecks.cpp
     swiftrollgated/chromevisuals.cpp
+    swiftrollgated/drawerparity.cpp
+    swiftrollgated/nativefixture.h
     swiftrollgated/notevisuals.cpp
     swiftrollgated/tabchecks.cpp
     swiftrollgated/tabfixture.cpp
@@ -116,6 +118,10 @@ if(APPLE)
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
+        editcheck/tst_songdocument_songnotes.swift
+        editcheck/NoteCorpusChecks.swift
+        editcheck/NoteMoveTransactionChecks.swift
+        editcheck/NoteMoveCorpusChecks.swift
         playback/projection.swift
         playback/rewrites.swift
         playback/opaque.swift

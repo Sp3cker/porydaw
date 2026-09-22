@@ -8,9 +8,12 @@ class QColor;
 class QImage;
 class QPoint;
 class QQuickItem;
+class QQuickWindow;
 class QRectF;
 
 namespace gridcheck {
+bool activateWindow(QQuickWindow *window);
+bool awaitFrame(QQuickWindow *window);
 QColor pixelAt(const QImage &image, const QPoint &logicalPoint);
 bool colorsNear(const QColor &actual, const QColor &expected);
 QQuickItem *visualDescendant(QQuickItem *root, const QString &name);
@@ -41,6 +44,11 @@ class SwiftRollGatedTest final : public QObject
     void selectionReticleRasterTranslucency();
     void noteRasterParity();
     void chromeRasterParity();
+    void drawerAutomationHoverRaster_data();
+    void drawerAutomationHoverRaster();
+    void drawerVoicePreviewTransaction_data();
+    void drawerVoicePreviewTransaction();
+    void drawerGripKeyboardIsolation();
     void songTabsGeometryAndSelection();
     void songTabsScrollControlsAndGridInput();
     void songTabsOpenCreatesIndependentWorkspace();

@@ -252,7 +252,7 @@ public final class SongHistory {
         var changes: DocumentChangeSet
         var afterIdentity: DocumentIdentity
         let group: HistoryGroup?
-        let operation: HistoryOperation
+        var operation: HistoryOperation
         var trackRemap: TrackRemap?
         var mergeSealed: Bool
     }
@@ -412,6 +412,31 @@ public final class SongHistory {
         return entry.changes
     }
 
+    internal func noteLengthOrigin(for ids: [NoteID])
+        -> (changes: DocumentChangeSet, group: HistoryGroup, delta: Int64)? {
+        guard index == entries.count, index > 0,
+              case let .document(entry) = entries[index - 1],
+              !entry.mergeSealed, let group = entry.group,
+              case let .resizeNoteLengths(previousIDs, delta) = entry.operation,
+              previousIDs == ids else { return nil }
+        return (entry.changes, group, delta)
+    }
+
+    internal func noteMoveOrigin(for ids: [NoteID], absolutePitches: Bool)
+        -> (changes: DocumentChangeSet, group: HistoryGroup, ticks: Int64, keys: Int)? {
+        guard index == entries.count, index > 0,
+              case let .document(entry) = entries[index - 1],
+              !entry.mergeSealed, let group = entry.group else { return nil }
+        switch entry.operation {
+        case let .nudgeNotes(previousIDs, ticks, keys) where !absolutePitches && previousIDs == ids:
+            return (entry.changes, group, ticks, keys)
+        case let .nudgeNotePitches(previousIDs, ticks) where absolutePitches && previousIDs == ids:
+            return (entry.changes, group, ticks, 0)
+        default:
+            return nil
+        }
+    }
+
     /// Document mutations are synchronous and must not race an owned bank transition.
     internal func record(changes: DocumentChangeSet, group: HistoryGroup?,
                          operation: HistoryOperation, returnsToOrigin: Bool,
@@ -421,14 +446,15 @@ public final class SongHistory {
         let mayMerge = group != nil && index == entries.count
         if mayMerge, let group, index > 0,
            case var .document(previous) = entries[index - 1],
-           previous.group == group, previous.operation == operation, !previous.mergeSealed {
-            if returnsToOrigin || changes.isEmpty {
+           previous.group == group, previous.operation.matchesGesture(operation), !previous.mergeSealed {
+            if operation.discardsOriginEntry && (returnsToOrigin || changes.isEmpty) {
                 entries.removeLast()
                 index -= 1
             } else {
                 previous.changes = changes
                 previous.afterIdentity = mintIdentity()
                 previous.trackRemap = trackRemap
+                previous.operation = operation
                 entries[index - 1] = .document(previous)
             }
             return
@@ -471,7 +497,10 @@ internal enum HistoryOperation: Hashable {
     case deleteNotes
     case moveNotes([NoteID])
     case moveNotesToPitches([NoteID])
+    case nudgeNotes([NoteID], Int64, Int)
+    case nudgeNotePitches([NoteID], Int64)
     case resizeNotes([NoteID], ResizeEdge)
+    case resizeNoteLengths([NoteID], Int64)
     case setVelocities
     case addTrack
     case duplicateTrack
@@ -498,4 +527,33 @@ internal enum HistoryOperation: Hashable {
     case removeTime
     case insertBlankTime
     case duplicateTime
+
+    /// Explicit-pitch keyboard commands retain their undo step after an inverse;
+    /// relative moves and length gestures discard the cancelled entry.
+    var discardsOriginEntry: Bool {
+        switch self {
+        case .nudgeNotePitches:
+            false
+        case .addNotes, .deleteNotes, .moveNotes, .moveNotesToPitches, .nudgeNotes,
+             .resizeNotes, .resizeNoteLengths, .setVelocities, .addTrack, .duplicateTrack,
+             .deleteTrack, .moveTrack, .renameTrack, .setChunkEnd, .setConfig,
+             .insertRawEvent, .modifyRawEvent, .deleteRawEvents, .moveRawEvent,
+             .editTempo, .editRawAndTempo, .setLoop, .setTimeSignature,
+             .moveTimeSignature, .deleteTimeSignature, .writeLane, .moveLanePoints,
+             .deleteLanePoints, .applyRangeEdit, .moveRange, .removeTime,
+             .insertBlankTime, .duplicateTime:
+            true
+        }
+    }
+
+    func matchesGesture(_ other: HistoryOperation) -> Bool {
+        switch (self, other) {
+        case let (.resizeNoteLengths(ids, _), .resizeNoteLengths(otherIDs, _)),
+             let (.nudgeNotes(ids, _, _), .nudgeNotes(otherIDs, _, _)),
+             let (.nudgeNotePitches(ids, _), .nudgeNotePitches(otherIDs, _)):
+            return ids == otherIDs
+        default:
+            return self == other
+        }
+    }
 }

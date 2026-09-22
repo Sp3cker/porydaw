@@ -4,7 +4,7 @@ Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_songranges.cpp
 Original SHA-256: 2c29ee7335263f22e9080dd541dce0be83c7919325fba143414e1f3f5423ff6b
 Swift counterpart: src/checks/editcheck/tst_songdocument_songranges.swift
-Swift SHA-256: 1901ada74da11364e2aacc4c7f5e1463095ce023faa45ab91c2c7fdfb2e5394e
+Swift SHA-256: b5e6d6e2404d710db924f74452a4a3d32114b4463a4436727be2e09bac619624
 
 Scope
 All 79 original assertion sites are listed below. MATCHED denotes an executable

@@ -11,6 +11,10 @@ func runNoteEditsSuite(_ report: CheckReport) {
     movementAndResize(report)
     velocityEditing(report)
     compatibilityRegressions(report)
+    coreNoteTransactionChecks(report)
+    coreNoteCorpusChecks(report)
+    coreNoteMoveTransactionChecks(report)
+    coreNoteMoveCorpusChecks(report)
 }
 
 @MainActor

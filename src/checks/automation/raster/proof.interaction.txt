@@ -1206,3 +1206,58 @@ Swift assertion predicates
 No Swift counterpart file was identified covering this file. There are no S entries for this file.
 
 No shared Swift helper fixture applies to this retired native file.
+
+Supplemental converted-window evidence
+
+Executable: src/checks/swiftrollgated/drawerparity.cpp
+Command: deno task verify --filter swiftrollgated --verbose --qt drawerAutomationHoverRaster drawerVoicePreviewTransaction
+
+The fixture opens the staged mus_route101 project through the real Swift
+ApplicationSession and mounts SwiftRollOverlay.qml in a standalone QQuickView.
+It uses private drawer preferences, real pointer delivery, rendered-frame waits,
+and native window framebuffer crops. No legacy presenter or QWidget host is
+mounted. This matches the intended Quick-only surface rather than the temporary
+RewriteWindow embedding boundary.
+
+drawerAutomationHoverRaster(pan, tempo) adapts hoverGhostRingAndLeaveClear:
+background hover changes pixels without a document revision, repeated hover is
+pixel-stable, a real node's ring changes its own crop, and leaving restores both
+the ring crop and full plot. It does not cover every original phantom, selected,
+curve-sampling, or fixture-specific assertion.
+
+drawerVoicePreviewTransaction(release-commits, escape-cancels) adapts the
+stationary-press and drag-preview observations in A060-A072: pressing a hovered
+marker leaves its pixels and document unchanged; dragging paints a same-sized
+preview and horizontal cursor without committing; release commits once and one
+completed asynchronous undo restores pixels; Escape cancels with no history
+entry. Both paths end the interaction.
+
+These are adapted native observations, not an exact replay of the original
+fixture. The original assertion dispositions and aggregate parity counts remain
+unchanged. The checks exposed missing Swift node/marker hover-role publication;
+the production publication owners now update the changed rows without rebuilding
+geometry.
+
+The shared gridcheck::NativeScene lives in swiftrollgated/nativefixture.h.
+The existing reticle, note-frame and chrome raster checks use it too. Their
+color, alpha and physical-pixel expectations are unchanged. The temporary
+embedded host produced window/image DPR 1 while the grid used Screen DPR 2;
+these final-surface assertions no longer depend on that embedding boundary.
+No production QWidget compensation or speculative QML DPR handler was retained.
+
+Verification after integration:
+- deno task verify: 24/24 harnesses pass.
+- deno task verify:qml: 1/1 lane passes.
+- deno task lsp:swift: 6/6 targets indexed.
+The QML outside-right-click retarget scenario now reuses its existing menu-open
+helper, which waits for realized rows and keyboard focus before choosing Delete.
+Its retarget/deletion assertions remain intact.
+
+Cohesion review: accepted exception for existing gesturechecks.cpp (688 lines),
+clipboardchecks.cpp (640) and tabfixture.cpp (628): only input, frame and baseline
+readiness changed; no independent responsibility was added. Accepted exception
+for editorqml/tst_EditorDrawer.qml (over 1,000 lines): the narrow retarget fix reuses
+an existing helper within the same scenario; it does not expand the harness.
+The extracted native scene owns session/window lifetime and capture setup
+(163 lines); drawerparity.cpp owns the three ported interaction contracts
+(273 lines). Swift hover publication stays in its existing publication owners.
