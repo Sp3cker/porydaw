@@ -35,6 +35,7 @@ add_library(PorydawApp STATIC
     commands/Clipboard.swift
     drawer/EditorDrawer.swift
     drawer/PromptAppearance.swift
+    drawer/EditorDrawerTypes.swift
     drawer/EditorDrawerLayout.swift
     drawer/velocity/VelocityContext.swift
     drawer/velocity/VelocityAxis.swift
