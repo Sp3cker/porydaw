@@ -177,3 +177,70 @@ diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeC
      void beginRemoveRows(const QModelIndex &parent, int first, int last);
      void endRemoveRows();
  
+diff --git a/Sources/QtBridgeCpp/qobjectproxy.cpp b/Sources/QtBridgeCpp/qobjectproxy.cpp
+--- a/Sources/QtBridgeCpp/qobjectproxy.cpp
++++ b/Sources/QtBridgeCpp/qobjectproxy.cpp
+@@ -4,6 +4,8 @@
+ #include "qobjectproxy.h"
+ 
+ #include "qobjectproxyimpl.h"
++
++#include <QtQml/QJSEngine>
+ 
+ // Impl
+ 
+@@ -13,7 +15,9 @@ public:
+     Impl(void *owner) :
+         m_ownership(Cpp),
+         m_object(new QObjectProxyImpl(owner))
+     {
++        // ~Impl deletes this object; exclude it from JS garbage collection.
++        QJSEngine::setObjectOwnership(m_object, QJSEngine::CppOwnership);
+     }
+ 
+     Impl(void *owner,
+@@ -55,7 +59,7 @@ private:
+     };
+ 
+     Ownership m_ownership;
+-    QObject * m_object;
++    QPointer<QObject> m_object;
+ };
+ 
+ QObjectProxy::QObjectProxy(void *owner)
+diff --git a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+--- a/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
++++ b/Sources/QtBridgeCpp/swiftmetaobjectbuilder.cpp
+@@ -281,5 +281,8 @@@
+     void emitSignal(QObject* obj, const std::string &name, const std::vector<QVariant> &args)
+     {
++        if (!obj)
++            return;
++
+         auto it = m_signalNameToId.find(name);
+         if (it == m_signalNameToId.end())
+             return;
+diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+--- a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
++++ b/Sources/QtBridgeCpp/include/qobjectproxyimpl.h
+@@ -6,6 +6,7 @@
+ #include <QtCore/qobject.h>
+ #include <QtQml/qqmllist.h>
+ #include <QtQml/qqmlparserstatus.h>
++#include <QtQml/qqmlengine.h>
+ 
+ #include "swiftobjectaccesor.h"
+ 
+@@ -21,6 +22,11 @@@ public:
+     QObjectProxyImpl(void *swiftObj)
+     : m_swiftObj(swiftObj)
+-    {}
++    {
++        // A Swift-created proxy is owned by its Swift owner, never by QML.
++        // Pin CppOwnership so the engine cannot garbage-collect it while the
++        // Swift object still publishes through it.
++        QQmlEngine::setObjectOwnership(this, QQmlEngine::CppOwnership);
++    }
+ 
+     using DeleterFn = void(*)(void *swiftObj);
+     QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
