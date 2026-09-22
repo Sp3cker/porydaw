@@ -258,6 +258,11 @@ int TabScene::pendingCloseId() const
     return m_controller->property("pendingCloseId").toInt();
 }
 
+bool TabScene::canUndo() const
+{
+    return m_session->property("canUndo").toBool();
+}
+
 QObject *TabScene::sessionAt(int row) const
 {
     if (row < 0 || row >= m_tabs->rowCount())
@@ -514,7 +519,10 @@ std::optional<TabNote> TabScene::firstClickableNote(int tabId) const
 QPoint TabScene::pointFor(int tabId, int tick, int pitch) const
 {
     QObject *const tabGrid = grid(tabId);
-    QQuickItem *const surface = pageSurface(tabId);
+    // The grid's drawing surface sits inside the roll plot, offset from the
+    // page by the keyboard gutter. Mapping through it lands the point on the
+    // note lane; mapping through the page surface lands it in the gutter.
+    QQuickItem *const surface = pageItem(tabId, QStringLiteral("pianoGridSurface"));
     if (!tabGrid || !surface)
         return QPoint{};
     const double pixelsPerTick =
@@ -557,10 +565,13 @@ bool TabScene::drawNote(int tabId, TabNote *drawn, QString *error)
         for (int candidate = (std::max)(0, firstTick); candidate + 2 * snap <= lastTick;
              candidate += snap) {
             const int end = candidate + 2 * snap;
+            // A press within a note's edge grip resizes it instead of drawing,
+            // so the lane must clear each note by a snap on both sides — not
+            // merely avoid overlapping it.
             const bool occupied =
                 std::any_of(before.cbegin(), before.cend(), [&](const TabNote &note) {
-                    return note.pitch == candidatePitch && note.tick < end &&
-                           note.tick + note.duration > candidate;
+                    return note.pitch == candidatePitch && note.tick < end + snap &&
+                           note.tick + note.duration > candidate - snap;
                 });
             if (!occupied) {
                 tick = candidate;
@@ -577,17 +588,14 @@ bool TabScene::drawNote(int tabId, TabNote *drawn, QString *error)
     const int inset = (std::max)(1, snap / 4);
     const QPoint start = pointFor(tabId, tick + inset, pitch);
     const QPoint finish = pointFor(tabId, tick + 2 * snap - inset, pitch);
+
     QTest::mouseMove(m_view, start);
     QTest::mousePress(m_view, Qt::LeftButton, Qt::NoModifier, start);
     QTest::mouseMove(m_view, finish, 20);
     QTest::mouseRelease(m_view, Qt::LeftButton, Qt::NoModifier, finish);
 
-    if (!QTest::qWaitFor(
-            [&] {
-                return tabGrid->property("canUndo").toBool() &&
-                       notes(tabId).size() == before.size() + 1;
-            },
-            kSettleTimeoutMs)) {
+    if (!QTest::qWaitFor([&] { return notes(tabId).size() == before.size() + 1; },
+                         kSettleTimeoutMs)) {
         *error = QStringLiteral("a real pointer drag did not add one note to tab %1").arg(tabId);
         return false;
     }

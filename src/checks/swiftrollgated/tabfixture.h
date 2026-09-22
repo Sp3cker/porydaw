@@ -111,6 +111,9 @@ class TabScene
     int selectedId() const;
     int selectedIndex() const;
     int pendingCloseId() const;
+    /// The application session's undo flag, which tracks the *selected* tab's
+    /// document history. Read it after selecting the tab under test.
+    bool canUndo() const;
     /// The tab session at one strip row, the identity the page and the model
     /// agree on.
     QObject *sessionAt(int row) const;

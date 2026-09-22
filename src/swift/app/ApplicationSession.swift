@@ -227,6 +227,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
         // drawer that can hold one.
         for tab in songTabs.allTabs {
             tab.workspace.cancel(reason: GridCancelReason.hidden.rawValue)
+            // The scene is about to die: no camera, playback or document
+            // publication may reach a page proxy it has already released.
+            tab.workspace.suspendCallbacks()
         }
         if songTabs.tabCount == 0 {
             emptyDrawerPresenter.inputCancelled(reason: GridCancelReason.hidden.rawValue)

@@ -283,7 +283,7 @@ Item {
                 anchors.fill: parent
                 session: model.display
                 controller: root.controller
-                visible: model.display.tabId === root.controller.selectedId
+                visible: model.display === root.controller.selectedPage
                 enabled: visible
             }
         }

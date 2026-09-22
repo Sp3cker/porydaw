@@ -144,6 +144,18 @@ public final class DocumentWorkspace {
         drawer.inputCancelled(reason: reason)
     }
 
+    /// Stops every session callback before the host tears the scene down.
+    /// `hostClosing` calls this after `cancel`: the workspace and its
+    /// presenters stay bound to the surface until `teardown`, but no camera,
+    /// playback or document publication may reach a page proxy the dying
+    /// scene has already released. Idempotent with `teardown`, which clears
+    /// the same closures.
+    public func suspendCallbacks() {
+        session.onCameraChange = nil
+        session.onChange = nil
+        session.onPlayback = nil
+    }
+
     /// The non-destructive inverse of `activate()`: a hidden workspace keeps its
     /// document, presenters and history, but releases the one shared audio
     /// engine, the playhead and its drawer slots, and stops presenting playback.

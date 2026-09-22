@@ -141,7 +141,12 @@ void SwiftRollGatedTest::songTabsGeometryAndSelection()
     const qreal dpr = selectedFrame.devicePixelRatio();
     const QRectF firstBody = sceneRectOf(button);
     const QRectF secondBody = sceneRectOf(scene.selectButton(secondId));
-    const QRectF thirdBody = sceneRectOf(scene.selectButton(thirdId));
+    // The tab is taller than the strip: its bottom margin is clipped by the
+    // viewport, so the button's scene rect reaches into the page stack. The
+    // untouched neighbour is measured only over the strip's visible band —
+    // below it the page stack repaints on every selection.
+    const QRectF thirdBody =
+        sceneRectOf(scene.selectButton(thirdId)).intersected(sceneRectOf(strip));
     QVERIFY2(changedPixels(selectedFrame, otherFrame, firstBody) > qMax(16, int(dpr * dpr * 16)),
              "the deselected tab body did not repaint");
     QVERIFY2(changedPixels(selectedFrame, otherFrame, secondBody) > qMax(16, int(dpr * dpr * 16)),
@@ -291,14 +296,15 @@ void SwiftRollGatedTest::songTabsSwitchPreservesPageState()
     QObject *const firstGrid = scene.grid(firstId);
     QVERIFY(firstGrid != nullptr);
     const QString editedSummary = firstGrid->property("noteSummary").toString();
-    QVERIFY(firstGrid->property("canUndo").toBool());
-    QQuickItem *const plot = scene.pageItem(firstId, QStringLiteral("timelineQuickRollPlot"));
-    QVERIFY(plot != nullptr);
+    QVERIFY(scene.canUndo());
+    QQuickItem *const gutter = scene.pageItem(firstId, QStringLiteral("timelineQuickRollGutter"));
+    QVERIFY(gutter != nullptr);
     const double initialScrollY = firstGrid->property("cameraScrollY").toDouble();
     const double maximumScrollY = firstGrid->property("cameraMaxVScroll").toDouble();
     QVERIFY(maximumScrollY > 1.0);
-    // The roll always scrolls away from the bound it already sits on.
-    scene.wheelVertical(*plot, initialScrollY < maximumScrollY - 1.0 ? -120 : 120);
+    // A wheel over the keyboard gutter scrolls the roll vertically; a wheel over
+    // the plot zooms instead, so the gutter is the scroll target.
+    scene.wheelVertical(*gutter, initialScrollY < maximumScrollY - 1.0 ? -120 : 120);
     QTRY_VERIFY_WITH_TIMEOUT(
         std::abs(firstGrid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5,
         kSettleTimeoutMs);
@@ -310,8 +316,7 @@ void SwiftRollGatedTest::songTabsSwitchPreservesPageState()
 
     QVERIFY2(scene.select(secondId, &error), qPrintable(error));
     QCOMPARE(scene.grid(secondId)->property("noteSummary").toString(), siblingSummary);
-    QVERIFY2(!scene.grid(secondId)->property("canUndo").toBool(),
-             "the sibling tab inherited the edited tab's history");
+    QVERIFY2(!scene.canUndo(), "the sibling tab inherited the edited tab's history");
     QVERIFY(firstPage != nullptr);
     QVERIFY2(!firstPage->isVisible(), "the hidden tab's page stayed presented");
 
@@ -320,8 +325,7 @@ void SwiftRollGatedTest::songTabsSwitchPreservesPageState()
     QVERIFY2(scene.grid(firstId) == firstGridGuard,
              "switching away and back replaced the tab's grid");
     QCOMPARE(firstGrid->property("noteSummary").toString(), editedSummary);
-    QVERIFY2(firstGrid->property("canUndo").toBool(),
-             "switching away and back dropped the tab's history");
+    QVERIFY2(scene.canUndo(), "switching away and back dropped the tab's history");
     QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollX").toDouble() + 1.0, cameraX + 1.0));
     QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollY").toDouble() + 1.0, cameraY + 1.0));
 }
@@ -346,12 +350,12 @@ void SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities()
     QVERIFY(firstGrid != nullptr);
     QVERIFY(secondGrid != nullptr);
     const QString editedSummary = firstGrid->property("noteSummary").toString();
-    QQuickItem *const plot = scene.pageItem(firstId, QStringLiteral("timelineQuickRollPlot"));
-    QVERIFY(plot != nullptr);
+    QQuickItem *const gutter = scene.pageItem(firstId, QStringLiteral("timelineQuickRollGutter"));
+    QVERIFY(gutter != nullptr);
     const double initialScrollY = firstGrid->property("cameraScrollY").toDouble();
     const double maximumScrollY = firstGrid->property("cameraMaxVScroll").toDouble();
     QVERIFY(maximumScrollY > 1.0);
-    scene.wheelVertical(*plot, initialScrollY < maximumScrollY - 1.0 ? -120 : 120);
+    scene.wheelVertical(*gutter, initialScrollY < maximumScrollY - 1.0 ? -120 : 120);
     QTRY_VERIFY_WITH_TIMEOUT(
         std::abs(firstGrid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5,
         kSettleTimeoutMs);
@@ -417,7 +421,7 @@ void SwiftRollGatedTest::songTabsPointerReorderPreservesIdentities()
     QCOMPARE(scene.grid(firstId), firstGrid);
     QCOMPARE(scene.grid(secondId), secondGrid);
     QCOMPARE(firstGrid->property("noteSummary").toString(), editedSummary);
-    QVERIFY(firstGrid->property("canUndo").toBool());
+    QVERIFY(scene.canUndo());
     QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollX").toDouble() + 1.0, cameraX + 1.0));
     QVERIFY(qFuzzyCompare(firstGrid->property("cameraScrollY").toDouble() + 1.0, cameraY + 1.0));
 }
@@ -575,8 +579,11 @@ void SwiftRollGatedTest::songTabsReopenExistingFocusesTab()
     QCOMPARE(scene.grid(firstId), firstGrid);
     QCOMPARE(firstGrid->property("noteSummary").toString(), firstSummary);
     QCOMPARE(scene.grid(secondId), secondGrid);
-    QVERIFY(scene.page(firstId)->isVisible() && scene.page(firstId)->isEnabled());
-    QVERIFY2(!scene.page(secondId)->isVisible(), "the outgoing tab's page stayed presented");
+    // The selection signals are queued: the page's visible binding re-evaluates
+    // on the next event-loop pass, after selectedId already reads the new tab.
+    QTRY_VERIFY_WITH_TIMEOUT(scene.page(firstId)->isVisible() && scene.page(firstId)->isEnabled(),
+                             kOpenTimeoutMs);
+    QTRY_VERIFY_WITH_TIMEOUT(!scene.page(secondId)->isVisible(), kOpenTimeoutMs);
     QQuickItem *const button = scene.selectButton(firstId);
     QVERIFY(button != nullptr);
     QVERIFY2(button->property("checked").toBool(), "the focused tab is not the checked tab");

@@ -105,10 +105,10 @@ public final class SongTabsController {
     // Only this controller writes these properties. QtBridge does not expose
     // private(set) properties, so their setters must remain public.
     public var tabs: QListModel<SongTabSession> = QListModel()
-    public var selectedId: Int = -1
-    public var selectedIndex: Int = -1
-    public var tabCount: Int = 0
-    public var pendingCloseId: Int = -1
+    @QtTracked public var selectedId: Int = -1
+    @QtTracked public var selectedIndex: Int = -1
+    @QtTracked public var tabCount: Int = 0
+    @QtTracked public var pendingCloseId: Int = -1
 
     /// The one palette every surface reads. The session owns the instance; the
     /// strip only reads roles through this reference, so the window's single
