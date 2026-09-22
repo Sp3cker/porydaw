@@ -1,6 +1,15 @@
 # C++ check parity through Swift — handoff
 
-Updated: 2026-09-21. Work is incomplete; the latest additions have not passed a build.
+Updated: 2026-09-21.
+
+> Historical task log: the build blocker and dirty-tree instructions below were
+> superseded by integration commit
+> `682095474e862b90227de941d9a0a5b29ad5926c`. The integrated registered suite
+> passes 24/24 and Swift indexing passes 6/6. Use
+> `docs/plans/swift-cpp-check-parity-audit.md` for the current parity queue and
+> `docs/plans/editor-drawer-swift-refactor-handoff.md` for the next Editor Drawer
+> refactor. The remaining sections preserve the earlier investigation and must
+> not be treated as current checkout instructions.
 
 ## Checkout and scope
 

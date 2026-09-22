@@ -2,45 +2,26 @@
 
 Updated: 2026-09-21
 
-This is the post-inventory audit for the dirty `feature/swift-qml-grid`
-worktree at HEAD `59f48ea0e432c14a0da6f93684cc729d8b3c587b`. It is a working-tree
-snapshot, not a commit certificate. The worktree contains unrelated staged,
-unstaged, and untracked migration work; do not stage it wholesale.
+This is the post-inventory audit integrated on `feature/swift-qml-grid` in
+`682095474e862b90227de941d9a0a5b29ad5926c`. The local `.scratch/` directory is
+review material and is not part of the commit.
 
 ## Runtime baseline
 
-Before the audio closure edits, the production and registered-check tree built
-and passed:
+The committed production and registered-check tree builds and passes:
 
 ```text
-deno task verify --filter swiftcore --verbose
-build: ok (11.63s)
-swiftcore: ok (8.06s)
-
 deno task verify --verbose
-build: ok (9.81s)
-verify: 24/24 ok (15.99s)
-```
-
-The complete registered-suite pass is the behavioral baseline for subsequent
-gap closure. It does not convert a `GAP`, `PARTIAL`, or native obligation into a
-match by itself.
-
-After the click-transport closure, the focused audio gate passed:
-
-```text
-deno task verify --filter swiftcore --filter clickcheck --verbose
-build: ok (10.16s)
-verify: 2/2 ok (8.34s)
+build: ok (10.82s)
+verify: 24/24 ok (16.91s)
 
 deno task lsp:swift
 index: 6/6 targets ok
 ```
 
-A later full run built successfully but hit desktop-sensitive failures in
-`swiftrollgated` and `selectionkey`. The single focused retry required by the
-repository guide passed both suites (2/2). Do not treat that transient full-run
-result as a Swift logic failure or repeatedly stress the native-input checks.
+The complete registered-suite pass is the behavioral baseline for subsequent
+gap closure. It does not convert a `GAP`, `PARTIAL`, or native obligation into a
+match by itself.
 
 ## Inventory snapshot
 
@@ -72,24 +53,19 @@ All canonical Swift counterpart hashes now match the working tree.
 
 The ledger is not yet a deletion gate for these reasons:
 
-1. `src/checks/swiftrollgated/proof.clipboardchecks.txt` pins the staged-index
-   version of `clipboardchecks.cpp`, including two new assertion sites, but names
-   an older commit whose file hash does not match. Pin it to the integration
-   commit after the staged source lands; changing the proof to the old hash would
-   discard the two added assertions.
-2. The two legacy proofs listed above need canonical `A###` inventories.
-3. 256 `MATCHED` entries in 13 proofs name related Swift behavior without citing
+1. The two legacy proofs listed above need canonical `A###` inventories.
+2. 256 `MATCHED` entries in 13 proofs name related Swift behavior without citing
    an `S###` predicate. They must be connected to exact Swift predicates before
    they can authorize C++ retirement. The SongDocument hardening pass cleared
    every such entry from `editcheck`; the track-header pass cleared its matching
    entries as well. The largest remaining clusters are automation domain, audio
    resonance/telemetry, and playback.
-4. Of 220 current `src/checks/**/*.cpp` files, 185 have proofs. Most of the other
+3. Of 220 current `src/checks/**/*.cpp` files, 185 have proofs. Most of the other
    35 are assertion-free harness/support sources. Two contain explicit failure
    sites and need either an inventory or a written exclusion rationale:
    `drawerpresentation/fixtures.cpp` (`qFatal`) and
    `selectionkey/corefixture.cpp` (`Q_ASSERT`).
-5. Many proof evidence sections still say an integrated run is pending. Refresh
+4. Many proof evidence sections still say an integrated run is pending. Refresh
    them from the final committed layout and the 24/24 gate rather than treating
    this working-tree run as permanent evidence.
 

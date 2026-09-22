@@ -1,6 +1,6 @@
 Assertion correspondence: swiftrollgated/clipboardchecks.cpp
 
-Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
+Reference revision: 682095474e862b90227de941d9a0a5b29ad5926c
 Original: src/checks/swiftrollgated/clipboardchecks.cpp
 Original SHA-256: b5a4b59e29cf1fdda7a40d25cd345a347eb3f8860084526f31619f683c44e619
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
@@ -20,9 +20,10 @@ is recorded as GAP. Bookkeeping must not overclaim.
 Host clipboard round-trip and replacement for the selectionkey surface: real pointer selection of two notes, mid-gesture Copy no-op sentinel, positive Copy payload schema, span-0 paste with cursor commit, undo/redo, replacement-surface paste, empty-clip no-op and span-96 tiling. Host bytes, actions and shortcuts are NATIVE; payload schema and track preconditions are GAP; note/cursor/revision accounting is PARTIAL.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
+Command: deno task verify --verbose
+Result: PASS, 24/24 registered harnesses after the integration commit; both
+swiftcore and the native swiftrollgated row passed. Source hashes pin the exact
+source and Swift check files inspected here.
 
 Execution and ownership
 runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) via checkOrderedSelection, checkViewport, checkProjection and checkIsolation executes the paired presenter checks. No same-directory Swift file exists for these C++ sources; no shared Swift fixture file carrying expects was identified (CoreCheckSupport.swift carries no report.expect predicates).

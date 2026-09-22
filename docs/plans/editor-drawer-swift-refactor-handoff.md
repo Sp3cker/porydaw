@@ -20,22 +20,21 @@ Use this checkout unless the user explicitly redirects the task:
 ```text
 /Users/spencer/dev/cProjects/porydaw/.worktrees/swift-qml-grid
 branch: feature/swift-qml-grid
-HEAD: 59f48ea0e432c14a0da6f93684cc729d8b3c587b
+migration integration commit: 682095474e862b90227de941d9a0a5b29ad5926c
 ```
 
-This is a heavily mixed migration worktree with staged, unstaged, and untracked
-changes from several lanes. Recheck `git status --short` before every edit. Do
-not reset, clean, stage wholesale, or commit unrelated files. If a separate
-worktree is requested after the migration has a stable commit, create it with
-the repository task:
+The mixed migration was committed at the revision above. Recheck branch, HEAD,
+status, and upstream before editing because later metadata commits or new work
+may exist. The local `.scratch/` directory contains review artifacts and is not
+part of the migration. If a separate worktree is requested, create it with the
+repository task:
 
 ```text
 deno task worktree:create -- editor-drawer-refactor --base feature/swift-qml-grid
 ```
 
-An isolated worktree created from the current commit will not contain the
-uncommitted Swift migration or hardened proof files. Do not create one from the
-old commit and then reconstruct this working tree by hand.
+Base the new worktree on the current remote branch, which contains the migration
+and hardened proof files. Do not base it on the older pre-integration commit.
 
 ## Verified baseline
 
