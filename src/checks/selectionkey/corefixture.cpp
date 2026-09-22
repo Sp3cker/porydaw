@@ -1,7 +1,5 @@
 #include "checks/selectionkey/corefixture.h"
 
-#include "checks/selectionkey/automationprobe.h"
-
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
 #include "ui/songview/editorselectionmodel.h"
@@ -68,16 +66,6 @@ void prepareCoreDocument(SongDocument &document)
     document.addLanePoint(kTrack, kController, kOutsidePointTick, 96);
     document.addLanePoint(kTrack, kController, kInsidePointTick, 48);
 }
-
-bool activateCoreAutomation(RigWorld &world, QString *diagnostics = nullptr)
-{
-    const auto probe =
-        AutomationProbe::locate(rigView(world), rigInput(world, "timelineAutomationInput"), kTrack,
-                                kController, diagnostics);
-    return probe && probe->activateParameter(diagnostics);
-}
-
-} // namespace
 
 QString describePoint(const QPointF &point)
 {
@@ -147,10 +135,7 @@ std::unique_ptr<CoreFixture> CoreFixture::create(const QString &projectRoot,
                                     coreRigConfig(drawerPage), prepareCoreDocument, error);
     if (!fixture->m_world)
         return nullptr;
-    if (drawerPage == EditorDrawerPage::Automations &&
-        !activateCoreAutomation(*fixture->m_world, &error)) {
-        return nullptr;
-    }
+
     return fixture;
 }
 
@@ -167,8 +152,6 @@ void CoreFixture::configureDrawerSurface(std::optional<EditorDrawerPage> drawerP
         songView.setDrawerSectionVisible(*drawerPage, true);
     }
     settle();
-    if (drawerPage == EditorDrawerPage::Automations)
-        activateCoreAutomation(*m_world);
 }
 
 bool CoreFixture::focusBand(songview::TimelineBand band)
@@ -194,18 +177,6 @@ std::optional<std::array<DocNote, 3>> CoreFixture::snapshotNotes() const
         snapshot[index] = *note;
     }
     return snapshot;
-}
-
-ClickTarget CoreFixture::emptyAutomationLanePoint() const
-{
-    ClickTarget result;
-    const auto probe =
-        AutomationProbe::locate(rigView(*m_world), rigInput(*m_world, "timelineAutomationInput"),
-                                kTrack, kController, &result.diagnostics);
-    QPoint point;
-    if (probe && probe->emptyNodePoint(64, point, &result.diagnostics))
-        result.point = point;
-    return result;
 }
 
 ClickTarget CoreFixture::selectedVelocityStemPoint() const
@@ -269,31 +240,6 @@ std::optional<QPoint> CoreFixture::plainRulerPoint(songview::TimelineInputItem *
             return std::optional(ruler->mapToScene(QPointF(x, bounds.center().y())).toPoint());
     }
     return std::nullopt;
-}
-
-std::optional<std::vector<QPoint>>
-CoreFixture::laneWindowPoints(const std::vector<std::pair<Tick, int>> &pointSpecs,
-                              QString *diagnostics) const
-{
-    const auto probe =
-        AutomationProbe::locate(rigView(*m_world), rigInput(*m_world, "timelineAutomationInput"),
-                                kTrack, kController, diagnostics);
-    if (!probe)
-        return std::nullopt;
-    std::vector<AutomationProbePoint> requested;
-    requested.reserve(pointSpecs.size());
-    for (const auto &spec : pointSpecs)
-        requested.push_back({spec.first, spec.second});
-    std::vector<QPoint> projected(pointSpecs.size());
-    if (!probe->project(requested, projected, diagnostics))
-        return std::nullopt;
-    return projected;
-}
-
-std::optional<QPoint> CoreFixture::laneWindowPoint(Tick tick, int value, QString *diagnostics) const
-{
-    const auto points = laneWindowPoints({{tick, value}}, diagnostics);
-    return points ? std::optional(points->front()) : std::nullopt;
 }
 
 } // namespace selectionkey

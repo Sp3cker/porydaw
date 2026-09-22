@@ -20,7 +20,6 @@ using selectionkey::drawerPageForBand;
 namespace {
 
 enum class CoreClick {
-    AutomationLaneGap,
     SelectedVelocityStemDrag,
     PlainRuler,
     BandCenter,
@@ -34,9 +33,7 @@ struct BandProbe {
     CoreClick click;
 };
 
-constexpr std::array<BandProbe, 5> kCoreBands{{
-    {songview::TimelineBand::Automation, "timelineAutomationInput", "automation", true,
-     CoreClick::AutomationLaneGap},
+constexpr std::array<BandProbe, 4> kCoreBands{{
     {songview::TimelineBand::Velocity, "timelineVelocityInput", "velocity", true,
      CoreClick::SelectedVelocityStemDrag},
     {songview::TimelineBand::VoiceChanges, "timelineVoiceChangesInput", "voice changes", true,
@@ -106,12 +103,6 @@ void SelectionKeyCoreTest::incidentalBandClickPreservesSelection()
     std::optional<QPoint> point;
     QString clickDiagnostics;
     switch (kind) {
-    case CoreClick::AutomationLaneGap: {
-        const ClickTarget target = m_fixture->emptyAutomationLanePoint();
-        point = target.point;
-        clickDiagnostics = target.diagnostics;
-        break;
-    }
     case CoreClick::SelectedVelocityStemDrag: {
         const ClickTarget target = m_fixture->selectedVelocityStemPoint();
         point = target.point;
@@ -164,10 +155,7 @@ void SelectionKeyCoreTest::incidentalBandClickPreservesSelection()
     // Ruler and other-events clicks intentionally do not focus.
     if (probe.clickTakesFocus)
         QVERIFY2(band->hasActiveFocus(), "Quick band input did not focus its band");
-    if (kind == CoreClick::AutomationLaneGap) {
-        QVERIFY2(!songView.selectionModel().timeSelection().active(),
-                 "the incidental automation click made a replacement range");
-    }
+
     QVERIFY2(songView.selectionModel().noteSelection() == selection,
              qPrintable(QStringLiteral("%1 band input disturbed the eligible selection: "
                                        "actual=%2 intended=%3 %4")

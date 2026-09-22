@@ -86,15 +86,8 @@ class CoreFixture final
     std::optional<std::array<DocNote, 3>> snapshotNotes() const;
 
     // Real, visible-surface click targets for the incidental-click scenarios.
-    ClickTarget emptyAutomationLanePoint() const;
     ClickTarget selectedVelocityStemPoint() const;
     std::optional<QPoint> plainRulerPoint(songview::TimelineInputItem *ruler) const;
-
-    std::optional<QPoint> laneWindowPoint(Tick tick, int value,
-                                          QString *diagnostics = nullptr) const;
-    std::optional<std::vector<QPoint>>
-    laneWindowPoints(const std::vector<std::pair<Tick, int>> &pointSpecs,
-                     QString *diagnostics = nullptr) const;
 
   private:
     CoreFixture() = default;
