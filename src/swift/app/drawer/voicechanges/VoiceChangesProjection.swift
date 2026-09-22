@@ -7,7 +7,9 @@ import QtBridge
 /// marker rule, and its interaction state.
 @MainActor
 @QtBridgeable
-public final class VoiceMarkerHandle {
+// Swift 6.4 misses the macro-emitted inherited conformance across source files.
+// Remove this explicit conformance once the toolchain contains swiftlang/swift#92390.
+public final class VoiceMarkerHandle: QVariantGettable {
     public var identity: String = ""
     public var tick: Double = 0
     public var value: Int = 0

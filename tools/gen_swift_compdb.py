@@ -139,14 +139,20 @@ def index_command(cmd, lib):
             continue
         out.append("-Onone" if tok == "-O" else tok)
         i += 1
-    return (["swiftc"] + out[1:]
+    return (out
             + ["-index-store-path", str(INDEXSTORE),
                "-index-ignore-system-modules"])
 
 
 def swiftc_version():
     """First line of `swiftc --version`; index stamp for toolchain drift."""
-    r = subprocess.run(["swiftc", "--version"],
+    compiler = "swiftc"
+    for lib, _ in swift_edges():
+        cmd = swiftc_command(lib)
+        if cmd:
+            compiler = shlex.split(cmd)[0]
+            break
+    r = subprocess.run([compiler, "--version"],
                        capture_output=True, text=True)
     return (r.stdout.splitlines() or ["unknown"])[0].strip()
 
