@@ -4491,20 +4491,21 @@ TestCase {
         var panel = findChild(testCase.surface, "automationMenuPanel")
         panel = findChild(panel, "quickMenuFrame")
         verify(panel, "the point menu has a drawn frame")
-        var target = null
+        var targetIndex = -1
         for (var i = 0; i < nodes.length; ++i) {
             if (i === first || nodes[i].model.projected) continue
             var p = testCase.automationNodePoint(nodes[i])
             var local = panel.mapFromItem(testCase.automationPlotInput(), p.x, p.y)
             if (local.x < 0 || local.x > panel.width || local.y < 0 || local.y > panel.height) {
-                target = nodes[i]
+                targetIndex = i
                 break
             }
         }
-        verify(target, "another written node lies outside the open menu")
-        var targetTick = target.model.tick
-        var point = testCase.automationNodePoint(target)
-        mouseClick(testCase.automationPlotInput(), point.x, point.y, Qt.RightButton)
+        verify(targetIndex >= 0, "another written node lies outside the open menu")
+        var targetTick = nodes[targetIndex].model.tick
+        // Retargeting rebuilds the menu too; use the same drawn-row and keyboard
+        // readiness contract as the initial open rather than the old open flag.
+        verify(testCase.openAutomationNodeMenu(targetIndex))
         compare(bootstrap.automationMenuOpen(), true, "outside right click retargets rather than dismisses")
         verify(testCase.triggerAutomationMenuRow(2))
         var remaining = bootstrap.automationLaneTicks().split(",")

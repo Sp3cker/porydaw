@@ -38,6 +38,18 @@ extension AutomationPage {
     /// The hover label: the value the lane holds under the pointer, at
     /// curve-true height and the pointer's own column.
     func publishHover() {
+        // Hover is an overlay-only update: refresh the changed node roles
+        // without rebuilding lane geometry or replacing unaffected delegates.
+        let hoveredTick = hover.flatMap {
+            $0.hasPoint && $0.parameter == activeParameter ? Double($0.tick) : nil
+        }
+        for (index, node) in nodeSnapshots.enumerated() {
+            let hovered = hoveredTick == node.tick
+            if node.hovered != hovered {
+                node.hovered = hovered
+                nodes[index] = node
+            }
+        }
         guard let session, let hover else {
             hoverVisible = false
             hoverText = ""

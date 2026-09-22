@@ -183,6 +183,18 @@ extension VoiceChangesPage {
             reusing: markerLookup))
     }
 
+    /// Hover changes only marker roles, not their projected geometry.
+    @QtIgnored
+    func publishMarkerHover() {
+        for (index, marker) in published.enumerated() {
+            let hovered = marker.identity == hoverIdentity
+            if marker.hovered != hovered {
+                marker.hovered = hovered
+                markers[index] = marker
+            }
+        }
+    }
+
     /// The drag's transient: where the frozen occurrence currently drafts.
     @QtIgnored
     func publishTransient() {

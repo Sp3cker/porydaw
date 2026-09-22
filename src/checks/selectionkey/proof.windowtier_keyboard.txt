@@ -1494,3 +1494,26 @@ S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:42
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
+
+Supplemental converted-window evidence
+
+Executable: src/checks/swiftrollgated/drawerparity.cpp
+Command: deno task verify --filter swiftrollgated --verbose --qt drawerGripKeyboardIsolation
+
+drawerGripKeyboardIsolation adapts chromeGripKeysStayLocal (A013-A020) to the
+real Swift ApplicationSession and production SwiftRollOverlay.qml, mounted in
+a standalone QQuickView. From the focused automation plot, real forward Tab
+traversal must reach the visible automation grip. Up/Down resize by the exact
+font-relative step; all four arrow presses are accepted locally; cross-axis
+arrows do not resize. The document revision and selected-note summary remain
+unchanged.
+
+The staged song and selected note differ from the original reserved note pair.
+This check does not replace the original QWidget-window Copy/Solo action-counter
+assertions or establish those other window-tier scenarios. Original dispositions
+and aggregate parity counts remain unchanged.
+
+Investigation also found that Tab can leave the temporary RewriteWindow's last
+Quick control and fail to re-enter its QWidget container. No container workaround
+was retained: the intended final application has no QWidget host. The retained
+check covers complete forward traversal on that standalone Quick surface.

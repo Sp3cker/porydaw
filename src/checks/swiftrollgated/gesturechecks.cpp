@@ -113,6 +113,11 @@ class GridFixture final
             return false;
         }
         m_view = m_window.gridView();
+        if (!gridcheck::activateWindow(m_view) || !gridcheck::awaitFrame(m_view)) {
+            *error =
+                QStringLiteral("the production Quick window did not become input/render ready");
+            return false;
+        }
         m_root = qobject_cast<QQuickItem *>(m_view->rootObject());
         m_grid = m_root ? m_root->property("gridModel").value<QObject *>() : nullptr;
         m_plot = gridcheck::visualDescendant(m_root, QStringLiteral("timelineQuickRollPlot"));
@@ -333,6 +338,7 @@ void SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim()
 
     QQuickItem *const rendered = fixture.noteItem(moving->id);
     QVERIFY(rendered != nullptr && rendered->isVisible());
+    QVERIFY(gridcheck::awaitFrame(fixture.view()));
     const QImage frame = fixture.view()->grabWindow();
     QVERIFY(!frame.isNull());
     const QColor expected(rendered->property("fillColor").toString());
@@ -478,12 +484,16 @@ void SwiftRollGatedTest::escapeCancelsSelectionBand()
             return selected && selected->selected;
         },
         kSettleTimeoutMs));
+    // Finish focus setup before observing what idle Escape changes. Native
+    // activation notifications can arrive after the click publishes selection.
+    fixture.input()->forceActiveFocus(Qt::OtherFocusReason);
+    QTRY_VERIFY(fixture.input()->hasActiveFocus());
+    QVERIFY(gridcheck::awaitFrame(fixture.view()));
     QString idleError;
     const QList<NoteState> idleBefore = fixture.notes(&idleError);
     QVERIFY2(idleError.isEmpty(), qPrintable(idleError));
     const QString idleRevision = fixture.grid()->property("appliedRevisionText").toString();
     const int idleReason = fixture.grid()->property("lastCancelReason").toInt();
-    fixture.input()->forceActiveFocus(Qt::OtherFocusReason);
     QTest::keyClick(fixture.view(), Qt::Key_Escape);
     QVERIFY(QTest::qWaitFor(
         [&] {

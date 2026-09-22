@@ -38,7 +38,7 @@ internal func coreRangeCorpusChecks(_ report: CheckReport) {
 }
 
 @MainActor
-private func coreRangeHistoryPosition(_ document: SongDocument, _ report: CheckReport,
+internal func coreRangeHistoryPosition(_ document: SongDocument, _ report: CheckReport,
                                        _ id: String) -> [Int] {
     let state = document.state
     let identity = document.history.currentIdentity
@@ -78,7 +78,7 @@ private func coreRangeExpectRejected(_ document: SongDocument, _ report: CheckRe
 }
 
 @MainActor
-private func coreRangeNotePairsConsistent(_ document: SongDocument, track: Int) -> Bool {
+internal func coreRangeNotePairsConsistent(_ document: SongDocument, track: Int) -> Bool {
     guard let chunk = document.engineTracks.tracks[track].midiChunk else { return false }
     let events = document.rawChunks[chunk].events
     var starts = Array(repeating: 0, count: events.count)

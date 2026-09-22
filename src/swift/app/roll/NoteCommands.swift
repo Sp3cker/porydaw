@@ -169,7 +169,7 @@ final class NoteCommands {
     private func resizeTrailing(_ delta: Int64) {
         let notes = selectedNotes()
         guard !notes.isEmpty else { return }
-        session.document.resizeNotes(notes.map(\.id), edge: .trailing, byTicks: delta)
+        session.document.resizeNoteLengths(notes.map(\.id), byTicks: delta)
     }
 
     private func toggleMute() {

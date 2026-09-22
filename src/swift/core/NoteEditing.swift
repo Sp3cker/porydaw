@@ -140,34 +140,99 @@ extension SongDocument {
         let operation = HistoryOperation.resizeNotes(ids.sorted { $0.rawValue < $1.rawValue }, edge)
         let base = origin(for: group, operation: operation)
         guard let original = resolve(ids, in: base) else { return }
-        var targets: [(tick: Tick, end: UInt64?)] = []
-        targets.reserveCapacity(original.count)
-        for note in original {
-            guard let end = note.endTick else {
-                targets.append((edge == .leading ? shiftedTick(note.tick, by: delta) : note.tick, nil))
-                continue
-            }
-            switch edge {
-            case .leading:
-                let upper = Tick(end - 1)
-                targets.append((min(shiftedTick(note.tick, by: delta), upper), end))
-            case .trailing:
-                let (shiftedEnd, overflow) = Int64(end).addingReportingOverflow(delta)
-                guard !overflow else { return }
-                let proposed = max(Int64(note.tick) + 1, shiftedEnd)
-                guard proposed <= Int64(TimeDefaults.maxTick) else { return }
-                targets.append((note.tick, UInt64(proposed)))
-            }
-        }
+        guard let durations = edge == .trailing
+            ? resizeNotesDurations(original.span, byTicks: delta) : [] else { return }
         var relocations: [RelocatedNote] = []
         relocations.reserveCapacity(original.count)
         for (index, note) in original.enumerated() {
-            let target = targets[index]
-            relocations.append(RelocatedNote(
-                original: note, tick: target.tick, pitch: note.pitch, endTick: target.end))
+            let tick: Tick
+            let end: UInt64?
+            switch edge {
+            case .leading:
+                tick = note.endTick.map { min(shiftedTick(note.tick, by: delta), Tick($0 - 1)) }
+                    ?? shiftedTick(note.tick, by: delta)
+                end = note.endTick
+            case .trailing:
+                tick = note.tick
+                end = note.isUnterminated ? nil : UInt64(tick) + UInt64(durations[index])
+            }
+            relocations.append(RelocatedNote(original: note, tick: tick,
+                                              pitch: note.pitch, endTick: end))
         }
         relocate(ids, base: base, group: group, operation: operation,
                  relocations: relocations)
+    }
+
+    /// Plans trailing-edge lengths in input order without changing the document.
+    /// Selected notes cap each other only within the same track and pitch.
+    public func resizeNotesDurations(_ notes: borrowing Span<Note>, byTicks delta: Int64) -> [Tick]? {
+        var durations: [Tick] = []
+        durations.reserveCapacity(notes.count)
+        for index in notes.indices {
+            let note = notes[index]
+            guard delta <= Int64(TimeDefaults.maxTick) - Int64(note.tick) - Int64(note.duration)
+            else { return nil }
+            let duration = max(1, Int64(note.duration) + delta)
+            guard UInt64(note.tick) + UInt64(duration) <= UInt64(TimeDefaults.maxTick)
+            else { return nil }
+            durations.append(Tick(duration))
+        }
+        guard notes.count > 1 else { return durations }
+        var order: [Int] = []
+        order.reserveCapacity(notes.count)
+        for index in notes.indices where !notes[index].isUnterminated { order.append(index) }
+        order.sort {
+            (notes[$0].track, notes[$0].pitch, notes[$0].tick) <
+                (notes[$1].track, notes[$1].pitch, notes[$1].tick)
+        }
+        for index in order.indices.dropFirst() {
+            let previous = order[index - 1]
+            let current = order[index]
+            let a = notes[previous]
+            let b = notes[current]
+            guard a.track == b.track, a.pitch == b.pitch else { continue }
+            if delta > 0 { durations[previous] = min(durations[previous], b.tick - a.tick) }
+            guard durations[previous] > 0,
+                  UInt64(a.tick) + UInt64(durations[previous]) <= UInt64(b.tick)
+            else { return nil }
+        }
+        return durations
+    }
+
+    /// Incremental keyboard length changes merge only if replaying their summed
+    /// delta from the first press produces exactly the next press's durations.
+    /// A capped reversal is therefore a separate undo step, unlike a drag update.
+    public func resizeNoteLengths(_ ids: [NoteID], byTicks delta: Int64) {
+        guard history.acceptsDocumentMutation, delta != 0, !ids.isEmpty,
+              let current = resolve(ids, in: state),
+              let durations = resizeNotesDurations(current.span, byTicks: delta),
+              zip(current, durations).contains(where: { $0.duration != $1 })
+        else { return }
+        let orderedIDs = ids.sorted { $0.rawValue < $1.rawValue }
+        var base = state
+        var original = current
+        var total = delta
+        var group: HistoryGroup?
+        if let previous = history.noteLengthOrigin(for: orderedIDs) {
+            let sum = previous.delta.addingReportingOverflow(delta)
+            if !sum.overflow {
+                var candidate = state
+                previous.changes.apply(to: &candidate, direction: .undo)
+                if let notes = resolve(ids, in: candidate),
+                   resizeNotesDurations(notes.span, byTicks: sum.partialValue) == durations {
+                    base = candidate
+                    original = notes
+                    total = sum.partialValue
+                    group = previous.group
+                }
+            }
+        }
+        let relocations = zip(original, durations).map { note, duration in
+            RelocatedNote(original: note, tick: note.tick, pitch: note.pitch,
+                          endTick: note.isUnterminated ? nil : UInt64(note.tick) + UInt64(duration))
+        }
+        relocate(ids, base: base, group: group ?? HistoryGroup(),
+                 operation: .resizeNoteLengths(orderedIDs, total), relocations: relocations)
     }
 
     public func setVelocities(_ velocities: [NoteVelocity],

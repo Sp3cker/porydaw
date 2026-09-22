@@ -454,6 +454,7 @@ extension VoiceChangesPage {
             hoverText = ""
             hoverVisible = false
             hoverLabelRect = rect
+            publishMarkerHover()
             return
         }
         let tick = snapTick(at: x)
@@ -472,6 +473,7 @@ extension VoiceChangesPage {
                          VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
                                                 plotHeight))
         setPublished(&hoverVisible, true)
+        publishMarkerHover()
     }
 
     private func clearHover() {
@@ -483,6 +485,7 @@ extension VoiceChangesPage {
         hoverVisible = false
         hoverTick = 0
         hoverLabelRect = VoiceMarkerHandle.rect(0, 0, 0, 0)
+        publishMarkerHover()
     }
 
     // MARK: Internals: gesture teardown

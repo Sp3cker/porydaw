@@ -4,7 +4,7 @@ Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_songmoves.cpp
 Original SHA-256: e6a0f92a7a1b66e31af1c5cc57fb1a0c2cef8f97dca7b385cc28e69eb9e016f7
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 9cd49c319b9b161331451f67c3d9a85050aa0180a45226845d9708028792df39
+Swift SHA-256: 4628d76755f6a71171d8ab16f5a13761e9dda55e7041b71fec79303cc921ae63
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
 Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
 

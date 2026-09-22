@@ -7,7 +7,7 @@ Swift counterpart: src/checks/midi/MidiChecks.swift
 Swift SHA-256: 3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50
 Additional covering Swift files:
 src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 9cd49c319b9b161331451f67c3d9a85050aa0180a45226845d9708028792df39
+Swift SHA-256: 4628d76755f6a71171d8ab16f5a13761e9dda55e7041b71fec79303cc921ae63
 src/checks/editcheck/EventChecks.swift
 Swift SHA-256: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
 

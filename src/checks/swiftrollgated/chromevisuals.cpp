@@ -1,6 +1,6 @@
 #include "tst_swiftrollgated.h"
 
-#include "app/RewriteWindow.h"
+#include "nativefixture.h"
 #include "ui/theme/themeruntime.h"
 
 #include <QColor>
@@ -149,23 +149,12 @@ void SwiftRollGatedTest::chromeRasterParity()
         QSKIP("chrome raster parity belongs to the swiftrollgated surface");
     QCOMPARE(m_mode, QStringLiteral("swiftrollgated"));
 
-    RewriteWindow window;
-    QVERIFY(window.isReady());
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
-    QVERIFY(session != nullptr);
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
-
-    QQuickView *const view = window.gridView();
-    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
-    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
-    QVERIFY(root != nullptr);
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-    QVERIFY(grid != nullptr);
+    gridcheck::NativeScene scene;
+    QString openError;
+    QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
+    QQuickView *const view = scene.view;
+    QQuickItem *const root = scene.root;
+    QObject *const grid = scene.grid;
     QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
 
     QQuickItem *const plot =
@@ -201,6 +190,7 @@ void SwiftRollGatedTest::chromeRasterParity()
     QVERIFY(rowHeight > 0.0);
     QVERIFY(keyboardWidth > 0.0);
 
+    QVERIFY(gridcheck::awaitFrame(view));
     QImage image;
     QTRY_VERIFY_WITH_TIMEOUT(!(image = view->grabWindow()).isNull(), 5'000);
     QVERIFY(image.devicePixelRatio() > 0.0);

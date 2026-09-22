@@ -235,6 +235,8 @@ void SwiftRollGatedTest::hostClipboardRoundTripAndReplacement()
     QString error;
     GridSurface surface;
     QVERIFY2(resolveSurface(window, &surface, &error), qPrintable(error));
+    QVERIFY(gridcheck::activateWindow(surface.view));
+    QVERIFY(gridcheck::awaitFrame(surface.view));
     std::optional<ClipboardNote> source = std::nullopt;
     std::optional<ClipboardNote> secondSource = std::nullopt;
     QVERIFY2(QTest::qWaitFor(
