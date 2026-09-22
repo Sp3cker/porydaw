@@ -1,7 +1,9 @@
 import Foundation
 
 /// Owns one document's editor presenters and all document-scoped publication wiring.
-/// The application replaces and tears down this object as a single unit.
+/// The application replaces and tears down this object as a single unit;
+/// `activate()` and `deactivate()` move it in and out of the one shared audio
+/// engine, playhead and drawer without touching the document.
 @MainActor
 public final class DocumentWorkspace {
     public struct Callbacks {
@@ -36,27 +38,29 @@ public final class DocumentWorkspace {
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
+    /// Drawer chrome belongs to the document: this workspace owns the presenter
+    /// and the three section slots its own pages occupy.
+    public let drawer = EditorDrawerPresenter()
 
     private unowned let audio: NativeAudio
-    private unowned let drawer: EditorDrawerPresenter
     private unowned let playhead: SharedPlayheadPresenter
     private let callbacks: Callbacks
     private var isActive = false
     private var isTornDown = false
 
     public init(session: DocumentSession, audio: NativeAudio,
-                drawer: EditorDrawerPresenter, playhead: SharedPlayheadPresenter,
-                callbacks: Callbacks) throws {
-        try audio.bind(timeline: session.timeline, bank: session.bankLease,
-                       config: session.document.state.config)
-
+                playhead: SharedPlayheadPresenter, palette: GridPalette,
+                callbacks: Callbacks) {
         self.session = session
         self.audio = audio
-        self.drawer = drawer
         self.playhead = playhead
         self.callbacks = callbacks
 
-        let grid = PianoGrid(session: session)
+        // The session owns the one palette the whole surface reads, so the roll
+        // presents that instance: the window's single theme push then reaches
+        // every page of every tab, hidden ones included, and the strip reads the
+        // same object.
+        let grid = PianoGrid(session: session, palette: palette)
         self.grid = grid
         let headers = TrackHeadersPresenter(baseFontPx: grid.baseFontPx)
         headers.attach(session: session, palette: grid.palette)
@@ -97,23 +101,32 @@ public final class DocumentWorkspace {
         session.onCameraChange = { [weak self] _ in
             self?.cameraDidChange()
         }
-        session.onPlayback = { [weak audio, weak self] timeline in
-            do {
-                try audio?.publish(timeline)
-            } catch {
-                self?.callbacks.publicationFailed(String(describing: error))
-            }
-        }
+        installPlaybackPublication()
         session.onChange = { [weak self] change in
             self?.sessionDidChange(change)
         }
     }
 
     /// Installs the already-built workspace only after the previous scene has
-    /// acknowledged detachment.
+    /// acknowledged detachment: the one shared audio engine takes this
+    /// document's timeline, bank and config, and the workspace's pages occupy
+    /// its own drawer slots. Idempotent; `deactivate()` reverses it.
     public func activate() {
         guard !isActive, !isTornDown else { return }
         isActive = true
+        do {
+            try audio.bind(timeline: session.timeline, bank: session.bankLease,
+                           config: session.document.state.config)
+        } catch {
+            // The renderer refused this document's voices. The document stays
+            // editable without a transport, exactly as it does when a playback
+            // publication fails, and the failure is reported once here.
+            callbacks.publicationFailed(String(describing: error))
+        }
+        // The engine is bound before the publication is reinstalled, so no
+        // timeline of this document can be published onto another document's
+        // voices. `deactivate()` cleared the closure this restores.
+        installPlaybackPublication()
         playhead.onPresentation = { [weak self] presentation in
             self?.present(playhead: presentation)
         }
@@ -136,21 +149,52 @@ public final class DocumentWorkspace {
         drawer.inputCancelled(reason: reason)
     }
 
+    /// Stops every session callback before the host tears the scene down.
+    /// `hostClosing` calls this after `cancel`: the workspace and its
+    /// presenters stay bound to the surface until `teardown`, but no camera,
+    /// playback or document publication may reach a page proxy the dying
+    /// scene has already released. Idempotent with `teardown`, which clears
+    /// the same closures.
+    public func suspendCallbacks() {
+        session.onCameraChange = nil
+        session.onChange = nil
+        session.onPlayback = nil
+    }
+
+    /// The non-destructive inverse of `activate()`: a hidden workspace keeps its
+    /// document, presenters and history, but releases the one shared audio
+    /// engine, the playhead and its drawer slots, and stops presenting playback.
+    /// Idempotent; `activate()` reverses it. `session.onChange` stays live, so a
+    /// hidden document keeps publishing its own state.
+    ///
+    /// The engine is shared, so a caller moving between workspaces deactivates
+    /// the outgoing one before it activates the incoming one: `activate()` binds
+    /// first, and the stop-and-unload here would strand that bind.
+    public func deactivate() {
+        guard isActive else { return }
+        isActive = false
+        cancel(reason: GridCancelReason.hidden.rawValue)
+        playhead.detach()
+        drawer.detachSection(automationPage)
+        drawer.detachSection(voiceChangesPage)
+        drawer.detachSection(velocityPage)
+        audio.stop()
+        audio.unload()
+        session.onPlayback = nil
+    }
+
     /// Detaches every document presenter after the host has removed the scene.
-    /// Closing the borrowed document session remains the application's async boundary.
+    /// Deactivation is part of teardown, so a retiring workspace has released
+    /// the shared audio engine, the playhead and its drawer slots whether or not
+    /// it was still active. Closing the borrowed document session remains the
+    /// application's async boundary.
     public func teardown() {
         guard !isTornDown else { return }
         isTornDown = true
+        deactivate()
         session.onChange = nil
         session.onPlayback = nil
         session.onCameraChange = nil
-        if isActive {
-            playhead.detach()
-            drawer.detachSection(automationPage)
-            drawer.detachSection(voiceChangesPage)
-            drawer.detachSection(velocityPage)
-            isActive = false
-        }
         automationPage.detach()
         voiceChangesPage.detach()
         voiceChangesPage.onAuditionVoice = nil
@@ -158,6 +202,20 @@ public final class DocumentWorkspace {
         velocityPage.onVelocityAccepted = nil
         trackHeaders.detach()
         grid.detach()
+    }
+
+    /// Installs the borrowed session's playback publication. The workspace owns
+    /// this closure from construction while it presents the document, and every
+    /// activation reinstalls what `deactivate()` cleared: an engine bound
+    /// without it would keep playing whatever it last held.
+    private func installPlaybackPublication() {
+        session.onPlayback = { [weak audio, weak self] timeline in
+            do {
+                try audio?.publish(timeline)
+            } catch {
+                self?.callbacks.publicationFailed(String(describing: error))
+            }
+        }
     }
 
     private func cameraDidChange() {

@@ -27,7 +27,7 @@ class SwiftRollGatedTest final : public QObject
 
   private slots:
     void init();
-    void failedOpenPreservesSceneAndSurfacesError();
+    void failedReopenLeavesEmptyStripAndSurfacesError();
     void pointerDrawMoveAndNeighborTrim();
     void resizeEdgesRespectMinimumDuration();
     void windowUndoRedoRerenders();
@@ -41,6 +41,17 @@ class SwiftRollGatedTest final : public QObject
     void selectionReticleRasterTranslucency();
     void noteRasterParity();
     void chromeRasterParity();
+    void songTabsGeometryAndSelection();
+    void songTabsScrollControlsAndGridInput();
+    void songTabsOpenCreatesIndependentWorkspace();
+    void songTabsSwitchPreservesPageState();
+    void songTabsPointerReorderPreservesIdentities();
+    void songTabsBackgroundClosePreservesActive();
+    void songTabsFinalCloseEmptyAndReopen();
+    void songTabsReopenExistingFocusesTab();
+    // Declared last: the Save path writes a song into the shared scratch
+    // project, so the scenarios that read the pristine fixture run first.
+    void songTabsDirtyCancelDiscardSave();
 
   private:
     QString m_mode;

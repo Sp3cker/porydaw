@@ -3,6 +3,14 @@ import PorydawCore
 import PorydawProjectService
 import QtBridge
 
+/// The application behind the mounted surface: the project service, the one
+/// audio engine and playhead, and the strip of open songs.
+///
+/// Each open song is one `DocumentWorkspace` behind one tab; the selected tab's
+/// workspace is the one bound to the shared engine, and every document-bound
+/// accessor below reads through it, so the window's actions follow the
+/// selection. The session's palette is the one instance the whole surface
+/// reads, and the tabs are the model the strip and its pages bind.
 @MainActor
 @QtBridgeable
 public final class ApplicationSession: QmlInstantiableStatus {
@@ -14,33 +22,62 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
 
+    /// The one palette for the whole surface. The host pushes the window theme
+    /// into it once; the strip and every page read their roles from it.
+    @QtTracked public var palette: GridPalette
+    /// The open songs. Constructed with the session and never nil: the surface
+    /// binds the strip before the first open and after the last close.
+    @QtTracked public var songTabs: SongTabsController
+
     private var projectRoot = ""
     private var labels: [String] = []
     private var catalogService: ProjectService?
     private var audio: NativeAudio?
-    private var workspace: DocumentWorkspace?
-    /// Drawer chrome is application state, not document state: this one
-    /// presenter is created here and survives every project and song
-    /// replacement.
-    private let drawer: EditorDrawerPresenter
+    /// The empty presenter the surface binds while no document is presented.
+    /// Drawer chrome belongs to the document, so this one is never attached to:
+    /// it is the stable object QML may hold before the first open and after the
+    /// last close.
+    private let emptyDrawerPresenter: EditorDrawerPresenter
     /// One shared playhead for the whole surface. A document workspace binds it
-    /// to the current document and cancels it before that workspace is released.
+    /// to its own document while that workspace is active and detaches it before
+    /// that workspace is deactivated or released.
     private let playhead: SharedPlayheadPresenter
     private let mouseHints = MouseHints()
-    private var detachContinuation: CheckedContinuation<Void, Never>?
+    /// The workspaces whose rows have left the strip and whose pages have not
+    /// reported their destruction yet. The page holds the C++ proxy for every
+    /// presenter it read, so a workspace is retained here until its page is
+    /// really gone.
+    private var pendingReleases: [Int: SongTabSession] = [:]
+    /// The ordered queue of document closes the retirements started. Every close
+    /// lands before the project service it borrows stops.
+    private var retireChain: Task<Void, Never>?
     private var isDisposed = false
+    private var hasReleased = false
     private var activeReplacementTask: Task<Void, Never>?
+    /// The project and song a close-all walk is switching to, when the walk was
+    /// started by a project open rather than by the host's close.
+    private var pendingProjectSwitch: (path: String, label: String?)?
+
     public required init() {
-        drawer = EditorDrawerPresenter()
+        let palette = GridPalette()
+        self.palette = palette
+        songTabs = SongTabsController(palette: palette)
+        emptyDrawerPresenter = EditorDrawerPresenter()
         playhead = SharedPlayheadPresenter()
         do {
             audio = try NativeAudio()
         } catch {
             lastSaveError = String(describing: error)
         }
+        songTabs.attach(app: self)
     }
 
     public func componentComplete() {}
+
+    /// The selected tab's workspace. Every document-bound accessor reads through
+    /// it, so all of them follow the selection, and it is nil exactly while the
+    /// strip is empty.
+    private var workspace: DocumentWorkspace? { songTabs.selectedWorkspace }
 
     public func isDocumentDirty() -> Bool { documentDirty }
     public func songCount() -> Int { labels.count }
@@ -61,9 +98,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.trackHeaders
     }
 
-    /// Drawer chrome exists for the whole session, so unlike `gridPresenter()`
-    /// this needs no open song and never fails.
-    public func drawerPresenter() -> EditorDrawerPresenter { drawer }
+    /// The presented document's drawer, or the session's empty presenter while
+    /// no document is presented. Unlike `gridPresenter()` this needs no open
+    /// song and never fails.
+    public func drawerPresenter() -> EditorDrawerPresenter {
+        workspace?.drawer ?? emptyDrawerPresenter
+    }
 
     /// The document-bound Velocity page. Like `gridPresenter()` it exists only
     /// while a document presentation is installed.
@@ -92,8 +132,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
         return workspace.automationPage
     }
 
-    /// The one shared playhead. Like the drawer it exists for the whole session;
-    /// it publishes an empty, detached presentation until a document is bound.
+    /// The one shared playhead. Unlike a workspace's drawer it is application
+    /// state: it publishes an empty, detached presentation until a document is
+    /// bound and returns to that empty presentation whenever the document is
+    /// deactivated.
     public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
 
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
@@ -128,12 +170,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     public func cancelGridInput(reason: Int) {
-        // The drawer owns application-scoped chrome; an installed workspace's
-        // cancel already covers it, so it cancels directly only without one.
+        // An installed workspace's cancel already covers the drawer it owns, so
+        // the empty presenter is cancelled only when no document is present.
         if let workspace {
             workspace.cancel(reason: reason)
         } else {
-            drawer.inputCancelled(reason: reason)
+            emptyDrawerPresenter.inputCancelled(reason: reason)
         }
     }
 
@@ -146,6 +188,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtSignal public func gridCommandAvailabilityChanged()
     @QtSignal public func openFailed(message: String)
     @QtSignal public func operationFailed(message: String)
+    @QtSignal public func allTabsClosed()
+    @QtSignal public func closeCancelled()
     @QtSignal public func headerContextMenuRequested(x: Double, y: Double)
     @QtSignal public func addTrackRequested()
     @QtSignal public func changeTrackVoiceRequested(track: Int)
@@ -157,124 +201,376 @@ public final class ApplicationSession: QmlInstantiableStatus {
         workspace?.trackHeaders.completeVoiceRequest(program: program)
     }
 
+    /// The host removed the scene, which is what releases the presentation. The
+    /// request itself arrives a turn later — QtBridge queues signal activation —
+    /// so the release follows this acknowledgment rather than the request, and a
+    /// host that acknowledges more than once releases once.
     public func acknowledgeGridDetached() {
-        let continuation = detachContinuation
-        detachContinuation = nil
-        continuation?.resume()
-        // The close path cannot await the acknowledgment, so its release runs
-        // here: the host removed the scene, so no QML item binds to the owners
-        // this releases any more.
-        if isDisposed { releaseDocumentPresentation() }
+        guard isDisposed, !hasReleased else { return }
+        hasReleased = true
+        releaseDocumentPresentation()
     }
 
     /// The host's close path, called before it destroys the Quick scene's engine.
-    /// Order is the accepted contract: cancel while the scene still exists, stop
-    /// presenting, and release nothing here — the surface still binds to the
-    /// document-bound owners until the host acknowledges scene removal through
-    /// `acknowledgeGridDetached()`, which is where the release happens.
+    /// Order is the accepted contract: admit no further work, cancel while the
+    /// scene still exists, and release nothing here — the surface still binds to
+    /// the document-bound owners until the host acknowledges scene removal
+    /// through `acknowledgeGridDetached()`, which is where the release happens.
     public func hostClosing() {
         isDisposed = true
         mouseHints.setWindowActive(active: false)
         activeReplacementTask?.cancel()
-        // Cancel while the scene exists: the drawer's resize session and every
-        // attached page's interaction end in the same call. The workspace's
-        // cancel covers the drawer it borrows; without a workspace the drawer
-        // still ends its own session.
-        if let workspace {
-            workspace.cancel(reason: GridCancelReason.hidden.rawValue)
-        } else {
-            drawer.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+        // Cancel while the scene exists: every tab's resize session and every
+        // attached page's interaction end in the same call, whether the tab is
+        // the selected one or hidden behind it. Each workspace's cancel covers
+        // the drawer it owns; without a tab the empty presenter is the only
+        // drawer that can hold one.
+        for tab in songTabs.allTabs {
+            tab.workspace.cancel(reason: GridCancelReason.hidden.rawValue)
+            // The scene is about to die: no camera, playback or document
+            // publication may reach a page proxy it has already released.
+            tab.workspace.suspendCallbacks()
         }
+        // Closed-but-page-alive workspaces are not in allTabs, yet their
+        // sessions can still publish into the dying scene.
+        for tab in pendingReleases.values {
+            tab.workspace.suspendCallbacks()
+        }
+        if songTabs.tabCount == 0 {
+            emptyDrawerPresenter.inputCancelled(reason: GridCancelReason.hidden.rawValue)
+        }
+        // The whole scene goes with this window: the host detaches it and
+        // acknowledges, and that acknowledgment releases every tab's workspace.
+        aboutToReleaseGrid()
     }
 
-    /// Releases the document-bound presentation owners. Called from the
-    /// replacement path after it awaited the host's acknowledgment, and from the
-    /// close path's acknowledgment: never earlier, because the QML surface binds
-    /// to the grid, the page and the session until the scene is really gone.
+    /// Releases every document-bound owner after the host removed the scene.
+    /// Never earlier: the QML surface binds to every tab's grid, pages and
+    /// workspace until the scene is really gone.
     private func releaseDocumentPresentation() {
-        let retiringSession: DocumentSession?
-        do {
-            let retiring = workspace
-            retiringSession = retiring?.session
-            workspace = nil
-            retiring?.teardown()
-        }
+        songTabs.releaseAllDetached()
         audio?.unload()
         songOpen = false
         documentDirty = false
         canUndo = false
         canRedo = false
-        // Keep the project alive until both the installed document and any
-        // in-flight replacement have retired, then stop its worker. Capture the
-        // session, not its workspace: the QML-facing owners must be released
-        // synchronously after the scene has detached, before any async close.
+        // Keep the project alive until every released document and any in-flight
+        // open have retired, then stop its worker. The workspaces themselves are
+        // released synchronously above, before any async close.
+        //
+        // Capture the work, never the session: a task that outlives the host
+        // would release this session — and the QObject proxies it owns — after
+        // Qt's own teardown, and that order crashes in the proxy destructor.
         let service = catalogService
         catalogService = nil
         let replacementTask = activeReplacementTask
+        let closing = retireChain
         Task {
             _ = await replacementTask?.value
-            _ = await retiringSession?.close()
+            _ = await closing?.value
             await service?.close()
         }
     }
 
-    /// Starts project replacement without exposing async/throws through Qt.
-    /// The native host must pass discardChanges only after its Save/Discard/
-    /// Cancel gate has selected Discard.
-    public func openProject(path: String, discardChanges: Bool) {
-        guard !documentDirty || discardChanges else {
-            let message = "Save or discard the current document before opening another project."
-            lastSaveError = message
-            openFailed(message: message)
-            return
-        }
-        let priorTask = activeReplacementTask
-        activeReplacementTask = Task {
-            _ = await priorTask?.value
-            _ = await replaceProject(path: path)
-        }
+    // MARK: - Project and song opens
+
+    /// Starts a project replacement without exposing async/throws through Qt.
+    /// Every open tab is asked to close first — the same Save/Discard/Cancel
+    /// question the strip asks — and the switch runs once the strip is empty.
+    public func openProject(path: String) {
+        requestProjectSwitch(path: path, label: nil)
     }
 
     public func openProjectAndSong(path: String, label: String) {
-        guard !documentDirty else {
-            let message = "Save or discard the current document before opening another project."
-            lastSaveError = message
-            openFailed(message: message)
+        requestProjectSwitch(path: path, label: label)
+    }
+
+    /// Opens a song in a tab.
+    ///
+    /// One live tab per label: an open tab is focused, and re-opening the
+    /// *selected* tab is the in-place reload path — the file on disk may have
+    /// changed under the open document — gated by the same question a close
+    /// asks. A label that is not open appends a tab and selects it.
+    public func openSong(label: String) {
+        if let live = songTabs.tab(label: label) {
+            guard live.tabId == songTabs.selectedId else {
+                songTabs.selectTab(tabId: live.tabId)
+                return
+            }
+            songTabs.requestReload(tabId: live.tabId)
             return
         }
-        let priorTask = activeReplacementTask
-        activeReplacementTask = Task {
-            _ = await priorTask?.value
-            guard await replaceProject(path: path) else { return }
-            await replaceSong(label: label)
+        startOpen(label: label, at: nil)
+    }
+
+    /// Closes every tab, asking about each dirty one in turn. The host's close
+    /// path calls this; `allTabsClosed` answers when the last tab is gone and
+    /// `closeCancelled` answers a refusal.
+    public func requestCloseAll() {
+        songTabs.startCloseAll()
+    }
+
+    // MARK: - Tab lifecycle
+
+    /// The strip changed its model or selection: republish the flags the window
+    /// and the surface read.
+    @QtIgnored
+    func tabsDidChange() {
+        refreshDocumentState()
+        // The selected workspace's grid owns command availability; switching
+        // tabs swaps it, so the window's Edit-menu enabled states must refresh.
+        gridCommandAvailabilityChanged()
+    }
+
+    /// A tab is about to leave the strip. Its workspace is retained here until
+    /// the page that bound it reports its destruction: that page holds a proxy
+    /// for every presenter it read, so releasing the workspace earlier would
+    /// leave those proxies dangling.
+    @QtIgnored
+    func tabWillLeave(_ tab: SongTabSession) {
+        pendingReleases[tab.tabId] = tab
+    }
+
+    /// The page that bound `tabId` is destroyed, so its workspace may be
+    /// retired. A tab that is not awaiting release is still live: a strip
+    /// reorder destroys and rebuilds the pages it moves, and that report
+    /// releases nothing.
+    @QtIgnored
+    func tabPageReleased(tabId: Int) {
+        guard let tab = pendingReleases.removeValue(forKey: tabId) else { return }
+        retire(tab)
+    }
+
+    /// Retires whatever no page reported. The host confirmed the scene is gone,
+    /// so no page can still bind these workspaces.
+    @QtIgnored
+    func drainTabReleases() {
+        guard !pendingReleases.isEmpty else { return }
+        let pending = pendingReleases.values.sorted { $0.tabId < $1.tabId }
+        pendingReleases.removeAll()
+        for tab in pending { retire(tab) }
+    }
+
+    /// The gate's Save answer for one tab, reported back through
+    /// `closeAfterSave(tabId:saved:)`: the strip closes the tab on success and
+    /// leaves the question up on a refusal.
+    @QtIgnored
+    func saveTabBeforeClose(_ tab: SongTabSession) {
+        guard !saveInProgress else {
+            let message = "A save is already in progress."
+            lastSaveError = message
+            operationFailed(message: message)
+            songTabs.closeAfterSave(tabId: tab.tabId, saved: false)
+            return
+        }
+        saveInProgress = true
+        lastSaveError = ""
+        // The document and the tab's identity travel; the strip and the session's
+        // own flags are reached through a weak self, so a save that finishes after
+        // the host is gone releases nothing late.
+        let tabId = tab.tabId
+        let session = tab.workspace.session
+        Task { [weak self] in
+            var saved = true
+            do {
+                try await session.save()
+            } catch {
+                saved = false
+                let message = String(describing: error)
+                self?.lastSaveError = message
+                self?.operationFailed(message: message)
+            }
+            self?.saveInProgress = false
+            self?.songTabs.closeAfterSave(tabId: tabId, saved: saved)
         }
     }
 
-    public func openSong(label: String, discardChanges: Bool) {
-        guard !documentDirty || discardChanges else {
-            let message = "Save or discard the current document before opening another song."
-            lastSaveError = message
-            openFailed(message: message)
+    /// The close-all walk's verdict. A walk this session started for a project
+    /// open continues that switch; any other walk answers the host: a completed
+    /// walk closes its window, a refusal cancels it.
+    @QtIgnored
+    func closeAllResolved(closed: Bool) {
+        if let pending = pendingProjectSwitch {
+            pendingProjectSwitch = nil
+            guard closed else {
+                closeCancelled()
+                return
+            }
+            startProjectSwitch(path: pending.path, label: pending.label)
             return
         }
-        let priorTask = activeReplacementTask
-        activeReplacementTask = Task {
-            _ = await priorTask?.value
-            await replaceSong(label: label)
+        if closed { allTabsClosed() } else { closeCancelled() }
+    }
+
+    /// The gate approved reopening a song in place: the tab closed, and the same
+    /// label opens again at the index it had.
+    @QtIgnored
+    func reloadApproved(label: String, index: Int) {
+        startOpen(label: label, at: index)
+    }
+
+    /// A document in one tab published a state change: every caption follows its
+    /// own document, and the selected document also feeds the window's flags.
+    /// Hidden tabs publish too, so a background edit still marks its own tab.
+    private func tabStateChanged() {
+        songTabs.refreshDirty()
+        refreshDocumentState()
+    }
+
+    /// Retires one tab: releases the workspace's presenters and closes its
+    /// borrowed document. Closing is the application's async boundary, and every
+    /// close lands before the project service it borrows stops.
+    private func retire(_ tab: SongTabSession) {
+        let session = tab.workspace.session
+        tab.workspace.teardown()
+        let prior = retireChain
+        retireChain = Task {
+            _ = await prior?.value
+            _ = await session.close()
         }
+    }
+
+    /// Waits for the document closes the retirements have already started. A tab
+    /// whose page has not reported yet is not awaited here: the row removal is
+    /// what destroys that page.
+    private func awaitTabCloses() async {
+        // Pages report destruction asynchronously, and a retire is only enqueued
+        // once its page reports — so the chain grows while reports land. Waiting
+        // on the chain as it stands now would return before the late reports'
+        // retires run, letting the outgoing service stop first. Wait until every
+        // released workspace has been retired, then drain the finished chain.
+        while !pendingReleases.isEmpty {
+            await retireChain?.value
+            await Task.yield()
+        }
+        await retireChain?.value
+    }
+
+    /// Tears every tab down for a project switch. The strip is presented, so the
+    /// workspaces are retired as their pages report destruction — nothing is
+    /// released while a page can still bind it — and the closes they started land
+    /// before the outgoing project's service stops.
+    private func releaseTabs() async {
+        songTabs.releaseAll()
+        await awaitTabCloses()
+    }
+
+    /// Starts a project switch: every tab is asked to close first, and the switch
+    /// runs once the strip is empty. A refusal cancels the switch.
+    private func requestProjectSwitch(path: String, label: String?) {
+        // A close-all walk already running for an earlier open is generic: the
+        // latest request wins, and the in-flight walk resolves into it.
+        guard songTabs.tabCount > 0 else {
+            pendingProjectSwitch = nil
+            startProjectSwitch(path: path, label: label)
+            return
+        }
+        pendingProjectSwitch = (path: path, label: label)
+        songTabs.startCloseAll()
+    }
+
+    /// Runs a queued project switch. The session is held weakly until the switch
+    /// actually starts, so a queued open that is superseded by the host's teardown
+    /// abandons the switch instead of keeping the session alive past it.
+    private func startProjectSwitch(path: String, label: String?) {
+        let priorTask = activeReplacementTask
+        activeReplacementTask = Task { [weak self] in
+            _ = await priorTask?.value
+            guard let self else { return }
+            guard await self.replaceProject(path: path) else { return }
+            if let label { await self.openTab(label: label, at: nil) }
+        }
+    }
+
+    /// Opens `label` after every earlier open has finished: one open at a time,
+    /// in the order they were asked for, and never while the host is closing. The
+    /// session is held weakly until the open actually starts, for the same reason
+    /// a queued project switch is.
+    private func startOpen(label: String, at index: Int?) {
+        let priorTask = activeReplacementTask
+        activeReplacementTask = Task { [weak self] in
+            _ = await priorTask?.value
+            await self?.openTab(label: label, at: index)
+        }
+    }
+
+    /// Builds one workspace and installs its tab. A load that fails reports and
+    /// installs nothing: a tab exists only for a document that opened.
+    private func openTab(label: String, at index: Int?) async {
+        guard let service = catalogService else {
+            failOpen("Open a project before opening a song.")
+            return
+        }
+        guard let audio else {
+            failOpen(String(describing:
+                NativeAudioError.initializationFailed("Audio service is unavailable.")))
+            return
+        }
+        lastSaveError = ""
+        do {
+            let session = try await DocumentSession.open(
+                service: service, label: label, sampleRate: audio.sampleRate)
+            let workspace = DocumentWorkspace(
+                session: session, audio: audio, playhead: playhead, palette: palette,
+                callbacks: makeCallbacks())
+            workspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
+                self?.gridCommandAvailabilityChanged()
+            }
+            guard !isDisposed, !Task.isCancelled else {
+                // The host is closing: nothing adopts this document.
+                workspace.teardown()
+                _ = await session.close()
+                return
+            }
+            let tab = SongTabSession(tabId: songTabs.reserveTabId(), title: label,
+                                     workspace: workspace, app: self)
+            songTabs.add(tab, at: index)
+        } catch {
+            failOpen(String(describing: error))
+        }
+    }
+
+    /// The callbacks every tab's workspace reports through. They are the
+    /// session's own notices: the window's track and context-menu requests, the
+    /// grid's command availability, and the state the strip and the window flags
+    /// publish.
+    private func makeCallbacks() -> DocumentWorkspace.Callbacks {
+        DocumentWorkspace.Callbacks(
+            addTrackRequested: { [weak self] in self?.addTrackRequested() },
+            changeTrackVoiceRequested: { [weak self] track in
+                self?.changeTrackVoiceRequested(track: track)
+            },
+            revealTrackVoiceRequested: { [weak self] track in
+                self?.revealTrackVoiceRequested(track: track)
+            },
+            headerContextMenuRequested: { [weak self] x, y in
+                self?.headerContextMenuRequested(x: x, y: y)
+            },
+            gridCommandAvailabilityChanged: { [weak self] in
+                self?.gridCommandAvailabilityChanged()
+            },
+            sessionStateChanged: { [weak self] in self?.tabStateChanged() },
+            publicationFailed: { [weak self] message in
+                self?.lastSaveError = message
+            })
+    }
+
+    private func failOpen(_ message: String) {
+        lastSaveError = message
+        openFailed(message: message)
     }
 
     public func requestSave() {
         guard let session = workspace?.session, !saveInProgress else { return }
         saveInProgress = true
         lastSaveError = ""
-        Task {
+        Task { [weak self] in
             do {
                 try await session.save()
             } catch {
-                lastSaveError = String(describing: error)
+                self?.lastSaveError = String(describing: error)
             }
-            saveInProgress = false
+            self?.saveInProgress = false
         }
     }
 
@@ -283,14 +579,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
         canUndo = false
         canRedo = false
         lastSaveError = ""
-        Task {
+        Task { [weak self] in
             do {
                 _ = try await session.undo()
             } catch {
                 let message = String(describing: error)
-                lastSaveError = message
-                operationFailed(message: message)
-                refreshDocumentState()
+                self?.lastSaveError = message
+                self?.operationFailed(message: message)
+                self?.refreshDocumentState()
             }
         }
     }
@@ -300,14 +596,14 @@ public final class ApplicationSession: QmlInstantiableStatus {
         canUndo = false
         canRedo = false
         lastSaveError = ""
-        Task {
+        Task { [weak self] in
             do {
                 _ = try await session.redo()
             } catch {
                 let message = String(describing: error)
-                lastSaveError = message
-                operationFailed(message: message)
-                refreshDocumentState()
+                self?.lastSaveError = message
+                self?.operationFailed(message: message)
+                self?.refreshDocumentState()
             }
         }
     }
@@ -337,7 +633,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         do {
             try await service.open(root: path)
             let newLabels = try await service.songLabels()
-            await retireCurrentDocument()
+            await releaseTabs()
             await catalogService?.close()
             guard !isDisposed, !Task.isCancelled else {
                 await service.close()
@@ -350,79 +646,16 @@ public final class ApplicationSession: QmlInstantiableStatus {
             return true
         } catch {
             await service.close()
-            let message = String(describing: error)
-            lastSaveError = message
-            openFailed(message: message)
+            failOpen(String(describing: error))
             return false
         }
     }
 
-    private func replaceSong(label: String) async {
-        guard let service = catalogService else {
-            let message = "Open a project before opening a song."
-            lastSaveError = message
-            openFailed(message: message)
-            return
-        }
-        guard let audio else {
-            let message = String(describing:
-                NativeAudioError.initializationFailed("Audio service is unavailable."))
-            lastSaveError = message
-            openFailed(message: message)
-            return
-        }
-        lastSaveError = ""
-        var opened: DocumentSession?
-        do {
-            let replacement = try await DocumentSession.open(
-                service: service, label: label, sampleRate: audio.sampleRate)
-            opened = replacement
-            let callbacks = DocumentWorkspace.Callbacks(
-                addTrackRequested: { [weak self] in self?.addTrackRequested() },
-                changeTrackVoiceRequested: { [weak self] track in
-                    self?.changeTrackVoiceRequested(track: track)
-                },
-                revealTrackVoiceRequested: { [weak self] track in
-                    self?.revealTrackVoiceRequested(track: track)
-                },
-                headerContextMenuRequested: { [weak self] x, y in
-                    self?.headerContextMenuRequested(x: x, y: y)
-                },
-                gridCommandAvailabilityChanged: { [weak self] in
-                    self?.gridCommandAvailabilityChanged()
-                },
-                sessionStateChanged: { [weak self] in
-                    self?.refreshDocumentState()
-                },
-                publicationFailed: { [weak self] message in
-                    self?.lastSaveError = message
-                })
-            let replacementWorkspace = try DocumentWorkspace(
-                session: replacement, audio: audio, drawer: drawer,
-                playhead: playhead, callbacks: callbacks)
-            await retireCurrentDocument(unloadAudio: false)
-            guard !isDisposed, !Task.isCancelled else {
-                replacementWorkspace.teardown()
-                _ = await replacement.close()
-                return
-            }
-            workspace = replacementWorkspace
-            replacementWorkspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
-                self?.gridCommandAvailabilityChanged()
-            }
-            replacementWorkspace.activate()
-            opened = nil
-            refreshDocumentState()
-            songOpen = true
-        } catch {
-            if let opened { _ = await opened.close() }
-            let message = String(describing: error)
-            lastSaveError = message
-            openFailed(message: message)
-        }
-    }
-
+    /// Republishes the flags the window and the strip read: the song is open
+    /// while any tab is, and the document flags follow the selected tab's
+    /// workspace.
     private func refreshDocumentState() {
+        songOpen = songTabs.tabCount > 0
         guard let session = workspace?.session else {
             documentDirty = false
             canUndo = false
@@ -434,32 +667,6 @@ public final class ApplicationSession: QmlInstantiableStatus {
         canRedo = session.document.history.canRedo
     }
 
-    private func retireCurrentDocument(unloadAudio: Bool = true) async {
-        let retiringSession: DocumentSession
-        if let retiring = workspace {
-            retiringSession = retiring.session
-            // Cancellation is synchronous while the scene still binds the workspace.
-            retiring.cancel(reason: GridCancelReason.hidden.rawValue)
-            await withCheckedContinuation { continuation in
-                detachContinuation = continuation
-                aboutToReleaseGrid()
-            }
-            // Only the host acknowledgment permits presentation owners to retire.
-            retiring.teardown()
-            if workspace === retiring { workspace = nil }
-            if unloadAudio { audio?.unload() }
-        } else {
-            if unloadAudio { audio?.unload() }
-            refreshDocumentState()
-            songOpen = false
-            return
-        }
-        // End the workspace's lexical lifetime before crossing the session-close
-        // suspension point; QML no longer owns a live reference after detachment.
-        _ = await retiringSession.close()
-        refreshDocumentState()
-        songOpen = false
-    }
 }
 
 /// Resolves canonical editor commands against live document selection. The

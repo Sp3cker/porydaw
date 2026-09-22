@@ -134,6 +134,15 @@ public final class GridPalette {
     public var buttonPressedBackground: String = "#F5B61C"
     public var buttonPressedText: String = "#302C29"
 
+    /// The tab strip's chrome: the window chrome one step lighter per state, the
+    /// active tab's accent, the pressed (dropping) fill, and the strip's own
+    /// separator line.
+    public var tabBackground: String = "#E1DBD6"
+    public var tabHoverBackground: String = "#ECE7E1"
+    public var tabSelectedBackground: String = "#B9E8EE"
+    public var tabPressedBackground: String = "#F5B61C"
+    public var tabSeparator: String = "#9E9893"
+
     public var keyboardNatural: String = "#F4F4F4"
     public var keyboardBlack: String = "#202224"
     public var keyboardSeparator: String = "#BCB4AF"

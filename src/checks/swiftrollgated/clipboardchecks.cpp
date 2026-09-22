@@ -436,19 +436,53 @@ void SwiftRollGatedTest::hostClipboardRoundTripAndReplacement()
     QTRY_VERIFY_WITH_TIMEOUT(undo->isEnabled(), kSettleTimeoutMs);
     QVERIFY(!redo->isEnabled());
 
-    QPointer<QQuickView> oldView = surface.view;
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel),
-                                      Q_ARG(bool, true)));
-    QVERIFY(QTest::qWaitFor(
-        [&] {
-            return oldView.isNull() && window.gridView() && window.gridView()->isExposed() &&
-                   window.gridView()->width() > 0 && window.gridView()->height() > 0 &&
-                   window.gridView()->rootObject();
-        },
-        kOpenTimeoutMs));
+    // Re-opening the selected song is the in-place reload path: the tab closes
+    // through the same gate a close asks and the same label opens again at the
+    // index it had. The mounted view survives all of it — only the tab's page
+    // and its grid are replaced — so the scenario drives the gate and then
+    // resolves the replacement surface from the same view.
+    const QPointer<QQuickView> reloadView = surface.view;
+    const QPointer<QObject> oldGrid = surface.grid;
+    QObject *const controller = session->property("songTabs").value<QObject *>();
+    QVERIFY(controller != nullptr);
+    const int reloadIndex = controller->property("selectedIndex").toInt();
+    QVERIFY(reloadIndex >= 0);
+    QVERIFY2(session->property("documentDirty").toBool(),
+             "the scenario's edits left the document clean, so no gate would ask");
+    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
+    QTRY_VERIFY_WITH_TIMEOUT(controller->property("pendingCloseId").toInt() >= 0, kSettleTimeoutMs);
+    QQuickItem *discard = nullptr;
+    QVERIFY2(QTest::qWaitFor(
+                 [&] {
+                     discard = gridcheck::visualDescendant(window.gridView()->contentItem(),
+                                                           QStringLiteral("songTabDiscard"));
+                     return discard && discard->isVisible();
+                 },
+                 kSettleTimeoutMs),
+             "the close gate's discard control is not presented");
+    const QPoint discardPoint = discard->mapToScene(discard->boundingRect().center()).toPoint();
+    QTest::mouseMove(surface.view, discardPoint);
+    QTest::mouseClick(surface.view, Qt::LeftButton, Qt::NoModifier, discardPoint);
+
+    const auto presentedGrid = [&window] {
+        QQuickItem *const rootItem =
+            window.gridView() ? qobject_cast<QQuickItem *>(window.gridView()->rootObject())
+                              : nullptr;
+        return rootItem ? rootItem->property("gridModel").value<QObject *>() : nullptr;
+    };
+    QVERIFY2(QTest::qWaitFor(
+                 [&] {
+                     return window.gridView() == reloadView &&
+                            controller->property("tabCount").toInt() == 1 &&
+                            controller->property("pendingCloseId").toInt() == -1 &&
+                            controller->property("selectedIndex").toInt() == reloadIndex &&
+                            presentedGrid() && presentedGrid() != oldGrid;
+                 },
+                 kOpenTimeoutMs),
+             "the in-place reload did not replace the selected tab's page and grid");
     GridSurface replacement;
     QVERIFY2(resolveSurface(window, &replacement, &error), qPrintable(error));
-    QVERIFY(!undo->isEnabled());
+    QTRY_VERIFY_WITH_TIMEOUT(!undo->isEnabled(), kSettleTimeoutMs);
     QVERIFY(!redo->isEnabled());
     QCOMPARE(QApplication::clipboard()->mimeData()->data(QLatin1String(kClipMimeType)),
              copiedPayload);

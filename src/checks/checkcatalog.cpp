@@ -75,6 +75,15 @@ const std::vector<CheckDefinition> &catalog()
         const QStringList rich = fixtures::richVoicegroupFiles();
         const QStringList route101 =
             project + strings({"sound/songs/midi/mus_route101.mid"}) + rich;
+        // The tab scenarios open more than one song at a time, so the
+        // swiftrollgated surface stages the other registered songs that share
+        // the fixture's `_fixture_rich` voicegroup.
+        const QStringList tabSongs =
+            project +
+            strings({"sound/songs/midi/mus_route101.mid",
+                     "sound/songs/midi/mus_littleroot_test.mid",
+                     "sound/songs/midi/mus_route102.mid", "sound/songs/midi/mus_gym.mid"}) +
+            rich;
         const QStringList route102 =
             project + strings({"sound/songs/midi/mus_route102.mid"}) + rich;
         const QStringList bank =
@@ -163,7 +172,7 @@ const std::vector<CheckDefinition> &catalog()
                 .handler = swiftGrid,
                 .scratchKind = ScratchKind::ExistingDirectory,
                 .fixtureRootKind = FixtureRootKind::DecompProject,
-                .fixtureFiles = route101,
+                .fixtureFiles = tabSongs,
                 .environment = {{QStringLiteral("PORYDAW_AUDIO_BACKEND"), QStringLiteral("null")}},
                 .windowing = Windowing::WindowSystem,
             });
