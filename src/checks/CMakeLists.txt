@@ -161,7 +161,9 @@ if(APPLE)
         drawerpresentation/velocity.swift
         drawerpresentation/voice.swift
         drawerpresentation/voicemenus.swift
-        drawerpresentation/drawer.swift
+        drawerpresentation/drawer_basics.swift
+        drawerpresentation/drawer_resize.swift
+        drawerpresentation/drawer_state.swift
         velocity/velocitydetentdragging.swift
         velocity/tst_velocityediting.swift
         rollcheck/velocity_prompt.swift
