@@ -6,7 +6,7 @@ Original SHA-256: 6f00bd37b89259ec40b7681dee5a90b2b925f9f27aeaa3566a87388e69c53f
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
 Swift SHA-256: 338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4
 Swift counterpart: src/checks/editcheck/tst_songdocument_songnotes.swift
-Swift SHA-256: a165d3fbd055f7120332a1cfca0d8c1be711314e6b982c0f579d0dc7bc63bf3c
+Swift SHA-256: 7027ac6701c4f833fb44e1e8e601a4efd1d08da5a352b08ecdd8c650add667c6
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
 Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
 Swift counterpart: src/checks/editcheck/NoteCorpusChecks.swift
@@ -28,7 +28,7 @@ an equivalent Swift assertion. Unsure PARTIAL-versus-GAP calls were resolved to
 GAP. None of these labels authorizes deletion or claims whole-case equivalence.
 
 Fixture, sequence and row constraints
-Resize-stop case is synthetic: a reverse false/true loop over resizeNotesDurations scenarios (capped extension, exact shrink), zero-capacity and kMaxTick rejections, per-note duration/identity/velocity preservation, undo-counted extension/shortening with byte identity, save-boundary cleanliness, and a compatible-inverse no-op asserted through full SavedDocState mismatch emptiness. The Swift port preserves every value and ordering: resizeNotesDurations becomes the pure Span<Note> planner document.resizeNotesDurations(_:byTicks:); mergeable resizeNotes(notes, d, true) becomes document.resizeNoteLengths(ids, byTicks:) (incremental keyboard semantics: merges compatible cumulative results, splits capped reversals, respects save boundaries, removes compatible inverse gestures); non-mergeable resizeNotes(notes, d) becomes document.resizeNotes(ids, edge: .trailing, byTicks:). undoStack()->clear() is unrepresentable in public Swift history, so each clear site recreates a fresh SongDocument from the encoded state and re-resolves note ids; undoStack()->count() becomes coreRangeHistoryPosition [count, cursor] probes; setClean() becomes didSave(captureSave()); isClean() becomes !isDirty; findNote(track,tick,key) becomes coreNoteFind over notes(in:); smf().write() becomes state.file.encoded(). SavedDocState/docStateMismatch become CoreNoteDocState/coreNoteStateMismatch covering the same fields (bytes, revision, save-identity analogue, undo count/cursor, clean, canRedo, track count, tempo, per-note id+velocity). Representational adaptations, all equivalence-preserving: (a) the original mutates DocNote copies for the adjacent/zeroCap planner inputs; Swift Note is immutable, so sibling synthetic documents supply notes with identical tick/pitch/duration/track — the only fields the pure planner reads; (b) history traversal publishes a revision, so undo count/cursor are probed once per site after the operation instead of inside every per-batch mismatch, and A054 additionally replays each rejection prefix on companion fixtures so per-batch count/cursor preservation is still proven; (c) the reverse loop distinguishes rows via [forward]/[reverse] cppID suffixes, matching corpus [label] convention. Out-of-slice limitation: C++ resizeNotes terminates unterminated notes (writes a note-off); Swift resizeNotes/resizeNoteLengths leave them unterminated. No site in A001-A069 resizes an unterminated note, so this divergence is unobservable here and is not claimed as parity.
+Resize-stop case is synthetic: a reverse false/true loop over resizeNotesDurations scenarios (capped extension, exact shrink), zero-capacity and kMaxTick rejections, per-note duration/identity/velocity preservation, undo-counted extension/shortening with byte identity, save-boundary cleanliness, and a compatible-inverse no-op asserted through full SavedDocState mismatch emptiness. The Swift port preserves every value and ordering: resizeNotesDurations becomes the pure Span<Note> planner document.resizeNotesDurations(_:byTicks:); mergeable resizeNotes(notes, d, true) becomes document.resizeNoteLengths(ids, byTicks:) (incremental keyboard semantics: merges compatible cumulative results, splits capped reversals, respects save boundaries, removes compatible inverse gestures); non-mergeable resizeNotes(notes, d) becomes document.resizeNotes(ids, edge: .trailing, byTicks:). undoStack()->clear() is unrepresentable in public Swift history, so each clear site recreates a fresh SongDocument from the encoded state and re-resolves note ids; undoStack()->count() becomes coreRangeHistoryPosition [count, cursor] probes; setClean() becomes didSave(captureSave()); isClean() becomes !isDirty; findNote(track,tick,key) becomes coreNoteFind over notes(in:); smf().write() becomes state.file.encoded(). SavedDocState/docStateMismatch become CoreNoteDocState/coreNoteStateMismatch covering the same fields (bytes, revision, save-identity analogue, undo count/cursor, clean, canRedo, track count, tempo, per-note id+velocity). Representational adaptations, all equivalence-preserving: (a) the original mutates DocNote copies for the adjacent/zeroCap planner inputs; Swift Note is immutable, so sibling synthetic documents supply notes with identical tick/pitch/duration/track — the only fields the pure planner reads; (b) history traversal publishes a revision, so undo count/cursor are probed once per site after the operation instead of inside every per-batch mismatch, and A054 additionally replays each rejection prefix on companion fixtures so per-batch count/cursor preservation is still proven; (c) the reverse loop distinguishes rows via [forward]/[reverse] cppID suffixes, matching corpus [label] convention. Supplemental regression: coreUnterminatedResizeChecks now covers the formerly missing trailing-resize termination. Both direct and keyboard paths generate a channel-matched velocity-zero note-on endpoint for positive and floor-clamped negative deltas, preserve the original note identity and bytes, and restore missing/present endpoints through undo/redo. Zero delta and overflow remain no-ops; compatible keyboard extensions merge; returning a cumulative gesture to zero restores its unterminated origin. These isolated-note regressions are additional behavior evidence, not new original A### sites or a claim of exhaustive unterminated-note collision/leading-resize parity.
 Batch-collision case is synthetic: three conflicting insertion batches looped against one SavedDocState (each must leave zero mismatch while preserving the staged redo branch), followed by exact-duplicate insertion asserting distinct assigned identities with identical tick/duration/key/velocity, plus undo/redo byte identity. The Swift port preserves all values: the same three batches reject via thrown NoteEditError.conflictingEditedNotes (try? mirrors the original's silent void rejection), the same three-note batch inserts, and the same exact-duplicate pair inserts with per-note tick/duration/key/velocity and assigned-distinct identity assertions.
 Corpus cases (noteEditingBasic/Batch/Abutting) enumerate every staged EditableTrack row at distantBase/step arithmetic. Basic covers the full gesture chain on one note: add, move by (8 steps, +3 keys), trailing resize, leading resizes (including the duration-1 clamp and end preservation), velocity set/nudge/clamp-to-127, and delete. Batch covers two-note insertion with single-entry undo/redo. Abutting covers seam-adjacent [seam-2step,seam)/[seam,seam+2step) notes with endIndex distinctness and a raw-event pairing-boundary scan.
 
@@ -37,8 +37,8 @@ runNoteEditsSuite (adoptionAndPairing, insertionAndCollision, movementAndResize,
 
 Verification
 Command: deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory
-Result: PASS (focused noteEdits/documentHistory, artifact://79), followed by
-full deno task verify PASS 24/24 (35.83s) and lsp:swift index 6/6.
+Result: PASS (focused noteEdits/documentHistory, artifact://90), followed by
+full deno task verify PASS 24/24 (33.98s) and lsp:swift index 6/6.
 All 111 original sites are MATCHED; A070-A111 now execute on the staged corpus.
 Focused run history: an earlier focused run passed the other targeted predicates
 but false-failed A052/A054 on revision because the mismatch helper traversed
@@ -1556,312 +1556,312 @@ S039 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
                     cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                     message: "note-end status is retained during adoption")
 
-S040 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:96
+S040 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:97
   report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: id,
       what: "A001 fixture loads with two editable tracks")
 
-S041 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:102
+S041 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:103
   report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
       message: "A002 inserted notes keep consistent on/off pairs")
 
-S042 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:106
+S042 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:107
   report.expect(planned != nil, cppID: id, message: "A003 +20 duration plan exists")
 
-S043 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:107
+S043 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:108
   report.expectEqual([Tick(20), Tick(30)], planned, cppID: id,
       what: "A004 +20 plan caps at the next selected start")
 
-S044 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:120
+S044 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:121
   report.expect(adjacentPlan != nil, cppID: id,
       message: "A005 adjacent +10 duration plan exists")
 
-S045 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:122
+S045 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:123
   report.expectEqual([Tick(20), Tick(40)], adjacentPlan, cppID: id,
       what: "A006 adjacent +10 plan extends the last note")
 
-S046 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:131
+S046 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:132
   report.expect(
       document.resizeNotesDurations(zeroCapNotes.span, byTicks: 20) == nil,
       cppID: id, message: "A007 zero capacity rejects the duration plan")
 
-S047 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:134
+S047 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:135
   report.expect(
       document.resizeNotesDurations(originals.span,
                                     byTicks: Int64(TimeDefaults.maxTick)) == nil,
       cppID: id, message: "A008 max-tick delta rejects the duration plan")
 
-S048 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:149
+S048 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:150
   report.fail(id, "capped resize changed the note count")
 
-S049 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:152
+S049 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:153
   report.expectEqual(Tick(20), notes[0].duration, cppID: id,
       what: "A009 capped resize keeps duration 20")
 
-S050 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:154
+S050 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:155
   report.expectEqual(Tick(30), notes[1].duration, cppID: id,
       what: "A010 capped resize grows duration to 30")
 
-S051 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:157
+S051 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:158
   report.expectEqual(clearedOriginals[index].id, notes[index].id, cppID: id,
       what: "A011 resize preserves note identity")
 
-S052 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:159
+S052 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:160
   report.expectEqual(clearedOriginals[index].velocity, notes[index].velocity,
       cppID: id, what: "A012 resize preserves velocity")
 
-S053 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:162
+S053 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:163
   report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
       message: "A013 first resize keeps consistent on/off pairs")
 
-S054 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:165
+S054 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:166
   report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
       message: "A014 merged resize keeps consistent on/off pairs")
 
-S055 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:167
+S055 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:168
   report.expectEqual([1, 1], coreRangeHistoryPosition(cleared, report, id),
       cppID: id, what: "A015 cumulative resize merges into one entry")
 
-S056 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:172
+S056 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:173
   report.fail(id, "merged resize changed the note count")
 
-S057 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:175
+S057 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:176
   report.expectEqual(Tick(20), notes[0].duration, cppID: id,
       what: "A016 merged resize keeps duration 20")
 
-S058 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:177
+S058 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:178
   report.expectEqual(Tick(40), notes[1].duration, cppID: id,
       what: "A017 merged resize grows duration to 40")
 
-S059 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:181
+S059 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:182
   report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
       message: "A018 shortened resize keeps consistent on/off pairs")
 
-S060 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:185
+S060 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:186
   report.fail(id, "reversed resize changed the note count")
 
-S061 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:188
+S061 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:189
   report.expectEqual(Tick(10), notes[0].duration, cppID: id,
       what: "A019 reversal shrinks duration to 10")
 
-S062 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:190
+S062 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:191
   report.expectEqual(Tick(30), notes[1].duration, cppID: id,
       what: "A020 reversal shrinks duration to 30")
 
-S063 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:192
+S063 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:193
   report.expectEqual([2, 2], coreRangeHistoryPosition(cleared, report, id),
       cppID: id, what: "A021 capped reversal splits into two entries")
 
-S064 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:197
+S064 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:198
   report.expectEqual(extended, try cleared.state.file.encoded(), cppID: id,
       what: "A022 first undo restores the extended bytes")
 
-S065 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:200
+S065 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:201
   report.expectEqual(before, try cleared.state.file.encoded(), cppID: id,
       what: "A023 second undo restores the original bytes")
 
-S066 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:203
+S066 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:204
   report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
       message: "A024 undone resize keeps consistent on/off pairs")
 
-S067 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:206
+S067 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:207
   report.expectEqual(shortened, try cleared.state.file.encoded(), cppID: id,
       what: "A025 redo restores the shortened bytes")
 
-S068 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:208
+S068 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:209
   report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
       message: "A026 redone resize keeps consistent on/off pairs")
 
-S069 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:215
+S069 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:216
   report.expect(coreRangeNotePairsConsistent(boundary, track: 0), cppID: id,
       message: "A027 first post-save resize keeps consistent on/off pairs")
 
-S070 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:219
+S070 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:220
   report.expect(coreRangeNotePairsConsistent(boundary, track: 0), cppID: id,
       message: "A028 second post-save resize keeps consistent on/off pairs")
 
-S071 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:221
+S071 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:222
   report.expectEqual([2, 2], coreRangeHistoryPosition(boundary, report, id),
       cppID: id, what: "A029 save boundary keeps both resize entries")
 
-S072 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:225
+S072 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:226
   report.expect(!boundary.isDirty, cppID: id,
       message: "A030 undo to the save boundary restores clean")
 
-S073 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:230
+S073 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:231
   report.expectEqual(2, multi.engineTracks.usedTrackCount, cppID: id,
       what: "A031 multi-track fixture loads with two editable tracks")
 
-S074 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:242
+S074 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:243
   report.expect(coreRangeNotePairsConsistent(multi, track: 0), cppID: id,
       message: "A032 multi-track resize keeps track 0 pairs consistent")
 
-S075 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:244
+S075 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:245
   report.expect(coreRangeNotePairsConsistent(multi, track: 1), cppID: id,
       message: "A033 multi-track resize keeps track 1 pairs consistent")
 
-S076 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:246
+S076 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:247
   report.expect(coreNoteFind(multi, track: 0, tick: 0, pitch: 60) != nil, cppID: id,
       message: "A034 note found at track 0 tick 0 pitch 60")
 
-S077 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:248
+S077 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:249
   report.expectEqual(Tick(20), coreNoteFind(multi, track: 0, tick: 0, pitch: 60)?.duration,
       cppID: id, what: "A035 capped duration 20 at tick 0")
 
-S078 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:250
+S078 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:251
   report.expect(coreNoteFind(multi, track: 0, tick: 20, pitch: 60) != nil, cppID: id,
       message: "A036 note found at track 0 tick 20 pitch 60")
 
-S079 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:252
+S079 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:253
   report.expectEqual(Tick(20), coreNoteFind(multi, track: 0, tick: 20, pitch: 60)?.duration,
       cppID: id, what: "A037 capped duration 20 at tick 20")
 
-S080 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:254
+S080 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:255
   report.expect(coreNoteFind(multi, track: 0, tick: 40, pitch: 60) != nil, cppID: id,
       message: "A038 note found at track 0 tick 40 pitch 60")
 
-S081 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:256
+S081 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:257
   report.expectEqual(Tick(40), coreNoteFind(multi, track: 0, tick: 40, pitch: 60)?.duration,
       cppID: id, what: "A039 uncapped duration 40 at tick 40")
 
-S082 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:258
+S082 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:259
   report.expect(coreNoteFind(multi, track: 0, tick: 0, pitch: 61) != nil, cppID: id,
       message: "A040 note found at track 0 tick 0 pitch 61")
 
-S083 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:260
+S083 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:261
   report.expectEqual(Tick(40), coreNoteFind(multi, track: 0, tick: 0, pitch: 61)?.duration,
       cppID: id, what: "A041 uncapped duration 40 at pitch 61")
 
-S084 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:262
+S084 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:263
   report.expect(coreNoteFind(multi, track: 1, tick: 0, pitch: 60) != nil, cppID: id,
       message: "A042 note found at track 1 tick 0 pitch 60")
 
-S085 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:264
+S085 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:265
   report.expectEqual(Tick(40), coreNoteFind(multi, track: 1, tick: 0, pitch: 60)?.duration,
       cppID: id, what: "A043 different track is not capped")
 
-S086 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:271
+S086 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:272
   report.expect(coreRangeNotePairsConsistent(multi, track: 1), cppID: id,
       message: "A044 added note keeps track 1 pairs consistent")
 
-S087 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:277
+S087 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:278
   report.expect(victim != nil, cppID: id,
       message: "A045 note found at track 1 tick 0 pitch 60")
 
-S088 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:281
+S088 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:282
   report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
       message: "A046 inverse-gesture extension keeps consistent pairs")
 
-S089 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:284
+S089 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:285
   report.expect(grown != nil, cppID: id, message: "A047 note found by identity")
 
-S090 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:287
+S090 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:288
   report.expectEqual(inverseBefore, try inverse.state.file.encoded(), cppID: id,
       what: "A048 compatible inverse restores the exact bytes")
 
-S091 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:289
+S091 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:290
   report.expectEqual([0, 0], coreRangeHistoryPosition(inverse, report, id), cppID: id,
       what: "A049 compatible inverse removes the gesture")
 
-S092 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:291
+S092 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:292
   report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
       message: "A050 inverse removal keeps consistent on/off pairs")
 
-S093 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:294
+S093 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:295
   report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
       message: "A051 floor-clamped drag keeps consistent on/off pairs")
 
-S094 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:299
+S094 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:300
   report.expect(noOpMismatch == nil, cppID: id,
       message: "A052 duration-floor resize leaves full state untouched")
 
-S095 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:302
+S095 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:303
   report.expectEqual(noOp.position, coreRangeHistoryPosition(inverse, report, id),
       cppID: id, what: "A052 duration-floor resize preserves history count and cursor")
 
-S096 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:339
+S096 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:340
   report.expectEqual(1, document.engineTracks.usedTrackCount, cppID: id,
       what: "A053 fixture loads with one editable track")
 
-S097 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:345
+S097 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:346
   report.expect(mismatch == nil, cppID: id,
       message: "A054 rejected batch leaves full state untouched")
 
-S098 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:350
+S098 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:351
   report.expectEqual(saved.position, coreRangeHistoryPosition(document, report, id),
       cppID: id, what: "A054 rejected batches preserve history count and cursor")
 
-S099 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:361
+S099 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:362
   report.expectEqual([2, 1], coreRangeHistoryPosition(probe, report, id),
       cppID: id, what: "A054 rejected batch prefix \(prefix) preserves "
       + "history count and cursor")
 
-S100 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:371
+S100 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:372
   report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
       message: "A055 batch insertion keeps consistent on/off pairs")
 
-S101 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:375
+S101 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:376
   report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
       what: "A056 batch undo restores the saved bytes")
 
-S102 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:378
+S102 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:379
   report.expectEqual(after, try document.state.file.encoded(), cppID: id,
       what: "A057 batch redo restores the batch bytes")
 
-S103 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:380
+S103 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:381
   report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
       message: "A058 redone batch keeps consistent on/off pairs")
 
-S104 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:384
+S104 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:385
   report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
       what: "A059 second batch undo restores the saved bytes")
 
-S105 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:391
+S105 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:392
   report.expectEqual(3, duplicates.count, cppID: id,
       what: "A060 duplicate insertion yields three notes")
 
-S106 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:394
+S106 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:395
   report.fail(id, "duplicate insertion changed the note count")
 
-S107 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:399
+S107 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:400
   report.expect(first.id.isAssigned, cppID: id,
       message: "A061 first duplicate identity is assigned")
 
-S108 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:401
+S108 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:402
   report.expect(second.id.isAssigned, cppID: id,
       message: "A062 second duplicate identity is assigned")
 
-S109 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:403
+S109 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:404
   report.expect(first.id != second.id, cppID: id,
       message: "A063 duplicate identities differ")
 
-S110 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:406
+S110 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:407
   report.expectEqual(Tick(110), note.tick, cppID: id,
       what: "A064 duplicate keeps tick 110")
 
-S111 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:408
+S111 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:409
   report.expectEqual(Tick(10), note.duration, cppID: id,
       what: "A065 duplicate keeps duration 10")
 
-S112 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:410
+S112 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:411
   report.expectEqual(UInt8(60), note.pitch, cppID: id,
       what: "A066 duplicate keeps key 60")
 
-S113 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:412
+S113 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:413
   report.expectEqual(UInt8(81), note.velocity, cppID: id,
       what: "A067 duplicate keeps velocity 81")
 
-S114 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:417
+S114 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:418
   report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
       what: "A068 duplicate undo restores the saved bytes")
 
-S115 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:420
+S115 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:421
   report.expectEqual(duplicateBytes, try document.state.file.encoded(), cppID: id,
       what: "A069 duplicate redo restores the duplicate bytes")
 
-S116 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:306
+S116 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:307
   report.fail(id, "original note transaction fixture failed: \(error)")
 
-S117 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:423
+S117 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:424
   report.fail(id, "original note batch fixture failed: \(error)")
 
 Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
@@ -2036,4 +2036,91 @@ S159 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:169 | A111
         report.expect(!(event.isChannel && event.tick >= seam - step * 2 &&
                         (event.isNoteOn || event.isNoteEnd)), cppID: id,
                       message: "A111 deleting both notes leaves no note endpoints at or beyond the seam")
+
+
+Supplemental unterminated-resize regression
+Owner: coreUnterminatedResizeChecks, called by coreNoteTransactionChecks.
+Reference behavior: src/core/songdocument.cpp at 8b9bb8f,
+buildResizeNotesOps / resizeNotes (lines 1541-1594): nonzero resize inserts
+a velocity-zero note-on end, including when no end existed.
+Failure-first: deno task verify --filter swiftcore --verbose --qt noteEdits
+failed with duration 0 instead of 1/12, no endpoint, and zero undo entries
+for both direct and keyboard paths (artifact://87).
+Post-fix: noteEdits and documentHistory pass (artifact://90).
+The original A001-A111 inventory and source sequences are unchanged.
+
+U001 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:445
+                    report.fail(id, "fixture must contain an unterminated note"); continue
+
+U002 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:458
+                report.expect(document.state == before && document.revision == revision &&
+                    document.history.currentIdentity == identity && !document.history.canUndo,
+                    cppID: id, message: "zero delta leaves the unterminated note and history untouched")
+
+U003 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:462
+                report.expect(document.state == before && document.revision == revision &&
+                    document.history.currentIdentity == identity && !document.history.canUndo,
+                    cppID: id, message: "overflow rejects without terminating or recording the note")
+
+U004 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:468
+                report.expectEqual(duration, document.note(original.id)?.duration, cppID: id,
+                                   what: "nonzero resize supplies the planned duration")
+
+U005 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:470
+                report.expect(document.note(original.id)?.endTick == UInt64(end), cppID: id,
+                              message: "resized note has an actual endpoint")
+
+U006 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:475
+                report.expectEqual(try expected.encoded(), try document.state.file.encoded(),
+                    cppID: id, what: "resize preserves note-on bytes and adds the canonical channel end")
+
+U007 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:477
+                report.expect(document.note(original.id)?.tick == original.tick &&
+                    document.note(original.id)?.pitch == original.pitch &&
+                    document.note(original.id)?.velocity == original.velocity,
+                    cppID: id, message: "termination preserves identity, tick, pitch, and velocity")
+
+U008 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:481
+                report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
+                                   cppID: id, what: "termination records exactly one undo entry")
+
+U009 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:485
+                report.expect(document.state == before &&
+                    document.note(original.id)?.isUnterminated == true &&
+                    document.history.currentIdentity == identity && !document.isDirty,
+                    cppID: id, message: "undo restores the unterminated state, identity, and cleanliness")
+
+U010 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:490
+                report.expect(document.state == terminated &&
+                    document.note(original.id)?.endTick == UInt64(end),
+                    cppID: id, message: "redo restores the same terminated note")
+
+U011 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:495
+                    report.expectEqual(Tick(15), document.note(original.id)?.duration, cppID: id,
+                                       what: "next keyboard press extends the newly terminated note")
+
+U012 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:497
+                    report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
+                                       cppID: id, what: "compatible keyboard presses merge")
+
+U013 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:500
+                    report.expectEqual(before, document.state, cppID: id,
+                                       what: "merged undo restores the original missing endpoint")
+
+U014 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:504
+                report.fail(id, "unterminated resize fixture failed: \(error)")
+
+U015 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:512
+            report.fail(id, "fixture note is missing"); return
+
+U016 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:517
+        report.expectEqual(UInt64(20), document.note(note.id)?.endTick, cppID: id,
+                           what: "cumulative resize creates an endpoint")
+
+U017 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:520
+        report.expect(document.state == before && !document.history.canUndo && !document.isDirty,
+                      cppID: id, message: "return to gesture origin removes the generated endpoint")
+
+U018 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:523
+        report.fail(id, "cumulative resize fixture failed: \(error)")
 

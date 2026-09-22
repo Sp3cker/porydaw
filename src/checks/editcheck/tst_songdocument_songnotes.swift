@@ -8,6 +8,7 @@ import PorydawCore
 internal func coreNoteTransactionChecks(_ report: CheckReport) {
     coreNoteResizeChecks(report)
     coreNoteBatchCollisionChecks(report)
+    coreUnterminatedResizeChecks(report)
 }
 
 // Native makeDocument stages the SMF through a real file; the equivalent here is
@@ -421,5 +422,104 @@ private func coreNoteBatchCollisionChecks(_ report: CheckReport) {
                            what: "A069 duplicate redo restores the duplicate bytes")
     } catch {
         report.fail(id, "original note batch fixture failed: \(error)")
+    }
+}
+
+// Supplemental regression: the legacy resize command generates a velocity-zero
+// note-on end for an unterminated note. These are not additional A### sites.
+@MainActor
+private func coreUnterminatedResizeChecks(_ report: CheckReport) {
+    let fixture = MidiFile(division: 24, chunks: [
+        MidiChunk(events: [], endTick: 48),
+        MidiChunk(events: [
+            .channel(status: 0xC2, data0: 0),
+            .channel(tick: 8, status: 0x92, data0: 60, data1: 81),
+        ], endTick: 200),
+    ])
+    for keyboard in [false, true] {
+        for delta: Int64 in [-5, 12] {
+            let id = "swiftcore/unterminatedResize[\(keyboard ? "keyboard" : "direct"),\(delta)]"
+            do {
+                let document = SongDocument(file: try MidiFile.decode(fixture.encoded()))
+                guard let original = document.notes(in: 0).first, original.isUnterminated else {
+                    report.fail(id, "fixture must contain an unterminated note"); continue
+                }
+                let before = document.state
+                let revision = document.revision
+                let identity = document.history.currentIdentity
+                func resize(_ amount: Int64) {
+                    if keyboard {
+                        document.resizeNoteLengths([original.id], byTicks: amount)
+                    } else {
+                        document.resizeNotes([original.id], edge: .trailing, byTicks: amount)
+                    }
+                }
+                resize(0)
+                report.expect(document.state == before && document.revision == revision &&
+                    document.history.currentIdentity == identity && !document.history.canUndo,
+                    cppID: id, message: "zero delta leaves the unterminated note and history untouched")
+                resize(Int64(TimeDefaults.maxTick))
+                report.expect(document.state == before && document.revision == revision &&
+                    document.history.currentIdentity == identity && !document.history.canUndo,
+                    cppID: id, message: "overflow rejects without terminating or recording the note")
+                resize(delta)
+                let duration = Tick(max(1, delta))
+                let end = original.tick + duration
+                report.expectEqual(duration, document.note(original.id)?.duration, cppID: id,
+                                   what: "nonzero resize supplies the planned duration")
+                report.expect(document.note(original.id)?.endTick == UInt64(end), cppID: id,
+                              message: "resized note has an actual endpoint")
+                var expected = before.file
+                expected.chunks[original.chunk].events.append(
+                    .channel(tick: end, status: 0x92, data0: 60, data1: 0))
+                report.expectEqual(try expected.encoded(), try document.state.file.encoded(),
+                    cppID: id, what: "resize preserves note-on bytes and adds the canonical channel end")
+                report.expect(document.note(original.id)?.tick == original.tick &&
+                    document.note(original.id)?.pitch == original.pitch &&
+                    document.note(original.id)?.velocity == original.velocity,
+                    cppID: id, message: "termination preserves identity, tick, pitch, and velocity")
+                report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
+                                   cppID: id, what: "termination records exactly one undo entry")
+                let terminated = document.state
+                _ = document.history.undoDocument()
+                report.expect(document.state == before &&
+                    document.note(original.id)?.isUnterminated == true &&
+                    document.history.currentIdentity == identity && !document.isDirty,
+                    cppID: id, message: "undo restores the unterminated state, identity, and cleanliness")
+                _ = document.history.redoDocument()
+                report.expect(document.state == terminated &&
+                    document.note(original.id)?.endTick == UInt64(end),
+                    cppID: id, message: "redo restores the same terminated note")
+                if keyboard && delta > 0 {
+                    resize(3)
+                    report.expectEqual(Tick(15), document.note(original.id)?.duration, cppID: id,
+                                       what: "next keyboard press extends the newly terminated note")
+                    report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
+                                       cppID: id, what: "compatible keyboard presses merge")
+                    _ = document.history.undoDocument()
+                    report.expectEqual(before, document.state, cppID: id,
+                                       what: "merged undo restores the original missing endpoint")
+                }
+            } catch {
+                report.fail(id, "unterminated resize fixture failed: \(error)")
+            }
+        }
+    }
+    let id = "swiftcore/unterminatedResize[cumulative-cancel]"
+    do {
+        let document = SongDocument(file: try MidiFile.decode(fixture.encoded()))
+        guard let note = document.notes(in: 0).first else {
+            report.fail(id, "fixture note is missing"); return
+        }
+        let before = document.state
+        let group = HistoryGroup()
+        document.resizeNotes([note.id], edge: .trailing, byTicks: 12, group: group)
+        report.expectEqual(UInt64(20), document.note(note.id)?.endTick, cppID: id,
+                           what: "cumulative resize creates an endpoint")
+        document.resizeNotes([note.id], edge: .trailing, byTicks: 0, group: group)
+        report.expect(document.state == before && !document.history.canUndo && !document.isDirty,
+                      cppID: id, message: "return to gesture origin removes the generated endpoint")
+    } catch {
+        report.fail(id, "cumulative resize fixture failed: \(error)")
     }
 }

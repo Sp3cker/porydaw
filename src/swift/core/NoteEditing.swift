@@ -133,6 +133,7 @@ extension SongDocument {
 
     /// `delta` is cumulative from the gesture's starting edge when `group` is
     /// reused; it is not a per-update increment.
+    /// A nonzero trailing resize terminates notes that have no end event.
     public func resizeNotes(_ ids: [NoteID], edge: ResizeEdge, byTicks delta: Int64,
                             group: HistoryGroup? = nil) {
         guard history.acceptsDocumentMutation else { return }
@@ -154,7 +155,7 @@ extension SongDocument {
                 end = note.endTick
             case .trailing:
                 tick = note.tick
-                end = note.isUnterminated ? nil : UInt64(tick) + UInt64(durations[index])
+                end = delta == 0 ? note.endTick : UInt64(tick) + UInt64(durations[index])
             }
             relocations.append(RelocatedNote(original: note, tick: tick,
                                               pitch: note.pitch, endTick: end))
@@ -206,7 +207,7 @@ extension SongDocument {
         guard history.acceptsDocumentMutation, delta != 0, !ids.isEmpty,
               let current = resolve(ids, in: state),
               let durations = resizeNotesDurations(current.span, byTicks: delta),
-              zip(current, durations).contains(where: { $0.duration != $1 })
+              zip(current, durations).contains(where: { $0.isUnterminated || $0.duration != $1 })
         else { return }
         let orderedIDs = ids.sorted { $0.rawValue < $1.rawValue }
         var base = state
@@ -229,7 +230,7 @@ extension SongDocument {
         }
         let relocations = zip(original, durations).map { note, duration in
             RelocatedNote(original: note, tick: note.tick, pitch: note.pitch,
-                          endTick: note.isUnterminated ? nil : UInt64(note.tick) + UInt64(duration))
+                          endTick: UInt64(note.tick) + UInt64(duration))
         }
         relocate(ids, base: base, group: group ?? HistoryGroup(),
                  operation: .resizeNoteLengths(orderedIDs, total), relocations: relocations)
@@ -482,11 +483,18 @@ extension SongDocument {
         }
         on.noteID = note.id
         mutation.insert(on, chunk: note.chunk)
-        if let endTick, let endIndex = note.endIndex {
-            var end = source.file.chunks[note.chunk].events[endIndex]
-            end.tick = Tick(endTick)
-            if case let .channel(status, _, velocity) = end.payload {
-                end.payload = .channel(status: status, data0: pitch, data1: velocity)
+        if let endTick {
+            let end: MidiEvent
+            if let endIndex = note.endIndex {
+                var existing = source.file.chunks[note.chunk].events[endIndex]
+                existing.tick = Tick(endTick)
+                if case let .channel(status, _, velocity) = existing.payload {
+                    existing.payload = .channel(status: status, data0: pitch, data1: velocity)
+                }
+                end = existing
+            } else {
+                end = .channel(tick: Tick(endTick), status: 0x90 | note.channel,
+                               data0: pitch, data1: 0)
             }
             mutation.insert(end, chunk: note.chunk)
         }
