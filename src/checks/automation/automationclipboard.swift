@@ -123,3 +123,98 @@ func drawerAutomationRangeEditAndClipboard(_ report: CheckReport, suite: Documen
                                                     points: []).unchanged,
                   cppID: drawerAutomationRangeID, message: "clearing an empty lane is unchanged")
 }
+
+@MainActor
+func drawerAutomationCrossLaneClipboardClamping(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let savedClipboard = drawerAutomationPorydawSelectionClipboardState()
+    defer { savedClipboard.restore() }
+
+    let tempoToCC = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [],
+        tempo: [(48, TimeDefaults.microsecondsPerQuarterNote(forBPM: 200))])
+    report.expect(tempoToCC.page.plotWidth > 0 && tempoToCC.page.plotHeight > 0,
+                  cppID: drawerAutomationRangeID,
+                  message: "cross-lane clipboard page has a configured canvas")
+    report.expect(tempoToCC.page.activeParameter == .tempo
+                      || tempoToCC.page.activateParameter(.tempo),
+                  cppID: drawerAutomationRangeID,
+                  message: "the tempo parameter activates")
+    report.expect(
+        tempoToCC.page.openParameterMenu(
+            index: tempoToCC.page.catalogIndex(of: .tempo), x: 0, y: 0),
+        cppID: drawerAutomationRangeID,
+        message: "the tempo lane menu opens")
+    report.expect(
+        tempoToCC.page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+        cppID: drawerAutomationRangeID,
+        message: "the tempo lane copies through its menu action")
+    report.expect(!tempoToCC.page.hasMenu, cppID: drawerAutomationRangeID,
+                  message: "copy closes the tempo lane menu")
+    report.expect(tempoToCC.page.activeParameter == tempoToCC.panLane
+                      || tempoToCC.page.activateParameter(tempoToCC.panLane),
+                  cppID: drawerAutomationRangeID,
+                  message: "the destination controller activates")
+    report.expect(
+        tempoToCC.page.openParameterMenu(
+            index: tempoToCC.page.catalogIndex(of: tempoToCC.panLane), x: 0, y: 0),
+        cppID: drawerAutomationRangeID,
+        message: "the controller lane menu opens")
+    report.expect(
+        tempoToCC.page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+        cppID: drawerAutomationRangeID,
+        message: "the controller lane pastes through its menu action")
+    report.expect(!tempoToCC.page.hasMenu, cppID: drawerAutomationRangeID,
+                  message: "paste closes the controller lane menu")
+    report.expectEqual(1, tempoToCC.lanePoints(tempoToCC.panLane).count,
+                       cppID: drawerAutomationRangeID,
+                       what: "tempo-to-controller paste writes one point")
+    report.expectEqual(Tick(48), tempoToCC.lanePoints(tempoToCC.panLane).first?.tick ?? -1,
+                       cppID: drawerAutomationRangeID,
+                       what: "tempo-to-controller paste preserves the tick")
+    report.expectEqual(127, tempoToCC.lanePoints(tempoToCC.panLane).first?.value ?? -1,
+                       cppID: drawerAutomationRangeID,
+                       what: "tempo-to-controller paste clamps to the controller maximum")
+
+    let ccToTempo = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [(96, 0)], tempo: [])
+    _ = ccToTempo.page.activateParameter(ccToTempo.panLane)
+    report.expect(
+        ccToTempo.page.openParameterMenu(
+            index: ccToTempo.page.catalogIndex(of: ccToTempo.panLane), x: 0, y: 0),
+        cppID: drawerAutomationRangeID,
+        message: "the controller copy menu opens")
+    report.expect(
+        ccToTempo.page.consumeMenuAction(actionId: AutomationMenuAction.copyLane.rawValue),
+        cppID: drawerAutomationRangeID,
+        message: "the controller lane copies through its menu action")
+    report.expect(!ccToTempo.page.hasMenu, cppID: drawerAutomationRangeID,
+                  message: "controller copy closes its menu")
+    report.expect(ccToTempo.page.activeParameter == .tempo
+                      || ccToTempo.page.activateParameter(.tempo),
+                  cppID: drawerAutomationRangeID,
+                  message: "the tempo destination activates")
+    report.expect(
+        ccToTempo.page.openParameterMenu(
+            index: ccToTempo.page.catalogIndex(of: .tempo), x: 0, y: 0),
+        cppID: drawerAutomationRangeID,
+        message: "the tempo paste menu opens")
+    report.expect(
+        ccToTempo.page.consumeMenuAction(actionId: AutomationMenuAction.pasteLane.rawValue),
+        cppID: drawerAutomationRangeID,
+        message: "the tempo lane pastes through its menu action")
+    report.expect(!ccToTempo.page.hasMenu, cppID: drawerAutomationRangeID,
+                  message: "tempo paste closes its menu")
+    report.expectEqual(1, ccToTempo.document.state.tempo.count,
+                       cppID: drawerAutomationRangeID,
+                       what: "controller-to-tempo paste writes one point")
+    report.expectEqual(Tick(96), ccToTempo.document.state.tempo.first?.tick ?? -1,
+                       cppID: drawerAutomationRangeID,
+                       what: "controller-to-tempo paste preserves the tick")
+    report.expectEqual(
+        TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM),
+        ccToTempo.document.state.tempo.first?.microsecondsPerQuarterNote ?? 0,
+        cppID: drawerAutomationRangeID,
+        what: "controller-to-tempo paste clamps to the minimum tempo")
+}

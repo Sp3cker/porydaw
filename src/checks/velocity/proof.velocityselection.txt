@@ -30,9 +30,7 @@ paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
 and gesture state live in the paired Swift sources. Their helper expectations execute
 on every call and are inventoried below.
 
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence and row constraints
 Data rows: primaryTrackSwitchCancelsDrag_data: production-route.
@@ -72,8 +70,8 @@ src/checks/velocity/velocityselection.cpp:178 | mouseRelease(Qt::RightButton, wi
 Original assertion inventory
 
 A001 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:21
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 executes `("A001", addedTrack == 1)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -100,8 +98,8 @@ Original expression:
   QCOMPARE(m_tab->document().addTrack(2), 1)
 
 A002 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:22
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 executes `("A002", track.session.timeline.tracks.indices.contains(1) && track.session.timeline.tracks[1].firstProgram == 2)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -109,8 +107,8 @@ Original expression:
   QTRY_COMPARE(view.currentProgram(1), 2)
 
 A003 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:31
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 executes `("A003", track.page.frozenPreview[trackNotes[0].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     selectDragPair();
@@ -126,8 +124,8 @@ Original expression:
   QVERIFY(view.previewVelocity(m_quietStacked.noteId).has_value())
 
 A004 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:32
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S082 executes `("A004", track.page.frozenPreview[trackNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -135,8 +133,8 @@ Original expression:
   QVERIFY(view.previewVelocity(m_later.noteId).has_value())
 
 A005 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:33
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 executes `("A005", track.page.observation.gestureKind == .relative)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -144,8 +142,8 @@ Original expression:
   QVERIFY(m_area->gestureActive())
 
 A006 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:40
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084 executes `("A006", track.document.revision == trackBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -159,8 +157,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A007 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 executes `("A007", track.page.observation.gestureKind == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -168,8 +166,8 @@ Original expression:
   QTRY_VERIFY(!m_area->gestureActive())
 
 A008 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S086 executes `("A008", track.page.frozenPreview[trackNotes[0].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -177,8 +175,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value())
 
 A009 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 executes `("A009", track.page.frozenPreview[trackNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -186,8 +184,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_later.noteId).has_value())
 
 A010 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:44
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088 executes `("A010", track.page.axisModel.mode == .intrinsic)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -195,8 +193,8 @@ Original expression:
   QTRY_VERIFY(m_area->axis().mode() == VelocityAxis::Mode::Intrinsic)
 
 A011 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089 executes `("A011", track.page.axisModel.graduations.count == 5)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -204,8 +202,8 @@ Original expression:
   QCOMPARE(m_area->axis().graduationCount(), 5)
 
 A012 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 executes `("A012", track.document.revision == trackBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -215,8 +213,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A013 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091 executes `("A013", track.document.history.currentIdentity == trackBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -224,8 +222,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A014 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S092 executes `("A014", track.document.note(trackNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -233,8 +231,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A015 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:51
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S093 executes `("A015", track.document.note(trackNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -242,8 +240,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A016 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:52
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094 executes `("A016", track.document.note(trackNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -251,8 +249,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A017 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 executes `("A017", track.page.frozenPreview[trackNotes[0].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -260,8 +258,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_quietStacked.noteId).has_value())
 
 A018 | VelocityEditingTest::primaryTrackSwitchCancelsDrag | src/checks/velocity/velocityselection.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096 executes `("A018", track.page.frozenPreview[trackNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -269,8 +267,8 @@ Original expression:
   QVERIFY(!view.previewVelocity(m_later.noteId).has_value())
 
 A019 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 executes `("A019", ungrab.session.selectedNotes == [ungrabNotes[0].id])]) _ = ungrab.page.pointerPress(x: loudHandle.x, y: loudHandle.y, surface: 1`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -283,8 +281,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A020 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 executes `("A020", ungrab.session.selectedNotes == [ungrabNotes[1].id])]) ungrab.page.cancelSectionInteraction() velocitySelectionRows(report, [`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -298,8 +296,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A021 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:68
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership by the native velocity input — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
 
@@ -308,8 +306,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A022 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts existence of the native QQuickItem mouse grabber before forced ungrab — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
 
@@ -319,8 +317,8 @@ Original expression:
   QVERIFY(grabber)
 
 A023 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow mouse-grab release after QQuickItem::ungrabMouse — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     grabber->ungrabMouse();
@@ -329,8 +327,8 @@ Original expression:
   QTRY_VERIFY(!m_quickWindow->mouseGrabberItem())
 
 A024 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:76
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 executes `("A024", ungrab.session.selectedNotes == [ungrabNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -339,8 +337,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A025 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100 executes `("A025", ungrab.document.revision == ungrabBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -348,8 +346,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A026 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S101 executes `("A026", ungrab.document.history.currentIdentity == ungrabBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -357,8 +355,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A027 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 executes `("A027", ungrab.document.note(ungrabNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -366,8 +364,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A028 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:80
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 executes `("A028", ungrab.document.note(ungrabNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -375,8 +373,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A029 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:81
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S104 executes `("A029", ungrab.document.note(ungrabNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -384,8 +382,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A030 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105 executes `("A030", ungrab.session.selectedNotes == [ungrabNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -397,8 +395,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A031 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S106 executes `("A031", ungrab.document.revision == ungrabBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -406,8 +404,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A032 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 executes `("A032", ungrab.document.history.currentIdentity == ungrabBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -415,8 +413,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A033 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 executes `("A033", ungrab.document.note(ungrabNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -424,8 +422,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A034 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 executes `("A034", ungrab.document.note(ungrabNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -433,8 +431,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A035 | VelocityEditingTest::pointerUngrabCancelsProvisionalSelection | src/checks/velocity/velocityselection.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110 executes `("A035", ungrab.document.note(ungrabNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -442,8 +440,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A036 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 executes `("A036", band.session.selectedNotes == [bandNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -456,8 +454,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_later.noteId}))
 
 A037 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 executes `("A037", bandGeometry.horizontal > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -473,8 +471,8 @@ Original expression:
   QVERIFY(horizontalMargin > 0.0)
 
 A038 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S113 executes `("A038", bandGeometry.vertical > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -482,8 +480,8 @@ Original expression:
   QVERIFY(verticalMargin > 0.0)
 
 A039 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S114 executes `("A039", bandGeometry.start.0 >= 0 && bandGeometry.start.0 <= band.page.plotWidth && bandGeometry.start.1 >= 0 && bandGeometry.start.1 <= band.page.plotHeight)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -497,8 +495,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(bandStart))
 
 A040 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S115 executes `("A040", bandGeometry.expanded.0 >= 0 && bandGeometry.expanded.0 <= band.page.plotWidth && bandGeometry.expanded.1 >= 0 && bandGeometry.expanded.1 <= band.page.plotHeight)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -506,8 +504,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(expandedEnd))
 
 A041 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S116 executes `("A041", bandGeometry.contracted.0 >= 0 && bandGeometry.contracted.0 <= band.page.plotWidth && bandGeometry.contracted.1 >= 0 && bandGeometry.contracted.1 <= band.page.plotHeight)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -515,8 +513,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(contractedEnd))
 
 A042 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S117 executes `("A042", abs(bandGeometry.expanded.0 - bandGeometry.start.0) + abs(bandGeometry.expanded.1 - bandGeometry.start.1) >= 10)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -525,8 +523,8 @@ Original expression:
           QApplication::startDragDistance())
 
 A043 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership by the native velocity input during band selection — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
 
@@ -537,8 +535,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A044 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S118 executes `("A044", band.session.selectedNotes == Set([bandNotes[0].id, bandNotes[1].id]))`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseMove(windowPoint(expandedEnd));
@@ -552,8 +550,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A045 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S119 executes `("A045", band.document.revision == bandBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -561,8 +559,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A046 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S120 executes `("A046", band.document.history.currentIdentity == bandBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -570,8 +568,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A047 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S121 executes `("A047", band.document.note(bandNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -579,8 +577,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A048 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S122 executes `("A048", band.document.note(bandNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -588,8 +586,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A049 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S123 executes `("A049", band.document.note(bandNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -597,8 +595,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), 70)
 
 A050 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S124 executes `("A050", selectionTimelineVelocity(band, bandNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -606,8 +604,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), 20)
 
 A051 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S125 executes `("A051", selectionTimelineVelocity(band, bandNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -615,8 +613,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), 70)
 
 A052 | VelocityEditingTest::bandSelectionExpandsAndContracts | src/checks/velocity/velocityselection.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S126 executes `("A052", selectionTimelineVelocity(band, bandNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -624,8 +622,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), 70)
 
 A053 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S127 executes `("A053", bandCancel.session.selectedNotes == [bandCancelNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -638,8 +636,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A054 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S128 executes `("A054", cancelGeometry.horizontal > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -655,8 +653,8 @@ Original expression:
   QVERIFY(horizontalMargin > 0.0)
 
 A055 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S129 executes `("A055", cancelGeometry.vertical > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -664,8 +662,8 @@ Original expression:
   QVERIFY(verticalMargin > 0.0)
 
 A056 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S130 executes `("A056", cancelGeometry.start.0 >= 0 && cancelGeometry.start.0 <= bandCancel.page.plotWidth && cancelGeometry.start.1 >= 0 && cancelGeometry.start.1 <= bandCancel.page.plotHeight)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -678,8 +676,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(bandStart))
 
 A057 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S131 executes `("A057", cancelGeometry.expanded.0 >= 0 && cancelGeometry.expanded.0 <= bandCancel.page.plotWidth && cancelGeometry.expanded.1 >= 0 && cancelGeometry.expanded.1 <= bandCancel.page.plotHeight)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -687,8 +685,8 @@ Original expression:
   QVERIFY(m_velocityInput->bounds().contains(expandedEnd))
 
 A058 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S132 executes `("A058", abs(cancelGeometry.expanded.0 - cancelGeometry.start.0) + abs(cancelGeometry.expanded.1 - cancelGeometry.start.1) >= 10)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -697,8 +695,8 @@ Original expression:
           QApplication::startDragDistance())
 
 A059 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership by the native velocity input during band selection — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
 
@@ -709,8 +707,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A060 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts existence of the native QQuickItem mouse grabber before forced band-selection ungrab — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     mouseMove(windowPoint(expandedEnd));
@@ -721,8 +719,8 @@ Original expression:
   QVERIFY(grabber)
 
 A061 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow mouse-grab release after QQuickItem::ungrabMouse — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     grabber->ungrabMouse();
@@ -731,8 +729,8 @@ Original expression:
   QTRY_VERIFY(!m_quickWindow->mouseGrabberItem())
 
 A062 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S133 executes `("A062", bandCancel.session.selectedNotes == [bandCancelNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -740,8 +738,8 @@ Original expression:
   QTRY_VERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A063 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S134 executes `("A063", bandCancel.session.selectedNotes == [bandCancelNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -754,8 +752,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A064 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S135 executes `("A064", bandCancel.document.revision == bandCancelBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -763,8 +761,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A065 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S136 executes `("A065", bandCancel.document.history.currentIdentity == bandCancelBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -772,8 +770,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A066 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S137 executes `("A066", bandCancel.document.note(bandCancelNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -781,8 +779,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A067 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S138 executes `("A067", bandCancel.document.note(bandCancelNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -790,8 +788,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), 70)
 
 A068 | VelocityEditingTest::bandUngrabRestoresSelection | src/checks/velocity/velocityselection.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S139 executes `("A068", bandCancel.document.note(bandCancelNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -1131,3 +1129,260 @@ S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageCheck
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+S079 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:48
+Swift expression:
+  ("A001", addedTrack == 1),
+
+S080 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:49
+Swift expression:
+  ("A002", track.session.timeline.tracks.indices.contains(1)
+  && track.session.timeline.tracks[1].firstProgram == 2),
+
+S081 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:59
+Swift expression:
+  ("A003", track.page.frozenPreview[trackNotes[0].id] != nil),
+
+S082 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:60
+Swift expression:
+  ("A004", track.page.frozenPreview[trackNotes[2].id] != nil),
+
+S083 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:61
+Swift expression:
+  ("A005", track.page.observation.gestureKind == .relative),
+
+S084 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:66
+Swift expression:
+  ("A006", track.document.revision == trackBefore.revision),
+
+S085 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:67
+Swift expression:
+  ("A007", track.page.observation.gestureKind == nil),
+
+S086 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:68
+Swift expression:
+  ("A008", track.page.frozenPreview[trackNotes[0].id] == nil),
+
+S087 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:69
+Swift expression:
+  ("A009", track.page.frozenPreview[trackNotes[2].id] == nil),
+
+S088 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:70
+Swift expression:
+  ("A010", track.page.axisModel.mode == .intrinsic),
+
+S089 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:71
+Swift expression:
+  ("A011", track.page.axisModel.graduations.count == 5),
+
+S090 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:75
+Swift expression:
+  ("A012", track.document.revision == trackBefore.revision),
+
+S091 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:76
+Swift expression:
+  ("A013", track.document.history.currentIdentity == trackBefore.identity),
+
+S092 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:77
+Swift expression:
+  ("A014", track.document.note(trackNotes[0].id)?.velocity == 20),
+
+S093 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:78
+Swift expression:
+  ("A015", track.document.note(trackNotes[1].id)?.velocity == 70),
+
+S094 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:79
+Swift expression:
+  ("A016", track.document.note(trackNotes[2].id)?.velocity == 70),
+
+S095 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:80
+Swift expression:
+  ("A017", track.page.frozenPreview[trackNotes[0].id] == nil),
+
+S096 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:81
+Swift expression:
+  ("A018", track.page.frozenPreview[trackNotes[2].id] == nil),
+
+S097 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:93
+Swift expression:
+  ("A019", ungrab.session.selectedNotes == [ungrabNotes[0].id])])
+  _ = ungrab.page.pointerPress(x: loudHandle.x, y: loudHandle.y, surface: 1,
+
+S098 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:96
+Swift expression:
+  ("A020", ungrab.session.selectedNotes == [ungrabNotes[1].id])])
+  ungrab.page.cancelSectionInteraction()
+  velocitySelectionRows(report, [
+
+S099 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:99
+Swift expression:
+  ("A024", ungrab.session.selectedNotes == [ungrabNotes[0].id]),
+
+S100 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:100
+Swift expression:
+  ("A025", ungrab.document.revision == ungrabBefore.revision),
+
+S101 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:101
+Swift expression:
+  ("A026", ungrab.document.history.currentIdentity == ungrabBefore.identity),
+
+S102 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:102
+Swift expression:
+  ("A027", ungrab.document.note(ungrabNotes[0].id)?.velocity == 20),
+
+S103 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:103
+Swift expression:
+  ("A028", ungrab.document.note(ungrabNotes[1].id)?.velocity == 70),
+
+S104 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:104
+Swift expression:
+  ("A029", ungrab.document.note(ungrabNotes[2].id)?.velocity == 70),
+
+S105 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:108
+Swift expression:
+  ("A030", ungrab.session.selectedNotes == [ungrabNotes[0].id]),
+
+S106 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:109
+Swift expression:
+  ("A031", ungrab.document.revision == ungrabBefore.revision),
+
+S107 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:110
+Swift expression:
+  ("A032", ungrab.document.history.currentIdentity == ungrabBefore.identity),
+
+S108 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:111
+Swift expression:
+  ("A033", ungrab.document.note(ungrabNotes[0].id)?.velocity == 20),
+
+S109 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:112
+Swift expression:
+  ("A034", ungrab.document.note(ungrabNotes[1].id)?.velocity == 70),
+
+S110 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:113
+Swift expression:
+  ("A035", ungrab.document.note(ungrabNotes[2].id)?.velocity == 70),
+
+S111 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:126
+Swift expression:
+  ("A036", band.session.selectedNotes == [bandNotes[2].id]),
+
+S112 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:127
+Swift expression:
+  ("A037", bandGeometry.horizontal > 0),
+
+S113 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:128
+Swift expression:
+  ("A038", bandGeometry.vertical > 0),
+
+S114 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:129
+Swift expression:
+  ("A039", bandGeometry.start.0 >= 0 && bandGeometry.start.0 <= band.page.plotWidth
+  && bandGeometry.start.1 >= 0 && bandGeometry.start.1 <= band.page.plotHeight),
+
+S115 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:131
+Swift expression:
+  ("A040", bandGeometry.expanded.0 >= 0 && bandGeometry.expanded.0 <= band.page.plotWidth
+  && bandGeometry.expanded.1 >= 0 && bandGeometry.expanded.1 <= band.page.plotHeight),
+
+S116 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:133
+Swift expression:
+  ("A041", bandGeometry.contracted.0 >= 0 && bandGeometry.contracted.0 <= band.page.plotWidth
+  && bandGeometry.contracted.1 >= 0 && bandGeometry.contracted.1 <= band.page.plotHeight),
+
+S117 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:135
+Swift expression:
+  ("A042", abs(bandGeometry.expanded.0 - bandGeometry.start.0)
+  + abs(bandGeometry.expanded.1 - bandGeometry.start.1) >= 10),
+
+S118 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:146
+Swift expression:
+  ("A044", band.session.selectedNotes == Set([bandNotes[0].id, bandNotes[1].id])),
+
+S119 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:147
+Swift expression:
+  ("A045", band.document.revision == bandBefore.revision),
+
+S120 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:148
+Swift expression:
+  ("A046", band.document.history.currentIdentity == bandBefore.identity),
+
+S121 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:149
+Swift expression:
+  ("A047", band.document.note(bandNotes[0].id)?.velocity == 20),
+
+S122 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:150
+Swift expression:
+  ("A048", band.document.note(bandNotes[1].id)?.velocity == 70),
+
+S123 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:151
+Swift expression:
+  ("A049", band.document.note(bandNotes[2].id)?.velocity == 70),
+
+S124 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:152
+Swift expression:
+  ("A050", selectionTimelineVelocity(band, bandNotes[0].id) == 20),
+
+S125 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:153
+Swift expression:
+  ("A051", selectionTimelineVelocity(band, bandNotes[1].id) == 70),
+
+S126 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:154
+Swift expression:
+  ("A052", selectionTimelineVelocity(band, bandNotes[2].id) == 70),
+
+S127 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:168
+Swift expression:
+  ("A053", bandCancel.session.selectedNotes == [bandCancelNotes[0].id]),
+
+S128 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:169
+Swift expression:
+  ("A054", cancelGeometry.horizontal > 0),
+
+S129 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:170
+Swift expression:
+  ("A055", cancelGeometry.vertical > 0),
+
+S130 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:171
+Swift expression:
+  ("A056", cancelGeometry.start.0 >= 0 && cancelGeometry.start.0 <= bandCancel.page.plotWidth
+  && cancelGeometry.start.1 >= 0 && cancelGeometry.start.1 <= bandCancel.page.plotHeight),
+
+S131 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:173
+Swift expression:
+  ("A057", cancelGeometry.expanded.0 >= 0
+  && cancelGeometry.expanded.0 <= bandCancel.page.plotWidth
+  && cancelGeometry.expanded.1 >= 0
+  && cancelGeometry.expanded.1 <= bandCancel.page.plotHeight),
+
+S132 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:177
+Swift expression:
+  ("A058", abs(cancelGeometry.expanded.0 - cancelGeometry.start.0)
+  + abs(cancelGeometry.expanded.1 - cancelGeometry.start.1) >= 10),
+
+S133 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:186
+Swift expression:
+  ("A062", bandCancel.session.selectedNotes == [bandCancelNotes[0].id]),
+
+S134 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:193
+Swift expression:
+  ("A063", bandCancel.session.selectedNotes == [bandCancelNotes[0].id]),
+
+S135 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:194
+Swift expression:
+  ("A064", bandCancel.document.revision == bandCancelBefore.revision),
+
+S136 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:195
+Swift expression:
+  ("A065", bandCancel.document.history.currentIdentity == bandCancelBefore.identity),
+
+S137 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:196
+Swift expression:
+  ("A066", bandCancel.document.note(bandCancelNotes[0].id)?.velocity == 20),
+
+S138 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:197
+Swift expression:
+  ("A067", bandCancel.document.note(bandCancelNotes[1].id)?.velocity == 70),
+
+S139 | drawerVelocitySelectionGapPredicates | src/checks/velocity/velocityselection_gap.swift:198
+Swift expression:
+  ("A068", bandCancel.document.note(bandCancelNotes[2].id)?.velocity == 70),

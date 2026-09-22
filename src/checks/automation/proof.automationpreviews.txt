@@ -4,14 +4,14 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/automationpreviews.cpp
 Original SHA-256: 166af765d75f596e24ea28119563c2f7f0446fbd3ea252667df3de1ad68e60fe
-Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 432252987f3359a15fabd41050900bd4d5b6b6379fb6deeef2a76618e310b289
+Swift counterpart: src/checks/automation/automationownership_gap.swift
+Swift SHA-256: 5f6828432d7198d4bf0648f93a5205d506ee531279afc8b494f6594eb90dfa9f
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 49 sites in this file are GAP: singleNodeDragPreview, multiNodeDragPreview, sweepPreview, shiftRampPreview, pencilPreviewAndValueLabel, and editCursorTracksQuickView exercise live preview generation during drags, sweeps, ramps, and pencil gestures without document mutation prior to release. While candidate Swift gesture checks exist in domain/gestures.swift, exact assertion correspondence for transient preview states is an open obligation.
+Of 49 sites, 47 are MATCHED by drawerAutomationPreviewGapChecks; A031-A032 remain GAP because the Swift page publishes no in-flight ramp line primitive.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,13 +21,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Verification evidence: pending orchestrator run
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest previews suite verified transient preview state and value label feedback during in-flight gestures. In the converted Swift suite, drawerAutomationNodeDragAndPhantomOutcomes and drawerAutomationSweepSteppingAndRampFinish in src/checks/automation/domain/gestures.swift exercise preview generation and document immutability during gestures.
+drawerAutomationPreviewGapChecks in src/checks/automation/automationownership_gap.swift owns node, sweep, pencil, label, and cursor preview predicates; ramp line publication is absent and remains GAP.
 
 Fixture, sequence and row constraints
 Data rows expand singleNodeDragPreview (cc-node, tempo-node), multiNodeDragPreview (two-nodes, three-nodes), sweepPreview (forward-sweep, backward-sweep), and shiftRampPreview (ramp-up, ramp-down). Loops assert unchanged document revision during preview phases.
@@ -37,8 +37,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(kind)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -195,8 +195,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(kind)));
 
 A002 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(scene);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       SongView &view = m_tab->view();
@@ -207,8 +207,8 @@ Original expression:
   QVERIFY(scene);
 
 A003 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!lane.body.isEmpty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       if (kind == LaneKind::Tempo) {
@@ -225,8 +225,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A004 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(m_automationInput->bounds().contains(source));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const int nodeValue = kind == LaneKind::Tempo ? kTempoNode : kCcNode;
@@ -238,8 +238,8 @@ Original expression:
   QVERIFY(m_automationInput->bounds().contains(source));
 
 A005 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(m_automationInput->bounds().contains(target));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -247,8 +247,8 @@ Original expression:
   QVERIFY(m_automationInput->bounds().contains(target));
 
 A006 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const int activationTravel = AutomationGeometry::resolve().nodeDragActivationDistance + 8;
@@ -264,8 +264,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A007 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -273,8 +273,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A008 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision > transientBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -288,8 +288,8 @@ Original expression:
                   transientBefore);
 
 A009 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(checks::support::layerHasColorIn( scene->layer(songview::TimelineQuickLayer::AutomationTransient), nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -299,8 +299,8 @@ Original expression:
           nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));
 
 A010 | AutomationEditingTest::singleNodeDragPreview | src/checks/automation/automationpreviews.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationPreviewGapChecks; concrete rows `A001-pan` and `A001-tempo`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::singleNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -308,8 +308,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A011 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:206
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(kind)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -330,8 +330,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(kind)));
 
 A012 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(scene);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       SongView &view = m_tab->view();
@@ -342,8 +342,8 @@ Original expression:
   QVERIFY(scene);
 
 A013 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:220
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!lane.body.isEmpty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       if (kind == LaneKind::Tempo) {
@@ -360,8 +360,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A014 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       songview::EditorSelectionModel::TimeSelection selection;
@@ -392,8 +392,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A015 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -401,8 +401,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A016 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision > transientBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -416,8 +416,8 @@ Original expression:
                   transientBefore);
 
 A017 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(checks::support::layerHasColorIn( scene->layer(songview::TimelineQuickLayer::AutomationTransient), nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -427,8 +427,8 @@ Original expression:
           nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));
 
 A018 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(checks::support::layerHasColorIn( scene->layer(songview::TimelineQuickLayer::AutomationTransient), nodeProbe(second, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -438,8 +438,8 @@ Original expression:
           nodeProbe(second, nodelane::hoverRingRadius(AutomationGeometry::resolve())), preview));
 
 A019 | AutomationEditingTest::multiNodeDragPreview | src/checks/automation/automationpreviews.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 (drawerAutomationPreviewGapChecks; concrete rows `A011-two-nodes` and `A011-three-nodes`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::multiNodeDragPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -447,8 +447,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A020 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(kind)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -469,8 +469,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(kind)));
 
 A021 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(scene);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       SongView &view = m_tab->view();
@@ -481,8 +481,8 @@ Original expression:
   QVERIFY(scene);
 
 A022 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       if (kind == LaneKind::Tempo)
@@ -508,8 +508,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A023 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -517,8 +517,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A024 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision > transientBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -531,8 +531,8 @@ Original expression:
                   transientBefore);
 
 A025 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(checks::support::layerHasColorIn( scene->layer(songview::TimelineQuickLayer::AutomationTransient), nodeProbe(target, nodelane::hoverRingRadius(AutomationGeometry::resolve())), themes::color(themes::Role::song_view_edit_preview_outline)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -543,8 +543,8 @@ Original expression:
           themes::color(themes::Role::song_view_edit_preview_outline)));
 
 A026 | AutomationEditingTest::sweepPreview | src/checks/automation/automationpreviews.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationPreviewGapChecks; concrete rows `A020-forward-sweep` and `A020-backward-sweep`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::sweepPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -552,8 +552,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A027 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPreviewGapChecks; concrete rows `A027-ramp-up` and `A027-ramp-down`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::shiftRampPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(kind)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -574,8 +574,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(kind)));
 
 A028 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPreviewGapChecks; concrete rows `A027-ramp-up` and `A027-ramp-down`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::shiftRampPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(scene);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       SongView &view = m_tab->view();
@@ -586,8 +586,8 @@ Original expression:
   QVERIFY(scene);
 
 A029 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPreviewGapChecks; concrete rows `A027-ramp-up` and `A027-ramp-down`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::shiftRampPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       if (kind == LaneKind::Tempo)
@@ -609,8 +609,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A030 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPreviewGapChecks; concrete rows `A027-ramp-up` and `A027-ramp-down`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::shiftRampPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -619,7 +619,7 @@ Original expression:
 
 A031 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:348
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Swift has no equivalent published predicate: ramp mode updates AutomationSweepTransaction.current, while AutomationPreviewDraft reads the empty transaction.preview point array, so no in-flight ramp line paint primitive or publication revision exists. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -634,7 +634,7 @@ Original expression:
 
 A032 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:350
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: Swift has no equivalent published predicate: ramp mode updates AutomationSweepTransaction.current, while AutomationPreviewDraft reads the empty transaction.preview point array, so no in-flight ramp line paint primitive or publication revision exists. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -644,8 +644,8 @@ Original expression:
           themes::color(themes::Role::song_view_edit_preview_outline)));
 
 A033 | AutomationEditingTest::shiftRampPreview | src/checks/automation/automationpreviews.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPreviewGapChecks; concrete rows `A027-ramp-up` and `A027-ramp-down`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::shiftRampPreview's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -653,8 +653,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A034 | AutomationEditingTest::pencilPreviewAndValueLabel | src/checks/automation/automationpreviews.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S166 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewAndValueLabel's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(scene);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -669,8 +669,8 @@ Original expression:
   QVERIFY(scene);
 
 A035 | AutomationEditingTest::pencilPreviewAndValueLabel | src/checks/automation/automationpreviews.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S166 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewAndValueLabel's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!lane.body.isEmpty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       setCc(document, {{0, kCcHeld}, {kNodeTick, kCcNode}, {kSecondTick, kCcSecond}});
@@ -680,8 +680,8 @@ Original expression:
   QVERIFY(!lane.body.isEmpty());
 
 A036 | AutomationEditingTest::pencilPreviewAndValueLabel | src/checks/automation/automationpreviews.cpp:373
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S166 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewAndValueLabel's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -697,8 +697,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A037 | AutomationEditingTest::pencilPreviewAndValueLabel | src/checks/automation/automationpreviews.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S166 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewAndValueLabel's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -706,8 +706,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A038 | AutomationEditingTest::pencilPreviewAndValueLabel | src/checks/automation/automationpreviews.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewAndValueLabel's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).revision > transientBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -721,8 +721,8 @@ Original expression:
                   transientBefore);
 
 A039 | AutomationEditingTest::pencilPreviewAndValueLabel | src/checks/automation/automationpreviews.cpp:382
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewAndValueLabel's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(checks::support::layerHasColorIn( scene->layer(songview::TimelineQuickLayer::AutomationTransient), lineProbe(pointForLane(view, *m_automationInput, lane, 48, 40), 8.0, std::max(qreal(layout::singlePixel()), qreal(AutomationGeometry::resolve().hoverPaintPadding + 1))), preview));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -735,8 +735,8 @@ Original expression:
           preview));
 
 A040 | std::max | src/checks/automation/automationpreviews.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S168 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in std::max's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(textModelHasRecordIn(scene->automationTransientTextModel(), previewLabelProbe(end.x(), end.y(), lane.body)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -745,8 +745,8 @@ Original expression:
                                    previewLabelProbe(end.x(), end.y(), lane.body)));
 
 A041 | std::max | src/checks/automation/automationpreviews.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S169 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in std::max's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -754,8 +754,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A042 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(quick);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -769,8 +769,8 @@ Original expression:
   QVERIFY(quick);
 
 A043 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:400
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S173 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -780,8 +780,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A044 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:401
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S173 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -789,8 +789,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A045 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:404
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(quick->editVisible());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -800,8 +800,8 @@ Original expression:
   QTRY_VERIFY(quick->editVisible());
 
 A046 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:407
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(quick->editVisible());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const qreal firstX = quick->editRootContentX();
@@ -811,8 +811,8 @@ Original expression:
   QTRY_VERIFY(quick->editVisible());
 
 A047 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S171 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!qFuzzyCompare(firstX, secondX));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const qreal secondX = quick->editRootContentX();
@@ -824,8 +824,8 @@ Original expression:
   QVERIFY(!qFuzzyCompare(firstX, secondX));
 
 A048 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:413
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S172 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(std::abs((secondX - firstX) - expected) < 0.5);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -833,8 +833,8 @@ Original expression:
   QVERIFY(std::abs((secondX - firstX) - expected) < 0.5);
 
 A049 | AutomationEditingTest::editCursorTracksQuickView | src/checks/automation/automationpreviews.cpp:414
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S173 (drawerAutomationPreviewGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::editCursorTracksQuickView's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1507,3 +1507,144 @@ Shared helper: src/checks/automation/AutomationPageChecks.swift
 SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
+
+S152 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:159
+  report.expect(
+              row.fixture.page.pointerPress(x: x, y: y, surface: 1, button: 1),
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A001-A007 single-node preview captures the source")
+
+S153 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:167
+  report.expectEqual(
+              ["\(row.target.0):\(row.target.1)"],
+              row.fixture.page.previewPoints.map { "\($0.tick):\($0.value)" },
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A008/A009 single-node paint preview publishes its destination")
+
+S154 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:172
+  report.expect(
+              row.fixture.page.previewLabelVisible
+                  && row.fixture.page.previewRectSnapshots.count == 1,
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A008/A009 preview publishes one node primitive and value label")
+
+S155 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:177
+  report.expectEqual(
+              before, row.fixture.snapshot,
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A010 single-node preview mutates nothing before release")
+
+S156 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:203
+  report.expect(
+              multiple.page.pointerPress(x: x, y: y, surface: 1, button: 1),
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A011-A015 selected-node preview captures its group")
+
+S157 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:211
+  report.expectEqual(
+              row.expected,
+              multiple.page.previewPoints.map { "\($0.tick):\($0.value)" },
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A016-A018 preview publishes every moved selected target")
+
+S158 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:216
+  report.expectEqual(
+              row.expected.count, multiple.page.previewRectSnapshots.count,
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A016-A018 paint model publishes every preview primitive")
+
+S159 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:220
+  report.expectEqual(
+              before, multiple.snapshot,
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A019 multi-node preview mutates nothing before release")
+
+S160 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:238
+  report.expect(
+              sweep.page.pointerPress(x: x, y: y, surface: 1, button: 1),
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A020-A023 background press starts production sweep preview")
+
+S161 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:246
+  report.expect(
+              sweep.page.observation.pointerKind == .sweep
+                  && !sweep.page.previewPoints.isEmpty
+                  && sweep.page.previewRectSnapshots.count == sweep.page.previewPoints.count,
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A024/A025 sweep paint preview publishes every stepped point")
+
+S162 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:252
+  report.expectEqual(
+              before, sweep.snapshot,
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A026 sweep preview mutates nothing before release")
+
+S163 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:268
+  report.expect(
+              ramp.page.pointerPress(
+                  x: ramp.x(row.source.0), y: ramp.y(ramp.panLane, row.source.1),
+                  surface: 1, button: 1, modifiers: DrawerModifiers.shiftBit),
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A027-A030 Shift background press starts the ramp gesture")
+
+S164 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:277
+  report.expect(
+              ramp.page.observation.pointerKind == .ramp,
+              cppID: automationPreviewGapID,
+              message: "\(row.name) A031/A032 Shift preview retains semantic ramp ownership")
+
+S165 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:281
+  report.expectEqual(
+              before, ramp.snapshot,
+              cppID: automationPreviewGapID,
+              what: "\(row.name) A033 ramp preview mutates nothing before release")
+
+S166 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:294
+  report.expect(
+          pencil.page.pointerPress(x: pencil.x(24), y: pencilY, surface: 1, button: 1),
+          cppID: automationPreviewGapID,
+          message: "A034-A037 pencil press starts the preview transaction")
+
+S167 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:300
+  report.expect(
+          !pencil.page.previewPoints.isEmpty
+              && pencil.page.previewRectSnapshots.count == pencil.page.previewPoints.count,
+          cppID: automationPreviewGapID,
+          message: "A038/A039 pencil preview publishes its held-span point primitives")
+
+S168 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:305
+  report.expect(
+          pencil.page.previewLabelVisible && !pencil.page.previewLabelText.isEmpty,
+          cppID: automationPreviewGapID,
+          message: "A040 pencil preview publishes the final value label")
+
+S169 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:309
+  report.expectEqual(
+          pencilBefore, pencil.snapshot,
+          cppID: automationPreviewGapID,
+          what: "A041 pencil preview changes no document or history state")
+
+S170 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:321
+  report.expect(
+          cursor.page.readoutVisible && cursor.page.contextTick == 24,
+          cppID: automationPreviewGapID,
+          message: "A042-A046 published edit cursor is visible in the page context")
+
+S171 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:327
+  report.expect(
+          cursor.page.readoutVisible && cursor.page.contextTick == 96 && firstX != secondX,
+          cppID: automationPreviewGapID,
+          message: "A046/A047 moved edit cursor republishes at a distinct quick-view x")
+
+S172 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:331
+  report.expect(
+          abs((secondX - firstX) - Double(96 - 24)
+              * cursor.session.camera.snapshot.pixelsPerTick) < 0.5,
+          cppID: automationPreviewGapID,
+          message: "A048 cursor movement uses the shared camera projection")
+
+S173 | drawerAutomationPreviewGapChecks | src/checks/automation/automationownership_gap.swift:336
+  report.expectEqual(
+          cursorBefore, cursor.snapshot,
+          cppID: automationPreviewGapID,
+          what: "A043/A044/A049 cursor synchronization mutates no document or history state")

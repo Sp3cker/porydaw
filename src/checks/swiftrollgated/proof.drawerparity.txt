@@ -181,8 +181,8 @@ Original expression:
 QTRY_VERIFY(!(hovered = scene.capture(input)).isNull() && hovered != idle);
 
 A011 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:70
-Disposition: GAP
-Mapping/reason: No Swift assertion proves this exact native hover delivery leaves the session revision unchanged.
+Disposition: MATCHED
+Mapping/reason: S013 drives background pointerMove through AutomationPage and proves the SongDocument revision is unchanged. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -214,8 +214,8 @@ Original expression:
 QTRY_COMPARE(scene.capture(input), idle);
 
 A015 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:77
-Disposition: GAP
-Mapping/reason: No Swift assertion proves the complete hover-away native sequence leaves the session revision unchanged.
+Disposition: MATCHED
+Mapping/reason: S014 completes the background-hover sequence with pointerLeave and proves the revision remains unchanged. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -282,8 +282,8 @@ Original expression:
 QTRY_VERIFY(!(ringFrame = scene.capture(ringBounds)).isNull() && ringFrame != ringIdle);
 
 A021 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:108
-Disposition: GAP
-Mapping/reason: No Swift assertion proves the native node-hover sequence leaves the session revision unchanged.
+Disposition: MATCHED
+Mapping/reason: S015 drives pointerMove over the concrete written pan node and proves the revision is unchanged. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -306,8 +306,8 @@ Original expression:
 QTRY_COMPARE(scene.capture(input), idle);
 
 A024 | SwiftRollGatedTest::drawerAutomationHoverRaster | src/checks/swiftrollgated/drawerparity.cpp:112
-Disposition: GAP
-Mapping/reason: No Swift assertion proves the complete node-hover native sequence leaves the session revision unchanged.
+Disposition: MATCHED
+Mapping/reason: S016 completes the node-hover sequence with pointerLeave and proves the revision remains unchanged. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -915,3 +915,23 @@ S012 | checkProjection | src/checks/rollcheck/EditorGridCameraChecks.swift:326
         cppID: projectionID, message: "beginPointer selects the note under the projected rectangle")
 
 Shared helper predicates are included only where an inventory entry cites them.
+
+S013 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:154
+Swift expression:
+  report.expectEqual(revision, automation.document.revision, cppID: drawerParityGapID,
+                     what: "A011 background hover leaves revision unchanged")
+
+S014 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:157
+Swift expression:
+  report.expectEqual(revision, automation.document.revision, cppID: drawerParityGapID,
+                     what: "A015 hover-away leaves revision unchanged")
+
+S015 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:162
+Swift expression:
+  report.expectEqual(revision, automation.document.revision, cppID: drawerParityGapID,
+                     what: "A021 written-node hover leaves revision unchanged")
+
+S016 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:165
+Swift expression:
+  report.expectEqual(revision, automation.document.revision, cppID: drawerParityGapID,
+                     what: "A024 complete node-hover sequence leaves revision unchanged")

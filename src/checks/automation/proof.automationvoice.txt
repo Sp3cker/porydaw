@@ -251,8 +251,8 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A014 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::SizeHorCursor on the native voice-change cursor — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -390,8 +390,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A029 | AutomationEditingTest::voiceHorizontalPreviewCommitsAndUndoes | src/checks/automation/automationvoice.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor on the native voice-change cursor — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -498,8 +498,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen);
 
 A039 | AutomationEditingTest::voiceStationaryVerticalJitterAndEmptySpaceDoNotCommit | src/checks/automation/automationvoice.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor on the native voice-change cursor — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -899,8 +899,8 @@ Original expression:
   QVERIFY(hasVoicePoint(tab().document(), destination, 9));
 
 A076 | AutomationEditingTest::voiceCollisionAndStaleRevision | src/checks/automation/automationvoice.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor on the native voice-change cursor — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1157,8 +1157,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A101 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor on the native voice-change cursor — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1166,8 +1166,8 @@ Original expression:
   QCOMPARE(voiceChangeInput().cursor().shape(), Qt::ArrowCursor);
 
 A102 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow mouse-grab acquisition/release during the native marker drag — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1180,8 +1180,8 @@ Original expression:
   QTRY_VERIFY(quickWindow().mouseGrabberItem() == &voiceChangeInput());
 
 A103 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow mouse-grab acquisition/release during the native marker drag — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       voiceChangeInput().ungrabMouse();
@@ -1227,8 +1227,8 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A108 | AutomationEditingTest::voiceEscapeAndUngrabCancel | src/checks/automation/automationvoice.cpp:330
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor on the native voice-change cursor — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 

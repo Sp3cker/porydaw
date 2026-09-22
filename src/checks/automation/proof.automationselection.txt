@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationselection.cpp
 Original SHA-256: 589378ab1a0351dd4c2b1963fb45a91b9973abf2ea95ae2456cb8cb11d706ef8
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: b9de1437f629495909ec4df5863d540b4c7fe22aa9b2de86afc6b1cbb84afd67
+Swift SHA-256: 1f0cf096d7b3a4bb0c30c655ab10a9b67c08aaa5a44ab209607875cebaef335c
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -51,38 +51,44 @@ src/checks/automation/automationselection.cpp:527 | mouseMove(end, Qt::ShiftModi
 Original assertion inventory
 
 A001 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S036] The mixed automation fixture owns a serializable real SongDocument.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(stage(mixedSelectionSmf()))
 
 A002 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S037] The Tempo projection is valid and nonempty in the production page fixture.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tempoLane.valid())
 
 A003 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S038] The Pan projection is valid and nonempty in the production page fixture.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(panLane.valid())
 
 A004 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S037] The Tempo projection is valid and nonempty in the production page fixture.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!laneBody(tempoLane).isEmpty())
 
 A005 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S038] The Pan projection is valid and nonempty in the production page fixture.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!laneBody(panLane).isEmpty())
 
 A006 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S039] The attached production automation plot has nonzero input bounds.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
@@ -99,68 +105,79 @@ Original expression:
   QVERIFY(edited.isValid())
 
 A009 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S042] The right-drag publishes exactly the requested tick range 24 through 96.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(tempoSelection, kSelectionTick - 24, kDestinationTick, true, {}))
 
 A010 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S043] The production time selection covers Tempo and contains no control-change lanes.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().view().selectionModel().timeSelectionCoversTempo(1u))
 
 A011 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S043] The production time selection covers Tempo and contains no control-change lanes.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u))
 
 A012 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S043] The production time selection covers Tempo and contains no control-change lanes.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!tab().view().selectionModel().timeSelectionCoversLane(kTrack, kLfoController, 1u))
 
 A013 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:220
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S044] The published selected-parameter list contains Tempo only.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(page().canvas()->selectedParameters(), tempoOnly)
 
 A014 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S045] Band creation leaves SongState and the full document/history snapshot unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeBand)
 
 A015 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S047] The selected-node press itself leaves the captured document/history snapshot unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeTempoDrag)
 
 A016 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S052] The completed selected Tempo drag advances the real document revision exactly once.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().revision(), beforeTempoDrag.revision + 1)
 
 A017 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S050] The Pan lane retains its original tick/value pair after the Tempo drag.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kPanController), panBefore))
 
 A018 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:246
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S051] The modulation lane retains its original tick/value pair after the Tempo drag.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kLfoController), lfoBefore))
 
 A019 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:247
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S049] The Tempo lane publishes the preserved 150 BPM point at destination tick 96.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kDestinationTick), kPreservedTempoUs)
 
@@ -172,942 +189,1095 @@ Original expression:
           timelineHasTempo(tab(), kDestinationTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs)))
 
 A021 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S053] The changed history identity and canUndo prove one undoable drag transaction.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canUndo())
 
 A022 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S054] The real DocumentSession undo request succeeds.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A023 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S055] Undo restores the 150 BPM Tempo point at selection tick 48.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
 
 A024 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S057] The production page publishes Pan as the active parameter before the second band gesture.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}))
 
 A025 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S059] The Pan-row right-drag publishes the same exact tick range 24 through 96.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(ccSelection, kSelectionTick - 24, kDestinationTick, false,
                                {{kTrack, kPanController}}))
 
 A026 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:267
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S060] The replacement selection excludes Tempo and explicitly covers only Pan.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!tab().view().selectionModel().timeSelectionCoversTempo(1u))
 
 A027 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S060] The replacement selection excludes Tempo and explicitly covers only Pan.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().view().selectionModel().timeSelectionCoversLane(kTrack, kPanController, 1u))
 
 A028 | AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows | src/checks/automation/automationselection.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S061] The published selected-parameter list contains Pan only.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(page().canvas()->selectedParameters(), panOnly)
 
 A029 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(stage(mixedSelectionSmf()))
 
 A030 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tempoLane.valid())
 
 A031 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(panLane.valid())
 
 A032 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(lfoLane.valid())
 
 A033 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
                                kDestinationTick, true,
                                {{kTrack, kPanController}, {kTrack, kLfoController}}))
 
 A034 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}))
 
 A035 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:293
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A036 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:294
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S080] The production fixture publishes valid Tempo, Pan, and LFO selection coverage with Pan active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
                                kDestinationTick, true,
                                {{kTrack, kPanController}, {kTrack, kLfoController}}))
 
 A037 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S081] The real selected-drag preview preserves the complete SongState and revision/history snapshot.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A038 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S081] The real selected-drag preview preserves the complete SongState and revision/history snapshot.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(edited.isValid())
 
 A039 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S081] The real selected-drag preview preserves the complete SongState and revision/history snapshot.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == preview)
 
 A040 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S082] Release creates exactly one revision and one new undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A041 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S082] Release creates exactly one revision and one new undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A042 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S082] Release creates exactly one revision and one new undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().revision(), preview.revision + 1)
 
 A043 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S082] Release creates exactly one revision and one new undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), preview.undoCount + 1)
 
 A044 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:325
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S082] Release creates exactly one revision and one new undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), preview.undoIndex + 1)
 
 A045 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S085] The selected Tempo occurrence leaves the source and appears at the destination with its preserved value.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), uint32_t{0})
 
 A046 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S085] The selected Tempo occurrence leaves the source and appears at the destination with its preserved value.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kDestinationTick), kPreservedTempoUs)
 
 A047 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S083] Both same-tick Pan occurrences move to the destination in source order.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick), std::vector<int>{})
 
 A048 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:329
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S083] Both same-tick Pan occurrences move to the destination in source order.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick),
                std::vector<int>({10, 20}))
 
 A049 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S084] The selected LFO occurrence moves from source to destination.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>{})
 
 A050 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S084] The selected LFO occurrence moves from source to destination.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), std::vector<int>({96}))
 
 A051 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S086] The unselected Volume lane is unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
 
 A052 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:334
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S087] The selection range and all three selected production streams move to the destination together.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kDestinationTick,
                                kDestinationTick + (kDestinationTick - kSelectionTick), true,
                                {{kTrack, kPanController}, {kTrack, kLfoController}}))
 
 A053 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S087] The selection range and all three selected production streams move to the destination together.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
 
 A054 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S087] The selection range and all three selected production streams move to the destination together.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kDestinationTick) == movedLfo)
 
 A055 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S087] The selection range and all three selected production streams move to the destination together.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(
           timelineHasTempo(tab(), kDestinationTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs)))
 
 A056 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:345
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S088] The committed mixed drag is available to and applied by real session undo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canUndo())
 
 A057 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:346
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S088] The committed mixed drag is available to and applied by real session undo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A058 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S089] Undo restores Tempo, duplicate Pan occurrences, and LFO at the source.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
 
 A059 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:348
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S089] Undo restores Tempo, duplicate Pan occurrences, and LFO at the source.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick),
                std::vector<int>({10, 20}))
 
 A060 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S089] Undo restores Tempo, duplicate Pan occurrences, and LFO at the source.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>({96}))
 
 A061 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S089] Undo restores Tempo, duplicate Pan occurrences, and LFO at the source.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == movedPan)
 
 A062 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S090] Undo publishes redo availability.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canRedo())
 
 A063 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:354
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S091] Real session redo restores duplicate Pan, LFO, and Tempo destination occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()))
 
 A064 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S091] Real session redo restores duplicate Pan, LFO, and Tempo destination occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kDestinationTick), kPreservedTempoUs)
 
 A065 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S091] Real session redo restores duplicate Pan, LFO, and Tempo destination occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick), movedPan)
 
 A066 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:357
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S091] Real session redo restores duplicate Pan, LFO, and Tempo destination occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), movedLfo)
 
 A067 | AutomationEditingTest::multiLaneSelectionDragPreservesTempoAndCcOrder | src/checks/automation/automationselection.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S091] Real session redo restores duplicate Pan, LFO, and Tempo destination occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
 
 A068 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(stage(mixedSelectionSmf()))
 
 A069 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tempoLane.valid())
 
 A070 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(panLane.valid())
 
 A071 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:371
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(lfoLane.valid())
 
 A072 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A073 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:379
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(covered.contains(checks::support::automationParameterIndex(
           *page().canvas(), {EditorAutomationRowKind::Tempo, 0, 0})))
 
 A074 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(covered.contains(checks::support::automationParameterIndex(
           *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kPanController})))
 
 A075 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:383
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(covered.contains(checks::support::automationParameterIndex(
           *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kLfoController})))
 
 A076 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:385
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!covered.contains(checks::support::automationParameterIndex(
           *page().canvas(), {EditorAutomationRowKind::ControlChange, kTrack, kVolumeController})))
 
 A077 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:387
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S092] The valid active Tempo selection covers Tempo, Pan, and LFO while excluding Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(focusAutomationBand())
 
 A078 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S094] The production Delete command creates exactly one revision and one undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A079 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S094] The production Delete command creates exactly one revision and one undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(edited.isValid())
 
 A080 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S094] The production Delete command creates exactly one revision and one undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A081 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S094] The production Delete command creates exactly one revision and one undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A082 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:400
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S094] The production Delete command creates exactly one revision and one undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().revision(), beforeDelete.revision + 1)
 
 A083 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:401
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S094] The production Delete command creates exactly one revision and one undoable history identity.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), beforeDelete.undoCount + 1)
 
 A084 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:402
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S095] Delete removes selected Tempo, Pan, and LFO occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), uint32_t{0})
 
 A085 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:403
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S095] Delete removes selected Tempo, Pan, and LFO occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick), std::vector<int>{})
 
 A086 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:404
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S095] Delete removes selected Tempo, Pan, and LFO occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>{})
 
 A087 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:405
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S096] Delete preserves unselected Volume.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
 
 A088 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:407
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S095] Delete removes selected Tempo, Pan, and LFO occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == noValues)
 
 A089 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:408
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S095] Delete removes selected Tempo, Pan, and LFO occurrences.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kSelectionTick) == noValues)
 
 A090 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:410
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S097] The mixed Delete is available to and applied by real session undo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canUndo())
 
 A091 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:411
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S097] The mixed Delete is available to and applied by real session undo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A092 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S098] Undo restores all selected occurrences and their serialized state.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
 
 A093 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:413
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S098] Undo restores all selected occurrences and their serialized state.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick),
                std::vector<int>({10, 20}))
 
 A094 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:415
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S098] Undo restores all selected occurrences and their serialized state.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>({96}))
 
 A095 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S098] Undo restores all selected occurrences and their serialized state.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(
           timelineHasTempo(tab(), kSelectionTick, CoreTimeDefaults::tempoBpm(kPreservedTempoUs)))
 
 A096 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:419
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S099] Undo publishes redo availability.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canRedo())
 
 A097 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S100] Real session redo restores the mixed deletion.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()))
 
 A098 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S100] Real session redo restores the mixed deletion.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), uint32_t{0})
 
 A099 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:423
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S100] Real session redo restores the mixed deletion.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == noValuesAfterRedo)
 
 A100 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:435
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S101] Repeating Delete on the now-empty range leaves document/history and Volume unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeEmptyDelete)
 
 A101 | AutomationEditingTest::multiLaneSelectionDeleteAndEmptyDeleteNoop | src/checks/automation/automationselection.cpp:436
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S101] Repeating Delete on the now-empty range leaves document/history and Volume unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
 
 A102 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:441
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S102] The production rebuild fixture publishes populated Tempo, Pan, and LFO projections with Tempo active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(stage(mixedSelectionSmf()))
 
 A103 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:447
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S102] The production rebuild fixture publishes populated Tempo, Pan, and LFO projections with Tempo active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tempoLane.valid())
 
 A104 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S102] The production rebuild fixture publishes populated Tempo, Pan, and LFO projections with Tempo active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(panLane.valid())
 
 A105 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:449
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S102] The production rebuild fixture publishes populated Tempo, Pan, and LFO projections with Tempo active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(lfoLane.valid())
 
 A106 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S102] The production rebuild fixture publishes populated Tempo, Pan, and LFO projections with Tempo active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A107 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S103] Refreshing production document state aborts the active drag preview without editing or changing history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A108 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:473
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S103] Refreshing production document state aborts the active drag preview without editing or changing history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(edited.isValid())
 
 A109 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:482
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S103] Refreshing production document state aborts the active drag preview without editing or changing history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(afterRebuild == beforeRebuild)
 
 A110 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:485
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S103] Refreshing production document state aborts the active drag preview without editing or changing history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == afterRebuild)
 
 A111 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:486
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
 
 A112 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:487
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kDestinationTick), uint32_t{0})
 
 A113 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:488
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kPanController), panBefore))
 
 A114 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:489
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kLfoController), lfoBefore))
 
 A115 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:490
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kVolumeController, 24), std::vector<int>({32}))
 
 A116 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:491
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kSelectionTick,
                                kDestinationTick, true,
                                {{kTrack, kPanController}, {kTrack, kLfoController}}))
 
 A117 | AutomationEditingTest::multiLaneSelectionDragAbortsOnDocumentRebuild | src/checks/automation/automationselection.cpp:495
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S104] The paired release after rebuild preserves Tempo, Pan, LFO, Volume, and the original selection range.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kSelectionTick) == originalPan)
 
 A118 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:500
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S105] The active production selection contains only Pan and LFO.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(stage(mixedSelectionSmf()))
 
 A119 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:505
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S105] The active production selection contains only Pan and LFO.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(panLane.valid())
 
 A120 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:506
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S105] The active production selection contains only Pan and LFO.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(lfoLane.valid())
 
 A121 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:509
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S105] The active production selection contains only Pan and LFO.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::ControlChange, kTrack, kPanController}))
 
 A122 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:514
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S106] The real multi-CC preview preserves complete SongState and revision/history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A123 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:515
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S106] The real multi-CC preview preserves complete SongState and revision/history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(edited.isValid())
 
 A124 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:528
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S106] The real multi-CC preview preserves complete SongState and revision/history.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == beforeDrag)
 
 A125 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:531
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S107] Release creates one undoable revision.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().revision(), beforeDrag.revision + 1)
 
 A126 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:532
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S109] Tempo and Volume remain unchanged and Tempo has no destination occurrence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
 
 A127 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:533
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S109] Tempo and Volume remain unchanged and Tempo has no destination occurrence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kDestinationTick), uint32_t{0})
 
 A128 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:534
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S108] Duplicate Pan occurrences and LFO move together to their destination.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick),
                std::vector<int>({10, 20}))
 
 A129 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:536
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S108] Duplicate Pan occurrences and LFO move together to their destination.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), std::vector<int>({96}))
 
 A130 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:537
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S109] Tempo and Volume remain unchanged and Tempo has no destination occurrence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sameLaneValues(laneValues(tab().document(), kVolumeController), volumeBefore))
 
 A131 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:538
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S110] The shifted selection remains lane-only over Pan and LFO and explicitly excludes Tempo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectionMatches(tab().view().selectionModel().timeSelection(), kDestinationTick,
                                kDestinationTick + (kDestinationTick - kSelectionTick), false,
                                {{kTrack, kPanController}, {kTrack, kLfoController}}))
 
 A132 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:544
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S108] Duplicate Pan occurrences and LFO move together to their destination.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kPanController, kDestinationTick) == movedPan)
 
 A133 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:545
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S108] Duplicate Pan occurrences and LFO move together to their destination.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(timelineValuesAt(tab(), kLfoController, kDestinationTick) == movedLfo)
 
 A134 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:547
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S111] The multi-CC transaction is available to and applied by real session undo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canUndo())
 
 A135 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:548
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S111] The multi-CC transaction is available to and applied by real session undo.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()))
 
 A136 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:549
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S112] Undo restores both CC lanes at source while preserving Tempo.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kSelectionTick), kPreservedTempoUs)
 
 A137 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:550
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S112] Undo restores both CC lanes at source while preserving Tempo.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kSelectionTick),
                std::vector<int>({10, 20}))
 
 A138 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:552
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S112] Undo restores both CC lanes at source while preserving Tempo.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kSelectionTick), std::vector<int>({96}))
 
 A139 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:554
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S113] Undo publishes redo availability.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().history().canRedo())
 
 A140 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:555
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S114] Real session redo restores both CC destinations while Tempo remains excluded.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestRedo()))
 
 A141 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:556
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S114] Real session redo restores both CC destinations while Tempo remains excluded.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tempoAt(tab().document(), kDestinationTick), uint32_t{0})
 
 A142 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:557
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S114] Real session redo restores both CC destinations while Tempo remains excluded.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kPanController, kDestinationTick), movedPan)
 
 A143 | AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume | src/checks/automation/automationselection.cpp:558
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S114] Real session redo restores both CC destinations while Tempo remains excluded.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(valuesAt(tab().document(), kLfoController, kDestinationTick), movedLfo)
 
 A144 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:564
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S072] The production page is attached with valid populated Volume and Pan catalog rows and Volume active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas)
 
 A145 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:571
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S072] The production page is attached with valid populated Volume and Pan catalog rows and Volume active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(volumeIndex >= 0)
 
 A146 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:572
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S072] The production page is attached with valid populated Volume and Pan catalog rows and Volume active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(panIndex >= 0)
 
 A147 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:573
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S072] The production page is attached with valid populated Volume and Pan catalog rows and Volume active.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A148 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:580
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S073] The production ghost-toggle seam accepts populated Pan.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(clickParameterTab(pan, Qt::ControlModifier))
 
 A149 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:581
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S074] The published ghost set contains only Pan while the active Volume row and selected-parameter publication remain unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(canvas->ghostParameters(), QList<int>({panIndex}))
 
 A150 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:582
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S074] The published ghost set contains only Pan while the active Volume row and selected-parameter publication remain unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(canvas->activeParameter(), volumeIndex)
 
 A151 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:583
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S074] The published ghost set contains only Pan while the active Volume row and selected-parameter publication remain unchanged.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(canvas->selectedParameters(), selectionBefore)
 
 A152 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:584
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S075] Ghost enablement leaves SongState, encoded MIDI, revision, and history snapshot exactly at baseline.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().smf().write(), documentBefore)
 
 A153 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:585
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S075] Ghost enablement leaves SongState, encoded MIDI, revision, and history snapshot exactly at baseline.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().revision(), revisionBefore)
 
 A154 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S075] Ghost enablement leaves SongState, encoded MIDI, revision, and history snapshot exactly at baseline.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().undoStack()->index(), undoIndexBefore)
 
 A155 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:587
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S075] Ghost enablement leaves SongState, encoded MIDI, revision, and history snapshot exactly at baseline.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(tab().document().undoStack()->count(), undoCountBefore)
 
 A156 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:589
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S076] After real Tempo and Volume activations, Volume is active and the Pan ghost remains published.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(tempo))
 
 A157 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:590
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S076] After real Tempo and Volume activations, Volume is active and the Pan ghost remains published.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A158 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:591
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S076] After real Tempo and Volume activations, Volume is active and the Pan ghost remains published.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex})
 
 A159 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:593
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S077] Activating Pan publishes Pan active while retaining its ghost.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A160 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:594
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S077] Activating Pan publishes Pan active while retaining its ghost.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(canvas->activeParameter(), panIndex)
 
 A161 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:595
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S077] Activating Pan publishes Pan active while retaining its ghost.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(canvas->ghostParameters(), QList<int>{panIndex})
 
 A162 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:597
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S078] Toggling the active Pan row consumes ghost disablement.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(clickParameterTab(pan, Qt::ControlModifier))
 
 A163 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:598
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S079] Ghost disablement leaves Pan active and publishes an empty ghost set.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(canvas->ghostParameters().isEmpty())
 
 A164 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:599
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S079] Ghost disablement leaves Pan active and publishes an empty ghost set.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(canvas->activeParameter(), panIndex)
 
 A165 | AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation | src/checks/automation/automationselection.cpp:602
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S079] Ghost disablement leaves Pan active and publishes an empty ghost set.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A166 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:608
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S063] The production automation page is attached to the fixture track.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas)
 
 A167 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:611
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S064] Activating Volume publishes Volume as the active parameter.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(volume))
 
 A168 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:613
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S065] The populated Volume row has a valid catalog index.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(volumeIndex >= 0)
 
 A169 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:616
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S067] The real SongDocument Modulation lane has no written events.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tab().document().lanePoints(kTrack, CoreTimeDefaults::kCcModulation).empty())
 
 A170 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:617
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S068] The production ghost-toggle seam rejects enablement for the eventless inactive lane.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(clickParameterTab(modulation, Qt::ControlModifier))
 
 A171 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:618
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S066] The eventless Modulation row has a valid published catalog index.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(checks::support::automationParameterIndex(*canvas, modulation) >= 0)
 
 A172 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:619
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S069] The rejected ghost toggle leaves Volume active.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(canvas->activeParameter(), volumeIndex)
 
 A173 | AutomationEditingTest::ghostToggleSkipsEventlessLane | src/checks/automation/automationselection.cpp:620
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S070, S071] The published ghost set remains empty and the Modulation tab remains visibly unghosted.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
@@ -1289,3 +1459,477 @@ S035 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
 Swift expression:
   report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
                          what: "undo restores the original range contents")
+
+S036 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:193
+Swift expression:
+  report.expect((try? fixture.document.state.file.encoded()) != nil,
+                    cppID: id, message: "A001 mixed automation fixture has a serializable document")
+
+S037 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:195
+Swift expression:
+  report.expect(fixture.projection(.tempo).points.isEmpty == false,
+                    cppID: id, message: "A002-A004 Tempo lane and body are valid and populated")
+
+S038 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:197
+Swift expression:
+  report.expect(fixture.projection(fixture.panLane).points.isEmpty == false,
+                    cppID: id, message: "A003-A005 Pan lane and body are valid and populated")
+
+S039 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:199
+Swift expression:
+  report.expect(fixture.page.trackAvailable && fixture.page.plotWidth > 0
+                        && fixture.page.plotHeight > 0,
+                    cppID: id, message: "A001-A006 automation plot and mixed fixture are available")
+
+S040 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:205
+Swift expression:
+  report.expect(fixture.page.pointerPress(
+          x: bandStartX,
+          y: 104,
+          surface: AutomationInputSurface.plot.rawValue,
+          button: 2,
+          modifiers: 0
+      ), cppID: id, message: "A009 tempo right press starts a band")
+
+S041 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:213
+Swift expression:
+  report.expect(fixture.page.pointerRelease(
+          x: bandEndX,
+          y: 108,
+          surface: AutomationInputSurface.plot.rawValue,
+          button: 2,
+          modifiers: 0
+      ), cppID: id, message: "A010 tempo right drag commits a band")
+
+S042 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:220
+Swift expression:
+  report.expect(fixture.page.selection?.range == TimeRange(startTick: 24, endTick: 96),
+                    cppID: id, message: "A009 tempo band publishes the dragged tick range")
+
+S043 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:222
+Swift expression:
+  report.expect(fixture.page.selection?.tempo == true
+                        && fixture.page.selection?.lanes.isEmpty == true,
+                    cppID: id, message: "A011-A014 tempo band contains Tempo and excludes CC lanes")
+
+S044 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:225
+Swift expression:
+  report.expect(fixture.page.selectedParameters == [.tempo],
+                    cppID: id, message: "A015 selection membership is isolated to Tempo")
+
+S045 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:227
+Swift expression:
+  report.expect(fixture.snapshot == initialSnapshot && fixture.document.state == initialState,
+                    cppID: id, message: "A016 band creation writes no document or history")
+
+S046 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:234
+Swift expression:
+  report.expect(fixture.page.pointerPress(
+          x: sourceX,
+          y: sourceY,
+          surface: AutomationInputSurface.plot.rawValue,
+          button: 1,
+          modifiers: DrawerModifiers.shiftBit
+      ), cppID: id, message: "A017 selected tempo node press is handled")
+
+S047 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:241
+Swift expression:
+  report.expect(fixture.snapshot == beforeTempoDrag,
+                    cppID: id, message: "A015 tempo drag press writes no document or history")
+
+S048 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:255
+Swift expression:
+  report.expect(fixture.page.pointerRelease(
+          x: destinationX,
+          y: sourceY,
+          surface: AutomationInputSurface.plot.rawValue,
+          button: 1,
+          modifiers: DrawerModifiers.shiftBit
+      ), cppID: id, message: "A018 selected tempo drag commits")
+
+S049 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:262
+Swift expression:
+  report.expectEqual(["0:120", "96:150"], fixture.tempoValues, cppID: id,
+                         what: "A019-A020 tempo point moves to the destination with its value")
+
+S050 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:264
+Swift expression:
+  report.expectEqual(["48:36"], fixture.values(fixture.panLane), cppID: id,
+                         what: "A021 pan lane remains unchanged by tempo selection drag")
+
+S051 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:266
+Swift expression:
+  report.expectEqual(["48:72"], fixture.values(fixture.modulationLane), cppID: id,
+                         what: "A021 modulation lane remains unchanged by tempo selection drag")
+
+S052 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:268
+Swift expression:
+  report.expectEqual(initialSnapshot.revision + 1, fixture.document.revision, cppID: id,
+                         what: "A022 selected tempo drag commits one revision")
+
+S053 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:270
+Swift expression:
+  report.expect(fixture.snapshot.canUndo && fixture.snapshot.identity != initialSnapshot.identity,
+                    cppID: id, message: "A021 selected tempo drag creates an undoable history entry")
+
+S054 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:272
+Swift expression:
+  report.expect(fixture.undo(), cppID: id, message: "A022 selected tempo drag is undoable")
+
+S055 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:273
+Swift expression:
+  report.expectEqual(["0:120", "48:150"], fixture.tempoValues, cppID: id,
+                         what: "A023 undo restores the tempo point at the selection tick")
+
+S056 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:275
+Swift expression:
+  report.expect(fixture.document.state == initialState && fixture.snapshot == initialSnapshot,
+                    cppID: id, message: "A024 undo restores the complete mixed document and history")
+
+S057 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:279
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane,
+                    cppID: id, message: "A024 Pan parameter activates for the second band")
+
+S058 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:281
+Swift expression:
+  report.expect(fixture.page.pointerPress(
+          x: bandStartX,
+          y: 104,
+          surface: AutomationInputSurface.plot.rawValue,
+          button: 2,
+          modifiers: 0
+      ), cppID: id, message: "A025 pan right press starts a replacement band")
+
+S059 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:296
+Swift expression:
+  report.expect(fixture.page.selection?.range == TimeRange(startTick: 24, endTick: 96),
+                    cppID: id, message: "A025 Pan band publishes the same dragged tick range")
+
+S060 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:298
+Swift expression:
+  report.expect(fixture.page.selection?.tempo == false
+                        && fixture.page.selection?.lanes == Set([fixture.panLane]),
+                    cppID: id, message: "A026 replacement band contains only Pan")
+
+S061 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:301
+Swift expression:
+  report.expect(fixture.page.selectedParameters == [fixture.panLane],
+                    cppID: id, message: "A027 Pan is selected after the active-row switch")
+
+S062 | drawerAutomationBandSelectionIsolationGapChecks | src/checks/automation/automationselection.swift:303
+Swift expression:
+  report.expect(!fixture.page.selectedParameters.contains(.tempo),
+                    cppID: id, message: "A028 Tempo is not selected by the Pan-row band")
+
+S063 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:323
+Swift expression:
+  report.expect(fixture.page.trackAvailable, cppID: id,
+                    message: "A166 automation page is attached to the fixture track")
+
+S064 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:325
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.volumeLane,
+                    cppID: id, message: "A167 populated Volume lane is active")
+
+S065 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:327
+Swift expression:
+  report.expect(volumeIndex >= 0,
+                    cppID: id, message: "A168 populated Volume row has a catalog index")
+
+S066 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:329
+Swift expression:
+  report.expect(eventlessIndex >= 0 && eventlessIndex < fixture.page.publishedTabs.count,
+                    cppID: id, message: "A168 eventless Modulation row is published")
+
+S067 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:331
+Swift expression:
+  report.expect(fixture.values(fixture.modulationLane).isEmpty,
+                    cppID: id, message: "A169 Modulation lane has no written events")
+
+S068 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:333
+Swift expression:
+  report.expect(!fixture.page.toggleGhostParameter(index: eventlessIndex),
+                    cppID: id, message: "A170 eventless lane rejects ghost enablement")
+
+S069 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:335
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.volumeLane,
+                    cppID: id, message: "A171 rejected ghost toggle keeps Volume active")
+
+S070 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:337
+Swift expression:
+  report.expect(fixture.page.ghostParameters.isEmpty,
+                    cppID: id, message: "A172 rejected toggle publishes no ghost lane")
+
+S071 | drawerAutomationGhostToggleSkipsEventlessLaneGapChecks | src/checks/automation/automationselection.swift:339
+Swift expression:
+  report.expect(fixture.page.publishedTabs[eventlessIndex].ghosted == false,
+                    cppID: id, message: "A173 eventless row remains visibly unghosted")
+
+S072 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:363
+Swift expression:
+  report.expect(fixture.page.trackAvailable && volumeIndex >= 0 && panIndex >= 0,
+                    cppID: id, message: "A144-A147 populated Volume and Pan rows are valid")
+
+S073 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:366
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex),
+                    cppID: id, message: "A148 populated Pan accepts ghost enablement")
+
+S074 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:368
+Swift expression:
+  report.expect(fixture.page.ghostParameters == [fixture.panLane]
+                        && fixture.page.activeParameter == fixture.volumeLane
+                        && fixture.page.selectedParameters == selectionBefore,
+                    cppID: id, message: "A149-A151 ghost toggle preserves active row and selection")
+
+S075 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:372
+Swift expression:
+  report.expect(fixture.document.state == baselineState && fixture.snapshot == baseline
+                        && (try? fixture.document.state.file.encoded()) == baselineBytes,
+                    cppID: id, message: "A152-A155 ghost toggle is document and history neutral")
+
+S076 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:378
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.volumeLane
+                        && fixture.page.ghostParameters == [fixture.panLane],
+                    cppID: id, message: "A156-A158 Pan ghost survives Tempo and Volume activation")
+
+S077 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:382
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && fixture.page.ghostParameters == [fixture.panLane],
+                    cppID: id, message: "A159-A161 activating Pan retains its ghost publication")
+
+S078 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:385
+Swift expression:
+  report.expect(fixture.page.toggleGhostParameter(index: panIndex),
+                    cppID: id, message: "A162 active Pan consumes ghost disablement")
+
+S079 | drawerAutomationPopulatedGhostToggleGapChecks | src/checks/automation/automationselection.swift:387
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && fixture.page.ghostParameters.isEmpty,
+                    cppID: id, message: "A163-A165 ghost disablement preserves active Pan and clears ghosts")
+
+S080 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:414
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && fixture.page.selection?.range == TimeRange(startTick: 48, endTick: 96)
+                        && Set(fixture.page.selectedParameters)
+                          == Set([fixture.panLane, fixture.modulationLane, .tempo]),
+                    cppID: id, message: "A029-A036 mixed three-lane selection is valid and Pan is active")
+
+S081 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:433
+Swift expression:
+  report.expect(fixture.snapshot == baseline && fixture.document.state == baselineState,
+                    cppID: id, message: "A037-A039 selected-drag preview writes no document or history")
+
+S082 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:439
+Swift expression:
+  report.expect(fixture.document.revision == baseline.revision + 1
+                        && fixture.snapshot.canUndo
+                        && fixture.snapshot.identity != baseline.identity,
+                    cppID: id, message: "A040-A044 selected drag creates one revision and history entry")
+
+S083 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:443
+Swift expression:
+  report.expectEqual(["96:10", "96:20"], fixture.values(fixture.panLane),
+                         cppID: id, what: "A047-A048 Pan duplicates move together in source order")
+
+S084 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:445
+Swift expression:
+  report.expectEqual(["96:96"], fixture.values(fixture.modulationLane),
+                         cppID: id, what: "A049-A050 LFO point moves to the destination")
+
+S085 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:447
+Swift expression:
+  report.expectEqual(["0:120", "96:150"], fixture.tempoValues,
+                         cppID: id, what: "A045-A046 selected Tempo point moves to the destination")
+
+S086 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:449
+Swift expression:
+  report.expectEqual(["24:32"], fixture.values(fixture.volumeLane),
+                         cppID: id, what: "A051 unselected Volume remains unchanged")
+
+S087 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:451
+Swift expression:
+  report.expect(fixture.page.selection?.range == TimeRange(startTick: 96, endTick: 144)
+                        && Set(fixture.page.selectedParameters)
+                          == Set([fixture.panLane, fixture.modulationLane, .tempo]),
+                    cppID: id, message: "A052-A055 selection and projected streams move together")
+
+S088 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:456
+Swift expression:
+  report.expect(fixture.snapshot.canUndo && fixture.undo(),
+                    cppID: id, message: "A056-A057 mixed selected drag is undoable")
+
+S089 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:458
+Swift expression:
+  report.expect(fixture.document.state == baselineState
+                        && fixture.values(fixture.panLane) == ["48:10", "48:20"]
+                        && fixture.values(fixture.modulationLane) == ["48:96"]
+                        && fixture.tempoValues == ["0:120", "48:150"],
+                    cppID: id, message: "A058-A061 undo restores all source occurrences")
+
+S090 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:463
+Swift expression:
+  report.expect(fixture.document.history.canRedo,
+                    cppID: id, message: "A062 selected drag undo publishes redo")
+
+S091 | drawerAutomationMultiLaneSelectionDragGapChecks | src/checks/automation/automationselection.swift:470
+Swift expression:
+  report.expect(fixture.values(fixture.panLane) == ["96:10", "96:20"]
+                        && fixture.values(fixture.modulationLane) == ["96:96"]
+                        && fixture.tempoValues == ["0:120", "96:150"],
+                    cppID: id, message: "A063-A067 redo restores every destination occurrence")
+
+S092 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:498
+Swift expression:
+  report.expect(fixture.page.activeParameter == .tempo
+                        && Set(fixture.page.selectedParameters)
+                          == Set([fixture.panLane, fixture.modulationLane, .tempo])
+                        && !fixture.page.selectedParameters.contains(fixture.volumeLane),
+                    cppID: id, message: "A068-A077 mixed selection covers Tempo, Pan, and LFO but not Volume")
+
+S093 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:503
+Swift expression:
+  report.expect(fixture.page.consumeSelectionCommand(command: .delete),
+                    cppID: id, message: "mixed selection consumes Delete")
+
+S094 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:505
+Swift expression:
+  report.expect(fixture.document.revision == baseline.revision + 1
+                        && fixture.snapshot.canUndo
+                        && fixture.snapshot.identity != baseline.identity,
+                    cppID: id, message: "A078-A083 Delete creates one revision and history entry")
+
+S095 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:509
+Swift expression:
+  report.expect(fixture.values(fixture.panLane).isEmpty
+                        && fixture.values(fixture.modulationLane).isEmpty
+                        && fixture.tempoValues == ["0:120"],
+                    cppID: id, message: "A084-A089 Delete removes all and only selected events")
+
+S096 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:513
+Swift expression:
+  report.expectEqual(["24:32"], fixture.values(fixture.volumeLane),
+                         cppID: id, what: "A087 Delete preserves unselected Volume")
+
+S097 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:516
+Swift expression:
+  report.expect(fixture.snapshot.canUndo && fixture.undo(),
+                    cppID: id, message: "A090-A091 mixed selection Delete is undoable")
+
+S098 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:518
+Swift expression:
+  report.expect(fixture.document.state == baselineState
+                        && fixture.values(fixture.panLane) == ["48:10", "48:20"]
+                        && fixture.values(fixture.modulationLane) == ["48:96"]
+                        && fixture.tempoValues == ["0:120", "48:150"],
+                    cppID: id, message: "A092-A095 undo restores every selected event")
+
+S099 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:523
+Swift expression:
+  report.expect(fixture.document.history.canRedo,
+                    cppID: id, message: "A096 Delete undo publishes redo")
+
+S100 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:530
+Swift expression:
+  report.expect(fixture.values(fixture.panLane).isEmpty
+                        && fixture.values(fixture.modulationLane).isEmpty
+                        && fixture.tempoValues == ["0:120"],
+                    cppID: id, message: "A097-A099 redo restores the mixed deletion")
+
+S101 | drawerAutomationMultiLaneSelectionDeleteGapChecks | src/checks/automation/automationselection.swift:536
+Swift expression:
+  report.expect(fixture.snapshot == beforeEmptyDelete
+                        && fixture.values(fixture.volumeLane) == ["24:32"],
+                    cppID: id, message: "A100-A101 empty repeated Delete is a document no-op")
+
+S102 | drawerAutomationSelectionDragRebuildAbortGapChecks | src/checks/automation/automationselection.swift:563
+Swift expression:
+  report.expect(fixture.page.activeParameter == .tempo
+                        && fixture.projection(.tempo).points.isEmpty == false
+                        && fixture.projection(fixture.panLane).points.isEmpty == false
+                        && fixture.projection(fixture.modulationLane).points.isEmpty == false,
+                    cppID: id, message: "A102-A106 mixed selection rebuild fixture is valid")
+
+S103 | drawerAutomationSelectionDragRebuildAbortGapChecks | src/checks/automation/automationselection.swift:583
+Swift expression:
+  report.expect(!fixture.page.hasGesture
+                        && fixture.snapshot == baseline
+                        && fixture.document.state == baselineState,
+                    cppID: id, message: "A107-A110 document rebuild aborts preview without an edit")
+
+S104 | drawerAutomationSelectionDragRebuildAbortGapChecks | src/checks/automation/automationselection.swift:591
+Swift expression:
+  report.expect(fixture.tempoValues == ["0:120", "48:150"]
+                        && fixture.values(fixture.panLane) == ["48:10", "48:20"]
+                        && fixture.values(fixture.modulationLane) == ["48:96"]
+                        && fixture.values(fixture.volumeLane) == ["24:32"]
+                        && fixture.page.selection?.range == TimeRange(startTick: 48, endTick: 96),
+                    cppID: id, message: "A111-A117 aborted release preserves every lane and selection")
+
+S105 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:621
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && Set(fixture.page.selectedParameters)
+                          == Set([fixture.panLane, fixture.modulationLane]),
+                    cppID: id, message: "A118-A121 Pan and LFO lane-only selection is valid")
+
+S106 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:639
+Swift expression:
+  report.expect(fixture.snapshot == baseline && fixture.document.state == baselineState,
+                    cppID: id, message: "A122-A124 multi-CC drag preview writes nothing")
+
+S107 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:645
+Swift expression:
+  report.expect(fixture.document.revision == baseline.revision + 1
+                        && fixture.snapshot.canUndo,
+                    cppID: id, message: "A125 multi-CC drag creates one undoable revision")
+
+S108 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:648
+Swift expression:
+  report.expect(fixture.values(fixture.panLane) == ["96:10", "96:20"]
+                        && fixture.values(fixture.modulationLane) == ["96:96"],
+                    cppID: id, message: "A128-A129 and A132-A133 both selected CC lanes move")
+
+S109 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:651
+Swift expression:
+  report.expect(fixture.tempoValues == ["0:120", "48:150"]
+                        && fixture.values(fixture.volumeLane) == ["24:32"],
+                    cppID: id, message: "A126-A127 and A130 drag excludes Tempo and Volume")
+
+S110 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:654
+Swift expression:
+  report.expect(fixture.page.selection?.range == TimeRange(startTick: 96, endTick: 144)
+                        && fixture.page.selection?.tempo == false
+                        && Set(fixture.page.selectedParameters)
+                          == Set([fixture.panLane, fixture.modulationLane]),
+                    cppID: id, message: "A131 lane-only selection moves and still excludes Tempo")
+
+S111 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:660
+Swift expression:
+  report.expect(fixture.snapshot.canUndo && fixture.undo(),
+                    cppID: id, message: "A134-A135 multi-CC drag is undoable")
+
+S112 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:662
+Swift expression:
+  report.expect(fixture.values(fixture.panLane) == ["48:10", "48:20"]
+                        && fixture.values(fixture.modulationLane) == ["48:96"]
+                        && fixture.tempoValues == ["0:120", "48:150"],
+                    cppID: id, message: "A136-A138 undo restores CC lanes and preserves Tempo")
+
+S113 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:666
+Swift expression:
+  report.expect(fixture.document.history.canRedo,
+                    cppID: id, message: "A139 multi-CC undo publishes redo")
+
+S114 | drawerAutomationMultiCCSelectionDragGapChecks | src/checks/automation/automationselection.swift:673
+Swift expression:
+  report.expect(fixture.values(fixture.panLane) == ["96:10", "96:20"]
+                        && fixture.values(fixture.modulationLane) == ["96:96"]
+                        && fixture.tempoValues == ["0:120", "48:150"],
+                    cppID: id, message: "A140-A143 redo restores CC destinations without Tempo")

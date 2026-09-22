@@ -116,6 +116,26 @@ public final class VelocityHandle {
 
 // MARK: - Page owner
 
+enum VelocityGestureObservationKind: Equatable, Sendable {
+    case relative
+    case paint
+    case ramp
+    case pendingBand
+    case band
+    case pan
+}
+
+struct VelocityPageObservation: Sendable {
+    /// The semantic kind of the active velocity gesture.
+    let gestureKind: VelocityGestureObservationKind?
+    /// The document revision captured when the gesture began.
+    let frozenRevision: UInt64?
+    /// The track captured when the gesture began.
+    let frozenTrack: Int?
+    /// The note directly targeted by the gesture, when one exists.
+    let targetNoteID: NoteID?
+}
+
 /// The production Velocity page. Every published value derives from the current
 /// document session; every mutation goes through `SongDocument.setVelocities`
 /// with the revision captured when the interaction began, so at most one history
@@ -229,6 +249,41 @@ public final class VelocityPage: EditorDrawerPage {
     @QtIgnored public var context: VelocityVoiceContext { state.presentedContext }
     @QtIgnored public var presentedContextEndTick: Tick {
         state.presentedContext.endTick ?? TimeDefaults.noTick
+    }
+
+    @QtIgnored var observation: VelocityPageObservation {
+        guard let gesture else {
+            return VelocityPageObservation(
+                gestureKind: nil, frozenRevision: nil, frozenTrack: nil, targetNoteID: nil)
+        }
+        let gestureKind: VelocityGestureObservationKind
+        let targetNoteID: NoteID?
+        switch gesture {
+        case let .relative(edit):
+            gestureKind = .relative
+            targetNoteID = edit.pressedNote
+        case let .paint(paint):
+            gestureKind = .paint
+            targetNoteID = paint.edit.pressedNote
+        case let .ramp(edit):
+            gestureKind = .ramp
+            targetNoteID = edit.pressedNote
+        case let .pendingBand(band):
+            gestureKind = .pendingBand
+            targetNoteID = band.pressedNote
+        case let .band(band):
+            gestureKind = .band
+            targetNoteID = band.pressedNote
+        case .pan:
+            gestureKind = .pan
+            targetNoteID = nil
+        }
+        let capture = gesture.captureIdentity
+        return VelocityPageObservation(
+            gestureKind: gestureKind,
+            frozenRevision: capture.revision,
+            frozenTrack: capture.track,
+            targetNoteID: targetNoteID)
     }
 
     @QtIgnored weak var session: DocumentSession?

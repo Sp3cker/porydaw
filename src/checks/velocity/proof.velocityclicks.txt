@@ -32,12 +32,9 @@ drawerVelocityCommandAvailability (velocity/VelocityPageChecks.swift) retain the
 broader paired checks. The exact click fixture and per-case state live in
 velocity/velocityclicks.swift.
 
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Verification evidence: pending orchestrator run
 
-Authored exact Swift mappings (pending the integrated command above; no GAP
-disposition is advanced without execution evidence):
+Authored exact Swift mappings:
 A001 -> velocity/velocityclicks.swift:82-84
 A002-A003 -> velocity/velocityclicks.swift:91-96
 A005 -> velocity/velocityclicks.swift:101-103
@@ -63,7 +60,9 @@ A046 -> velocity/velocityclicks.swift:214-216
 A047-A049 -> velocity/velocityclicks.swift:201-205
 A050-A052 -> velocity/velocityclicks.swift:206-210
 A053 -> velocity/velocityclicks.swift:217-219
-A004, A016-A022 and A041 remain native/setup gaps.
+A016-A018,A020-A021 -> velocity/velocityclicks_gap.swift:15-20
+A004, A022, and A041 remain NATIVE. A019 remains GAP because its
+QQuick input-item/QQuickWindow identity has no Swift-observable surface.
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.
@@ -97,8 +96,8 @@ src/checks/velocity/velocityclicks.cpp:141 | mouseRelease(Qt::LeftButton, window
 Original assertion inventory
 
 A001 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:35
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 executes `report.expect(blank.session.selectedNotes == [blank.quiet.id, blank.later.id], cppID: drawerVelocityExactClicksID, message: "the blank sequence starts with quiet and later selected in order")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -139,8 +138,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A002 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:40
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 executes `report.expect(blankX < blank.page.state.body.plotWidth && blank.page.publishedHandlesSnapshot.allSatisfy { $0.endX + stemSlop < blankX }, cppID: drawerVelocityExactClicksID, message: "the blank click is in bounds and right of every note stem")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -152,8 +151,8 @@ Original expression:
   QVERIFY(plotBounds.contains(blankLocal))
 
 A003 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 executes `report.expect(blankX < blank.page.state.body.plotWidth && blank.page.publishedHandlesSnapshot.allSatisfy { $0.endX + stemSlop < blankX }, cppID: drawerVelocityExactClicksID, message: "the blank click is in bounds and right of every note stem")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -161,8 +160,8 @@ Original expression:
   QVERIFY(blankLocal.x() > nodePoint(kLoudVelocity, m_later.tick + m_later.duration).x())
 
 A004 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership by the native velocity input after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
 
@@ -177,8 +176,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A005 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S082 executes `report.expect(blank.session.selectedNotes == [blank.quiet.id, blank.later.id], cppID: drawerVelocityExactClicksID, message: "the blank press keeps the ordered selection until release")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -186,8 +185,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A006 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 executes `report.expect(blank.session.selectedNotes.isEmpty, cppID: drawerVelocityExactClicksID, message: "the blank release clears the ordered selection")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(blankLocal));
@@ -197,8 +196,8 @@ Original expression:
   QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
 
 A007 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084 executes `report.expect(drawerVelocityDocumentSnapshot(blank.document) == blankBaseline, cppID: drawerVelocityExactClicksID, message: "the blank click leaves revision and history unchanged")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -206,8 +205,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A008 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 executes `report.expect(drawerVelocityDocumentSnapshot(blank.document) == blankBaseline, cppID: drawerVelocityExactClicksID, message: "the blank click leaves revision and history unchanged")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -215,8 +214,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A009 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S086 executes `report.expect(Int(blank.document.note(blank.quiet.id)?.velocity ?? 0) == 20 && Int(blank.document.note(blank.loud.id)?.velocity ?? 0) == 70 && Int(blank.document.note(blank.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the blank click changes no document velocity")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -224,8 +223,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A010 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:57
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 executes `report.expect(Int(blank.document.note(blank.quiet.id)?.velocity ?? 0) == 20 && Int(blank.document.note(blank.loud.id)?.velocity ?? 0) == 70 && Int(blank.document.note(blank.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the blank click changes no document velocity")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -233,8 +232,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A011 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:58
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088 executes `report.expect(Int(blank.document.note(blank.quiet.id)?.velocity ?? 0) == 20 && Int(blank.document.note(blank.loud.id)?.velocity ?? 0) == 70 && Int(blank.document.note(blank.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the blank click changes no document velocity")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -242,8 +241,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A012 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089 executes `report.expect(blank.handle(blank.quiet)?.value == 20 && blank.handle(blank.loud)?.value == 70 && blank.handle(blank.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the blank click changes no published velocity")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -251,8 +250,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), 20)
 
 A013 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 executes `report.expect(blank.handle(blank.quiet)?.value == 20 && blank.handle(blank.loud)?.value == 70 && blank.handle(blank.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the blank click changes no published velocity")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -260,8 +259,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A014 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:61
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091 executes `report.expect(blank.handle(blank.quiet)?.value == 20 && blank.handle(blank.loud)?.value == 70 && blank.handle(blank.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the blank click changes no published velocity")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -269,8 +268,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A015 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S092 executes `report.expect(ruler.session.selectedNotes == [ruler.quiet.id, ruler.loud.id], cppID: drawerVelocityExactClicksID, message: "the ruler sequence starts with both stacked notes selected")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -283,8 +282,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A016 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S093 executes `report.expect(page.session === fixture.session, cppID: id, message: "A016")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -296,8 +295,8 @@ Original expression:
   QVERIFY(quickView)
 
 A017 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094 executes `report.expect(page.axisModel.drawableSpan > 0, cppID: id, message: "A017")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     QObject *const quickRoot = quickView->rootObject();
@@ -306,8 +305,8 @@ Original expression:
   QVERIFY(quickRoot)
 
 A018 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 executes `report.expect(page.rulerWidth > 0, cppID: id, message: "A018")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *const gutterInput =
@@ -319,7 +318,7 @@ Original expression:
 
 A019 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:79
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: The original compares the native QQuick input item's QQuickWindow identity. VelocityPage intentionally publishes no QQuickWindow identity, so no Swift predicate can establish this native ownership precondition.
 Source context since previous assertion:
 ;
 
@@ -327,8 +326,8 @@ Original expression:
   QCOMPARE(gutterInput->window(), m_quickWindow.data())
 
 A020 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 executes `report.expect(page.axisModel.yToVelocity(maximumY) == 127, cppID: id, message: "A020")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -345,8 +344,8 @@ Original expression:
   QVERIFY(maximumLabel)
 
 A021 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:92
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 executes `report.expect(maximumY >= 0 && maximumY <= page.plotHeight && rulerX < page.rulerWidth, cppID: id, message: "A021")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -356,8 +355,8 @@ Original expression:
   QVERIFY(gutterInput->bounds().contains(gutterLocal))
 
 A022 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership by the native velocity gutter input after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     const QPoint gutterWindow = gutterInput->mapToScene(gutterLocal).toPoint();
@@ -372,8 +371,8 @@ Original expression:
   QTRY_COMPARE(m_quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(gutterInput))
 
 A023 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 executes `report.expect(ruler.session.selectedNotes == [ruler.quiet.id, ruler.loud.id], cppID: drawerVelocityExactClicksID, message: "the ruler press preserves the selected stacked pair")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -381,8 +380,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A024 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100 executes `report.expect(Int(ruler.document.note(ruler.quiet.id)?.velocity ?? 0) == 127 && Int(ruler.document.note(ruler.loud.id)?.velocity ?? 0) == 127 && Int(ruler.document.note(ruler.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the ruler press commits only the selected stacked notes")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -390,8 +389,8 @@ Original expression:
   QTRY_COMPARE(documentVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
 
 A025 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S101 executes `report.expect(Int(ruler.document.note(ruler.quiet.id)?.velocity ?? 0) == 127 && Int(ruler.document.note(ruler.loud.id)?.velocity ?? 0) == 127 && Int(ruler.document.note(ruler.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the ruler press commits only the selected stacked notes")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -399,8 +398,8 @@ Original expression:
   QTRY_COMPARE(documentVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
 
 A026 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 executes `report.expectEqual(rulerBaseline.revision + 1, ruler.document.revision, cppID: drawerVelocityExactClicksID, what: "the ruler press makes one revision before release")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, gutterWindow);
@@ -410,8 +409,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A027 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 executes `report.expect(rulerIdentity != rulerBaseline.identity, cppID: drawerVelocityExactClicksID, message: "the ruler press makes one history entry")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -419,8 +418,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A028 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S104 executes `report.expect(ruler.session.selectedNotes == [ruler.quiet.id, ruler.loud.id], cppID: drawerVelocityExactClicksID, message: "the ruler transaction preserves selection order")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -428,8 +427,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
 
 A029 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105 executes `report.expect(ruler.document.revision == rulerBaseline.revision + 1 && ruler.document.history.currentIdentity == rulerIdentity, cppID: drawerVelocityExactClicksID, message: "the ruler release makes no second transaction")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -437,8 +436,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
 
 A030 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S106 executes `report.expect(ruler.document.revision == rulerBaseline.revision + 1 && ruler.document.history.currentIdentity == rulerIdentity, cppID: drawerVelocityExactClicksID, message: "the ruler release makes no second transaction")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -446,8 +445,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A031 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 executes `report.expect(ruler.document.revision == rulerBaseline.revision + 1 && ruler.document.history.currentIdentity == rulerIdentity, cppID: drawerVelocityExactClicksID, message: "the ruler release makes no second transaction")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -455,8 +454,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
 
 A032 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 executes `report.expect(ruler.handle(ruler.quiet)?.value == 127 && ruler.handle(ruler.loud)?.value == 127 && ruler.handle(ruler.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the ruler release leaves the published values at the press result")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -464,8 +463,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
 
 A033 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 executes `report.expect(ruler.handle(ruler.quiet)?.value == 127 && ruler.handle(ruler.loud)?.value == 127 && ruler.handle(ruler.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the ruler release leaves the published values at the press result")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -473,8 +472,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A034 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110 executes `report.expect(ruler.handle(ruler.quiet)?.value == 127 && ruler.handle(ruler.loud)?.value == 127 && ruler.handle(ruler.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the ruler release leaves the published values at the press result")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -482,8 +481,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A035 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70 && paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint setup matches the original quiet/loud/later state")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -496,8 +495,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A036 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70 && paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint setup matches the original quiet/loud/later state")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -507,8 +506,8 @@ Original expression:
   QTRY_COMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A037 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S113 executes `report.expect(paint.handle(paint.quiet)?.value == 1 && paint.handle(paint.loud)?.value == 70 && paint.handle(paint.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the paint setup publishes the original three velocity values")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -516,8 +515,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A038 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S114 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70 && paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint setup matches the original quiet/loud/later state")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -525,8 +524,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A039 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S115 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70 && paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint setup matches the original quiet/loud/later state")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -534,8 +533,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A040 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S116 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70 && paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint setup matches the original quiet/loud/later state")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -543,8 +542,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A041 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership by the native velocity input after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
 
@@ -560,8 +559,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A042 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S117 executes `report.expectEqual(40, Int(paint.page.frozenPreview[paint.loud.id] ?? 0), cppID: drawerVelocityExactClicksID, what: "the paint press previews velocity 40")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     const std::optional<uint8_t> loudPreview = m_tab->view().previewVelocity(m_loudStacked.noteId);
@@ -570,8 +569,8 @@ Original expression:
   QVERIFY(loudPreview.has_value())
 
 A043 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S118 executes `report.expectEqual(40, Int(paint.page.frozenPreview[paint.loud.id] ?? 0), cppID: drawerVelocityExactClicksID, what: "the paint press previews velocity 40")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -579,8 +578,8 @@ Original expression:
   QCOMPARE(int(*loudPreview), int(kClickVelocity))
 
 A044 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S119 executes `report.expect(paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint press keeps the loud stacked note selected")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -588,8 +587,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A045 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S120 executes `report.expectEqual(paintBaseline.revision + 1, paint.document.revision, cppID: drawerVelocityExactClicksID, what: "the paint release makes one revision")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPos);
@@ -599,8 +598,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A046 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S121 executes `report.expect(paint.document.history.currentIdentity != paintBaseline.identity, cppID: drawerVelocityExactClicksID, message: "the paint release makes one history entry")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -608,8 +607,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A047 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S122 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 40 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the paint release commits only the selected loud note")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -617,8 +616,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A048 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S123 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 40 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the paint release commits only the selected loud note")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -626,8 +625,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kClickVelocity))
 
 A049 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S124 executes `report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1 && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 40 && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70, cppID: drawerVelocityExactClicksID, message: "the paint release commits only the selected loud note")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -635,8 +634,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A050 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S125 executes `report.expect(paint.handle(paint.quiet)?.value == 1 && paint.handle(paint.loud)?.value == 40 && paint.handle(paint.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the paint release republishes the committed velocities")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -644,8 +643,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A051 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S126 executes `report.expect(paint.handle(paint.quiet)?.value == 1 && paint.handle(paint.loud)?.value == 40 && paint.handle(paint.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the paint release republishes the committed velocities")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -653,8 +652,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kClickVelocity))
 
 A052 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S127 executes `report.expect(paint.handle(paint.quiet)?.value == 1 && paint.handle(paint.loud)?.value == 40 && paint.handle(paint.later)?.value == 70, cppID: drawerVelocityExactClicksID, message: "the paint release republishes the committed velocities")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -662,8 +661,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A053 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S128 executes `report.expect(paint.session.selectedNotes == [paint.loud.id], cppID: drawerVelocityExactClicksID, message: "the paint transaction preserves the selected loud note")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -1003,3 +1002,347 @@ S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageCheck
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+S079 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:82
+Swift expression:
+  report.expect(blank.session.selectedNotes == [blank.quiet.id, blank.later.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank sequence starts with quiet and later selected in order")
+
+S080 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:91
+Swift expression:
+  report.expect(blankX < blank.page.state.body.plotWidth
+  && blank.page.publishedHandlesSnapshot.allSatisfy {
+  $0.endX + stemSlop < blankX
+  },
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click is in bounds and right of every note stem")
+
+S081 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:91
+Swift expression:
+  report.expect(blankX < blank.page.state.body.plotWidth
+  && blank.page.publishedHandlesSnapshot.allSatisfy {
+  $0.endX + stemSlop < blankX
+  },
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click is in bounds and right of every note stem")
+
+S082 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:101
+Swift expression:
+  report.expect(blank.session.selectedNotes == [blank.quiet.id, blank.later.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank press keeps the ordered selection until release")
+
+S083 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:105
+Swift expression:
+  report.expect(blank.session.selectedNotes.isEmpty, cppID: drawerVelocityExactClicksID,
+  message: "the blank release clears the ordered selection")
+
+S084 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:107
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(blank.document) == blankBaseline,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click leaves revision and history unchanged")
+
+S085 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:107
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(blank.document) == blankBaseline,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click leaves revision and history unchanged")
+
+S086 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:110
+Swift expression:
+  report.expect(Int(blank.document.note(blank.quiet.id)?.velocity ?? 0) == 20
+  && Int(blank.document.note(blank.loud.id)?.velocity ?? 0) == 70
+  && Int(blank.document.note(blank.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click changes no document velocity")
+
+S087 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:110
+Swift expression:
+  report.expect(Int(blank.document.note(blank.quiet.id)?.velocity ?? 0) == 20
+  && Int(blank.document.note(blank.loud.id)?.velocity ?? 0) == 70
+  && Int(blank.document.note(blank.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click changes no document velocity")
+
+S088 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:110
+Swift expression:
+  report.expect(Int(blank.document.note(blank.quiet.id)?.velocity ?? 0) == 20
+  && Int(blank.document.note(blank.loud.id)?.velocity ?? 0) == 70
+  && Int(blank.document.note(blank.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click changes no document velocity")
+
+S089 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:115
+Swift expression:
+  report.expect(blank.handle(blank.quiet)?.value == 20
+  && blank.handle(blank.loud)?.value == 70
+  && blank.handle(blank.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click changes no published velocity")
+
+S090 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:115
+Swift expression:
+  report.expect(blank.handle(blank.quiet)?.value == 20
+  && blank.handle(blank.loud)?.value == 70
+  && blank.handle(blank.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click changes no published velocity")
+
+S091 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:115
+Swift expression:
+  report.expect(blank.handle(blank.quiet)?.value == 20
+  && blank.handle(blank.loud)?.value == 70
+  && blank.handle(blank.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the blank click changes no published velocity")
+
+S092 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:124
+Swift expression:
+  report.expect(ruler.session.selectedNotes == [ruler.quiet.id, ruler.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler sequence starts with both stacked notes selected")
+
+S093 | drawerVelocityClickSetupGapPredicates | src/checks/velocity/velocityclicks_gap.swift:15
+Swift expression:
+  report.expect(page.session === fixture.session, cppID: id, message: "A016")
+
+S094 | drawerVelocityClickSetupGapPredicates | src/checks/velocity/velocityclicks_gap.swift:16
+Swift expression:
+  report.expect(page.axisModel.drawableSpan > 0, cppID: id, message: "A017")
+
+S095 | drawerVelocityClickSetupGapPredicates | src/checks/velocity/velocityclicks_gap.swift:17
+Swift expression:
+  report.expect(page.rulerWidth > 0, cppID: id, message: "A018")
+
+S097 | drawerVelocityClickSetupGapPredicates | src/checks/velocity/velocityclicks_gap.swift:18
+Swift expression:
+  report.expect(page.axisModel.yToVelocity(maximumY) == 127, cppID: id, message: "A020")
+
+S098 | drawerVelocityClickSetupGapPredicates | src/checks/velocity/velocityclicks_gap.swift:19
+Swift expression:
+  report.expect(maximumY >= 0 && maximumY <= page.plotHeight && rulerX < page.rulerWidth,
+  cppID: id, message: "A021")
+
+S099 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:133
+Swift expression:
+  report.expect(ruler.session.selectedNotes == [ruler.quiet.id, ruler.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler press preserves the selected stacked pair")
+
+S100 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:136
+Swift expression:
+  report.expect(Int(ruler.document.note(ruler.quiet.id)?.velocity ?? 0) == 127
+  && Int(ruler.document.note(ruler.loud.id)?.velocity ?? 0) == 127
+  && Int(ruler.document.note(ruler.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler press commits only the selected stacked notes")
+
+S101 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:136
+Swift expression:
+  report.expect(Int(ruler.document.note(ruler.quiet.id)?.velocity ?? 0) == 127
+  && Int(ruler.document.note(ruler.loud.id)?.velocity ?? 0) == 127
+  && Int(ruler.document.note(ruler.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler press commits only the selected stacked notes")
+
+S102 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:141
+Swift expression:
+  report.expectEqual(rulerBaseline.revision + 1, ruler.document.revision,
+  cppID: drawerVelocityExactClicksID,
+  what: "the ruler press makes one revision before release")
+
+S103 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:145
+Swift expression:
+  report.expect(rulerIdentity != rulerBaseline.identity,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler press makes one history entry")
+
+S104 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:153
+Swift expression:
+  report.expect(ruler.session.selectedNotes == [ruler.quiet.id, ruler.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler transaction preserves selection order")
+
+S105 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:149
+Swift expression:
+  report.expect(ruler.document.revision == rulerBaseline.revision + 1
+  && ruler.document.history.currentIdentity == rulerIdentity,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler release makes no second transaction")
+
+S106 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:149
+Swift expression:
+  report.expect(ruler.document.revision == rulerBaseline.revision + 1
+  && ruler.document.history.currentIdentity == rulerIdentity,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler release makes no second transaction")
+
+S107 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:149
+Swift expression:
+  report.expect(ruler.document.revision == rulerBaseline.revision + 1
+  && ruler.document.history.currentIdentity == rulerIdentity,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler release makes no second transaction")
+
+S108 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:156
+Swift expression:
+  report.expect(ruler.handle(ruler.quiet)?.value == 127
+  && ruler.handle(ruler.loud)?.value == 127
+  && ruler.handle(ruler.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler release leaves the published values at the press result")
+
+S109 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:156
+Swift expression:
+  report.expect(ruler.handle(ruler.quiet)?.value == 127
+  && ruler.handle(ruler.loud)?.value == 127
+  && ruler.handle(ruler.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler release leaves the published values at the press result")
+
+S110 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:156
+Swift expression:
+  report.expect(ruler.handle(ruler.quiet)?.value == 127
+  && ruler.handle(ruler.loud)?.value == 127
+  && ruler.handle(ruler.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the ruler release leaves the published values at the press result")
+
+S111 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:169
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70
+  && paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint setup matches the original quiet/loud/later state")
+
+S112 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:169
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70
+  && paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint setup matches the original quiet/loud/later state")
+
+S113 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:179
+Swift expression:
+  report.expect(paint.handle(paint.quiet)?.value == 1
+  && paint.handle(paint.loud)?.value == 70
+  && paint.handle(paint.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint setup publishes the original three velocity values")
+
+S114 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:169
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70
+  && paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint setup matches the original quiet/loud/later state")
+
+S115 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:169
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70
+  && paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint setup matches the original quiet/loud/later state")
+
+S116 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:169
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 70
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70
+  && paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint setup matches the original quiet/loud/later state")
+
+S117 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:190
+Swift expression:
+  report.expectEqual(40, Int(paint.page.frozenPreview[paint.loud.id] ?? 0),
+  cppID: drawerVelocityExactClicksID,
+  what: "the paint press previews velocity 40")
+
+S118 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:190
+Swift expression:
+  report.expectEqual(40, Int(paint.page.frozenPreview[paint.loud.id] ?? 0),
+  cppID: drawerVelocityExactClicksID,
+  what: "the paint press previews velocity 40")
+
+S119 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:197
+Swift expression:
+  report.expect(paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint press keeps the loud stacked note selected")
+
+S120 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:211
+Swift expression:
+  report.expectEqual(paintBaseline.revision + 1, paint.document.revision,
+  cppID: drawerVelocityExactClicksID,
+  what: "the paint release makes one revision")
+
+S121 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:214
+Swift expression:
+  report.expect(paint.document.history.currentIdentity != paintBaseline.identity,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release makes one history entry")
+
+S122 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:201
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 40
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release commits only the selected loud note")
+
+S123 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:201
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 40
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release commits only the selected loud note")
+
+S124 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:201
+Swift expression:
+  report.expect(Int(paint.document.note(paint.quiet.id)?.velocity ?? 0) == 1
+  && Int(paint.document.note(paint.loud.id)?.velocity ?? 0) == 40
+  && Int(paint.document.note(paint.later.id)?.velocity ?? 0) == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release commits only the selected loud note")
+
+S125 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:206
+Swift expression:
+  report.expect(paint.handle(paint.quiet)?.value == 1
+  && paint.handle(paint.loud)?.value == 40
+  && paint.handle(paint.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release republishes the committed velocities")
+
+S126 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:206
+Swift expression:
+  report.expect(paint.handle(paint.quiet)?.value == 1
+  && paint.handle(paint.loud)?.value == 40
+  && paint.handle(paint.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release republishes the committed velocities")
+
+S127 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:206
+Swift expression:
+  report.expect(paint.handle(paint.quiet)?.value == 1
+  && paint.handle(paint.loud)?.value == 40
+  && paint.handle(paint.later)?.value == 70,
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint release republishes the committed velocities")
+
+S128 | drawerVelocityExactClickSequences | src/checks/velocity/velocityclicks.swift:217
+Swift expression:
+  report.expect(paint.session.selectedNotes == [paint.loud.id],
+  cppID: drawerVelocityExactClicksID,
+  message: "the paint transaction preserves the selected loud note")

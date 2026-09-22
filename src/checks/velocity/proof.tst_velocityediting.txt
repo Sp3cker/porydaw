@@ -22,8 +22,7 @@ order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
 VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
-Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -54,44 +53,44 @@ src/checks/velocity/tst_velocityediting.cpp:444 | for (const TimelineEvent &even
 Original assertion inventory
 
 A001 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S042 executes `("A001", setup.document.source.label == "velocity-editing")`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(name.has_value())
 
 A002 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S043 executes `("A002", setup.session.bankLease === session.bankLease && !setup.session.bankSlots.isEmpty)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(identity.has_value())
 
 A003 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S044 executes `("A003", setupPage.contextDiagnostic.isEmpty)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->presentationError().isEmpty())
 
 A004 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S045 executes `("A004", setupPage.session === setup.session && setupPage.publishedNoteCount == 3)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(m_tab->isReady())
 
 A005 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S046 executes `("A005", setup.session.bankLease === session.bankLease)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->voicegroupLease().get() == &m_bank)
 
 A006 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 executes `("A006", setupNotes.count == 3)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(notes.size() == 3, "the fixture track must carry exactly three notes")
 
 A007 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S048 executes `("A007", setupNotes.count == 3 && setupNotes[0].id != setupNotes[1].id && setupNotes[0].velocity == 20 && setupNotes[1].velocity == 70 && setupNotes[2].tick == 60 && setupNotes[2].velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(m_quietStacked.noteId != m_loudStacked.noteId &&
                    m_quietStacked.velocity == kQuietStackedVelocity &&
@@ -100,730 +99,730 @@ Original expression:
                "fixture notes must resolve in SMF event order with their literal velocities")
 
 A008 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S049 executes `("A008", setupPage.plotWidth > 0 && setupPage.plotHeight > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_area)
 
 A009 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S050 executes `("A009", setupPage.session === setup.session)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(quick)
 
 A010 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S051 executes `("A010", setupPage.session != nil && setupPage.plotWidth == 400)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_quickWindow)
 
 A011 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S052 executes `("A011", setupPage.axisModel.drawableSpan > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(quickRoot)
 
 A012 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S053 executes `("A012", setupHandles.count == 3 && setupPage.publishedNoteCount == 3)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_velocityInput)
 
 A013 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S054 executes `("A013", setup.session.camera.pixelsPerTick > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_rollInput)
 
 A014 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow visibility and platform exposure for the native Qt test window — no Swift-observable surface; retained by native Qt checks.
 Original expression:
   QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed())
 
 A015 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S055 executes `("A015", setupPage.plotWidth > 0 && setupPage.plotHeight > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!m_velocityInput->bounds().isEmpty())
 
 A016 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the QQuick input item is attached to the native QQuickWindow — no Swift-observable surface; retained by native Qt checks.
 Original expression:
   QTRY_COMPARE(m_velocityInput->window(), m_quickWindow.data())
 
 A017 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S056 executes `("A017", setupPage.axisModel.drawableSpan > 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(m_area->axis().drawableSpan() > 0.0)
 
 A018 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S057 executes `("A018", !setupPage.axisGraduationsVisible)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A019 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S058 executes `("A019", setupHandles.allSatisfy { $0.x >= 0 && $0.x <= setupPage.plotWidth && $0.y >= 0 && $0.y <= setupPage.plotHeight })`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(nodePoint(kQuietStackedVelocity, kDuplicateTick)) &&
               m_velocityInput->bounds().contains(nodePoint(kLaterVelocity, kLaterTick)))
 
 A020 | VelocityEditingTest::cleanup | src/checks/velocity/tst_velocityediting.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts teardown of QQuickWindow mouse-grab state after native QTest input — no Swift-observable surface; retained by native Qt checks.
 Original expression:
   QVERIFY(mouseGrabCleared)
 
 A021 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S059 executes `("A021", dragDocument.onChange != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A022 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S060 executes `("A022", drag.session.onChange != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(edited.isValid())
 
 A023 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:207
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S061 executes `("A023", dragDocument.revision == dragBaseline.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A024 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S062 executes `("A024", dragDocument.history.currentIdentity == dragBaseline.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A025 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S063 executes `("A025", documentChangeCount == 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A026 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S064 executes `("A026", editedCount == 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(edited.count(), 0)
 
 A027 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S065 executes `("A027", dragDocument.note(dragNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A028 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S066 executes `("A028", dragDocument.note(dragNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A029 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S067 executes `("A029", dragDocument.note(dragNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A030 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S068 executes `("A030", velocityTimelineValue(drag.session, dragNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A031 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S069 executes `("A031", velocityTimelineValue(drag.session, dragNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A032 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S070 executes `("A032", velocityTimelineValue(drag.session, dragNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A033 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:220
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S071 executes `("A033", dragPage.frozenPreview[dragNotes[0].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(firstQuietPreview.has_value())
 
 A034 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S072 executes `("A034", dragPage.frozenPreview[dragNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(firstLaterPreview.has_value())
 
 A035 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S073 executes `("A035", dragPage.frozenPreview[dragNotes[0].id] == 48)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*firstQuietPreview), kQuietStackedVelocity + kDragUpSteps)
 
 A036 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S074 executes `("A036", dragPage.frozenPreview[dragNotes[2].id] == 98)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*firstLaterPreview), kLaterVelocity + kDragUpSteps)
 
 A037 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:224
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075 executes `("A037", dragPage.frozenPreview[dragNotes[1].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A038 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S076 executes `("A038", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A039 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S077 executes `("A039", dragDocument.revision == dragBaseline.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A040 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S078 executes `("A040", dragDocument.history.currentIdentity == dragBaseline.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A041 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 executes `("A041", documentChangeCount == 0)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A042 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 executes `("A042", dragDocument.note(dragNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A043 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 executes `("A043", dragDocument.note(dragNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A044 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S082 executes `("A044", dragDocument.note(dragNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A045 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 executes `("A045", velocityTimelineValue(drag.session, dragNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A046 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084 executes `("A046", velocityTimelineValue(drag.session, dragNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A047 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 executes `("A047", velocityTimelineValue(drag.session, dragNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A048 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S086 executes `("A048", dragPage.frozenPreview[dragNotes[0].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(secondQuietPreview.has_value())
 
 A049 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 executes `("A049", dragPage.frozenPreview[dragNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(secondLaterPreview.has_value())
 
 A050 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088 executes `("A050", dragPage.frozenPreview[dragNotes[0].id] == 16)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*secondQuietPreview), kQuietStackedVelocity - kDragDownSteps)
 
 A051 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089 executes `("A051", dragPage.frozenPreview[dragNotes[2].id] == 66)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*secondLaterPreview), kLaterVelocity - kDragDownSteps)
 
 A052 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 executes `("A052", documentChangeCount == 1)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A053 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091 executes `("A053", editedCount == 1)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A054 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S092 executes `("A054", dragCommitted.revision == dragBaseline.revision + 1)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A055 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S093 executes `("A055", dragDocument.history.canUndo && !dragDocument.history.canRedo)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A056 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094 executes `("A056", dragPage.frozenPreview[dragNotes[0].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A057 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 executes `("A057", dragPage.frozenPreview[dragNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A058 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096 executes `("A058", dragPage.frozenPreview[dragNotes[1].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A059 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 executes `("A059", dragDocument.note(dragNotes[0].id)?.velocity == 16)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A060 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 executes `("A060", dragDocument.note(dragNotes[2].id)?.velocity == 66)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A061 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 executes `("A061", dragDocument.note(dragNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A062 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100 executes `("A062", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A063 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S101 executes `("A063", velocityTimelineValue(drag.session, dragNotes[0].id) == 16)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A064 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 executes `("A064", velocityTimelineValue(drag.session, dragNotes[2].id) == 66)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A065 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 executes `("A065", velocityTimelineValue(drag.session, dragNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A066 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S104 executes `("A066", dragDocument.history.canUndo)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A067 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105 executes `("A067", didUndo)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()))
 
 A068 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S106 executes `("A068", dragDocument.note(dragNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A069 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 executes `("A069", dragDocument.note(dragNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A070 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 executes `("A070", dragDocument.note(dragNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A071 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 executes `("A071", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A072 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110 executes `("A072", velocityTimelineValue(drag.session, dragNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A073 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 executes `("A073", velocityTimelineValue(drag.session, dragNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A074 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 executes `("A074", velocityTimelineValue(drag.session, dragNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A075 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:279
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S113 executes `("A075", dragDocument.history.canRedo)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->history().canRedo())
 
 A076 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S114 executes `("A076", didRedo)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()))
 
 A077 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S115 executes `("A077", dragDocument.note(dragNotes[0].id)?.velocity == 16)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A078 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S116 executes `("A078", dragDocument.note(dragNotes[2].id)?.velocity == 66)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A079 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S117 executes `("A079", dragDocument.note(dragNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A080 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S118 executes `("A080", velocityTimelineValue(drag.session, dragNotes[0].id) == 16)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A081 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S119 executes `("A081", velocityTimelineValue(drag.session, dragNotes[2].id) == 66)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A082 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S120 executes `("A082", velocityTimelineValue(drag.session, dragNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A083 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S121 executes `("A083", cancelPage.frozenPreview[cancelNotes[0].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(firstQuietPreview.has_value())
 
 A084 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:303
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S122 executes `("A084", cancelPage.frozenPreview[cancelNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(firstLaterPreview.has_value())
 
 A085 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S123 executes `("A085", cancelPage.frozenPreview[cancelNotes[0].id] == 48)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*firstQuietPreview), kQuietStackedVelocity + kDragUpSteps)
 
 A086 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S124 executes `("A086", cancelPage.frozenPreview[cancelNotes[2].id] == 98)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*firstLaterPreview), kLaterVelocity + kDragUpSteps)
 
 A087 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S125 executes `("A087", cancelPage.frozenPreview[cancelNotes[0].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(secondQuietPreview.has_value())
 
 A088 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S126 executes `("A088", cancelPage.frozenPreview[cancelNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(secondLaterPreview.has_value())
 
 A089 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S127 executes `("A089", cancelPage.frozenPreview[cancelNotes[0].id] == 16)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*secondQuietPreview), kQuietStackedVelocity - kDragDownSteps)
 
 A090 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S128 executes `("A090", cancelPage.frozenPreview[cancelNotes[2].id] == 66)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(*secondLaterPreview), kLaterVelocity - kDragDownSteps)
 
 A091 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S129 executes `("A091", cancelPage.frozenPreview[cancelNotes[0].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A092 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S130 executes `("A092", cancelPage.frozenPreview[cancelNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A093 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S131 executes `("A093", cancelDocument.revision == cancelBaseline.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A094 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S132 executes `("A094", cancelDocument.history.currentIdentity == cancelBaseline.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A095 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S133 executes `("A095", cancel.session.selectedNoteOrder == [cancelNotes[0].id, cancelNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A096 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S134 executes `("A096", cancelDocument.note(cancelNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A097 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S135 executes `("A097", cancelDocument.note(cancelNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A098 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:325
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S136 executes `("A098", cancelDocument.note(cancelNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A099 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S137 executes `("A099", velocityTimelineValue(cancel.session, cancelNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A100 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S138 executes `("A100", velocityTimelineValue(cancel.session, cancelNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A101 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S139 executes `("A101", velocityTimelineValue(cancel.session, cancelNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A102 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:334
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S140 executes `("A102", cancelPage.frozenPreview[cancelNotes[0].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A103 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S141 executes `("A103", cancelPage.frozenPreview[cancelNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A104 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:336
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S142 executes `("A104", cancelDocument.revision == cancelBaseline.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A105 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:337
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S143 executes `("A105", cancelDocument.history.currentIdentity == cancelBaseline.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A106 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S144 executes `("A106", cancelDocument.note(cancelNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A107 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:339
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S145 executes `("A107", cancelDocument.note(cancelNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A108 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S146 executes `("A108", cancelDocument.note(cancelNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A109 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S147 executes `("A109", velocityTimelineValue(cancel.session, cancelNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A110 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S148 executes `("A110", velocityTimelineValue(cancel.session, cancelNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A111 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:343
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S149 executes `("A111", velocityTimelineValue(cancel.session, cancelNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A112 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:348
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S150 executes `("A112", click.session.selectedNotes.isEmpty)]) _ = clickPage.pointerPress(x: clickHandle.x, y: clickHandle.y, surface: 1`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
 
 A113 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:357
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S151 executes `("A113", clickPage.frozenPreview[clickNotes[0].id] == nil || clickPage.frozenPreview[clickNotes[0].id] == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(int(pressPreview.value_or(kQuietStackedVelocity)), int(kQuietStackedVelocity))
 
 A114 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 executes `("A114", clickDocument.revision == clickBaseline.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A115 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 executes `("A115", clickDocument.history.currentIdentity == clickBaseline.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A116 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S154 executes `("A116", clickPage.frozenPreview[clickNotes[0].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A117 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 executes `("A117", clickPage.frozenPreview[clickNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A118 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 executes `("A118", clickDocument.note(clickNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A119 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:367
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 executes `("A119", clickDocument.note(clickNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A120 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 executes `("A120", clickDocument.note(clickNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A121 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 executes `("A121", velocityTimelineValue(click.session, clickNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A122 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 executes `("A122", velocityTimelineValue(click.session, clickNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A123 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:371
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 executes `("A123", velocityTimelineValue(click.session, clickNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A124 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 executes `("A124", click.session.selectedNoteOrder == [clickNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A125 | VelocityEditingTest::selectDragPair | src/checks/velocity/tst_velocityediting.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 executes `("A125", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A126 | VelocityEditingTest::focusVelocityBand | src/checks/velocity/tst_velocityediting.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S164 executes `("A126", focusConsumed)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->view().quickView()->focusBand(songview::TimelineBand::Velocity,
                                                    Qt::OtherFocusReason))
 
 A127 | VelocityEditingTest::focusVelocityBand | src/checks/velocity/tst_velocityediting.cpp:425
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 executes `("A127", focus.page.observation.gestureKind == .relative && focus.page.observation.targetNoteID == focusNote.id)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(m_tab->view().quickView()->focusedBand() == songview::TimelineBand::Velocity)
 
 A128 | VelocityEditingTest::focusVelocityBand | src/checks/velocity/tst_velocityediting.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::activeFocusItem ownership by the native velocity input item — no Swift-observable surface; retained by native Qt checks.
 Original expression:
   QTRY_COMPARE(m_quickWindow->activeFocusItem(),
                    static_cast<QQuickItem *>(m_velocityInput.data()))
@@ -1038,3 +1037,506 @@ S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediti
 Swift expression:
   report.expectEqual(3, fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
                          what: "the band selected every note it covered")
+
+S042 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:100
+Swift expression:
+  ("A001", setup.document.source.label == "velocity-editing"),
+
+S043 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:101
+Swift expression:
+  ("A002", setup.session.bankLease === session.bankLease
+  && !setup.session.bankSlots.isEmpty),
+
+S044 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:103
+Swift expression:
+  ("A003", setupPage.contextDiagnostic.isEmpty),
+
+S045 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:104
+Swift expression:
+  ("A004", setupPage.session === setup.session && setupPage.publishedNoteCount == 3),
+
+S046 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:105
+Swift expression:
+  ("A005", setup.session.bankLease === session.bankLease),
+
+S047 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:106
+Swift expression:
+  ("A006", setupNotes.count == 3),
+
+S048 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:107
+Swift expression:
+  ("A007", setupNotes.count == 3 && setupNotes[0].id != setupNotes[1].id
+  && setupNotes[0].velocity == 20 && setupNotes[1].velocity == 70
+  && setupNotes[2].tick == 60 && setupNotes[2].velocity == 70),
+
+S049 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:110
+Swift expression:
+  ("A008", setupPage.plotWidth > 0 && setupPage.plotHeight > 0),
+
+S050 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:111
+Swift expression:
+  ("A009", setupPage.session === setup.session),
+
+S051 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:112
+Swift expression:
+  ("A010", setupPage.session != nil && setupPage.plotWidth == 400),
+
+S052 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:113
+Swift expression:
+  ("A011", setupPage.axisModel.drawableSpan > 0),
+
+S053 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:114
+Swift expression:
+  ("A012", setupHandles.count == 3 && setupPage.publishedNoteCount == 3),
+
+S054 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:115
+Swift expression:
+  ("A013", setup.session.camera.pixelsPerTick > 0),
+
+S055 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:116
+Swift expression:
+  ("A015", setupPage.plotWidth > 0 && setupPage.plotHeight > 0),
+
+S056 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:117
+Swift expression:
+  ("A017", setupPage.axisModel.drawableSpan > 0),
+
+S057 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:118
+Swift expression:
+  ("A018", !setupPage.axisGraduationsVisible),
+
+S058 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:119
+Swift expression:
+  ("A019", setupHandles.allSatisfy { $0.x >= 0 && $0.x <= setupPage.plotWidth
+  && $0.y >= 0 && $0.y <= setupPage.plotHeight }),
+
+S059 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:146
+Swift expression:
+  ("A021", dragDocument.onChange != nil),
+
+S060 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:147
+Swift expression:
+  ("A022", drag.session.onChange != nil),
+
+S061 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:153
+Swift expression:
+  ("A023", dragDocument.revision == dragBaseline.revision),
+
+S062 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:154
+Swift expression:
+  ("A024", dragDocument.history.currentIdentity == dragBaseline.identity),
+
+S063 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:155
+Swift expression:
+  ("A025", documentChangeCount == 0),
+
+S064 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:156
+Swift expression:
+  ("A026", editedCount == 0),
+
+S065 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:157
+Swift expression:
+  ("A027", dragDocument.note(dragNotes[0].id)?.velocity == 20),
+
+S066 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:158
+Swift expression:
+  ("A028", dragDocument.note(dragNotes[2].id)?.velocity == 70),
+
+S067 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:159
+Swift expression:
+  ("A029", dragDocument.note(dragNotes[1].id)?.velocity == 70),
+
+S068 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:160
+Swift expression:
+  ("A030", velocityTimelineValue(drag.session, dragNotes[0].id) == 20),
+
+S069 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:161
+Swift expression:
+  ("A031", velocityTimelineValue(drag.session, dragNotes[2].id) == 70),
+
+S070 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:162
+Swift expression:
+  ("A032", velocityTimelineValue(drag.session, dragNotes[1].id) == 70),
+
+S071 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:163
+Swift expression:
+  ("A033", dragPage.frozenPreview[dragNotes[0].id] != nil),
+
+S072 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:164
+Swift expression:
+  ("A034", dragPage.frozenPreview[dragNotes[2].id] != nil),
+
+S073 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:165
+Swift expression:
+  ("A035", dragPage.frozenPreview[dragNotes[0].id] == 48),
+
+S074 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:166
+Swift expression:
+  ("A036", dragPage.frozenPreview[dragNotes[2].id] == 98),
+
+S075 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:167
+Swift expression:
+  ("A037", dragPage.frozenPreview[dragNotes[1].id] == nil),
+
+S076 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:168
+Swift expression:
+  ("A038", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id]),
+
+S077 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:172
+Swift expression:
+  ("A039", dragDocument.revision == dragBaseline.revision),
+
+S078 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:173
+Swift expression:
+  ("A040", dragDocument.history.currentIdentity == dragBaseline.identity),
+
+S079 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:174
+Swift expression:
+  ("A041", documentChangeCount == 0),
+
+S080 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:175
+Swift expression:
+  ("A042", dragDocument.note(dragNotes[0].id)?.velocity == 20),
+
+S081 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:176
+Swift expression:
+  ("A043", dragDocument.note(dragNotes[2].id)?.velocity == 70),
+
+S082 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:177
+Swift expression:
+  ("A044", dragDocument.note(dragNotes[1].id)?.velocity == 70),
+
+S083 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:178
+Swift expression:
+  ("A045", velocityTimelineValue(drag.session, dragNotes[0].id) == 20),
+
+S084 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:179
+Swift expression:
+  ("A046", velocityTimelineValue(drag.session, dragNotes[2].id) == 70),
+
+S085 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:180
+Swift expression:
+  ("A047", velocityTimelineValue(drag.session, dragNotes[1].id) == 70),
+
+S086 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:181
+Swift expression:
+  ("A048", dragPage.frozenPreview[dragNotes[0].id] != nil),
+
+S087 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:182
+Swift expression:
+  ("A049", dragPage.frozenPreview[dragNotes[2].id] != nil),
+
+S088 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:183
+Swift expression:
+  ("A050", dragPage.frozenPreview[dragNotes[0].id] == 16),
+
+S089 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:184
+Swift expression:
+  ("A051", dragPage.frozenPreview[dragNotes[2].id] == 66),
+
+S090 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:189
+Swift expression:
+  ("A052", documentChangeCount == 1),
+
+S091 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:190
+Swift expression:
+  ("A053", editedCount == 1),
+
+S092 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:191
+Swift expression:
+  ("A054", dragCommitted.revision == dragBaseline.revision + 1),
+
+S093 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:192
+Swift expression:
+  ("A055", dragDocument.history.canUndo && !dragDocument.history.canRedo),
+
+S094 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:193
+Swift expression:
+  ("A056", dragPage.frozenPreview[dragNotes[0].id] == nil),
+
+S095 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:194
+Swift expression:
+  ("A057", dragPage.frozenPreview[dragNotes[2].id] == nil),
+
+S096 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:195
+Swift expression:
+  ("A058", dragPage.frozenPreview[dragNotes[1].id] == nil),
+
+S097 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:196
+Swift expression:
+  ("A059", dragDocument.note(dragNotes[0].id)?.velocity == 16),
+
+S098 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:197
+Swift expression:
+  ("A060", dragDocument.note(dragNotes[2].id)?.velocity == 66),
+
+S099 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:198
+Swift expression:
+  ("A061", dragDocument.note(dragNotes[1].id)?.velocity == 70),
+
+S100 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:199
+Swift expression:
+  ("A062", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id]),
+
+S101 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:200
+Swift expression:
+  ("A063", velocityTimelineValue(drag.session, dragNotes[0].id) == 16),
+
+S102 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:201
+Swift expression:
+  ("A064", velocityTimelineValue(drag.session, dragNotes[2].id) == 66),
+
+S103 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:202
+Swift expression:
+  ("A065", velocityTimelineValue(drag.session, dragNotes[1].id) == 70),
+
+S104 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:203
+Swift expression:
+  ("A066", dragDocument.history.canUndo),
+
+S105 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:207
+Swift expression:
+  ("A067", didUndo),
+
+S106 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:208
+Swift expression:
+  ("A068", dragDocument.note(dragNotes[0].id)?.velocity == 20),
+
+S107 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:209
+Swift expression:
+  ("A069", dragDocument.note(dragNotes[2].id)?.velocity == 70),
+
+S108 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:210
+Swift expression:
+  ("A070", dragDocument.note(dragNotes[1].id)?.velocity == 70),
+
+S109 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:211
+Swift expression:
+  ("A071", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id]),
+
+S110 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:212
+Swift expression:
+  ("A072", velocityTimelineValue(drag.session, dragNotes[0].id) == 20),
+
+S111 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:213
+Swift expression:
+  ("A073", velocityTimelineValue(drag.session, dragNotes[2].id) == 70),
+
+S112 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:214
+Swift expression:
+  ("A074", velocityTimelineValue(drag.session, dragNotes[1].id) == 70),
+
+S113 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:215
+Swift expression:
+  ("A075", dragDocument.history.canRedo),
+
+S114 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:219
+Swift expression:
+  ("A076", didRedo),
+
+S115 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:220
+Swift expression:
+  ("A077", dragDocument.note(dragNotes[0].id)?.velocity == 16),
+
+S116 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:221
+Swift expression:
+  ("A078", dragDocument.note(dragNotes[2].id)?.velocity == 66),
+
+S117 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:222
+Swift expression:
+  ("A079", dragDocument.note(dragNotes[1].id)?.velocity == 70),
+
+S118 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:223
+Swift expression:
+  ("A080", velocityTimelineValue(drag.session, dragNotes[0].id) == 16),
+
+S119 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:224
+Swift expression:
+  ("A081", velocityTimelineValue(drag.session, dragNotes[2].id) == 66),
+
+S120 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:225
+Swift expression:
+  ("A082", velocityTimelineValue(drag.session, dragNotes[1].id) == 70),
+
+S121 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:245
+Swift expression:
+  ("A083", cancelPage.frozenPreview[cancelNotes[0].id] != nil),
+
+S122 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:246
+Swift expression:
+  ("A084", cancelPage.frozenPreview[cancelNotes[2].id] != nil),
+
+S123 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:247
+Swift expression:
+  ("A085", cancelPage.frozenPreview[cancelNotes[0].id] == 48),
+
+S124 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:248
+Swift expression:
+  ("A086", cancelPage.frozenPreview[cancelNotes[2].id] == 98),
+
+S125 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:253
+Swift expression:
+  ("A087", cancelPage.frozenPreview[cancelNotes[0].id] != nil),
+
+S126 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:254
+Swift expression:
+  ("A088", cancelPage.frozenPreview[cancelNotes[2].id] != nil),
+
+S127 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:255
+Swift expression:
+  ("A089", cancelPage.frozenPreview[cancelNotes[0].id] == 16),
+
+S128 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:256
+Swift expression:
+  ("A090", cancelPage.frozenPreview[cancelNotes[2].id] == 66),
+
+S129 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:260
+Swift expression:
+  ("A091", cancelPage.frozenPreview[cancelNotes[0].id] == nil),
+
+S130 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:261
+Swift expression:
+  ("A092", cancelPage.frozenPreview[cancelNotes[2].id] == nil),
+
+S131 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:262
+Swift expression:
+  ("A093", cancelDocument.revision == cancelBaseline.revision),
+
+S132 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:263
+Swift expression:
+  ("A094", cancelDocument.history.currentIdentity == cancelBaseline.identity),
+
+S133 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:264
+Swift expression:
+  ("A095", cancel.session.selectedNoteOrder == [cancelNotes[0].id, cancelNotes[2].id]),
+
+S134 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:265
+Swift expression:
+  ("A096", cancelDocument.note(cancelNotes[0].id)?.velocity == 20),
+
+S135 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:266
+Swift expression:
+  ("A097", cancelDocument.note(cancelNotes[2].id)?.velocity == 70),
+
+S136 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:267
+Swift expression:
+  ("A098", cancelDocument.note(cancelNotes[1].id)?.velocity == 70),
+
+S137 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:268
+Swift expression:
+  ("A099", velocityTimelineValue(cancel.session, cancelNotes[0].id) == 20),
+
+S138 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:269
+Swift expression:
+  ("A100", velocityTimelineValue(cancel.session, cancelNotes[2].id) == 70),
+
+S139 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:270
+Swift expression:
+  ("A101", velocityTimelineValue(cancel.session, cancelNotes[1].id) == 70),
+
+S140 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:277
+Swift expression:
+  ("A102", cancelPage.frozenPreview[cancelNotes[0].id] == nil),
+
+S141 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:278
+Swift expression:
+  ("A103", cancelPage.frozenPreview[cancelNotes[2].id] == nil),
+
+S142 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:279
+Swift expression:
+  ("A104", cancelDocument.revision == cancelBaseline.revision),
+
+S143 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:280
+Swift expression:
+  ("A105", cancelDocument.history.currentIdentity == cancelBaseline.identity),
+
+S144 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:281
+Swift expression:
+  ("A106", cancelDocument.note(cancelNotes[0].id)?.velocity == 20),
+
+S145 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:282
+Swift expression:
+  ("A107", cancelDocument.note(cancelNotes[2].id)?.velocity == 70),
+
+S146 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:283
+Swift expression:
+  ("A108", cancelDocument.note(cancelNotes[1].id)?.velocity == 70),
+
+S147 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:284
+Swift expression:
+  ("A109", velocityTimelineValue(cancel.session, cancelNotes[0].id) == 20),
+
+S148 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:285
+Swift expression:
+  ("A110", velocityTimelineValue(cancel.session, cancelNotes[2].id) == 70),
+
+S149 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:286
+Swift expression:
+  ("A111", velocityTimelineValue(cancel.session, cancelNotes[1].id) == 70),
+
+S150 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:299
+Swift expression:
+  ("A112", click.session.selectedNotes.isEmpty)])
+  _ = clickPage.pointerPress(x: clickHandle.x, y: clickHandle.y, surface: 1,
+
+S151 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:303
+Swift expression:
+  ("A113", clickPage.frozenPreview[clickNotes[0].id] == nil
+  || clickPage.frozenPreview[clickNotes[0].id] == 20),
+
+S152 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:308
+Swift expression:
+  ("A114", clickDocument.revision == clickBaseline.revision),
+
+S153 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:309
+Swift expression:
+  ("A115", clickDocument.history.currentIdentity == clickBaseline.identity),
+
+S154 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:310
+Swift expression:
+  ("A116", clickPage.frozenPreview[clickNotes[0].id] == nil),
+
+S155 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:311
+Swift expression:
+  ("A117", clickPage.frozenPreview[clickNotes[2].id] == nil),
+
+S156 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:312
+Swift expression:
+  ("A118", clickDocument.note(clickNotes[0].id)?.velocity == 20),
+
+S157 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:313
+Swift expression:
+  ("A119", clickDocument.note(clickNotes[1].id)?.velocity == 70),
+
+S158 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:314
+Swift expression:
+  ("A120", clickDocument.note(clickNotes[2].id)?.velocity == 70),
+
+S159 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:315
+Swift expression:
+  ("A121", velocityTimelineValue(click.session, clickNotes[0].id) == 20),
+
+S160 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:316
+Swift expression:
+  ("A122", velocityTimelineValue(click.session, clickNotes[1].id) == 70),
+
+S161 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:317
+Swift expression:
+  ("A123", velocityTimelineValue(click.session, clickNotes[2].id) == 70),
+
+S162 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:318
+Swift expression:
+  ("A124", click.session.selectedNoteOrder == [clickNotes[0].id]),
+
+S163 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:319
+Swift expression:
+  ("A125", drag.session.selectedNoteOrder == [dragNotes[0].id, dragNotes[2].id]),
+
+S164 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:330
+Swift expression:
+  ("A126", focusConsumed),
+
+S165 | drawerVelocityEditingGapPredicates | src/checks/velocity/velocityediting_gap.swift:331
+Swift expression:
+  ("A127", focus.page.observation.gestureKind == .relative
+  && focus.page.observation.targetNoteID == focusNote.id),

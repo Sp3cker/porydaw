@@ -328,243 +328,243 @@ Original expression:
   qFatal("%s", qPrintable(error))
 
 A003 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A003 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(project, qPrintable(error))
 
 A004 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A004 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(song, qPrintable(error))
 
 A005 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A005 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(timeline)
 
 A006 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A006 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(quick)
 
 A007 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Shows and exposes a real QQuickWindow viewport — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::showQuickViewport(view, QSize(960, 480)))
 
 A008 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A008 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer)
 
 A009 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A009 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(input)
 
 A010 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A010 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(gutter)
 
 A011 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A011 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(geometry)
 
 A012 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A012 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(input->bounds(), QRectF(QPointF{}, geometry->plotRect.size()))
 
 A013 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A013 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(gutter->bounds(), QRectF(QPointF{}, QSizeF(geometry->plotRect.x() - geometry->rect.x(),
                                                           geometry->rect.height())))
 
 A014 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A014 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!notes.empty())
 
 A015 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A015 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.camera().pxPerBeat() > zoom)
 
 A016 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A016 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::abs(view.camera().displayX(tick, 0.0, input->devicePixelRatio()) - anchor.x()) <=
               1.0 / input->devicePixelRatio())
 
 A017 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A017 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer->velocityArea()->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A018 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A018 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer->velocityArea()->axis().markerCount(), size_t(1))
 
 A019 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A019 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer->velocityArea()->axis().markers()[0].velocity, notes.front().velocity)
 
 A020 | VelocityPageTest::fixtureRoute101AndInputGeometry | src/checks/drawerpresentation/velocity.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A020 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::abs(drawer->velocityArea()->axis().markers()[0].y -
                        drawer->velocityArea()->axis().velocityToY(notes.front().velocity)) <=
               1.0 / input->devicePixelRatio())
 
 A021 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A021 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.barItem->isVisible())
 
 A022 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A022 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.barItem->interaction(), &chrome.interaction(DrawerChromeTarget::Bar))
 
 A023 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A023 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(chrome.barRect().contains(chrome.velocityToggleRect()))
 
 A024 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A024 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.velocityToggleRect().x(), chrome.automationToggleRect().x() +
                                                     chrome.automationToggleRect().width() +
                                                     layout::space(layout::Space::One))
 
 A025 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A025 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.barItem->bounds().contains(chrome.velocityToggleRect().center() -
                                                  chrome.barRect().topLeft()))
 
 A026 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A026 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.detentItem->isVisible())
 
 A027 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A027 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!chrome.detentVisible())
 
 A028 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A028 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A029 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A029 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!VelocityAxis::nodesFocusable())
 
 A030 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A030 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!VelocityAxis::graduationLabelsFocusable())
 
 A031 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A031 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A032 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A032 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Velocity), height)
 
 A033 | VelocityPageTest::chromeAndContinuousAxis | src/checks/drawerpresentation/velocity.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A033 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A034 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A034 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().tickCount(), 9)
 
 A035 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A035 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().labelCount(), 5)
 
 A036 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A036 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(labels[0].velocity, 127)
 
 A037 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A037 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(labels[1].velocity, 96)
 
 A038 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A038 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(labels[2].velocity, 64)
 
 A039 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A039 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(labels[3].velocity, 32)
 
 A040 | VelocityPageTest::continuousGraduationDensity | src/checks/drawerpresentation/velocity.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A040 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(labels[4].velocity, 1)
 
 A041 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(std::any_of(colors.cbegin(), colors.cend(), [&](const QColor &color) {
           return layerTouches(
@@ -573,80 +573,80 @@ Original expression:
       }))
 
 A042 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A042 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.camera().scrollX(), scroll)
 
 A043 | VelocityPageTest::gridAndPanClamp | src/checks/drawerpresentation/velocity.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Compares captured native QQuickWindow framebuffer pixels — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(samePixels(before, checks::support::captureQuickBand(view, fixture.bandRect())))
 
 A044 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A044 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().mode(), VelocityAxis::Mode::Intrinsic)
 
 A045 | VelocityPageTest::psgAxisContexts | src/checks/drawerpresentation/velocity.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A045 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().graduationCount(), graduations)
 
 A046 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A046 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.beginVelocityGesture({fixture.notes[1]}))
 
 A047 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A047 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}))
 
 A048 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A048 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().map(), noiseMap)
 
 A049 | VelocityPageTest::hoveredPsgContext | src/checks/drawerpresentation/velocity.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A049 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.area->axis().graduations()[9].active)
 
 A050 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A050 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.beginVelocityGesture({fixture.notes[1]}))
 
 A051 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A051 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.updateVelocityGesture({{fixture.notes[1].noteId, 74}}))
 
 A052 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:294
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A052 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(map.representative(9), 76)
 
 A053 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:295
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A053 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.area->useDetents())
 
 A054 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A054 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(
           std::count_if(fixture.area->axis().graduations().cbegin(),
@@ -656,51 +656,51 @@ Original expression:
           1)
 
 A055 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A055 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.area->axis().graduations()[9].active)
 
 A056 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityAxis,
                            accentProbe, fixture.gutterItem->palette().highlight().color()))
 
 A057 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A057 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->axis().markers()[0].velocity, 74)
 
 A058 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Compares captured native QQuickWindow framebuffer pixels — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::captureQuickBand(view, fixture.bandRect()) != snapped)
 
 A059 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Compares captured native QQuickWindow framebuffer pixels — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(samePixels(snapped, checks::support::captureQuickBand(view, fixture.bandRect())))
 
 A060 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A060 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectedLevel)
 
 A061 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A061 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(outsiderLevel)
 
 A062 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(
           stems,
@@ -710,248 +710,248 @@ Original expression:
           stemColor))
 
 A063 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, selectedProbe,
                                                fixture.inputItem->palette().highlight().color()))
 
 A064 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, Qt::black))
 
 A065 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(nodes, outsiderProbe, trackFill))
 
 A066 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:346
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::layerHasColorIn(dimmedNodes, outsiderProbe,
                                                fixture.inputItem->palette().mid().color()))
 
 A067 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:348
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!checks::support::layerHasColorIn(dimmedNodes, outsiderProbe, Qt::black))
 
 A068 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:354
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A068 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.detentItem->isVisible())
 
 A069 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A069 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.drawerChrome->detentVisible())
 
 A070 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A070 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.detentItem->interaction(),
                &fixture.drawerChrome->interaction(DrawerChromeTarget::Detent))
 
 A071 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A071 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.detentItem->bounds(),
                QRectF(QPointF{}, fixture.drawerChrome->detentRect().size()))
 
 A072 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A072 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::abs(detentRect.left() - band.left()) <= layout::singlePixel())
 
 A073 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A073 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::abs(detentRect.bottom() - band.bottom()) <= layout::singlePixel())
 
 A074 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A074 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(detentRect.right() < fixture.plotRect().left())
 
 A075 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A075 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!detentRect.contains(
           QPointF(detentRect.center().x(), fixture.area->axis().graduations()[0].y)))
 
 A076 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A076 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.drawerChrome->detentChecked())
 
 A077 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A077 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.area->useDetents())
 
 A078 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:383
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Compares captured native QQuickWindow framebuffer pixels — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(samePixels(continuousBand.copy(rulerBounds), directSoundBand.copy(rulerBounds)))
 
 A079 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A079 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.drawerChrome->iconRevision() > checkedIconRevision)
 
 A080 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A080 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.drawerChrome->detentChecked())
 
 A081 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A081 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.area->useDetents())
 
 A082 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A082 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.drawerChrome->iconRevision() > uncheckedIconRevision)
 
 A083 | VelocityPageTest::psgRenderingAndDetentToggle | src/checks/drawerpresentation/velocity.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A083 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!fixture.detentItem->isVisible())
 
 A084 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:403
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A084 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(quick)
 
 A085 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:409
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A085 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(quick->editVisible())
 
 A086 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:410
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A086 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(first != quick->editRootContentX())
 
 A087 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A087 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.selectionModel().noteSelection().empty())
 
 A088 | VelocityPageTest::editCursorAndContextRounding | src/checks/drawerpresentation/velocity.cpp:422
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A088 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.voiceContext(expected[index]).voice, &fixture.voicegroup.voices[0])
 
 A089 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient, selector, fill))
 
 A090 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient, selector, edge))
 
 A091 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(
           layerEmpty(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityTransient))
 
 A092 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:458
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A092 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first))
 
 A093 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:465
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A093 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(overlap != notes.cend())
 
 A094 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:468
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A094 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(overlapLevel)
 
 A095 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:474
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
                            QRectF(stacked - QPointF(3, 3), QSizeF(6, 6)),
                            fixture.inputItem->palette().highlight().color()))
 
 A096 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:481
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A096 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(selectedLevel)
 
 A097 | VelocityPageTest::transientBandAndStackedNodes | src/checks/drawerpresentation/velocity.cpp:487
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(), songview::TimelineQuickLayer::VelocityNodes,
                            QRectF(selected - QPointF(3, 3), QSizeF(6, 6)),
                            fixture.inputItem->palette().highlight().color()))
 
 A098 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:503
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A098 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.document.findNote(fixture.notes[0].noteId, &first))
 
 A099 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:504
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A099 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.document.findNote(fixture.notes[2].noteId, &third))
 
 A100 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:511
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A100 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(middle != notes.cend())
 
 A101 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:523
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Probes native Qt Quick scene-layer raster content — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(layerTouches(*fixture.rig->quickScene(),
                            songview::TimelineQuickLayer::VelocityTransient,
@@ -959,146 +959,146 @@ Original expression:
                            themes::color(themes::Role::song_view_edit_preview_outline)))
 
 A102 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:534
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A102 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(roll)
 
 A103 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:537
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A103 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(modifiers != Qt::NoModifier)
 
 A104 | VelocityPageTest::rampAndRollPreview | src/checks/drawerpresentation/velocity.cpp:544
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A104 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.previewVelocity(first.noteId).has_value())
 
 A105 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:561
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A105 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.previewVelocity(fixture.notes[0].noteId).has_value())
 
 A106 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:562
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A106 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.snapshot() == baseline)
 
 A107 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:564
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A107 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.snapshot() == baseline)
 
 A108 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:565
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A108 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.previewVelocity(fixture.notes[0].noteId).has_value())
 
 A109 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:571
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A109 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(committed.revision, baseline.revision + 1)
 
 A110 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:572
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A110 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(committed.undoIndex, baseline.undoIndex + 1)
 
 A111 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:573
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A111 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(committed.smf != baseline.smf)
 
 A112 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:576
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A112 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(undone.smf, baseline.smf)
 
 A113 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:577
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A113 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(undone.undoIndex, baseline.undoIndex)
 
 A114 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:578
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A114 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(undone.revision, committed.revision + 1)
 
 A115 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:581
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A115 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(redone.smf, committed.smf)
 
 A116 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:582
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A116 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(redone.undoIndex, committed.undoIndex)
 
 A117 | VelocityPageTest::velocityGestureTransactions | src/checks/drawerpresentation/velocity.cpp:583
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A117 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(redone.revision, undone.revision + 1)
 
 A118 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:592
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A118 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(text)
 
 A119 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:594
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A119 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(rows > 0)
 
 A120 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:605
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A120 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(churn, 0)
 
 A121 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:608
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A121 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(churn, 0)
 
 A122 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:612
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A122 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(text->rowCount(), rows)
 
 A123 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:621
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A123 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->diagnostics().contentBuildCount, warm.contentBuildCount)
 
 A124 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:622
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A124 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->diagnostics().presentedPlayheadTick, 120.0)
 
 A125 | VelocityPageTest::textRetentionAndPlayheadPerformance | src/checks/drawerpresentation/velocity.cpp:623
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 row A125 in src/checks/drawerpresentation/velocitypres_gap.swift drives VelocityPage typed pointer and detent dispatch against a real session; published geometry, axis mode, hover, frozen gesture observation, cancellation and one-entry commit preserve the original velocity preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.area->diagnostics().playheadPresentationCount,
                warm.playheadPresentationCount + 120)
@@ -1542,3 +1542,9 @@ The context-invalidating supplementary assertions now belong to drawerVelocityVo
 Suite order is explicit; no generic fixture abstraction was introduced.
 Static diff check passed; Debug execution of this refactor is pending root.
 Existing assertion dispositions are unchanged; this is not a completion claim.
+
+
+S085 | drawerVelocityPortableGapChecks | src/checks/drawerpresentation/velocitypres_gap.swift:92
+Swift expression:
+  report.expect(contract, cppID: drawerVelocityPortableGapID,
+                    message: "\(row)-velocity publication, pointer and history contract")

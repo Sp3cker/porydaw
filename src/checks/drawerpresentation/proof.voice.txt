@@ -198,468 +198,468 @@ src/checks/drawerpresentation/voice.cpp:479 | sendMouse(fixture.input(), QEvent:
 Original assertion inventory
 
 A001 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A001 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(scene)
 
 A002 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A002 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(gutter)
 
 A003 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A003 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A004 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A004 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.plotRect().isEmpty())
 
 A005 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A005 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.plotRect().x(), view.timelineSplitX())
 
 A006 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A006 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.input().bounds(), QRectF(QPointF{}, fixture.plotRect().size()))
 
 A007 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A007 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(gutter->bounds(),
                QRectF(QPointF{}, QSizeF(fixture.fixedSpan(), fixture.bandRect().height())))
 
 A008 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A008 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A009 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A009 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(markers.at(0).startsWith(QStringLiteral("000 ")))
 
 A010 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A010 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(markers.at(1).contains(QStringLiteral("voice-check")))
 
 A011 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A011 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(hasVoiceMarkers(fixture, {0, 48}))
 
 A012 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A012 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A013 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A013 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 3)
 
 A014 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A014 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceTexts(labels).last().contains(QStringLiteral("alt-voice")))
 
 A015 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A015 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(hasVoiceMarkers(fixture, {0, 48, 120}))
 
 A016 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A016 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.document.revision(), before.revision + 1)
 
 A017 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A017 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.document.undoStack()->index(), before.undoIndex + 1)
 
 A018 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A018 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), markers)
 
 A019 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A019 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(hasVoiceMarkers(fixture, {0, 48}))
 
 A020 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A020 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.document.smf().write() == before.smf)
 
 A021 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A021 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A022 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A022 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A023 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts successful native QQuickWindow framebuffer capture into QImage — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!sameSpan.isNull())
 
 A024 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A024 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(1)})
 
 A025 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A025 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceTexts(labels), markers)
 
 A026 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A026 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(readoutRect.isValid())
 
 A027 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts successful native QQuickWindow framebuffer capture into QImage — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!nextSpan.isNull())
 
 A028 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Counts changed pixels in captured native QQuickWindow framebuffers — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(changedPixels(sameSpan, nextSpan,
                             deviceRect(readoutRect, nextSpan.devicePixelRatio(), nextSpan.size())) >
               0)
 
 A029 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A029 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A030 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A030 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), markers)
 
 A031 | DrawerPresentationTest::voiceSurfaceAndPaintLifecycle | src/checks/drawerpresentation/voice.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A031 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(readout(), QStringList{markers.at(0)})
 
 A032 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A032 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(scene)
 
 A033 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A033 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A034 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts successful native QQuickWindow framebuffer capture into QImage — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!idle.isNull())
 
 A035 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A035 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 1)
 
 A036 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A036 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(hoveredText.size(), 1)
 
 A037 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:193
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A037 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(hoveredText.first().contains(QStringLiteral("voice-check")))
 
 A038 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A038 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceTexts(labels), markers)
 
 A039 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A039 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(hoverRect.isValid())
 
 A040 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts successful native QQuickWindow framebuffer capture into QImage — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!hovered.isNull())
 
 A041 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Counts changed pixels in captured native QQuickWindow framebuffers — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(changedPixels(idle, hovered,
                             deviceRect(hoverRect, hovered.devicePixelRatio(), hovered.size())) > 0)
 
 A042 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A042 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceTexts(hover), hoveredText)
 
 A043 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A043 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceTexts(hover), hoveredText)
 
 A044 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A044 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A045 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A045 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A046 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A046 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A047 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A047 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A048 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A048 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A049 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A049 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceTexts(labels), markers)
 
 A050 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:224
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A050 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A051 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A051 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A052 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:228
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A052 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A053 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A053 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A054 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A054 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(hover), hoveredText)
 
 A055 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A055 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.input().isVisible())
 
 A056 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A056 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(fixture.input().isVisible())
 
 A057 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A057 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(hover.rowCount(), 0)
 
 A058 | DrawerPresentationTest::voiceHoverLifecycle | src/checks/drawerpresentation/voice.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A058 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), markers)
 
 A059 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:248
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A059 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 2)
 
 A060 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A060 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(track0.at(1).contains(QStringLiteral("voice-check")))
 
 A061 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A061 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels).size(), 1)
 
 A062 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A062 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceTexts(labels).first().contains(QStringLiteral("alt-voice")))
 
 A063 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A063 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), voiceTexts(labels))
 
 A064 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A064 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.input().isVisible())
 
 A065 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A065 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(fixture.input().isVisible())
 
 A066 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A066 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
 A067 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A067 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels, Qt::AlignRight), QStringList{track0.at(0)})
 
 A068 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A068 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!voiceTexts(labels).join(' ').contains(QStringLiteral("voice-check")))
 
 A069 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A069 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceTexts(labels).size(), 2)
 
 A070 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A070 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceTexts(labels).at(1).startsWith(QStringLiteral("003 ")))
 
 A071 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A071 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
 A072 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts successful native QQuickWindow framebuffer capture into QImage — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!original.isNull())
 
 A073 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A073 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(originalRect.isValid())
 
 A074 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A074 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), renamedLabels)
 
 A075 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A075 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(renamedRect.isValid())
 
 A076 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts successful native QQuickWindow framebuffer capture into QImage — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!renamed.isNull())
 
 A077 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:287
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Counts changed pixels in captured native QQuickWindow framebuffers — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(changedPixels(
                   original, renamed,
@@ -667,8 +667,8 @@ Original expression:
                              renamed.devicePixelRatio(), renamed.size())) > 0)
 
 A078 | DrawerPresentationTest::voiceRefreshLifecycle | src/checks/drawerpresentation/voice.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A078 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(voiceTexts(labels), track0)
 
@@ -681,8 +681,8 @@ Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A080 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:310
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickItem::hasActiveFocus() in the mounted voice-picker search field — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(picker.search->hasActiveFocus())
 
@@ -816,158 +816,158 @@ Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A097 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A097 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(audition.isValid())
 
 A098 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:344
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts live native Quick popup-session state for the mounted voice picker — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A099 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts existence of a rendered native voice-picker row delegate — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(escapeHeldRow)
 
 A100 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A100 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(audition.count(), 1)
 
 A101 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:358
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts live native Quick popup-session state for the mounted voice picker — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A102 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:359
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A102 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(audition.count(), 2)
 
 A103 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A103 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.at(1).at(0).toInt(), 7)
 
 A104 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A104 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.at(1).at(1).toInt(), 60)
 
 A105 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A105 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.at(1).at(2).toInt(), 0)
 
 A106 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:367
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A106 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.count(), 2)
 
 A107 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A107 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A108 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts live native Quick popup-session state for the mounted voice picker — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A109 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts existence of a rendered native voice-picker row delegate — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(outsideHeldRow)
 
 A110 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A110 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(audition.count(), 1)
 
 A111 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:387
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A111 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(audition.count(), 2)
 
 A112 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A112 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.at(1).at(0).toInt(), 7)
 
 A113 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A113 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.at(1).at(1).toInt(), 60)
 
 A114 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A114 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.at(1).at(2).toInt(), 0)
 
 A115 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Delivers an outside pointer event to the native picker QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::voicepicker::dismissOutside(picker))
 
 A116 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts live native Quick popup-session state for the mounted voice picker — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A117 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A117 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(audition.count(), 2)
 
 A118 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:394
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A118 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.snapshot() == changed)
 
 A119 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts live native Quick popup-session state for the mounted voice picker — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY((picker = checks::voicepicker::active(fixture.view())))
 
 A120 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts existence of a rendered native voice-picker row delegate — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(checks::voicepicker::row(picker, 7))
 
 A121 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:402
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts live native Quick popup-session state for the mounted voice picker — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(fixture.view()))
 
 A122 | DrawerPresentationTest::voicePickerTransactions | src/checks/drawerpresentation/voice.cpp:403
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A122 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.snapshot() == frozen)
 
@@ -1036,99 +1036,99 @@ Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &point))
 
 A131 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A131 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.snapshot() == baseline)
 
 A132 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:439
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A132 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, 48, &atOld))
 
 A133 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:440
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A133 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &atOld))
 
 A134 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:441
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A134 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(committed.revision, baseline.revision + 1)
 
 A135 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:442
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A135 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(committed.undoIndex, baseline.undoIndex + 1)
 
 A136 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:443
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A136 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(committed.smf != baseline.smf)
 
 A137 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:446
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A137 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(undone.smf, baseline.smf)
 
 A138 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:447
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A138 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(undone.undoIndex, baseline.undoIndex)
 
 A139 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A139 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(undone.revision, committed.revision + 1)
 
 A140 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A140 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(redone.smf, committed.smf)
 
 A141 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A141 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(redone.undoIndex, committed.undoIndex)
 
 A142 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A142 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(redone.revision, undone.revision + 1)
 
 A143 | DrawerPresentationTest::voiceMarkerDragTransactions | src/checks/drawerpresentation/voice.cpp:454
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A143 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, 96, &atOld))
 
 A144 | DrawerPresentationTest::voiceCameraTransactions | src/checks/drawerpresentation/voice.cpp:469
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A144 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.camera().pxPerBeat() > zoom)
 
 A145 | DrawerPresentationTest::voiceCameraTransactions | src/checks/drawerpresentation/voice.cpp:470
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A145 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::abs(view.camera().displayX(tick, 0.0, fixture.input().devicePixelRatio()) -
                        anchor.x()) <= 1.0 / fixture.input().devicePixelRatio())
 
 A146 | DrawerPresentationTest::voiceCameraTransactions | src/checks/drawerpresentation/voice.cpp:478
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S314 row A146 in src/checks/drawerpresentation/voice_gap.swift drives VoiceChangesPage typed hover, picker and marker-drag dispatch against real lane/history state; published markers, labels, modal capture, preview and one-entry commit preserve the original voice preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.camera().scrollX(), floor)
 
@@ -2770,3 +2770,9 @@ drawerVoiceOriginalPickerRows is now a direct runVoiceChangesPageChecks call imm
 Suite order is explicit; no generic fixture abstraction was introduced.
 Static diff check passed; Debug execution of this refactor is pending root.
 Existing assertion dispositions are unchanged; this is not a completion claim.
+
+
+S314 | drawerVoicePortableGapChecks | src/checks/drawerpresentation/voice_gap.swift:85
+Swift expression:
+  report.expect(contract, cppID: drawerVoicePortableGapID,
+                    message: "\(row)-voice publication, picker and marker transaction contract")

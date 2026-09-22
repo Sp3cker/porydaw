@@ -230,8 +230,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A005 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -284,8 +284,8 @@ Original expression:
                CoreTimeDefaults::controllerDefault(CoreTimeDefaults::kCcVolume));
 
 A010 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -296,8 +296,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A011 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Drives a real QTest click into a rendered Qt Quick popup row/button — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -306,8 +306,8 @@ Original expression:
                "the Delete button never rendered in the confirmation form");
 
 A012 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       // Accept consumed the prompt and returned the band focus.
@@ -317,8 +317,8 @@ Original expression:
                    "accepting left confirmation content on the session");
 
 A013 | AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores | src/checks/automation/ccdeleteconfirmation.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -533,8 +533,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A035 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -548,8 +548,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A036 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Drives a real QTest click into a rendered Qt Quick popup row/button — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -559,8 +559,8 @@ Original expression:
                "the Cancel button never rendered in the confirmation form");
 
 A037 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -568,8 +568,8 @@ Original expression:
   QTRY_VERIFY2(!opened.session->isOpen(), "Cancel did not dismiss the confirmation");
 
 A038 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -606,8 +606,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A042 | AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -632,8 +632,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A044 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -647,8 +647,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A045 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -658,8 +658,8 @@ Original expression:
   QTRY_VERIFY2(!opened.session->isOpen(), "Escape did not dismiss the confirmation");
 
 A046 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -696,8 +696,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A050 | AutomationEditingTest::ccDeletePromptEscapeLeavesDocumentUntouched | src/checks/automation/ccdeleteconfirmation.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -724,8 +724,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A052 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -739,8 +739,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A053 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the rendered native Qt Quick confirmation-frame item exists — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -752,8 +752,8 @@ Original expression:
   QVERIFY(frame);
 
 A054 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:296
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-frame scene geometry for the outside-click witness — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
@@ -764,8 +764,8 @@ Original expression:
   QVERIFY2(!frameScene.contains(outside), "the outside witness sat inside the confirmation");
 
 A055 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:297
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the outside-click witness lies in the native QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -773,8 +773,8 @@ Original expression:
   QVERIFY(QRect(QPoint{}, m_quickWindow->size()).contains(outside));
 
 A056 | AutomationEditingTest::ccDeletePromptOutsideRightPressClosesWithoutRetarget | src/checks/automation/ccdeleteconfirmation.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -806,8 +806,8 @@ Original expression:
   QTRY_VERIFY2(!laneBody(cc).isEmpty(), "the lane plot never rendered");
 
 A059 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:311
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       QTest::mouseRelease(m_quickWindow, Qt::RightButton, Qt::NoModifier,
@@ -819,8 +819,8 @@ Original expression:
   QVERIFY2(session && !session->isOpen(), "the swallowed outside right release opened a popup");
 
 A060 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -857,8 +857,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A064 | QTest::mouseRelease | src/checks/automation/ccdeleteconfirmation.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -883,8 +883,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A066 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -898,8 +898,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A067 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -908,8 +908,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A068 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -920,8 +920,8 @@ Original expression:
   QTRY_VERIFY2(!opened.session->isOpen(), "Return did not dismiss the confirmation");
 
 A069 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -958,8 +958,8 @@ Original expression:
   QCOMPARE(laneValue(kSecondPointTick), kSecondPointValue);
 
 A073 | AutomationEditingTest::ccDeletePromptInitialReturnCancelsWithoutNavigation | src/checks/automation/ccdeleteconfirmation.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -968,8 +968,8 @@ Original expression:
                    "the Return cancellation did not restore the automation band focus");
 
 A074 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:359
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
   }
@@ -988,8 +988,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A075 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -998,8 +998,8 @@ Original expression:
                    "the confirmation did not give Cancel the initial focus");
 
 A076 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the rendered native Qt Quick confirmation button exists — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1012,8 +1012,8 @@ Original expression:
   QVERIFY(opened.acceptButton);
 
 A077 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const QPoint acceptCenter = quick_popup::itemCenter(*opened.acceptButton);
@@ -1041,8 +1041,8 @@ Original expression:
   QVERIFY2(!opened.session->isOpen(), "the stale request left a popup open");
 
 A078 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       songview::QuickPopupSession *const session = quick_popup::popupSession(songTab.view());
@@ -1051,8 +1051,8 @@ Original expression:
   QVERIFY2(session && !session->isOpen(), "the stale request reopened a popup");
 
 A079 | AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget | src/checks/automation/ccdeleteconfirmation.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1151,8 +1151,8 @@ Original expression:
           findRow({EditorAutomationRowKind::ControlChange, 0, CoreTimeDefaults::kCcVolume}).valid());
 
 A090 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:414
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
   }
@@ -1171,8 +1171,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A091 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1228,8 +1228,8 @@ Original expression:
   QVERIFY(division);
 
 A096 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:437
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       ruler->openDivisionMenu(
@@ -1241,8 +1241,8 @@ Original expression:
   QVERIFY(live);
 
 A097 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:438
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native Qt Quick popup panel is rendered and published — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1254,8 +1254,8 @@ Original expression:
                "the foreign ruler menu did not publish over the pending confirmation");
 
 A098 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:443
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1263,8 +1263,8 @@ Original expression:
   QVERIFY(live->contentItem() == nullptr);
 
 A099 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:444
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1272,8 +1272,8 @@ Original expression:
   QVERIFY(quick_popup::promptItem(*live, QLatin1String("ccDeleteConfirm")) == nullptr);
 
 A100 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1287,8 +1287,8 @@ Original expression:
   QVERIFY2(live->isOpen(), "the canvas rewrite cancelled the foreign ruler menu");
 
 A101 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native Qt Quick popup panel is rendered and published — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1315,8 +1315,8 @@ Original expression:
   QVERIFY2(targetRow >= 0, "the foreign division menu omitted the chosen denominator");
 
 A103 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:464
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Drives a real QTest click into a rendered Qt Quick popup row/button — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1325,8 +1325,8 @@ Original expression:
                "the foreign division row did not receive a real click");
 
 A104 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:467
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       QCoreApplication::processEvents();
@@ -1345,8 +1345,8 @@ Original expression:
                songview::GridSelection::musical(uint32_t(targetDenom)));
 
 A106 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:473
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1358,8 +1358,8 @@ Original expression:
                    "the foreign pick did not return focus to the ruler control");
 
 A107 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:476
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native Qt Quick popup panel is rendered and published — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       keyClick(Qt::Key_Return);
@@ -1372,8 +1372,8 @@ Original expression:
                "Return on the focused ruler control did not reopen the foreign menu");
 
 A108 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:486
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1386,8 +1386,8 @@ Original expression:
   QVERIFY(!live->isOpen());
 
 A109 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:488
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -1396,8 +1396,8 @@ Original expression:
   QVERIFY(!live->isOpen());
 
 A110 | AutomationEditingTest::ccDeletePromptInvalidationSparesForeignPopup | src/checks/automation/ccdeleteconfirmation.cpp:489
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1577,8 +1577,8 @@ Original expression:
   QVERIFY2(removeRow >= 0, "the synthetic-only volume menu offered no RemoveLane row");
 
 A127 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:534
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Drives a real QTest click into a rendered Qt Quick popup row/button — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1587,8 +1587,8 @@ Original expression:
                "the RemoveLane row did not receive a real click");
 
 A128 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:540
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       QCoreApplication::processEvents();
@@ -1600,8 +1600,8 @@ Original expression:
   QVERIFY2(!menu.session->isOpen(), "the synthetic-only volume pick left a popup open");
 
 A129 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:543
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       checks::support::pumpQuick();
@@ -1612,8 +1612,8 @@ Original expression:
                "the synthetic-only volume pick opened a delete confirmation");
 
 A130 | AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation | src/checks/automation/ccdeleteconfirmation.cpp:545
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup content attachment/removal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1704,8 +1704,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A138 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:577
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick popup-session presentation/dismissal mechanics — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState(documentChanged.count());
@@ -1718,8 +1718,8 @@ Original expression:
                qUtf8Printable(opened.diagnostic));
 
 A139 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:579
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow active-focus ownership/restoration — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -1754,8 +1754,8 @@ Original expression:
                "the confirmation count includes the synthetic default node");
 
 A142 | AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic | src/checks/automation/ccdeleteconfirmation.cpp:592
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Drives a real QTest click into a rendered Qt Quick popup row/button — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 

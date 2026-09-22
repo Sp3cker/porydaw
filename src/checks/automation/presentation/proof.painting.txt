@@ -62,20 +62,20 @@ Original expression:
   QVERIFY(canvas)
 
 A003 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 proves the production page publishes one selector label per catalog parameter. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(labels.size(), int(controllers.size()) + 1)
 
 A004 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S039 proves the published selector contains a Tempo row. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(tempoRow.has_value())
 
 A005 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S040 proves the Tempo row retains its catalog label identity. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY((*tempoRow == EditorAutomationRowId{EditorAutomationRowKind::Tempo, 0, 0}))
 
@@ -144,8 +144,8 @@ Original expression:
   QVERIFY2(text, "a catalog label rendered without its Text item")
 
 A016 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S036 compares the production tab texts verbatim with parameterLabels. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(text->property("text").toString(), labels.at(index))
 
@@ -170,8 +170,8 @@ Original expression:
                    "the rendered fitted Text exceeds its label height")
 
 A020 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 proves row and label cardinality are equal. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(counts.size(), labels.size())
 
@@ -182,8 +182,8 @@ Original expression:
   QVERIFY(row.has_value())
 
 A022 | AutomationPresentationTest::parameterLabelsFitGutterAtDerivedMinimum | src/checks/automation/presentation/painting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 compares every published tab event count with its corresponding row count. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(counts.at(index).toULongLong(), written)
 
@@ -707,35 +707,35 @@ Original expression:
   QVERIFY(band)
 
 A105 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:498
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts captureQuickBand produced a native QQuickWindow framebuffer image — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!image.isNull())
 
 A106 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:517
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Scans native captureQuickBand pixelColor output for the rendered selection outline — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(containsOutline(localBounds(lfoTab), selectionBar),
                "the inactive LFO label has no visible shared-selection indicator")
 
 A107 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:519
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Scans native captureQuickBand pixelColor output for the rendered selection outline — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(containsOutline(localBounds(tempoTab), selectionBar),
                "the inactive Tempo label has no visible shared-selection indicator")
 
 A108 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:522
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Scans native captureQuickBand pixelColor output for the rendered selection outline — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(!containsOutline(localBounds(lfoTab), ghostRule),
                "the shared selection leaked onto the ghost rule")
 
 A109 | AutomationPresentationTest::selectedInactiveParametersKeepScopeIndicators | src/checks/automation/presentation/painting.cpp:524
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Scans native captureQuickBand pixelColor output for the rendered selection outline — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(!containsOutline(localBounds(tempoTab), ghostRule),
                "the shared selection leaked onto the ghost rule")
@@ -765,8 +765,8 @@ Original expression:
   QVERIFY(band)
 
 A114 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:550
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native captureQuickBand framebuffer image exists — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!before.isNull())
 
@@ -783,14 +783,14 @@ Original expression:
   QVERIFY(QRectF(QPointF{}, QSizeF(automationPage->automationViewportSize())).contains(*label))
 
 A117 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:556
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native captureQuickBand framebuffer image exists — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!after.isNull())
 
 A118 | AutomationPresentationTest::tempoHoverValueHasVisibleTextRecord | src/checks/automation/presentation/painting.cpp:557
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Compares native QQuickWindow framebuffer pixels before and after hover — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(after != before)
 
@@ -1038,70 +1038,70 @@ Original expression:
   QVERIFY(activateParameter(pan))
 
 A158 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:683
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A158-A160-pan requires the exact Pan maximum text in page.scaleLabels. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(
           (maxLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+63"), viewport)).has_value())
 
 A159 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:685
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A158-A160-pan requires the exact Pan minimum text in page.scaleLabels. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(
           (minLabel = findTextRecord(laneTextModel, QStringLiteral("c_v-64"), viewport)).has_value())
 
 A160 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:687
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A158-A160-pan requires the exact Pan neutral text in page.scaleLabels. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY((neutralLabel = findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport))
                       .has_value())
 
 A161 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:690
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S046 proves every Pan label begins in the left viewport quarter. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(rect.left() < viewport.left() + viewport.width() / 4.0,
                    "a scale label no longer hugs the viewport's left edge")
 
 A162 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:693
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 proves the Pan maximum label center is in the top third. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(maxLabel->center().y() < viewport.top() + viewport.height() / 3.0,
                "the maximum scale label left the plot's top third")
 
 A163 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:695
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 proves the Pan neutral label center is in the middle third. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(neutralLabel->center().y() >= viewport.top() + viewport.height() / 3.0 &&
                    neutralLabel->center().y() < viewport.top() + viewport.height() * 2.0 / 3.0,
                "the neutral scale label left the plot's middle third")
 
 A164 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:698
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S047 proves the Pan minimum label center is in the bottom third. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(minLabel->center().y() >= viewport.top() + viewport.height() * 2.0 / 3.0,
                "the minimum scale label left the plot's bottom third")
 
 A165 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:700
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S048 proves the measured Pan maximum and minimum rectangles do not intersect. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!maxLabel->intersects(*minLabel))
 
 A166 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:701
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S048 proves the measured Pan maximum and neutral rectangles do not intersect. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!maxLabel->intersects(*neutralLabel))
 
 A167 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:702
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S048 proves the measured Pan minimum and neutral rectangles do not intersect. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!minLabel->intersects(*neutralLabel))
 
@@ -1118,15 +1118,15 @@ Original expression:
   QVERIFY(!body.isEmpty())
 
 A170 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:716
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S049 proves the Pan minimum center remains within half its measured height of the curve value. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(std::abs(minLabel->center().y() - minY) <= minLabel->height() / 2.0,
                "the minimum scale label moved off its curve height")
 
 A171 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:737
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S050 proves exactly three distinct scale rules align with the three Pan label heights. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1 &&
                   edgeTickYs().size() == 3)
@@ -1156,8 +1156,8 @@ Original expression:
   QCOMPARE(findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport), neutralLabel)
 
 A176 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:747
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S050 proves each scale rule is within one pixel of its curve-true scale-label height. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY2(ticksNear(maxY) == 1 && ticksNear(neutralY) == 1 && ticksNear(minY) == 1,
                "a scale tick no longer sits at its label's curve height")
@@ -1218,20 +1218,20 @@ Original expression:
   QVERIFY(canvas->ghostParameters().isEmpty())
 
 A185 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:781
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A185-A187-volume requires exact Volume text 127. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("127"), viewport).has_value())
 
 A186 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:782
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A185-A187-volume requires exact Volume text 0. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value())
 
 A187 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:783
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A185-A187-volume requires the complete list [127, 0], excluding a neutral label. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("c_v+0"), viewport).has_value())
 
@@ -1242,20 +1242,20 @@ Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A189 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:791
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A189-A191-tempo requires exact Tempo text 255. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("255"), viewport).has_value())
 
 A190 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:792
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A189-A191-tempo requires exact Tempo text 20. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("20"), viewport).has_value())
 
 A191 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:793
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A189-A191-tempo requires the complete list [255, 20], excluding 120. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(!findTextRecord(laneTextModel, QStringLiteral("120"), viewport).has_value())
 
@@ -1266,20 +1266,20 @@ Original expression:
   QVERIFY(bendIndex >= 0)
 
 A193 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:798
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A193-A195-bend requires exact Bend text +8191. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("+8191"), viewport).has_value())
 
 A194 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:799
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A193-A195-bend requires exact Bend text -8192. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("-8192"), viewport).has_value())
 
 A195 | AutomationPresentationTest::laneScaleLabelsRenderAtLeftEdge | src/checks/automation/presentation/painting.cpp:800
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S041 row A193-A195-bend requires exact Bend text 0. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(findTextRecord(laneTextModel, QStringLiteral("0"), viewport).has_value())
 
@@ -1470,3 +1470,113 @@ S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/pr
 Swift expression:
   report.expectEqual([String](), fixture.page.ghostLabels, cppID: drawerAutomationRowsID,
                          what: "unpinning drops the ghost label")
+
+S035 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:73
+Swift expression:
+  report.expectEqual(AutomationCatalog.count, page.parameterLabels.count,
+                     cppID: automationPaintingGapID,
+                     what: "A003 selector publishes one label per catalog parameter")
+
+S036 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:76
+Swift expression:
+  report.expectEqual(page.parameterLabels, tabs.map(\.label),
+                     cppID: automationPaintingGapID,
+                     what: "A016 selector tab text equals the published labels")
+
+S037 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:79
+Swift expression:
+  report.expectEqual(page.parameterLabels.count, page.rows.count,
+                     cppID: automationPaintingGapID,
+                     what: "A020 selector rows and labels have equal cardinality")
+
+S038 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:82
+Swift expression:
+  report.expectEqual(page.rows.map(\.eventCount), tabs.map(\.eventCount),
+                     cppID: automationPaintingGapID,
+                     what: "A022 each selector count matches its automation row")
+
+S039 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:85
+Swift expression:
+  report.expect(tabs.contains { $0.tempo }, cppID: automationPaintingGapID,
+                message: "A004 the published selector contains Tempo")
+
+S040 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:87
+Swift expression:
+  report.expect(tabs.first { $0.tempo }?.label == "Tempo",
+                cppID: automationPaintingGapID,
+                message: "A005 the Tempo row keeps its catalog identity")
+
+S041 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:101
+Swift expression:
+  report.expectEqual(row.texts, page.scaleLabels.map(\.text),
+                     cppID: automationPaintingGapID,
+                     what: "\(row.id) scale label model text")
+
+S042 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:104
+Swift expression:
+  report.expectEqual(row.texts, labels.map(\.text),
+                     cppID: automationPaintingGapID,
+                     what: "\(row.id) published measured text")
+
+S043 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:107
+Swift expression:
+  report.expectEqual(labels.count, rules.count, cppID: automationPaintingGapID,
+                     what: "\(row.id) each label owns one scale rule")
+
+S044 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:109
+Swift expression:
+  report.expect(labels.enumerated().allSatisfy { index, label in
+      label.rect.x >= 0 && label.rect.width > 0 && label.rect.height > 0
+          && label.rect.x + label.rect.width <= 480
+          && label.rect.y >= 0 && label.rect.y + label.rect.height <= 120
+          && abs(rules[index].y + rules[index].height / 2
+                 - page.scaleLabels[index].y) <= 1
+  }, cppID: automationPaintingGapID,
+                message: "\(row.id) native text metrics fit and align to curve-true rules")
+
+S045 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:117
+Swift expression:
+  report.expect(Set(labels.map { Int($0.rect.y.rounded()) }).count == labels.count,
+                cppID: automationPaintingGapID,
+                message: "\(row.id) measured labels do not overlap vertically")
+
+S046 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:124
+Swift expression:
+  report.expect(panLabels.count == 3 && panLabels.allSatisfy { $0.rect.x < 120 },
+                cppID: automationPaintingGapID,
+                message: "A161 Pan scale labels hug the viewport's left quarter")
+
+S047 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:127
+Swift expression:
+  report.expect(centers.count == 3 && centers[0] < 40
+      && centers[2] >= 40 && centers[2] < 80 && centers[1] >= 80,
+                cppID: automationPaintingGapID,
+                message: "A162-A164 Pan maximum neutral and minimum occupy their thirds")
+
+S048 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:131
+Swift expression:
+  report.expect(panLabels.indices.allSatisfy { left in
+      panLabels.indices.allSatisfy { right in
+          left == right || panLabels[left].rect.y + panLabels[left].rect.height
+              <= panLabels[right].rect.y
+              || panLabels[right].rect.y + panLabels[right].rect.height
+              <= panLabels[left].rect.y
+      }
+  }, cppID: automationPaintingGapID,
+                message: "A165-A167 Pan scale labels do not intersect")
+
+S049 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:141
+Swift expression:
+  report.expect(panLabels.count == 3 && page.scaleLabels.count == 3
+      && abs(centers[1] - page.scaleLabels[1].y) <= panLabels[1].rect.height / 2,
+                cppID: automationPaintingGapID,
+                message: "A170 Pan minimum label remains on its curve height")
+
+S050 | drawerAutomationPublishedLabelsAndMetrics | src/checks/automation/presentation/automationpresentation_gap.swift:145
+Swift expression:
+  report.expect(panRules.count == 3 && Set(panRules.map {
+      Int(($0.y + $0.height / 2).rounded())
+  }).count == 3 && panRules.indices.allSatisfy {
+      abs(panRules[$0].y + panRules[$0].height / 2 - page.scaleLabels[$0].y) <= 1
+  }, cppID: automationPaintingGapID,
+                message: "A171-A176 exactly one scale rule sits at each Pan label height")

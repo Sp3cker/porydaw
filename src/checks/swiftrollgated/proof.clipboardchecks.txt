@@ -281,8 +281,8 @@ Original expression:
         kOpenTimeoutMs));
 
 A004 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickView exposure, nonzero native window geometry, and a live root object — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -330,8 +330,8 @@ Original expression:
              qPrintable(error));
 
 A007 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:257
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S058 compares the two concrete source notes in the equivalent two-note production-grid fixture and proves they retain one source-track membership. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -562,24 +562,24 @@ Original expression:
     QVERIFY(!copiedPayload.isEmpty());
 
 A030 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:339
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input, invokes the production Copy command, reads the host clipboard, and proves the JSON object predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const QJsonDocument copiedDocument = QJsonDocument::fromJson(copiedPayload);
 Original expression:
     QVERIFY(copiedDocument.isObject());
 
 A031 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:341
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S047 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const QJsonObject copied = copiedDocument.object();
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("format")).toInt(), 1);
 
 A032 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:342
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S048 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -587,64 +587,64 @@ Original expression:
              surface.grid->property("ticksPerBeat").toInt());
 
 A033 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:344
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S049 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("span")).toInt(), 0);
 
 A034 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:345
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S050 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("wholeLane")).toBool(), false);
 
 A035 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:346
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S051 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("lanes")).toArray().size(), 0);
 
 A036 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:347
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S052 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("tempo")).toArray().size(), 0);
 
 A037 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:349
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S053 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const QJsonArray copiedTracks = copied.value(QStringLiteral("tracks")).toArray();
 Original expression:
     QCOMPARE(copiedTracks.size(), 1);
 
 A038 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:351
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S054 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const QJsonObject copiedTrack = copiedTracks[0].toObject();
 Original expression:
     QCOMPARE(copiedTrack.value(QStringLiteral("track")).toInt(), source->track);
 
 A039 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:353
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S055 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const QJsonArray copiedNotes = copiedTrack.value(QStringLiteral("notes")).toArray();
 Original expression:
     QCOMPARE(copiedNotes.size(), 2);
 
 A040 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:364
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S056 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const int copiedOrigin = (std::min)(source->tick, secondSource->tick);
     const auto payloadContains = [&](const ClipboardNote &expected) {
@@ -660,8 +660,8 @@ Original expression:
     QVERIFY(payloadContains(*source));
 
 A041 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:365
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 selects both source notes through production pointer input and invokes the production Copy command; S057 reads its host-clipboard JSON and proves the original schema predicate. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -864,8 +864,8 @@ Original expression:
                                       Q_ARG(bool, true)));
 
 A060 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:442
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: NATIVE
+Mapping/reason: Asserts destruction and replacement of a QQuickView plus exposure, native window geometry, and root-object availability — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1486,3 +1486,84 @@ S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:566
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
+
+S046 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:95
+Swift expression:
+  for index in sourceRects.indices {
+      let rect = sourceRects[index]
+      let modifiers = index == 0 ? 0 : DrawerModifiers.shiftBit
+      clipboardGrid.beginPointer(
+          x: rect.x + rect.width / 2, y: rect.y + rect.height / 2,
+          modifiers: modifiers)
+      clipboardGrid.endPointer(x: rect.x + rect.width / 2, y: rect.y + rect.height / 2)
+  }
+  clipboardGrid.performCommand(command: EditCommand.copy.rawValue)
+  guard let bytes = gatedClipboardData(),
+        let object = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any] else {
+      report.fail(clipboardGapID, "A030 production Copy did not write its JSON object schema")
+      return
+  }
+  report.pass(clipboardGapID, row: "A030 production Copy payload is a JSON object")
+
+S047 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:119
+Swift expression:
+  report.expectEqual(1, (object["format"] as? NSNumber)?.intValue,
+                     cppID: clipboardGapID, what: "A031 format is version 1")
+
+S048 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:121
+Swift expression:
+  report.expectEqual(Int(clipboardDocument.ticksPerBeat),
+                     (object["ticksPerBeat"] as? NSNumber)?.intValue,
+                     cppID: clipboardGapID, what: "A032 ticksPerBeat is preserved")
+
+S049 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:124
+Swift expression:
+  report.expectEqual(0, (object["span"] as? NSNumber)?.intValue,
+                     cppID: clipboardGapID, what: "A033 note-only selection span is zero")
+
+S050 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:126
+Swift expression:
+  report.expectEqual(false, (object["wholeLane"] as? NSNumber)?.boolValue,
+                     cppID: clipboardGapID, what: "A034 note payload is not a whole lane")
+
+S051 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:128
+Swift expression:
+  report.expectEqual(0, (object["lanes"] as? [Any])?.count,
+                     cppID: clipboardGapID, what: "A035 note payload has no lanes")
+
+S052 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:130
+Swift expression:
+  report.expectEqual(0, (object["tempo"] as? [Any])?.count,
+                     cppID: clipboardGapID, what: "A036 note payload has no tempo points")
+
+S053 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:132
+Swift expression:
+  report.expectEqual(1, tracks.count, cppID: clipboardGapID,
+                     what: "A037 payload has one source track")
+
+S054 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:134
+Swift expression:
+  report.expectEqual(0, (copiedTrack["track"] as? NSNumber)?.intValue,
+                     cppID: clipboardGapID, what: "A038 payload preserves source track")
+
+S055 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:136
+Swift expression:
+  report.expectEqual(2, notes.count, cppID: clipboardGapID,
+                     what: "A039 payload has both selected notes")
+
+S056 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:144
+Swift expression:
+  report.expect(noteShapes.contains("0:60:24:91"), cppID: clipboardGapID,
+                message: "A040 payload contains the first selected note")
+
+S057 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:146
+Swift expression:
+  report.expect(noteShapes.contains("48:67:12:73"), cppID: clipboardGapID,
+                message: "A041 payload contains the second selected note")
+
+S058 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:86
+Swift expression:
+  report.expect(sourceNotes.count == 2
+      && sourceNotes.allSatisfy { $0.track == sourceNotes[0].track },
+                cppID: clipboardGapID,
+                message: "A007 both source notes retain one track membership")

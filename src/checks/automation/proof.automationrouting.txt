@@ -6,12 +6,14 @@ Original: src/checks/automation/automationrouting.cpp
 Original SHA-256: 009c91dba2f96807276b0077fe5421c37ac60bc636a9c0e29f3ded03d7cf427c
 Swift counterpart: src/checks/automation/automationactions.swift
 Swift SHA-256: fdc0ace0e3434ea4f9d707c211c61cd8275283c4b5b1b0c7abeeb9ee3e4aa626
+Additional Swift counterpart: src/checks/automation/automationrouting_gap.swift
+Additional Swift SHA-256: 929ee1c45bc50b192a7f08a5c782b64cad7df2195619de2c5b9b075b46a7afb8
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 96 sites in this file are GAP: middlePanIsolated, voicePressIsolated, rightBandPreviewIsolated, pencilEditTargetsOnlyItsLane, defaultBodyClickSetsCursorOnly, and firstCcRowOriginRebuildAndUndo exercise event routing isolation between middle mouse panning, voice change presses, automation band right clicks, lane targeting, and origin rebuilding.
+Portable predicates in middlePanIsolated, voicePressIsolated, and firstCcRowOriginRebuildAndUndo are MATCHED below; unaddressed routing groups remain GAP.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -37,8 +39,9 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S013] The production automation page is attached and the Pan parameter is active, establishing the valid lane precondition.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -90,8 +93,9 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A002 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S013] The production automation page is attached and the Pan parameter is active, establishing the valid lane precondition.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -100,8 +104,9 @@ Original expression:
   QVERIFY(pan.valid());
 
 A003 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S014] The configured automation plot has nonzero width and height, so the delivered input lies in a real input surface.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const QPointF input = inputPoint(pan, 48, 64);
@@ -113,8 +118,9 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A004 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S016] A Qt middle-button pointerPress makes the production page panning and interaction-active.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -127,8 +133,9 @@ Original expression:
   QVERIFY(page().canvas()->isPanning());
 
 A005 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S016] A Qt middle-button pointerPress makes the production page panning and interaction-active.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -136,8 +143,9 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A006 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:61
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S017] The middle-pan gesture creates no band selection.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -145,8 +153,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A007 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:62
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S021] During the drag, real SongState and the full document/history snapshot remain frozen.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -154,8 +163,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A008 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:63
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The automation plot width and height remain equal to their pre-drag geometry.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -164,8 +174,9 @@ Original expression:
               automationBefore);
 
 A009 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S022] The shared edit cursor remains at its captured tick.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -173,8 +184,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A010 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] Middle-button release clears pan, interaction, and pointer-kind state and leaves no band.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -185,8 +197,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A011 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:70
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] Middle-button release clears pan, interaction, and pointer-kind state and leaves no band.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -194,8 +207,9 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A012 | AutomationEditingTest::middlePanIsolated | src/checks/automation/automationrouting.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] Middle-button release clears pan, interaction, and pointer-kind state and leaves no band.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -203,8 +217,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A013 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S025] The voice marker coordinate is inside the attached production Voice Changes plot.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
   }
@@ -217,8 +232,9 @@ Original expression:
   QTRY_VERIFY(!voiceChangeInput().bounds().isEmpty());
 
 A014 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S026] A Pan lane is valid and active on the automation page attached to the same session.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -227,8 +243,9 @@ Original expression:
   QVERIFY(pan.valid());
 
 A015 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S026] A Pan lane is valid and active on the automation page attached to the same session.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const FrozenDocumentState frozen = frozenDocumentState();
@@ -239,8 +256,9 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A016 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S030] Pressing the voice marker leaves automation panning false.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -252,8 +270,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A017 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S029] Pressing the voice marker leaves automation interaction and pointer-gesture state false.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -261,8 +280,9 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A018 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S030] Pressing the voice marker creates no automation band.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -270,8 +290,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A019 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S031, S032] The voice press leaves SongState, revision, and history identity unchanged.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -279,8 +300,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A020 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:92
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S034] The automation plot geometry remains equal to its captured pre-press geometry.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -289,8 +311,9 @@ Original expression:
               automationBefore);
 
 A021 | AutomationEditingTest::voicePressIsolated | src/checks/automation/automationrouting.cpp:94
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S033] The shared edit cursor remains at its captured tick.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -298,8 +321,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A022 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S055] Activating Pan publishes the Pan parameter and a real projection on the production page.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       mouseRelease(voiceChangeInput(), Qt::LeftButton, input);
@@ -312,8 +336,9 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A023 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S055] Activating Pan publishes the Pan parameter and a real projection on the production page.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -322,8 +347,9 @@ Original expression:
   QVERIFY(pan.valid());
 
 A024 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S055] Activating Pan publishes the Pan parameter and a real projection on the production page.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const QPointF input = inputPoint(pan, 144, 48);
@@ -335,8 +361,9 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A025 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S056] The right press owns a pending range gesture, not panning, with no active range preview yet.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -349,8 +376,9 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A026 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S056] The right press owns a pending range gesture, not panning, with no active range preview yet.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -358,8 +386,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A027 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S056] The right press owns a pending range gesture, not panning, with no active range preview yet.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -367,8 +396,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A028 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S057] The right press preserves SongState/history, edit cursor, and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -376,8 +406,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A029 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S057] The right press preserves SongState/history, edit cursor, and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -386,8 +417,9 @@ Original expression:
               automationBefore);
 
 A030 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S057] The right press preserves SongState/history, edit cursor, and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -395,8 +427,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A031 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S058] Travel beyond the drag threshold publishes a range preview frozen to Pan.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -407,8 +440,9 @@ Original expression:
   QTRY_VERIFY(page().canvas()->bandPreviewContainsLane(pan));
 
 A032 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S059] The active preview preserves SongState/history, edit cursor, and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -416,8 +450,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A033 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S059] The active preview preserves SongState/history, edit cursor, and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -426,8 +461,9 @@ Original expression:
               automationBefore);
 
 A034 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S059] The active preview preserves SongState/history, edit cursor, and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -435,8 +471,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A035 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S060] Release clears the range pointer, pan state, and gesture ownership.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -446,8 +483,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A036 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S060] Release clears the range pointer, pan state, and gesture ownership.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -455,8 +493,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A037 | AutomationEditingTest::rightBandPreviewIsolated | src/checks/automation/automationrouting.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S060] Release clears the range pointer, pan state, and gesture ownership.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -464,8 +503,9 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A038 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S061] The active Pan catalog row has a valid production projection and nonzero delivered plot viewport.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
   }
@@ -478,8 +518,9 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A039 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S061] The active Pan catalog row has a valid production projection and nonzero delivered plot viewport.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -487,8 +528,9 @@ Original expression:
   QTRY_VERIFY(findRow(controlRow(kPanController)).valid());
 
 A040 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S061] The active Pan catalog row has a valid production projection and nonzero delivered plot viewport.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -505,8 +547,9 @@ Original expression:
   QVERIFY(automationInput().bounds().contains(deliveredViewport));
 
 A041 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S061] The active Pan catalog row has a valid production projection and nonzero delivered plot viewport.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const QPointF deliveredContent =
@@ -520,8 +563,9 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A042 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S062] The primary press owns a Pan pencil stroke, not pan or range interaction.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LanePoints lfoBefore = lanePoints(tab().document(), kLfoController);
@@ -538,8 +582,9 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A043 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S062] The primary press owns a Pan pencil stroke, not pan or range interaction.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -547,8 +592,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A044 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S062] The primary press owns a Pan pencil stroke, not pan or range interaction.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -556,8 +602,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A045 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:169
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S063] Before release the pencil stroke preserves frozen SongState/history, plot dimensions, and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -565,8 +612,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A046 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S063] Before release the pencil stroke preserves frozen SongState/history, plot dimensions, and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -575,8 +623,9 @@ Original expression:
               automationBefore);
 
 A047 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S063] Before release the pencil stroke preserves frozen SongState/history, plot dimensions, and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -584,8 +633,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A048 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:176
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S064] Release writes exactly the mapped tick/value point to Pan.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -596,8 +646,9 @@ Original expression:
   QVERIFY(tab().document().findLanePoint(0, kPanController, mapped.point.tick, &inserted));
 
 A049 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S064] Release writes exactly the mapped tick/value point to Pan.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -605,8 +656,9 @@ Original expression:
   QCOMPARE(inserted.value, mapped.point.value);
 
 A050 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S065] The pencil release changes SongState once and publishes a new undoable revision/history identity.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -614,8 +666,9 @@ Original expression:
   QVERIFY(tab().document().smf().write() != frozen.smf);
 
 A051 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S065] The pencil release changes SongState once and publishes a new undoable revision/history identity.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -623,8 +676,9 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A052 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S065] The pencil release changes SongState once and publishes a new undoable revision/history identity.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -632,8 +686,9 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->count(), frozen.undoCount + 1);
 
 A053 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S065] The pencil release changes SongState once and publishes a new undoable revision/history identity.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -641,8 +696,9 @@ Original expression:
   QCOMPARE(tab().document().undoStack()->index(), frozen.undoIndex + 1);
 
 A054 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S066] The same production pencil sequence leaves modulation, volume, voice, pitch-bend, and tempo values exactly unchanged.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -650,8 +706,9 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), kLfoController) == lfoBefore);
 
 A055 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S066] The same production pencil sequence leaves modulation, volume, voice, pitch-bend, and tempo values exactly unchanged.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -659,8 +716,9 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), kVolumeController) == volumeBefore);
 
 A056 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S066] The same production pencil sequence leaves modulation, volume, voice, pitch-bend, and tempo values exactly unchanged.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -668,8 +726,9 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), DOC_CC_VOICE) == voiceBefore);
 
 A057 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S066] The same production pencil sequence leaves modulation, volume, voice, pitch-bend, and tempo values exactly unchanged.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -677,8 +736,9 @@ Original expression:
   QVERIFY(lanePoints(tab().document(), DOC_CC_BEND) == bendBefore);
 
 A058 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S066] The same production pencil sequence leaves modulation, volume, voice, pitch-bend, and tempo values exactly unchanged.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -686,8 +746,9 @@ Original expression:
   QVERIFY(tab().document().tempoPoints() == tempoBefore);
 
 A059 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S067] Pencil release preserves published plot dimensions and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -696,8 +757,9 @@ Original expression:
               automationBefore);
 
 A060 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S067] Pencil release preserves published plot dimensions and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -705,8 +767,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A061 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S068] Pencil release clears gesture, pan, and preview state.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -714,8 +777,9 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A062 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S068] Pencil release clears gesture, pan, and preview state.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -723,8 +787,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A063 | AutomationEditingTest::pencilEditTargetsOnlyItsLane | src/checks/automation/automationrouting.cpp:192
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S068] Pencil release clears gesture, pan, and preview state.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -732,8 +797,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A064 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S069] The active Pan projection and a cursor target distinct from the current cursor establish the default-body-click preconditions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
   }
@@ -746,8 +812,9 @@ Original expression:
   QVERIFY(activateParameter(controlRow(kPanController)));
 
 A065 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S069] The active Pan projection and a cursor target distinct from the current cursor establish the default-body-click preconditions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LaneHandle pan = findRow(controlRow(kPanController));
@@ -756,8 +823,9 @@ Original expression:
   QVERIFY(pan.valid());
 
 A066 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S069] The active Pan projection and a cursor target distinct from the current cursor establish the default-body-click preconditions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       setPencilMode(false);
@@ -772,8 +840,9 @@ Original expression:
   QVERIFY(automationBefore.has_value());
 
 A067 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S069] The active Pan projection and a cursor target distinct from the current cursor establish the default-body-click preconditions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const Tick cursorBefore = tab().view().editCursorTick();
@@ -782,8 +851,9 @@ Original expression:
   QVERIFY(expectedCursor != cursorBefore);
 
 A068 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S070] Primary body press owns a sweep gesture without pan or range preview.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -795,8 +865,9 @@ Original expression:
   QVERIFY(tab().view().userGestureActive());
 
 A069 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S070] Primary body press owns a sweep gesture without pan or range preview.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -804,8 +875,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A070 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:217
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S070] Primary body press owns a sweep gesture without pan or range preview.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -813,8 +885,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A071 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S071] Before release the body press preserves SongState/history, plot dimensions, and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -822,8 +895,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A072 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:219
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S071] Before release the body press preserves SongState/history, plot dimensions, and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -832,8 +906,9 @@ Original expression:
               automationBefore);
 
 A073 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S071] Before release the body press preserves SongState/history, plot dimensions, and edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -841,8 +916,9 @@ Original expression:
   QCOMPARE(tab().view().editCursorTick(), cursorBefore);
 
 A074 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S072] Body release commits the mapped tick as the edit cursor.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -853,8 +929,9 @@ Original expression:
   QTRY_COMPARE(tab().view().editCursorTick(), expectedCursor);
 
 A075 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:226
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S073] The cursor-only commit preserves SongState/history and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -862,8 +939,9 @@ Original expression:
   QVERIFY(frozenDocumentState() == frozen);
 
 A076 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:227
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S073] The cursor-only commit preserves SongState/history and published plot dimensions.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -872,8 +950,9 @@ Original expression:
               automationBefore);
 
 A077 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:229
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S074] Body release clears gesture, pan, and preview state.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -881,8 +960,9 @@ Original expression:
   QVERIFY(!tab().view().userGestureActive());
 
 A078 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S074] Body release clears gesture, pan, and preview state.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -890,8 +970,9 @@ Original expression:
   QVERIFY(!page().canvas()->isPanning());
 
 A079 | AutomationEditingTest::defaultBodyClickSetsCursorOnly | src/checks/automation/automationrouting.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S074] Body release clears gesture, pan, and preview state.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -899,8 +980,9 @@ Original expression:
   QVERIFY(!page().canvas()->bandPreviewContainsLane(pan));
 
 A080 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The published automation catalog contains Tempo plus a first control-change row.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
   }
@@ -913,8 +995,9 @@ Original expression:
   QVERIFY(rows.size() > 1);
 
 A081 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:239
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S037] Activating the first control-change row publishes its index as active.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const EditorAutomationRowId firstRowId = rows[1].id;
@@ -923,8 +1006,9 @@ Original expression:
   QVERIFY(activateParameter(firstRowId));
 
 A082 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S036] The published catalog index is zero, proving Volume is the first valid control-change row, equivalent to the original first-row identifier predicate.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const LaneHandle firstRow = findRow(firstRowId);
@@ -933,8 +1017,9 @@ Original expression:
   QVERIFY(firstRow.valid());
 
 A083 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S038] The first control-change row publishes a nonempty synthetic-origin projection.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const QRect firstBody = laneBody(firstRow);
@@ -952,8 +1037,9 @@ Original expression:
   QCOMPARE(firstBody.top(), 0);
 
 A085 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S040] The first row parameter is explicitly control-change Volume on track zero.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -961,8 +1047,9 @@ Original expression:
   QVERIFY(firstRowId.kind == EditorAutomationRowKind::ControlChange);
 
 A086 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S041] The delivered pencil coordinate lies inside the configured first-row plot bounds.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -974,8 +1061,9 @@ Original expression:
   QVERIFY(automationInput().bounds().contains(deliveredViewport));
 
 A087 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S042] Production pointerPress/pointerRelease in pencil mode are both handled.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
       const QPointF deliveredContent =
@@ -993,8 +1081,9 @@ Original expression:
                                              mapped.point.tick, &committed));
 
 A088 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S045] The committed SongDocument point and published projection point have identical tick and value.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1002,8 +1091,9 @@ Original expression:
   QCOMPARE(committed.value, mapped.point.value);
 
 A089 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S046] The pencil transaction advances the real document revision exactly once.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1011,8 +1101,9 @@ Original expression:
   QCOMPARE(tab().document().revision(), frozen.revision + 1);
 
 A090 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S047] The changed history identity and canUndo prove one undoable transaction.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1030,8 +1121,9 @@ Original expression:
   QTRY_COMPARE(laneBody(findRow(firstRowId)).top(), 0);
 
 A092 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:267
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S050] Refreshing from the document rebuilds a nonempty first-row projection.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1039,8 +1131,9 @@ Original expression:
   QTRY_VERIFY(!laneBody(findRow(firstRowId)).isEmpty());
 
 A093 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S051] The real DocumentSession undo request succeeds.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1049,8 +1142,9 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
 
 A094 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S052] Undo restores baseline SongState, history snapshot, and byte-identical encoded MIDI.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1067,8 +1161,9 @@ Original expression:
   QTRY_COMPARE(laneBody(findRow(firstRowId)).top(), 0);
 
 A096 | AutomationEditingTest::firstCcRowOriginRebuildAndUndo | src/checks/automation/automationrouting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S054] After undo the same first control-change row remains active and its synthetic-origin projection is nonempty, equivalent to the original nonempty rebuilt body predicate.
+Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
 
@@ -1149,3 +1244,324 @@ Shared helper: src/checks/automation/AutomationPageChecks.swift
 SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
+
+S013 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:25
+Swift expression:
+  report.expect(fixture.page.trackAvailable, cppID: id, message: "A001 track is available")
+
+S014 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:26
+Swift expression:
+  report.expect(fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0, cppID: id, message: "A002-A003 drawer and automation plot are available")
+
+S015 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:35
+Swift expression:
+  report.expect(pressHandled, cppID: id, message: "A004 middle press is handled")
+
+S016 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:36
+Swift expression:
+  report.expect(fixture.page.isPanning && fixture.page.interactionActive, cppID: id, message: "A004-A005 middle press enters pan mode and owns the gesture")
+
+S017 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:37
+Swift expression:
+  report.expect(!fixture.page.hasBand, cppID: id, message: "A006 middle pan does not create a band preview")
+
+S018 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:38
+Swift expression:
+  report.expect(fixture.page.observation.pointerKind == .pan, cppID: id, message: "middle press is routed to automation pan")
+
+S019 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:39
+Swift expression:
+  report.expect(fixture.page.pointerMove(x: 270, y: 72), cppID: id, message: "A008 middle drag is handled")
+
+S020 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:40
+Swift expression:
+  report.expect(fixture.page.plotWidth == beforeWidth && fixture.page.plotHeight == beforeHeight, cppID: id, message: "A008 middle drag keeps the automation plot geometry")
+
+S021 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:41
+Swift expression:
+  report.expect(fixture.document.state == beforeState && fixture.snapshot == beforeSnapshot,
+                    cppID: id, message: "A007 middle drag leaves document and history frozen")
+
+S022 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:43
+Swift expression:
+  report.expect(fixture.session.editCursor == beforeCursor, cppID: id, message: "A009 middle drag does not move the shared cursor")
+
+S023 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:52
+Swift expression:
+  report.expect(releaseHandled, cppID: id, message: "A011 middle release is handled")
+
+S024 | drawerAutomationMiddlePanIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:53
+Swift expression:
+  report.expect(!fixture.page.isPanning && !fixture.page.interactionActive
+                        && fixture.page.observation.pointerKind == nil && !fixture.page.hasBand,
+                    cppID: id, message: "A010-A012 middle release returns automation to idle without a band")
+
+S025 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:90
+Swift expression:
+  report.expect(fixture.page.trackAvailable && markerX >= 0 && markerX <= fixture.page.plotWidth, cppID: id, message: "A013-A014 voice marker is inside the voice plot")
+
+S026 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:91
+Swift expression:
+  report.expect(automation.trackAvailable && automation.activeParameter == pan,
+                    cppID: id, message: "A014-A015 Pan lane is valid in automation on the same session")
+
+S027 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:101
+Swift expression:
+  report.expect(handled, cppID: id, message: "A016 voice marker press is handled")
+
+S028 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:102
+Swift expression:
+  report.expect(automation.observation.pointerKind == nil, cppID: id, message: "A017 voice press does not enter an automation gesture")
+
+S029 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:103
+Swift expression:
+  report.expect(!automation.interactionActive && !automation.pointerGestureActive, cppID: id, message: "A018 voice press leaves automation idle")
+
+S030 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:104
+Swift expression:
+  report.expect(!automation.isPanning && !automation.hasBand, cppID: id, message: "A019 voice press creates neither automation pan nor band state")
+
+S031 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:105
+Swift expression:
+  report.expect(fixture.document.state == beforeState && fixture.document.revision == beforeRevision, cppID: id, message: "A020 voice press does not edit automation or document state")
+
+S032 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:106
+Swift expression:
+  report.expect(fixture.document.history.currentIdentity == beforeIdentity, cppID: id, message: "A020 voice press does not add history")
+
+S033 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:107
+Swift expression:
+  report.expect(fixture.session.editCursor == beforeCursor, cppID: id, message: "A021 voice press does not move the shared cursor")
+
+S034 | drawerAutomationVoicePressIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:108
+Swift expression:
+  report.expect(automation.plotWidth == beforeAutomationWidth
+                        && automation.plotHeight == beforeAutomationHeight,
+                    cppID: id, message: "A020 voice press preserves automation geometry")
+
+S035 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:134
+Swift expression:
+  report.expect(fixture.page.trackAvailable && fixture.page.publishedTabs.count > 1, cppID: id, message: "A080-A081 automation catalog exposes tempo and a first control-change row")
+
+S036 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:135
+Swift expression:
+  report.expect(firstIndex == 0, cppID: id, message: "A082 Volume is the first control-change catalog row")
+
+S037 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:137
+Swift expression:
+  report.expect(fixture.page.activeParameterIndex == firstIndex, cppID: id, message: "A083 first control-change row activates")
+
+S038 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:138
+Swift expression:
+  report.expect(fixture.page.projection?.points.isEmpty == false,
+                    cppID: id, message: "A083 first control-change row has a synthetic origin projection")
+
+S039 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:140
+Swift expression:
+  report.expect(fixture.page.plotHeight == 120, cppID: id, message: "A084 first row uses the configured plot origin and height")
+
+S040 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:141
+Swift expression:
+  report.expect(fixture.volumeLane == .controlChange(track: 0, controller: TimeDefaults.ccVolume),
+                    cppID: id, message: "A085 first row is a control-change parameter")
+
+S041 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:146
+Swift expression:
+  report.expect(x >= 0 && x <= fixture.page.plotWidth && y >= 0 && y <= fixture.page.plotHeight, cppID: id, message: "A086 pencil coordinate is inside the first row plot")
+
+S042 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:167
+Swift expression:
+  report.expect(pressHandled && releaseHandled, cppID: id, message: "A087 pencil press and release are handled")
+
+S043 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:168
+Swift expression:
+  report.expect(inserted.count == 1, cppID: id, message: "A088 pencil gesture inserts one first-row event")
+
+S044 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:169
+Swift expression:
+  report.expect(fixture.page.projection?.points.count == 1, cppID: id, message: "A089 first-row projection publishes the inserted point")
+
+S045 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:171
+Swift expression:
+  report.expect(committedPoints.count == 1
+                        && fixture.page.projection?.points.first?.tick == committedPoints[0].tick
+                        && fixture.page.projection?.points.first?.value == committedPoints[0].value,
+                    cppID: id, message: "A088 projection and document publish the same committed point")
+
+S046 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:175
+Swift expression:
+  report.expect(fixture.snapshot.revision == beforeSnapshot.revision + 1, cppID: id, message: "A090 pencil gesture commits one document revision")
+
+S047 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:176
+Swift expression:
+  report.expect(fixture.snapshot.identity != beforeSnapshot.identity && fixture.snapshot.canUndo, cppID: id, message: "A090 pencil gesture creates one undoable history entry")
+
+S048 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:179
+Swift expression:
+  report.expect(fixture.page.activeParameterIndex == firstIndex && fixture.page.activeParameter == fixture.volumeLane, cppID: id, message: "A091 refresh retains the first control-change row")
+
+S049 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:180
+Swift expression:
+  report.expect(fixture.values(fixture.volumeLane) == inserted, cppID: id, message: "A092 refresh rebuilds the first-row values from the document")
+
+S050 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:181
+Swift expression:
+  report.expect(fixture.page.projection?.points.count == 1, cppID: id, message: "A093 refresh rebuilds the first-row projection")
+
+S051 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:183
+Swift expression:
+  report.expect(fixture.undo(), cppID: id, message: "A093 inserted first-row point is undoable")
+
+S052 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:184
+Swift expression:
+  report.expect(fixture.document.state == beforeState && fixture.snapshot == beforeSnapshot
+                        && (try? fixture.document.state.file.encoded()) == beforeBytes,
+                    cppID: id, message: "A094 undo restores the exact serialized document and history")
+
+S053 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:187
+Swift expression:
+  report.expect(fixture.values(fixture.volumeLane).isEmpty,
+                    cppID: id, message: "A095 undo rebuilds the first control-change lane empty")
+
+S054 | drawerAutomationFirstControlChangeOriginGapChecks | src/checks/automation/automationrouting_gap.swift:189
+Swift expression:
+  report.expect(fixture.page.activeParameterIndex == firstIndex
+                        && fixture.page.projection?.points.isEmpty == false,
+                    cppID: id, message: "A096 undo keeps the first row active with its synthetic origin")
+
+S055 | drawerAutomationRightBandIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:211
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && fixture.page.projection != nil,
+                    cppID: id, message: "A022-A024 Pan row and automation projection are active")
+
+S056 | drawerAutomationRightBandIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:219
+Swift expression:
+  report.expect(fixture.page.hasGesture
+                        && fixture.page.observation.pointerKind == .pendingRange
+                        && !fixture.page.isPanning,
+                    cppID: id, message: "A025-A027 right press arms only the range preview")
+
+S057 | drawerAutomationRightBandIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:223
+Swift expression:
+  report.expect(fixture.document.state == baselineState && fixture.snapshot == baseline
+                        && fixture.session.editCursor == baselineCursor
+                        && fixture.page.plotWidth == baselineSize.0
+                        && fixture.page.plotHeight == baselineSize.1,
+                    cppID: id, message: "A028-A030 right press preserves document, geometry, and cursor")
+
+S058 | drawerAutomationRightBandIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:232
+Swift expression:
+  report.expect(fixture.page.observation.pointerKind == .range
+                        && fixture.page.observation.frozenParameter == fixture.panLane,
+                    cppID: id, message: "A031 dragged range preview contains only Pan")
+
+S059 | drawerAutomationRightBandIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:235
+Swift expression:
+  report.expect(fixture.document.state == baselineState && fixture.snapshot == baseline
+                        && fixture.session.editCursor == baselineCursor
+                        && fixture.page.plotWidth == baselineSize.0
+                        && fixture.page.plotHeight == baselineSize.1,
+                    cppID: id, message: "A032-A034 range preview preserves document, geometry, and cursor")
+
+S060 | drawerAutomationRightBandIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:244
+Swift expression:
+  report.expect(!fixture.page.hasGesture && !fixture.page.isPanning
+                        && fixture.page.observation.pointerKind == nil,
+                    cppID: id, message: "A035-A037 release clears preview and gesture state")
+
+S061 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:279
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && fixture.page.catalogIndex(of: fixture.panLane) >= 0
+                        && fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0,
+                    cppID: id, message: "A038-A041 Pan pencil target and delivered viewport are valid")
+
+S062 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:292
+Swift expression:
+  report.expect(fixture.page.hasGesture
+                        && fixture.page.observation.pointerKind == .pencilStroke
+                        && !fixture.page.isPanning,
+                    cppID: id, message: "A042-A044 pencil press owns only the Pan stroke")
+
+S063 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:296
+Swift expression:
+  report.expect(fixture.document.state == baselineState && fixture.snapshot == baseline
+                        && fixture.session.editCursor == cursorBefore
+                        && fixture.page.plotWidth == baselineSize.0
+                        && fixture.page.plotHeight == baselineSize.1,
+                    cppID: id, message: "A045-A047 pencil press preserves frozen state, geometry, and cursor")
+
+S064 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:309
+Swift expression:
+  report.expectEqual(["48:96"], fixture.values(fixture.panLane),
+                         cppID: id, what: "A048-A049 pencil writes the mapped Pan point")
+
+S065 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:311
+Swift expression:
+  report.expect(fixture.document.state != baselineState
+                        && fixture.document.revision == baseline.revision + 1
+                        && fixture.snapshot.canUndo
+                        && fixture.snapshot.identity != baseline.identity,
+                    cppID: id, message: "A050-A053 pencil creates one document revision and history entry")
+
+S066 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:316
+Swift expression:
+  report.expect(fixture.values(fixture.modulationLane) == modulationBefore
+                        && fixture.values(fixture.volumeLane) == volumeBefore
+                        && fixture.values(voiceLane) == voiceBefore
+                        && fixture.values(fixture.bendLane) == bendBefore
+                        && fixture.tempoValues == tempoBefore,
+                    cppID: id, message: "A054-A058 pencil preserves every non-Pan lane")
+
+S067 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:322
+Swift expression:
+  report.expect(fixture.page.plotWidth == baselineSize.0
+                        && fixture.page.plotHeight == baselineSize.1
+                        && fixture.session.editCursor == cursorBefore,
+                    cppID: id, message: "A059-A060 pencil release preserves geometry and cursor")
+
+S068 | drawerAutomationPencilLaneIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:326
+Swift expression:
+  report.expect(!fixture.page.hasGesture && !fixture.page.isPanning
+                        && fixture.page.observation.pointerKind == nil,
+                    cppID: id, message: "A061-A063 pencil release clears gesture and preview state")
+
+S069 | drawerAutomationBodyCursorIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:349
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                        && fixture.page.projection != nil
+                        && expectedCursor != cursorBefore,
+                    cppID: id, message: "A064-A067 Pan row and distinct cursor target are valid")
+
+S070 | drawerAutomationBodyCursorIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:359
+Swift expression:
+  report.expect(fixture.page.hasGesture && !fixture.page.isPanning
+                        && fixture.page.observation.pointerKind == .sweep,
+                    cppID: id, message: "A068-A070 body press owns no pan or range preview")
+
+S071 | drawerAutomationBodyCursorIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:362
+Swift expression:
+  report.expect(fixture.document.state == baselineState && fixture.snapshot == baseline
+                        && fixture.session.editCursor == cursorBefore
+                        && fixture.page.plotWidth == baselineSize.0
+                        && fixture.page.plotHeight == baselineSize.1,
+                    cppID: id, message: "A071-A073 body press preserves document, geometry, and cursor")
+
+S072 | drawerAutomationBodyCursorIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:372
+Swift expression:
+  report.expect(fixture.session.editCursor == expectedCursor,
+                    cppID: id, message: "A074 body release commits only the mapped cursor")
+
+S073 | drawerAutomationBodyCursorIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:374
+Swift expression:
+  report.expect(fixture.document.state == baselineState && fixture.snapshot == baseline
+                        && fixture.page.plotWidth == baselineSize.0
+                        && fixture.page.plotHeight == baselineSize.1,
+                    cppID: id, message: "A075-A076 cursor commit preserves document and geometry")
+
+S074 | drawerAutomationBodyCursorIsolationGapChecks | src/checks/automation/automationrouting_gap.swift:378
+Swift expression:
+  report.expect(!fixture.page.hasGesture && !fixture.page.isPanning
+                        && fixture.page.observation.pointerKind == nil,
+                    cppID: id, message: "A077-A079 cursor release clears gesture and preview state")

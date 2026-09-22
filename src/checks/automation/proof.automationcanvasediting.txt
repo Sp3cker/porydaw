@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationcanvasediting.cpp
 Original SHA-256: 86ae100130f53fbd21bcc365842cdb7360a0751afed4e39d4433b8bf9f24d275
 Swift counterpart: src/checks/automation/automationcanvasediting.swift
-Swift SHA-256: 11cf7e3dd791e0ef1e75cf46e47da3cd818e31b57580e4e86773309ce1c3c17a
+Swift SHA-256: f9bd0694c88a490f8100ede8aa1dc2c8c38b56201a7c6365981959a125b24332
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,7 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -44,111 +44,111 @@ src/checks/automation/automationcanvasediting.cpp:235 | for (const PlaybackBound
 Original assertion inventory
 
 A001 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S057 resolves the staged controller lane in the production catalog.
 Original expression:
   QVERIFY(lane.valid())
 
 A002 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S058 starts the same production pointer route on a blank lane position.
 Original expression:
   QVERIFY(
           automationInput().bounds().contains(automationInput().mapFromScene(QPointF(blankWindow))))
 
 A003 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S059 verifies sub-threshold motion commits no document or history change.
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A004 | AutomationEditingTest::activationSlopDoesNotCommit | src/checks/automation/automationcanvasediting.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S060 verifies release below activation slop remains unchanged.
 Original expression:
   QCOMPARE(laneValue(kBlankPointTick), -1)
 
 A005 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S061 resolves the Bend lane used by the multilane sequence.
 Original expression:
   QVERIFY(lane.valid())
 
 A006 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S062 verifies the initial page has no active time selection.
 Original expression:
   QVERIFY(!view.selectionModel().timeSelection().active())
 
 A007 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S069 verifies clearTimeSelection publishes an inactive selection.
 Original expression:
   QVERIFY(!view.selectionModel().timeSelection().active())
 
 A008 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S063 activates Tempo through the production page.
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A009 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S064 verifies applying the selection publishes active state.
 Original expression:
   QVERIFY(view.selectionModel().timeSelection().active())
 
 A010 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S065 verifies the complete noncontiguous lane set.
 Original expression:
   QVERIFY(view.selectionModel().timeSelection().lanes == selection.lanes)
 
 A011 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S066 verifies lane scope is published exactly.
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().scope, selection.scope)
 
 A012 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S067 verifies the selected start tick.
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().startTick, selection.startTick)
 
 A013 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S068 verifies the selected end tick.
 Original expression:
   QCOMPARE(view.selectionModel().timeSelection().endTick, selection.endTick)
 
 A014 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S069 verifies clearTimeSelection makes the selection inactive.
 Original expression:
   QVERIFY(!cleared.active())
 
 A015 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S070 verifies clearTimeSelection restores Tracks scope.
 Original expression:
   QCOMPARE(cleared.scope, songview::EditorSelectionModel::TimeSelection::Tracks)
 
 A016 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S071 verifies clearTimeSelection restores start tick zero.
 Original expression:
   QCOMPARE(cleared.startTick, uint64_t{0})
 
 A017 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S071 verifies clearTimeSelection restores end tick zero.
 Original expression:
   QCOMPARE(cleared.endTick, uint64_t{0})
 
 A018 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S072 verifies clearTimeSelection removes every lane.
 Original expression:
   QVERIFY(cleared.lanes.empty())
 
@@ -165,26 +165,26 @@ Original expression:
   QVERIFY(afterRebuild.lanes.empty())
 
 A021 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S073 reapplies and observes the complete noncontiguous lane set.
 Original expression:
   QVERIFY(view.selectionModel().timeSelection().lanes == noncontiguous.lanes)
 
 A022 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:142
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S074 verifies replacement atomically publishes the replacement lane set.
 Original expression:
   QVERIFY(view.selectionModel().timeSelection().lanes == noncontiguous.lanes)
 
 A023 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S075-S076 route Escape and verify selection activity is cleared.
 Original expression:
   QVERIFY(!view.selectionModel().timeSelection().active())
 
 A024 | AutomationEditingTest::selectionClearingAndMultilaneReplacement | src/checks/automation/automationcanvasediting.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S076 verifies Escape leaves the published lane set empty.
 Original expression:
   QVERIFY(view.selectionModel().timeSelection().lanes.empty())
 
@@ -195,14 +195,14 @@ Original expression:
   QVERIFY(lane.valid())
 
 A026 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts QQuickWindow mouse-grab ownership by the native automation input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(quickWindow().mouseGrabberItem() == &automationInput())
 
 A027 | AutomationEditingTest::additionalDragCancellationRoutesLeaveDocumentUntouched | src/checks/automation/automationcanvasediting.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts release of the QQuickWindow native mouse grab — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(!quickWindow().mouseGrabberItem())
 
@@ -598,3 +598,126 @@ S056 | drawerAutomationContextAndPublicationDiagnostics | src/checks/automation/
 Swift expression:
   report.expect(copyAvailable, cppID: drawerAutomationContextID,
                     message: "a retained command subscriber observes selection after page reattachment")
+
+S057 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:241
+Swift expression:
+  report.expect(AutomationCatalog.index(of: slop.panLane, track: 0) != nil,
+                cppID: drawerAutomationCancelID,
+                message: "activation-slop lane resolves in the production catalog")
+
+S058 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:246
+Swift expression:
+  report.expect(slop.page.pointerPress(x: blankX, y: blankY,
+                                       surface: AutomationInputSurface.plot.rawValue,
+                                       button: 1, modifiers: 0),
+                cppID: drawerAutomationCancelID,
+                message: "blank-lane press starts the production pointer route")
+
+S059 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:253
+Swift expression:
+  report.expectEqual(slopBefore, slop.snapshot, cppID: drawerAutomationCancelID,
+                     what: "sub-threshold motion commits no document change")
+
+S060 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:256
+Swift expression:
+  report.expectEqual(slopBefore, slop.snapshot, cppID: drawerAutomationCancelID,
+                     what: "sub-threshold release leaves document and history untouched")
+
+S061 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:262
+Swift expression:
+  report.expect(AutomationCatalog.index(of: bend, track: 0) != nil,
+                cppID: drawerAutomationCancelID,
+                message: "the production catalog resolves the Bend lane")
+
+S062 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:265
+Swift expression:
+  report.expect(fixture.page.selection?.isActive != true,
+                cppID: drawerAutomationCancelID,
+                message: "a fresh page has no active time selection")
+
+S063 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:268
+Swift expression:
+  report.expect(fixture.page.activeParameter == .tempo
+                    || fixture.page.activateParameter(.tempo),
+                cppID: drawerAutomationCancelID,
+                message: "the page activates Tempo before applying selection")
+
+S064 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:277
+Swift expression:
+  report.expect(fixture.page.selection?.isActive == true,
+                cppID: drawerAutomationCancelID,
+                message: "applying a nonempty selection makes it active")
+
+S065 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:280
+Swift expression:
+  report.expectEqual(Set([fixture.panLane, bend]), fixture.page.selection?.lanes ?? [],
+                     cppID: drawerAutomationCancelID,
+                     what: "selection publishes the complete noncontiguous lane set")
+
+S066 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:283
+Swift expression:
+  report.expect(fixture.page.selection?.scope == .lanes,
+                cppID: drawerAutomationCancelID,
+                message: "selection publishes lane scope")
+
+S067 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:286
+Swift expression:
+  report.expectEqual(Tick(24), fixture.page.selection?.range.startTick ?? -1,
+                     cppID: drawerAutomationCancelID,
+                     what: "selection publishes its start tick")
+
+S068 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:289
+Swift expression:
+  report.expectEqual(Tick(120), fixture.page.selection?.range.endTick ?? -1,
+                     cppID: drawerAutomationCancelID,
+                     what: "selection publishes its end tick")
+
+S069 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:294
+Swift expression:
+  report.expect(fixture.page.selection?.isActive != true,
+                cppID: drawerAutomationCancelID,
+                message: "clearing makes the time selection inactive")
+
+S070 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:297
+Swift expression:
+  report.expect((fixture.page.selection?.scope ?? .tracks) == .tracks,
+                cppID: drawerAutomationCancelID,
+                message: "clearing restores the default Tracks scope")
+
+S071 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:300
+Swift expression:
+  report.expect((fixture.page.selection?.range.startTick ?? 0) == 0
+                    && (fixture.page.selection?.range.endTick ?? 0) == 0,
+                cppID: drawerAutomationCancelID,
+                message: "clearing restores zero start and end ticks")
+
+S072 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:304
+Swift expression:
+  report.expect((fixture.page.selection?.lanes ?? []).isEmpty,
+                cppID: drawerAutomationCancelID,
+                message: "clearing removes every selected lane")
+
+S073 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:309
+Swift expression:
+  report.expectEqual(Set([fixture.panLane, bend]), fixture.page.selection?.lanes ?? [],
+                     cppID: drawerAutomationCancelID,
+                     what: "rebuild setup preserves the noncontiguous lane set")
+
+S074 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:316
+Swift expression:
+  report.expectEqual(Set([AutomationParameter.controlChange(track: 0, controller: 21)]),
+                     fixture.page.selection?.lanes ?? [],
+                     cppID: drawerAutomationCancelID,
+                     what: "a replacement selection replaces the lane set atomically")
+
+S075 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:320
+Swift expression:
+  report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
+                message: "Escape consumes the active replacement selection")
+
+S076 | drawerAutomationActivationAndSelectionContracts | src/checks/automation/automationcanvasediting.swift:322
+Swift expression:
+  report.expect(fixture.page.selection?.isActive != true
+                    && (fixture.page.selection?.lanes ?? []).isEmpty,
+                cppID: drawerAutomationCancelID,
+                message: "Escape clears replacement activity and lanes")

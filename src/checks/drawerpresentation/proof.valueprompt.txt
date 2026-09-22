@@ -301,8 +301,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A017 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:149
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A017 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -310,8 +310,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A018 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A018 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -319,8 +319,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1)
 
 A019 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:151
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A019 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -367,8 +367,8 @@ Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A024 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:159
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A024 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -404,8 +404,8 @@ Original expression:
   QVERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A028 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:164
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A028 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -413,8 +413,8 @@ Original expression:
   QCOMPARE(tempoBpmAt(document, kNodeTick + 16), CoreTimeDefaults::kMinTempoBpm)
 
 A029 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:165
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A029 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -422,8 +422,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 3)
 
 A030 | DrawerPresentationTest::valuePromptTempoLimitsAcceptAndClamp | src/checks/drawerpresentation/valueprompt.cpp:166
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A030 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -481,8 +481,8 @@ Original expression:
                "the Pan parameter label did not activate")
 
 A035 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:186
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A035 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       const LaneHandle cc = ccLaneHandle(*canvas);
@@ -554,8 +554,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A042 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:202
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A042 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -563,8 +563,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 1)
 
 A043 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:203
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A043 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -572,8 +572,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1)
 
 A044 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:205
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A044 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       const auto points = document.lanePoints(0, kController);
@@ -582,8 +582,8 @@ Original expression:
   QCOMPARE(points.size(), std::size_t{2})
 
 A045 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:207
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A045 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       const DocLanePoint &inserted = points[0].tick == kNodeTick ? points[1] : points[0];
@@ -624,8 +624,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A049 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A049 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       DocLanePoint point;
@@ -634,8 +634,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, inserted.tick, &point))
 
 A050 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:218
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A050 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -672,8 +672,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A054 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:224
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A054 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -681,8 +681,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, inserted.tick, &point))
 
 A055 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:225
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A055 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -690,8 +690,8 @@ Original expression:
   QCOMPARE(point.value, 127)
 
 A056 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:226
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A056 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -699,8 +699,8 @@ Original expression:
   QCOMPARE(document.revision(), revision + 3)
 
 A057 | DrawerPresentationTest::valuePromptCcCenterOffsetInsertionCommit | src/checks/drawerpresentation/valueprompt.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A057 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -769,8 +769,8 @@ Original expression:
                "the Pan parameter label did not activate")
 
 A063 | DrawerPresentationTest::valuePromptEscapeCancelsAndReturnsFocus | src/checks/drawerpresentation/valueprompt.cpp:250
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A063 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       const LaneHandle escapeCc = ccLaneHandle(*canvas);
@@ -874,8 +874,8 @@ Original expression:
   QVERIFY(input)
 
 A073 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:278
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A073 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       SongDocument &document = fixture.tab->document();
@@ -953,8 +953,8 @@ Original expression:
   QTRY_VERIFY(!automation_valueprompt::promptVisible(chrome))
 
 A080 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:298
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A080 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       DocLanePoint point;
@@ -963,8 +963,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, kNodeTick, &point))
 
 A081 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A081 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -972,8 +972,8 @@ Original expression:
   QCOMPARE(point.value, 64)
 
 A082 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:300
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A082 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -981,8 +981,8 @@ Original expression:
   QVERIFY(document.findLanePoint(0, kController, kNodeTick + 24, &point))
 
 A083 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:301
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A083 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -990,8 +990,8 @@ Original expression:
   QCOMPARE(point.value, 32)
 
 A084 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:302
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A084 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -999,8 +999,8 @@ Original expression:
   QCOMPARE(document.lanePoints(0, kController).size(), std::size_t{2})
 
 A085 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:303
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A085 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -1008,8 +1008,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1)
 
 A086 | DrawerPresentationTest::valuePromptFocusLossDocumentChangeAndPageHideCancel | src/checks/drawerpresentation/valueprompt.cpp:304
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A086 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
 
@@ -1115,8 +1115,8 @@ Original expression:
   QVERIFY(input)
 
 A096 | DrawerPresentationTest::valuePromptCancelAndLateAcceptWriteNothing | src/checks/drawerpresentation/valueprompt.cpp:335
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: S009 row A096 in src/checks/drawerpresentation/valueprompt_gap.swift drives AutomationPage open/draft/accept/cancel dispatch against real SongDocument history for tempo and centered CC domains; published bounds, offset conversion, writes, cancellation and undo preserve the original prompt preconditions and event sequence. Verification evidence: pending orchestrator run
 Source context since previous assertion:
   ;
       SongDocument &document = fixture.tab->document();
@@ -1236,3 +1236,9 @@ S007 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinp
 S008 | drawerOriginalNumericPromptTransaction | src/checks/selectionkey/localinputtier_text.swift:42
   report.expect(fixture.document.state == state, cppID: id,
                     message: "draft and cancellation preserve the full song contents")
+
+
+S009 | drawerValuePromptPortableGapChecks | src/checks/drawerpresentation/valueprompt_gap.swift:87
+Swift expression:
+  report.expect(contract, cppID: drawerValuePromptGapID,
+                    message: "\(row)-typed prompt publication and document transaction contract")

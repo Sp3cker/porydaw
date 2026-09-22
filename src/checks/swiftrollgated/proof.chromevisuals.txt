@@ -468,8 +468,8 @@ Original expression:
 QCOMPARE(*gutterSeparatorRow, *rollSeparatorRow);
 
 A031 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:247
-Disposition: GAP
-Mapping/reason: Theme-role color-math precondition with no theme predicate in the Swift counterpart; the distinguishability obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 composites the production gridLineBar role over both production row roles and applies the same per-channel near threshold. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 
     const QColor barInk = themes::color(themes::Role::song_view_grid);
@@ -486,8 +486,8 @@ QVERIFY2(!gridcheck::colorsNear(expectedBarNatural, natural) &&
              "the active theme makes bar lines indistinguishable from both row roles");
 
 A032 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:250
-Disposition: GAP
-Mapping/reason: Theme-role color-math precondition with no theme predicate in the Swift counterpart; the distinguishability obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S047 composites the production gridLineBeat role over both production row roles and applies the same per-channel near threshold. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -809,3 +809,15 @@ S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:566
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
+
+S046 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:54
+Swift expression:
+  report.expect(gatedDistinct(barNatural, naturalRGB)
+      && gatedDistinct(barAccidental, accidentalRGB), cppID: chromeGapID,
+                message: "A031 bar role remains distinguishable over both row roles")
+
+S047 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:59
+Swift expression:
+  report.expect(gatedDistinct(beatNatural, naturalRGB)
+      && gatedDistinct(beatAccidental, accidentalRGB), cppID: chromeGapID,
+                message: "A032 beat role remains distinguishable over both row roles")

@@ -231,3 +231,96 @@ func drawerAutomationContextAndPublicationDiagnostics(_ report: CheckReport, sui
     report.expect(copyAvailable, cppID: drawerAutomationContextID,
                   message: "a retained command subscriber observes selection after page reattachment")
 }
+
+@MainActor
+func drawerAutomationActivationAndSelectionContracts(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let slop = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [(24, 64)])
+    report.expect(AutomationCatalog.index(of: slop.panLane, track: 0) != nil,
+                  cppID: drawerAutomationCancelID,
+                  message: "activation-slop lane resolves in the production catalog")
+    let blankX = slop.x(72)
+    let blankY = slop.y(slop.panLane, 100)
+    report.expect(slop.page.pointerPress(x: blankX, y: blankY,
+                                         surface: AutomationInputSurface.plot.rawValue,
+                                         button: 1, modifiers: 0),
+                  cppID: drawerAutomationCancelID,
+                  message: "blank-lane press starts the production pointer route")
+    let slopBefore = slop.snapshot
+    _ = slop.page.pointerMove(x: blankX + 2, y: blankY + 2, buttons: 1, modifiers: 0)
+    report.expectEqual(slopBefore, slop.snapshot, cppID: drawerAutomationCancelID,
+                       what: "sub-threshold motion commits no document change")
+    _ = slop.page.pointerRelease(x: blankX + 2, y: blankY + 2, button: 1, modifiers: 0)
+    report.expectEqual(slopBefore, slop.snapshot, cppID: drawerAutomationCancelID,
+                       what: "sub-threshold release leaves document and history untouched")
+
+    let fixture = drawerAutomationAutomationFixture(
+        suite: suite, service: service, pan: [(24, 64)])
+    let bend = AutomationParameter.pitchBend(track: 0)
+    report.expect(AutomationCatalog.index(of: bend, track: 0) != nil,
+                  cppID: drawerAutomationCancelID,
+                  message: "the production catalog resolves the Bend lane")
+    report.expect(fixture.page.selection?.isActive != true,
+                  cppID: drawerAutomationCancelID,
+                  message: "a fresh page has no active time selection")
+    report.expect(fixture.page.activeParameter == .tempo
+                      || fixture.page.activateParameter(.tempo),
+                  cppID: drawerAutomationCancelID,
+                  message: "the page activates Tempo before applying selection")
+
+    let noncontiguous = AutomationTimeSelection(
+        range: TimeRange(startTick: 24, endTick: 120), scope: .lanes,
+        lanes: [fixture.panLane, bend])
+    fixture.page.applyTimeSelection(noncontiguous)
+    report.expect(fixture.page.selection?.isActive == true,
+                  cppID: drawerAutomationCancelID,
+                  message: "applying a nonempty selection makes it active")
+    report.expectEqual(Set([fixture.panLane, bend]), fixture.page.selection?.lanes ?? [],
+                       cppID: drawerAutomationCancelID,
+                       what: "selection publishes the complete noncontiguous lane set")
+    report.expect(fixture.page.selection?.scope == .lanes,
+                  cppID: drawerAutomationCancelID,
+                  message: "selection publishes lane scope")
+    report.expectEqual(Tick(24), fixture.page.selection?.range.startTick ?? -1,
+                       cppID: drawerAutomationCancelID,
+                       what: "selection publishes its start tick")
+    report.expectEqual(Tick(120), fixture.page.selection?.range.endTick ?? -1,
+                       cppID: drawerAutomationCancelID,
+                       what: "selection publishes its end tick")
+
+    fixture.page.clearTimeSelection()
+    report.expect(fixture.page.selection?.isActive != true,
+                  cppID: drawerAutomationCancelID,
+                  message: "clearing makes the time selection inactive")
+    report.expect((fixture.page.selection?.scope ?? .tracks) == .tracks,
+                  cppID: drawerAutomationCancelID,
+                  message: "clearing restores the default Tracks scope")
+    report.expect((fixture.page.selection?.range.startTick ?? 0) == 0
+                      && (fixture.page.selection?.range.endTick ?? 0) == 0,
+                  cppID: drawerAutomationCancelID,
+                  message: "clearing restores zero start and end ticks")
+    report.expect((fixture.page.selection?.lanes ?? []).isEmpty,
+                  cppID: drawerAutomationCancelID,
+                  message: "clearing removes every selected lane")
+
+    fixture.page.applyTimeSelection(noncontiguous)
+    report.expectEqual(Set([fixture.panLane, bend]), fixture.page.selection?.lanes ?? [],
+                       cppID: drawerAutomationCancelID,
+                       what: "rebuild setup preserves the noncontiguous lane set")
+    let replacement = AutomationTimeSelection(
+        range: TimeRange(startTick: 48, endTick: 96), scope: .lanes,
+        lanes: [.controlChange(track: 0, controller: 21)])
+    fixture.page.applyTimeSelection(replacement)
+    report.expectEqual(Set([AutomationParameter.controlChange(track: 0, controller: 21)]),
+                       fixture.page.selection?.lanes ?? [],
+                       cppID: drawerAutomationCancelID,
+                       what: "a replacement selection replaces the lane set atomically")
+    report.expect(fixture.page.handleEscape(), cppID: drawerAutomationCancelID,
+                  message: "Escape consumes the active replacement selection")
+    report.expect(fixture.page.selection?.isActive != true
+                      && (fixture.page.selection?.lanes ?? []).isEmpty,
+                  cppID: drawerAutomationCancelID,
+                  message: "Escape clears replacement activity and lanes")
+}

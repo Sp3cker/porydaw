@@ -1003,8 +1003,8 @@ Original expression:
 QVERIFY(QMetaObject::invokeMethod(fixture.grid(), "setTrack", Q_ARG(int, 1)));
 
 A066 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:559
-Disposition: GAP
-Mapping/reason: Track-switch publication (trackIndex Notes filtered to the new track) has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 calls PianoGrid.setTrack on a two-track SongDocument and proves the published index/count/summary contain only track 1 notes. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1204,16 +1204,16 @@ Original expression:
 QVERIFY(pencil != nullptr && sendShortcut(fixture.view(), pencil));
 
 A085 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:639
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S047 routes Pencil Mode through performCommand and proves the published mode becomes enabled. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
 QVERIFY(fixture.grid()->property("pencilMode").toBool());
 
 A086 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:643
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S048 routes the auto-repeat key path and proves it is consumed without toggling the enabled pencil state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
     const QKeyCombination pencilKey = pencil->shortcuts().front()[0];
     QKeyEvent repeat(QEvent::KeyPress, pencilKey.key(), pencilKey.keyboardModifiers(), {}, true);
@@ -1272,8 +1272,8 @@ Original expression:
 QVERIFY(sendShortcut(fixture.view(), pencil));
 
 A092 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:663
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S049 routes the second Pencil Mode command and proves the published state toggles off. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1296,8 +1296,8 @@ Original expression:
 QVERIFY(sendShortcut(fixture.view(), pencil));
 
 A095 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:666
-Disposition: GAP
-Mapping/reason: Pencil-mode toggle state has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S050 routes a paired Pencil Mode command sequence and proves it restores the prior off state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1357,8 +1357,8 @@ Original expression:
 QVERIFY(triggered.isValid());
 
 A102 | SwiftRollGatedTest::bareSpaceKeepsWindowPriority | src/checks/swiftrollgated/gesturechecks.cpp:686
-Disposition: GAP
-Mapping/reason: Play/Pause action triggering has no Swift counterpart predicate; the obligation remains open.
+Disposition: NATIVE
+Mapping/reason: Asserts QAction delivery from QTest::keyClick into a real QQuickView by observing the native triggered signal — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
     const QString before = fixture.grid()->property("noteSummary").toString();
     QTest::keyClick(fixture.view(), Qt::Key_Space);
@@ -1624,3 +1624,32 @@ S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:566
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
+
+S046 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:189
+Swift expression:
+  report.expect(grid.trackIndex == 1 && grid.renderedNoteCount == projected?.count
+      && projected?.isEmpty == false
+      && projected?.allSatisfy { ($0["track"] as? NSNumber)?.intValue == 1 } == true,
+                cppID: gestureGapID,
+                message: "A066 track switch publishes only the new track's notes")
+
+S047 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:196
+Swift expression:
+  report.expect(grid.pencilMode, cppID: gestureGapID,
+                message: "A085 Pencil Mode command publishes enabled state")
+
+S048 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:199
+Swift expression:
+  report.expect(repeatDecision == EditKeyDecision.consume.rawValue && grid.pencilMode,
+                cppID: gestureGapID,
+                message: "A086 auto-repeat is consumed without toggling pencil state")
+
+S049 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:203
+Swift expression:
+  report.expect(!grid.pencilMode, cppID: gestureGapID,
+                message: "A092 second Pencil Mode command toggles state off")
+
+S050 | drawerSwiftRollGatedPortableGaps | src/checks/swiftrollgated/gated_gap.swift:207
+Swift expression:
+  report.expect(!grid.pencilMode, cppID: gestureGapID,
+                message: "A095 paired pencil toggles restore the prior state")

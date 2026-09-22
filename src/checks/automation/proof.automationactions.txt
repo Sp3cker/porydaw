@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationactions.cpp
 Original SHA-256: 32f5e5de2ff62c9d9bf4b0c9b8b73f462a356dd2f83a5f22bfba1e65fad98768
 Swift counterpart: src/checks/automation/automationactions.swift
-Swift SHA-256: fdc0ace0e3434ea4f9d707c211c61cd8275283c4b5b1b0c7abeeb9ee3e4aa626
+Swift SHA-256: 2800daaf266f7c9f99d7905ed347bc22e05a4e00b390674c992fa247d93828d6
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,7 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -35,98 +35,98 @@ src/checks/automation/automationactions.cpp:143 | for (const LaneHandle lane : {
 Original assertion inventory
 
 A001 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:35
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S013 verifies the canonical Pencil action row exists and names the toggle operation.
 Original expression:
   QVERIFY(action)
 
 A002 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:37
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: The shipped keymap binding remains host-side; Swift receives an already-resolved EditCommand and cannot predicate the concrete key.
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A003 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S015 executes the first routed press and observes the checked page state.
 Original expression:
   QVERIFY(action->isChecked())
 
 A004 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S016 verifies release leaves the checked latch unchanged.
 Original expression:
   QVERIFY(action->isChecked())
 
 A005 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S017 executes the second routed press and observes the unchecked state.
 Original expression:
   QVERIFY(!action->isChecked())
 
 A006 | AutomationEditingTest::actionShortcutLatching | src/checks/automation/automationactions.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S018 verifies release leaves the unchecked latch unchanged.
 Original expression:
   QVERIFY(!action->isChecked())
 
 A007 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S013 verifies the canonical Pencil action used by the text-immunity sequence.
 Original expression:
   QVERIFY(action)
 
 A008 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:56
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: The shipped keymap binding remains host-side; Swift receives an already-resolved EditCommand and cannot predicate the concrete key.
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A009 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:62
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts native QLineEdit keyboard focus before Qt key delivery — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(editor.hasFocus())
 
 A010 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts QTest::keyClick text delivery into a native QLineEdit — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(editor.text(), QStringLiteral("b"))
 
 A011 | AutomationEditingTest::actionTextInputImmunity | src/checks/automation/automationactions.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S023-S024 route an unbound text key to its owner and verify Pencil remains unchecked.
 Original expression:
   QVERIFY(!action->isChecked())
 
 A012 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S013 verifies the canonical Pencil action used by the repeat sequence.
 Original expression:
   QVERIFY(action)
 
 A013 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:75
 Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Mapping/reason: The shipped keymap binding remains host-side; Swift receives an already-resolved EditCommand and cannot predicate the concrete key.
 Original expression:
   QVERIFY(shortcut.key() != Qt::Key_unknown)
 
 A014 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S019 executes a real routed press and observes Pencil checked.
 Original expression:
   QVERIFY(action->isChecked())
 
 A015 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S020-S021 consume auto-repeat without execution and preserve the latch.
 Original expression:
   QVERIFY(action->isChecked())
 
 A016 | AutomationEditingTest::actionRepeatImmunity | src/checks/automation/automationactions.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S022 verifies repeat release leaves Pencil checked.
 Original expression:
   QVERIFY(action->isChecked())
 
@@ -431,3 +431,68 @@ S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactio
 Swift expression:
   report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                          what: "the Qt control bit a QML event carries lands the drag on the neutral")
+
+S013 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:78
+Swift expression:
+  report.expect(policy.command == .pencilMode && policy.standaloneOperation == .pencilToggle,
+                cppID: drawerAutomationModifierMappingID,
+                message: "the canonical action table contains the Pencil toggle command")
+
+S014 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:81
+Swift expression:
+  report.expect(policy.keyRoute == .availabilityGated
+                    && policy.autoRepeatRule == .consumeWhenEligible,
+                cppID: drawerAutomationModifierMappingID,
+                message: "Pencil has the canonical gated repeat policy")
+
+S015 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:102
+Swift expression:
+  report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "the first shortcut press checks Pencil")
+
+S016 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:104
+Swift expression:
+  report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "shortcut release leaves the latched action checked")
+
+S017 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:107
+Swift expression:
+  report.expect(!fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "the second shortcut press unchecks Pencil")
+
+S018 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:109
+Swift expression:
+  report.expect(!fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "second shortcut release leaves Pencil unchecked")
+
+S019 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:113
+Swift expression:
+  report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "a real shortcut press checks Pencil before repeat delivery")
+
+S020 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:115
+Swift expression:
+  report.expect(decision(autoRepeat: true) == .consume,
+                cppID: drawerAutomationModifierMappingID,
+                message: "an auto-repeat shortcut press is consumed without execution")
+
+S021 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:119
+Swift expression:
+  report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "auto-repeat leaves the Pencil latch checked")
+
+S022 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:121
+Swift expression:
+  report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "repeat release leaves Pencil checked")
+
+S023 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:124
+Swift expression:
+  report.expect(decision(autoRepeat: false, command: nil) == .decline,
+                cppID: drawerAutomationModifierMappingID,
+                message: "an unbound text key stays with its text owner")
+
+S024 | drawerAutomationActionShortcutContracts | src/checks/automation/automationactions.swift:127
+Swift expression:
+  report.expect(!fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                message: "text input does not toggle Pencil")

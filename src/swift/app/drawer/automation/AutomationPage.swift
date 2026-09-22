@@ -36,6 +36,30 @@ public enum AutomationPagePolicy {
     public static let accessibleName = "Automation"
 }
 
+enum AutomationPointerObservationKind: Equatable, Sendable {
+    case nodeDrag
+    case originPhantomDrag
+    case pencilStroke
+    case sweep
+    case ramp
+    case pendingRange
+    case range
+    case pan
+}
+
+struct AutomationPageObservation: Sendable {
+    /// The complete identity of the currently open menu target.
+    let menuTarget: AutomationMenuTarget?
+    /// The semantic kind of the active pointer interaction.
+    let pointerKind: AutomationPointerObservationKind?
+    /// The stable target tick captured by a single-anchor interaction.
+    let frozenTick: Tick?
+    /// The parameter captured for the active revision-bound interaction.
+    let frozenParameter: AutomationParameter?
+    /// The reducer's typed cursor intent after publication.
+    let cursorIntent: AutomationCursorKind
+}
+
 // Mouse-hint profiles are plain scene values; the Qt-facing publication owns
 // their reconciliation.
 
@@ -224,6 +248,43 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored public var frozenRevision: UInt64? { state.pointer.gestureFacts?.revision ?? state.modal.facts?.revision }
     @QtIgnored public var menuRowActions: [Int] { state.modal.menu?.rows.map(\.actionId) ?? [] }
     @QtIgnored public var menuTargetIsPoint: Bool { if case .point = state.modal.menu?.target { return true }; return false }
+    @QtIgnored var observation: AutomationPageObservation {
+        let pointerKind: AutomationPointerObservationKind?
+        let frozenTick: Tick?
+        switch state.pointer {
+        case .idle:
+            pointerKind = nil
+            frozenTick = nil
+        case let .node(transaction, _):
+            pointerKind = .nodeDrag
+            frozenTick = transaction.targets.indices.contains(transaction.grabbedPoint)
+                ? transaction.targets[transaction.grabbedPoint].source.tick : nil
+        case let .phantom(transaction, _):
+            pointerKind = .originPhantomDrag
+            frozenTick = transaction.target.source.tick
+        case .pencil:
+            pointerKind = .pencilStroke
+            frozenTick = nil
+        case let .sweep(transaction, _):
+            pointerKind = transaction.mode == .ramp ? .ramp : .sweep
+            frozenTick = transaction.anchor.tick
+        case let .pendingBand(band):
+            pointerKind = .pendingRange
+            frozenTick = band.anchorTick
+        case let .band(band):
+            pointerKind = .range
+            frozenTick = band.anchorTick
+        case .pan:
+            pointerKind = .pan
+            frozenTick = nil
+        }
+        return AutomationPageObservation(
+            menuTarget: state.modal.menu?.target,
+            pointerKind: pointerKind,
+            frozenTick: frozenTick,
+            frozenParameter: state.pointer.gestureFacts?.parameter ?? state.modal.facts?.parameter,
+            cursorIntent: state.cursor)
+    }
     @QtIgnored public var promptForExistingNode: Bool { state.modal.prompt?.forExistingNode ?? false }
     @QtIgnored public var tapTempoSession: AutomationTapTempoSession { state.tapTempo.session }
     @QtIgnored var publishedTabs: [AutomationTabValue] { tabSnapshots }

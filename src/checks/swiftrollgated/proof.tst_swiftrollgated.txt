@@ -359,8 +359,8 @@ Original expression:
 QVERIFY(session != nullptr);
 
 A003 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:313
-Disposition: GAP
-Mapping/reason: Session open-state survival across the failure path has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S046 stages a private project copy, opens it through ApplicationSession, and waits for both projectOpen and songOpen. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -623,8 +623,8 @@ Original expression:
 QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
 
 A031 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:394
-Disposition: GAP
-Mapping/reason: Session open-state survival across the failure path has no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: S047 forces the reopen failure, restores the MIDI, reopens through ApplicationSession, and proves songOpen with exactly one tab. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1218,3 +1218,17 @@ S045 | checkIsolation | src/checks/rollcheck/EditorGridCameraChecks.swift:566
         cppID: isolationID, message: "one edit publishes one coherent playback and document refresh after reconciliation")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
+
+S046 | drawerSwiftRollGatedSessionReopenSurvival | src/checks/swiftrollgated/gated_gap.swift:255
+Swift expression:
+  let initiallyOpen = gatedWait { app.projectOpen && app.songOpen }
+  report.expect(initiallyOpen, cppID: sessionReopenGapID,
+                message: "A003 project and song reach open state")
+
+S047 | drawerSwiftRollGatedSessionReopenSurvival | src/checks/swiftrollgated/gated_gap.swift:287
+Swift expression:
+  let reopened = gatedWait {
+      app.songOpen && app.songTabs.tabCount == 1
+  }
+  report.expect(reopened, cppID: sessionReopenGapID,
+                message: "A031 restored song reopens and republishes songOpen")

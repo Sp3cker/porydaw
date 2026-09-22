@@ -68,3 +68,62 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
     report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                        what: "the Qt control bit a QML event carries lands the drag on the neutral")
 }
+
+@MainActor
+func drawerAutomationActionShortcutContracts(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service)
+    let policy = editCommandPolicy(.pencilMode)
+    report.expect(policy.command == .pencilMode && policy.standaloneOperation == .pencilToggle,
+                  cppID: drawerAutomationModifierMappingID,
+                  message: "the canonical action table contains the Pencil toggle command")
+    report.expect(policy.keyRoute == .availabilityGated
+                      && policy.autoRepeatRule == .consumeWhenEligible,
+                  cppID: drawerAutomationModifierMappingID,
+                  message: "Pencil has the canonical gated repeat policy")
+
+    func decision(autoRepeat: Bool, command: EditCommand? = .pencilMode) -> EditKeyDecision {
+        EditKeyArbiter.decide(
+            command: command,
+            surface: EditSurfaceState(pointerGestureActive: false,
+                                      timeSelectionActive: false,
+                                      noteSelectionEmpty: true,
+                                      origin: .timeline,
+                                      autoRepeat: autoRepeat,
+                                      commandAvailable: true))
+    }
+    func execute(_ route: EditKeyDecision) {
+        if route == .execute { fixture.page.isPencilMode.toggle() }
+    }
+
+    fixture.page.isPencilMode = false
+    execute(decision(autoRepeat: false))
+    report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "the first shortcut press checks Pencil")
+    report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "shortcut release leaves the latched action checked")
+    execute(decision(autoRepeat: false))
+    report.expect(!fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "the second shortcut press unchecks Pencil")
+    report.expect(!fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "second shortcut release leaves Pencil unchecked")
+
+    execute(decision(autoRepeat: false))
+    report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "a real shortcut press checks Pencil before repeat delivery")
+    report.expect(decision(autoRepeat: true) == .consume,
+                  cppID: drawerAutomationModifierMappingID,
+                  message: "an auto-repeat shortcut press is consumed without execution")
+    execute(decision(autoRepeat: true))
+    report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "auto-repeat leaves the Pencil latch checked")
+    report.expect(fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "repeat release leaves Pencil checked")
+    fixture.page.isPencilMode = false
+    report.expect(decision(autoRepeat: false, command: nil) == .decline,
+                  cppID: drawerAutomationModifierMappingID,
+                  message: "an unbound text key stays with its text owner")
+    report.expect(!fixture.page.isPencilMode, cppID: drawerAutomationModifierMappingID,
+                  message: "text input does not toggle Pencil")
+}

@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationclipboard.cpp
 Original SHA-256: 8de1d04cb8fc0bc30dfa4a8e4cd997e62cc9229a0dff29bef8e5538f20c1df64
 Swift counterpart: src/checks/automation/automationclipboard.swift
-Swift SHA-256: 6d86f78e1349b0519eb27bd49194538f0e762abca6f90ffffa0c72d6ad0f7b35
+Swift SHA-256: 87cf6df66b280bdab841d232dffd0536f4ad671db12a2d0ac686d74c91bbe0c0
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,7 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -37,117 +37,117 @@ src/checks/automation/automationclipboard.cpp:113 | songTab, *canvas, tempoRow, 
 Original assertion inventory
 
 A001 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S032 verifies the cross-lane clipboard page publishes a configured canvas.
 Original expression:
   QVERIFY(canvas)
 
 A002 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 activates Tempo through the production page.
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A003 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts creation of the native popup session after a rendered-label right click — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(copyTempo.session, qUtf8Printable(copyTempo.diagnostic))
 
 A004 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts QTest delivery to the native popup Copy row through quick_popup::clickMenuRow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(clickRow(copyTempo, CanvasMenuAction::Copy), "the Copy tempo row was not clickable")
 
 A005 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts closure of the native popup session after the Copy row click — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(!copyTempo.session->isOpen(), "the Copy tempo pick left the shared menu open")
 
 A006 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:93
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts QTest delivery to the native popup Paste row through quick_popup::clickMenuRow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(clickRow(pasteCc, CanvasMenuAction::Paste), "the Paste CC row was not clickable")
 
 A007 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts closure of the native popup session after the Paste row click — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(!pasteCc.session->isOpen(), "the Paste CC pick left the shared menu open")
 
 A008 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 verifies tempo-to-controller paste writes exactly one point.
 Original expression:
   QCOMPARE(clampedCc.size(), std::size_t{1})
 
 A009 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:98
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 verifies tempo-to-controller paste preserves the source tick.
 Original expression:
   QCOMPARE(clampedCc.front().tick, kTempoCopyTick)
 
 A010 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S036 verifies tempo-to-controller paste clamps to the controller maximum.
 Original expression:
   QCOMPARE(clampedCc.front().value, 127)
 
 A011 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts creation of the native popup session after reopening the rendered CC label menu — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(copyCc.session, qUtf8Printable(copyCc.diagnostic))
 
 A012 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts QTest delivery to the reopened native popup Copy row through quick_popup::clickMenuRow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(clickRow(copyCc, CanvasMenuAction::Copy), "the Copy CC row was not clickable")
 
 A013 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts closure of the reopened native popup session after the Copy row click — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(!copyCc.session->isOpen(), "the Copy CC pick left the shared menu open")
 
 A014 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts creation of the native popup session after reopening the rendered tempo label menu — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(pasteTempo.session, qUtf8Printable(pasteTempo.diagnostic))
 
 A015 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts QTest delivery to the reopened native popup Paste row through quick_popup::clickMenuRow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(clickRow(pasteTempo, CanvasMenuAction::Paste),
                "the Paste tempo row was not clickable")
 
 A016 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts closure of the reopened native popup session after the Paste row click — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY2(!pasteTempo.session->isOpen(), "the Paste tempo pick left the shared menu open")
 
 A017 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 verifies controller-to-tempo paste writes exactly one tempo point.
 Original expression:
   QCOMPARE(clampedTempo.size(), std::size_t{1})
 
 A018 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 verifies controller-to-tempo paste preserves the source tick.
 Original expression:
   QCOMPARE(clampedTempo.front().tick, kCcCopyTick)
 
 A019 | AutomationEditingTest::clipboardCrossLanePasteClamps | src/checks/automation/automationclipboard.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S039 verifies controller-to-tempo paste clamps to minimum tempo.
 Original expression:
   QCOMPARE(clampedTempo.front().microsecondsPerQuarterNote,
                CoreTimeDefaults::microsecondsPerQuarterNoteForBpm(CoreTimeDefaults::kMinTempoBpm))
@@ -312,3 +312,54 @@ Swift expression:
   report.expect(AutomationRangeEditor.replaceLane(replace.facts(replace.panLane),
                                                       points: []).unchanged,
                     cppID: drawerAutomationRangeID, message: "clearing an empty lane is unchanged")
+
+S032 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:137
+Swift expression:
+  report.expect(tempoToCC.page.plotWidth > 0 && tempoToCC.page.plotHeight > 0,
+                cppID: drawerAutomationRangeID,
+                message: "cross-lane clipboard page has a configured canvas")
+
+S033 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:140
+Swift expression:
+  report.expect(tempoToCC.page.activeParameter == .tempo
+                    || tempoToCC.page.activateParameter(.tempo),
+                cppID: drawerAutomationRangeID,
+                message: "the tempo parameter activates")
+
+S034 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:170
+Swift expression:
+  report.expectEqual(1, tempoToCC.lanePoints(tempoToCC.panLane).count,
+                     cppID: drawerAutomationRangeID,
+                     what: "tempo-to-controller paste writes one point")
+
+S035 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:173
+Swift expression:
+  report.expectEqual(Tick(48), tempoToCC.lanePoints(tempoToCC.panLane).first?.tick ?? -1,
+                     cppID: drawerAutomationRangeID,
+                     what: "tempo-to-controller paste preserves the tick")
+
+S036 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:176
+Swift expression:
+  report.expectEqual(127, tempoToCC.lanePoints(tempoToCC.panLane).first?.value ?? -1,
+                     cppID: drawerAutomationRangeID,
+                     what: "tempo-to-controller paste clamps to the controller maximum")
+
+S037 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:209
+Swift expression:
+  report.expectEqual(1, ccToTempo.document.state.tempo.count,
+                     cppID: drawerAutomationRangeID,
+                     what: "controller-to-tempo paste writes one point")
+
+S038 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:212
+Swift expression:
+  report.expectEqual(Tick(96), ccToTempo.document.state.tempo.first?.tick ?? -1,
+                     cppID: drawerAutomationRangeID,
+                     what: "controller-to-tempo paste preserves the tick")
+
+S039 | drawerAutomationCrossLaneClipboardClamping | src/checks/automation/automationclipboard.swift:215
+Swift expression:
+  report.expectEqual(
+      TimeDefaults.microsecondsPerQuarterNote(forBPM: TimeDefaults.minimumTempoBPM),
+      ccToTempo.document.state.tempo.first?.microsecondsPerQuarterNote ?? 0,
+      cppID: drawerAutomationRangeID,
+      what: "controller-to-tempo paste clamps to the minimum tempo")

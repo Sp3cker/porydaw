@@ -79,8 +79,8 @@ Original expression:
   QVERIFY(m_quickWindow)
 
 A007 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native QQuickWindow visibility and platform exposure — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed())
 
@@ -103,8 +103,8 @@ Original expression:
   QTRY_VERIFY(page() && page()->canvas())
 
 A011 | AutomationPresentationTest::init | src/checks/automation/presentation/tst_automationpresentation.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the Qt Quick input item is owned by the native QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(m_gutterInput->window(), m_quickWindow.data())
 
@@ -127,98 +127,98 @@ Original expression:
   QTRY_VERIFY(quickScene())
 
 A015 | AutomationPresentationTest::cleanup | src/checks/automation/presentation/tst_automationpresentation.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts cleanup released the native QQuickWindow mouse grab — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(mouseGrabCleared)
 
 A016 | AutomationPresentationTest::mouseMove | src/checks/automation/presentation/tst_automationpresentation.cpp:307
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the Qt Quick input item is owned by the native QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(input.window(), m_quickWindow.data())
 
 A017 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:325
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 drives the nonoptional production AutomationPage and successfully activates Pan. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationPage)
 
 A018 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 proves activateParameter accepts the Pan catalog row. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(panRow))
 
 A019 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:330
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 requires a valid Pan catalog index and successful activation. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(pan.valid())
 
 A020 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:332
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 proves Pan publishes a projection plus nonempty measured plot primitives. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!plot.isEmpty())
 
 A021 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:336
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!m_plotInput->cursor().pixmap().isNull())
 
 A022 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:339
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor shape on the native input cursor — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(m_gutterInput->cursor().shape(), Qt::ArrowCursor)
 
 A023 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S030 proves the production page accepts the Tempo catalog row. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}))
 
 A024 | AutomationPresentationTest::pencilCursorUsesPlotGutterBoundary | src/checks/automation/presentation/tst_automationpresentation.cpp:343
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!m_plotInput->cursor().pixmap().isNull())
 
 A025 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:349
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026/S028 drive the nonoptional production AutomationPage for the DPR scenario. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationPage)
 
 A026 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:352
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 requires a valid Pan catalog row before DPR moves. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(pan.valid())
 
 A027 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!pixmap.isNull())
 
 A028 | AutomationPresentationTest::pencilCursorUsesInputDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:357
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native cursor pixmap device-pixel ratio — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(pixmap.devicePixelRatio(), m_plotInput->devicePixelRatio())
 
 A029 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 drives the nonoptional production page through each injected DPR row. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationPage)
 
 A030 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 invokes the production page pointer seam, the Swift owner corresponding to canvas interaction. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas)
 
@@ -235,86 +235,86 @@ Original expression:
   QVERIFY(m_plotInput->interaction() == canvas)
 
 A033 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S026 requires valid Pan activation before the DPR table. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(pan.valid())
 
 A034 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 row A034-dpr1 proves pointerMove is accepted; S029 proves typed pencil intent. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
 A035 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!pixmapAtOne.isNull())
 
 A036 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native cursor pixmap device-pixel ratio — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(qFuzzyCompare(pixmapAtOne.devicePixelRatio(), 1.0))
 
 A037 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 row A037-dpr2 proves pointerMove is accepted; S029 proves typed pencil intent. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
 A038 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!pixmapAtTwo.isNull())
 
 A039 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:387
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native cursor pixmap device-pixel ratio — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(qFuzzyCompare(pixmapAtTwo.devicePixelRatio(), 2.0))
 
 A040 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 row A040-dpr1-again proves pointerMove is accepted; S029 proves typed pencil intent. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(canvas->pointerMove(plotPointerInput(plotPoint, host)))
 
 A041 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!pixmapAtOneAgain.isNull())
 
 A042 | AutomationPresentationTest::pencilCursorScalesWithInjectedDevicePixelRatio | src/checks/automation/presentation/tst_automationpresentation.cpp:393
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the native cursor pixmap device-pixel ratio — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(qFuzzyCompare(pixmapAtOneAgain.devicePixelRatio(), 1.0))
 
 A043 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 reactivates Pan on the nonoptional production page for pencil-off. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationPage)
 
 A044 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:402
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 requires a valid Pan index and successful activation. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(pan.valid())
 
 A045 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:406
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts a native Qt cursor pixmap was rendered for the input item — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!m_plotInput->cursor().pixmap().isNull())
 
 A046 | AutomationPresentationTest::pencilCursorTurnsOffToArrow | src/checks/automation/presentation/tst_automationpresentation.cpp:409
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::ArrowCursor shape on the native input cursor — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(m_plotInput->cursor().shape(), Qt::ArrowCursor)
 
@@ -448,3 +448,45 @@ S025 | drawerAutomationParameterSwitchAndGhosts | src/checks/automation/presenta
 Swift expression:
   report.expectEqual("", fixture.page.plotMessage, cppID: drawerAutomationSwitchID,
                          what: "a selected track presents again")
+
+S026 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:18
+Swift expression:
+  report.expect(panIndex >= 0 && page.activateParameter(index: panIndex),
+                cppID: automationPresentationGapID,
+                message: "A017-A019 the production page activates its Pan row")
+
+S027 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:21
+Swift expression:
+  report.expect(page.projection != nil && !page.valueLineSnapshots.isEmpty
+      && !page.valueLabelSnapshots.isEmpty,
+                cppID: automationPresentationGapID,
+                message: "A020 Pan publishes a nonempty plot")
+
+S028 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:33
+Swift expression:
+  report.expect(handled, cppID: automationPresentationGapID,
+                message: "\(row.id) plot move is accepted")
+
+S029 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:35
+Swift expression:
+  report.expectEqual(AutomationCursorKind.pencil, page.observation.cursorIntent,
+                     cppID: automationPresentationGapID,
+                     what: "\(row.id) typed cursor intent remains pencil")
+
+S030 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:44
+Swift expression:
+  report.expect(tempoIndex >= 0 && page.activateParameter(index: tempoIndex),
+                cppID: automationPresentationGapID,
+                message: "A023 the production page activates Tempo")
+
+S031 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:53
+Swift expression:
+  report.expect(page.activateParameter(index: panIndex),
+                cppID: automationPresentationGapID,
+                message: "A043-A044 Pan is restored for the pencil-off case")
+
+S032 | drawerAutomationTypedCursorIntent | src/checks/automation/presentation/automationpresentation_gap.swift:58
+Swift expression:
+  report.expectEqual(AutomationCursorKind.arrow, page.observation.cursorIntent,
+                     cppID: automationPresentationGapID,
+                     what: "A046 disabling pencil mode restores typed arrow intent")

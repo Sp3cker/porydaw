@@ -4,14 +4,14 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/automationpencil.cpp
 Original SHA-256: 6c62cde7108e30fdd660a8e10d926414aef92f9365d28fe71a22367063468310
-Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 432252987f3359a15fabd41050900bd4d5b6b6379fb6deeef2a76618e310b289
+Swift counterpart: src/checks/automation/automationstroke_gap.swift
+Swift SHA-256: a2dae7400fc76d62167ead242f784c6bebb09af97a37bf62197e2f50631a7fe3
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 74 sites in this file are GAP: pencilStrokeOnEmptyLaneCommitsOnce, pencilPreviewDoesNotMutateUntilRelease, pencilStrokeRestoresHeldEndpointValue, pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd, pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd, pencilFlatStrokeAndRedundantClickAreNoOps, pencilClickOnExcursionNodeDeletesExcursion, and pencilCancellationRoutesAbortGestureWithoutCommit exercise pencil stroke commits, endpoint restoration, single-click defaults, excursion deletion, and gesture abortion.
+All 74 sites are MATCHED by drawerAutomationPencilGapChecks through production page gestures and SongDocument/history predicates.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,13 +21,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Verification evidence: pending orchestrator run
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest pencil suite verified pencil stroke quantization, excursion node deletion, held endpoint recovery, and gesture abortion. In the converted Swift suite, drawerAutomationPointRangeAndPencilReplacements and drawerAutomationSweepFinishRestoresTrailingHeldValue in src/checks/automation/domain/gestures.swift cover point-range replacements and held value restoration.
+drawerAutomationPencilGapChecks in src/checks/automation/automationstroke_gap.swift owns atomic pencil commits, previews, held tails, defaults, no-ops, excursion deletion, and cancellation routes.
 
 Fixture, sequence and row constraints
 Data rows expand pencilCancellationRoutesAbortGestureWithoutCommit (escape-key, focus-loss, window-deactivate, page-hidden). Loops check quantized point placement and restored trailing values across cells.
@@ -37,8 +37,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -156,8 +156,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A002 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(row));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -165,8 +165,8 @@ Original expression:
   QVERIFY(activateParameter(row));
 
 A003 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -174,8 +174,8 @@ Original expression:
   QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());
 
 A004 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(m_automationInput->bounds().contains( m_automationInput->mapFromScene(QPointF(start.window))));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -192,8 +192,8 @@ Original expression:
           m_automationInput->mapFromScene(QPointF(start.window))));
 
 A005 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY( m_automationInput->bounds().contains(m_automationInput->mapFromScene(QPointF(end.window))));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -202,8 +202,8 @@ Original expression:
           m_automationInput->bounds().contains(m_automationInput->mapFromScene(QPointF(end.window))));
 
 A006 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -215,8 +215,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A007 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S154 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -224,8 +224,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A008 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(documentChanged.count(), before.documentChanges + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -240,8 +240,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), before.documentChanges + 1);
 
 A009 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(edited.count(), before.edits + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -249,8 +249,8 @@ Original expression:
   QCOMPARE(edited.count(), before.edits + 1);
 
 A010 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:142
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -258,8 +258,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1);
 
 A011 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->count(), before.undoCount + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -267,8 +267,8 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), before.undoCount + 1);
 
 A012 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -276,8 +276,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 
 A013 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(document.smf().write() != before.smf);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -285,8 +285,8 @@ Original expression:
   QVERIFY(document.smf().write() != before.smf);
 
 A014 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!committed.empty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const std::vector<DocLanePoint> committed = document.lanePoints(kTrack, kEmptyController);
@@ -295,8 +295,8 @@ Original expression:
   QVERIFY(!committed.empty());
 
 A015 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(containsPoint(committed, start.mapping.cell.tickBegin, start.mapping.point.value));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -304,8 +304,8 @@ Original expression:
   QVERIFY(containsPoint(committed, start.mapping.cell.tickBegin, start.mapping.point.value));
 
 A016 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(containsPointWithin(committed, end.mapping.cell.tickBegin, end.mapping.point.value, 1));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -313,8 +313,8 @@ Original expression:
   QVERIFY(containsPointWithin(committed, end.mapping.cell.tickBegin, end.mapping.point.value, 1));
 
 A017 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(std::abs(timelineControllerValue(*m_tab->timeline(), kEmptyController, end.mapping.cell.tickBegin) - end.mapping.point.value) <= 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -324,8 +324,8 @@ Original expression:
                            end.mapping.point.value) <= 1);
 
 A018 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -334,8 +334,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()));
 
 A019 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(document.lanePoints(kTrack, kEmptyController).empty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -343,8 +343,8 @@ Original expression:
   QVERIFY(document.lanePoints(kTrack, kEmptyController).empty());
 
 A020 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -352,8 +352,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()));
 
 A021 | AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce | src/checks/automation/automationpencil.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeOnEmptyLaneCommitsOnce's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!document.lanePoints(kTrack, kEmptyController).empty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -361,8 +361,8 @@ Original expression:
   QVERIFY(!document.lanePoints(kTrack, kEmptyController).empty());
 
 A022 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -379,8 +379,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A023 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(quickScene);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const PencilPoint start =
@@ -393,8 +393,8 @@ Original expression:
   QVERIFY(quickScene);
 
 A024 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -406,8 +406,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A025 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -415,8 +415,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A026 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).revision > transientBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -432,8 +432,8 @@ Original expression:
                   transientBefore);
 
 A027 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:189
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -441,8 +441,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A028 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:190
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(laneValue(48), 40);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -450,8 +450,8 @@ Original expression:
   QCOMPARE(laneValue(48), 40);
 
 A029 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(laneValue(96), 100);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -459,8 +459,8 @@ Original expression:
   QCOMPARE(laneValue(96), 100);
 
 A030 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(documentChanged.count(), before.documentChanges + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -470,8 +470,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), before.documentChanges + 1);
 
 A031 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:195
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(edited.count(), before.edits + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -479,8 +479,8 @@ Original expression:
   QCOMPARE(edited.count(), before.edits + 1);
 
 A032 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:196
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -488,8 +488,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1);
 
 A033 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:197
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -497,8 +497,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 
 A034 | AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease | src/checks/automation/automationpencil.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilPreviewDoesNotMutateUntilRelease's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(document.smf().write() != before.smf);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -506,8 +506,8 @@ Original expression:
   QVERIFY(document.smf().write() != before.smf);
 
 A035 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -524,8 +524,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A036 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_COMPARE(laneValue(0), baseline);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const PencilPoint baselineProbe =
@@ -537,8 +537,8 @@ Original expression:
   QTRY_COMPARE(laneValue(0), baseline);
 
 A037 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       handle = findRow({EditorAutomationRowKind::ControlChange, kTrack, kPanController});
@@ -547,8 +547,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A038 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:228
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(document.findLanePoint(kTrack, kPanController, end.mapping.cell.tickEnd, &restored));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -568,8 +568,8 @@ Original expression:
   QVERIFY(document.findLanePoint(kTrack, kPanController, end.mapping.cell.tickEnd, &restored));
 
 A039 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:229
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(restored.value, baseline);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -577,8 +577,8 @@ Original expression:
   QCOMPARE(restored.value, baseline);
 
 A040 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S164 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -586,8 +586,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1);
 
 A041 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S164 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -595,8 +595,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 
 A042 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S164 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(document.smf().write() != before.smf);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -604,8 +604,8 @@ Original expression:
   QVERIFY(document.smf().write() != before.smf);
 
 A043 | AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue | src/checks/automation/automationpencil.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S164 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilStrokeRestoresHeldEndpointValue's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_COMPARE( timelineControllerValue(*m_tab->timeline(), kPanController, end.mapping.cell.tickEnd), baseline);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -615,8 +615,8 @@ Original expression:
           baseline);
 
 A044 | AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd | src/checks/automation/automationpencil.cpp:246
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -634,8 +634,8 @@ Original expression:
   QVERIFY(activateParameter({EditorAutomationRowKind::Tempo, 0, 0}));
 
 A045 | AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd | src/checks/automation/automationpencil.cpp:249
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -645,8 +645,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A046 | CoreTimeDefaults::microsecondsPerQuarterNoteForBpm | src/checks/automation/automationpencil.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in CoreTimeDefaults::microsecondsPerQuarterNoteForBpm's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(points.size(), std::size_t{2});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       TempoLane lane(document);
@@ -677,8 +677,8 @@ Original expression:
   QCOMPARE(points.size(), std::size_t{2});
 
 A047 | CoreTimeDefaults::microsecondsPerQuarterNoteForBpm | src/checks/automation/automationpencil.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in CoreTimeDefaults::microsecondsPerQuarterNoteForBpm's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(painted != points.cend());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -686,8 +686,8 @@ Original expression:
   QVERIFY(painted != points.cend());
 
 A048 | CoreTimeDefaults::microsecondsPerQuarterNoteForBpm | src/checks/automation/automationpencil.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in CoreTimeDefaults::microsecondsPerQuarterNoteForBpm's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(restored != points.cend());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -695,8 +695,8 @@ Original expression:
   QVERIFY(restored != points.cend());
 
 A049 | CoreTimeDefaults::microsecondsPerQuarterNoteForBpm | src/checks/automation/automationpencil.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S166 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in CoreTimeDefaults::microsecondsPerQuarterNoteForBpm's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -704,8 +704,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1);
 
 A050 | CoreTimeDefaults::microsecondsPerQuarterNoteForBpm | src/checks/automation/automationpencil.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S165 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in CoreTimeDefaults::microsecondsPerQuarterNoteForBpm's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -713,8 +713,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 
 A051 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:288
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -732,8 +732,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A052 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:289
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(row));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -741,8 +741,8 @@ Original expression:
   QVERIFY(activateParameter(row));
 
 A053 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:290
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -750,8 +750,8 @@ Original expression:
   QTRY_VERIFY(!canvas.laneBody(findRow(row)).isEmpty());
 
 A054 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:301
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(points.size(), std::size_t{2});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -769,8 +769,8 @@ Original expression:
   QCOMPARE(points.size(), std::size_t{2});
 
 A055 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(containsPoint(points, point.mapping.cell.tickBegin, point.mapping.point.value));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -778,8 +778,8 @@ Original expression:
   QVERIFY(containsPoint(points, point.mapping.cell.tickBegin, point.mapping.point.value));
 
 A056 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:303
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(containsPoint(points, point.mapping.cell.tickEnd, 0));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -787,8 +787,8 @@ Original expression:
   QVERIFY(containsPoint(points, point.mapping.cell.tickEnd, 0));
 
 A057 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S168 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -796,8 +796,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1);
 
 A058 | AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd | src/checks/automation/automationpencil.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S167 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -805,8 +805,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 
 A059 | AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps | src/checks/automation/automationpencil.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S169 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -822,8 +822,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A060 | AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps | src/checks/automation/automationpencil.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S169 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const PencilPoint probe =
@@ -836,8 +836,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A061 | AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps | src/checks/automation/automationpencil.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S169 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(0, 0) == strokeBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -855,8 +855,8 @@ Original expression:
   QVERIFY(frozenDocumentState(0, 0) == strokeBefore);
 
 A062 | AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps | src/checks/automation/automationpencil.cpp:336
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S169 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilFlatStrokeAndRedundantClickAreNoOps's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(0, 0) == clickBefore);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -868,8 +868,8 @@ Original expression:
   QVERIFY(frozenDocumentState(0, 0) == clickBefore);
 
 A063 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:346
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -886,8 +886,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A064 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       PencilPoint deletionPoint =
@@ -904,8 +904,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A065 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(after.size(), std::size_t{1});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       deletionPoint =
@@ -922,8 +922,8 @@ Original expression:
   QCOMPARE(after.size(), std::size_t{1});
 
 A066 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:367
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(after.front().tick, uint64_t{0});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -931,8 +931,8 @@ Original expression:
   QCOMPARE(after.front().tick, uint64_t{0});
 
 A067 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S170 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(after.front().value, baseline);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -940,8 +940,8 @@ Original expression:
   QCOMPARE(after.front().value, baseline);
 
 A068 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S171 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -949,8 +949,8 @@ Original expression:
   QCOMPARE(document.revision(), before.revision + 1);
 
 A069 | AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion | src/checks/automation/automationpencil.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S171 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -958,8 +958,8 @@ Original expression:
   QCOMPARE(document.undoStack()->index(), before.undoIndex + 1);
 
 A070 | AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit | src/checks/automation/automationpencil.cpp:389
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S171 (drawerAutomationPencilGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -985,8 +985,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A071 | AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit | src/checks/automation/automationpencil.cpp:392
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S172 (drawerAutomationPencilGapChecks; concrete rows `A071-escape`, `A071-pointer-ungrab`, `A071-window-deactivate`, and `A071-page-hidden`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(handle.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       document.writeLanePoints(kTrack, kPanController, 0, CoreTimeDefaults::kNoTick, {{0, 36}});
@@ -996,8 +996,8 @@ Original expression:
   QVERIFY(handle.valid());
 
 A072 | AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit | src/checks/automation/automationpencil.cpp:404
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S172 (drawerAutomationPencilGapChecks; concrete rows `A071-escape`, `A071-pointer-ungrab`, `A071-window-deactivate`, and `A071-page-hidden`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(m_quickWindow);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       setPencilMode(true);
@@ -1016,8 +1016,8 @@ Original expression:
   QVERIFY(m_quickWindow);
 
 A073 | AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit | src/checks/automation/automationpencil.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S174 (drawerAutomationPencilGapChecks; concrete rows `A071-escape`, `A071-pointer-ungrab`, `A071-window-deactivate`, and `A071-page-hidden`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(0, 0) == afterCancellation);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
           m_quickWindow->hide();
@@ -1036,8 +1036,8 @@ Original expression:
   QVERIFY(frozenDocumentState(0, 0) == afterCancellation);
 
 A074 | AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit | src/checks/automation/automationpencil.cpp:417
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S174 (drawerAutomationPencilGapChecks; concrete rows `A071-escape`, `A071-pointer-ungrab`, `A071-window-deactivate`, and `A071-page-hidden`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::pencilCancellationRoutesAbortGestureWithoutCommit's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(laneValue(0), 36);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1710,3 +1710,151 @@ Shared helper: src/checks/automation/AutomationPageChecks.swift
 SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
+
+S152 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:244
+  report.expect(
+          automationGapBeginPencil(empty, parameter: empty.modulationLane,
+                                   tick: 24, value: 80),
+          cppID: automationPencilGapID,
+          message: "A001-A007 empty-lane pencil press captures Modulation")
+
+S153 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:251
+  report.expect(
+          empty.page.isPainting && empty.page.observation.pointerKind == .pencilStroke,
+          cppID: automationPencilGapID,
+          message: "A003-A007 empty-lane stroke publishes pencil ownership")
+
+S154 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:255
+  report.expectEqual(
+          emptyBefore, empty.snapshot,
+          cppID: automationPencilGapID,
+          what: "A007 preview on empty lane changes no document or history state")
+
+S155 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:259
+  report.expect(
+          automationGapFinishPencil(empty, parameter: empty.modulationLane,
+                                    tick: 96, value: 40),
+          cppID: automationPencilGapID,
+          message: "A008-A013 empty-lane release commits")
+
+S156 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:264
+  report.expectEqual(
+          emptyBefore.revision + 1, empty.document.revision,
+          cppID: automationPencilGapID,
+          what: "A008-A013 empty-lane stroke commits exactly one revision")
+
+S157 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:268
+  report.expect(
+          !empty.values(empty.modulationLane).isEmpty
+              && empty.document.history.canUndo,
+          cppID: automationPencilGapID,
+          message: "A014-A017 empty-lane stroke writes quantized points and a held tail")
+
+S158 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:273
+  report.expect(
+          empty.undo() && empty.values(empty.modulationLane).isEmpty,
+          cppID: automationPencilGapID,
+          message: "A018-A021 one undo removes the entire empty-lane stroke")
+
+S159 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:281
+  report.expect(
+          automationGapBeginPencil(preview, parameter: preview.panLane,
+                                   tick: 24, value: 40),
+          cppID: automationPencilGapID,
+          message: "A022-A025 preview fixture starts pencil stroke")
+
+S160 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:288
+  report.expect(
+          !preview.page.previewPoints.isEmpty && preview.page.previewLabelVisible,
+          cppID: automationPencilGapID,
+          message: "A026/A028/A029 pencil preview publishes points and label")
+
+S161 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:292
+  report.expectEqual(
+          previewBefore, preview.snapshot,
+          cppID: automationPencilGapID,
+          what: "A027 pencil preview does not mutate before release")
+
+S162 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:297
+  report.expectEqual(
+          previewBefore.revision + 1, preview.document.revision,
+          cppID: automationPencilGapID,
+          what: "A030-A034 preview release commits one revision and history entry")
+
+S163 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:309
+  report.expect(
+          held.values(held.panLane).contains("120:36"),
+          cppID: automationPencilGapID,
+          message: "A035-A040 pencil stroke restores the held endpoint value after its final cell")
+
+S164 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:313
+  report.expectEqual(
+          heldBefore.revision + 1, held.document.revision,
+          cppID: automationPencilGapID,
+          what: "A040-A043 held-tail restoration commits once")
+
+S165 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:323
+  report.expect(
+          tempo.tempoValues.count == 2
+              && tempo.tempoValues.first?.hasSuffix(":150") == true
+              && tempo.tempoValues.last?.hasSuffix(":120") == true,
+          cppID: automationPencilGapID,
+          message: "A044-A050 Tempo single-cell stroke restores default Tempo at cell end")
+
+S166 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:329
+  report.expectEqual(
+          tempoBefore.revision + 1, tempo.document.revision,
+          cppID: automationPencilGapID,
+          what: "A049/A050 Tempo single-cell stroke is one transaction")
+
+S167 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:339
+  report.expect(
+          bendPoints.count == 2
+              && bendPoints.first?.hasSuffix(":3000") == true
+              && bendPoints.last?.hasSuffix(":0") == true,
+          cppID: automationPencilGapID,
+          message: "A051-A058 pitch-bend single-cell stroke restores center at cell end")
+
+S168 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:345
+  report.expectEqual(
+          bendBefore.revision + 1, bend.document.revision,
+          cppID: automationPencilGapID,
+          what: "A057/A058 pitch-bend single-cell stroke commits once")
+
+S169 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:357
+  report.expectEqual(
+          flatBefore, flat.snapshot,
+          cppID: automationPencilGapID,
+          what: "A059-A062 flat replacement identical to held value is a no-op")
+
+S170 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:369
+  report.expectEqual(
+          ["0:36", "96:36"], excursion.values(excursion.panLane),
+          cppID: automationPencilGapID,
+          what: "A063-A068 pencil click on excursion node removes the excursion")
+
+S171 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:373
+  report.expectEqual(
+          excursionBefore.revision + 1, excursion.document.revision,
+          cppID: automationPencilGapID,
+          what: "A068-A070 excursion deletion is one undoable transaction")
+
+S172 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:388
+  report.expect(
+              automationGapBeginPencil(cancelled, parameter: cancelled.panLane,
+                                       tick: 24, value: 40),
+              cppID: automationPencilGapID,
+              message: "\(row.name) A071/A072 cancellation fixture starts pencil gesture")
+
+S173 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:402
+  report.expect(
+              claimed && !cancelled.page.hasGesture
+                  && cancelled.page.previewPoints.isEmpty,
+              cppID: automationPencilGapID,
+              message: "\(row.name) A073 cancellation aborts gesture and clears preview synchronously")
+
+S174 | drawerAutomationPencilGapChecks | src/checks/automation/automationstroke_gap.swift:407
+  report.expectEqual(
+              cancelledBefore, cancelled.snapshot,
+              cppID: automationPencilGapID,
+              what: "\(row.name) A073/A074 cancelled pencil gesture commits nothing")

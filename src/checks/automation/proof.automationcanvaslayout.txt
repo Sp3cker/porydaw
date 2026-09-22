@@ -23,7 +23,7 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -41,8 +41,8 @@ src/checks/automation/automationcanvaslayout.cpp:267 | mouseMove(*m_automationIn
 Original assertion inventory
 
 A001 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S021 verifies the active production page publishes a projection.
 Original expression:
   QVERIFY(automation.has_value())
 
@@ -59,14 +59,14 @@ Original expression:
   QCOMPARE(body.topLeft(), QPoint{})
 
 A004 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S022 verifies the plot body height equals the configured viewport height.
 Original expression:
   QCOMPARE(body.height(), page.automationViewportSize().height())
 
 A005 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S023 verifies body width excludes exactly the gutter.
 Original expression:
   QCOMPARE(body.size(), automation->plotRect.size())
 
@@ -79,8 +79,8 @@ Original expression:
               nullptr)
 
 A007 | verifyActivePlot | src/checks/automation/automationcanvaslayout.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S024 verifies the plot begins at the published timeline split.
 Original expression:
   QCOMPARE(automation->plotRect.left(), view.timelineSplitX())
 
@@ -115,14 +115,14 @@ Original expression:
   QVERIFY(labelRect.left() >= gutterRect.left() && labelRect.right() <= gutterRect.right())
 
 A013 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:82
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S021 verifies the active automation page publishes its projection/band.
 Original expression:
   QVERIFY(band.has_value())
 
 A014 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 verifies the published automation band is nonempty.
 Original expression:
   QVERIFY(!band->rect.isEmpty())
 
@@ -145,14 +145,14 @@ Original expression:
   QVERIFY(quickScene)
 
 A018 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts native QQuickItem-to-QQuickWindow ownership for the automation input — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(m_automationInput->window(), m_quickWindow.data())
 
 A019 | AutomationEditingTest::automationBandAndInputsExposed | src/checks/automation/automationcanvaslayout.cpp:88
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts native QQuickItem-to-QQuickWindow ownership for the gutter input — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(gutter->window(), m_quickWindow.data())
 
@@ -199,14 +199,14 @@ Original expression:
   QVERIFY(drawer->maximumSectionHeight() > minimumHeight)
 
 A027 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027 verifies section resize publishes the requested viewport height.
 Original expression:
   QTRY_COMPARE(m_page->automationViewportSize().height(), height)
 
 A028 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S021 verifies the resized page still publishes an automation projection.
 Original expression:
   QVERIFY(automation.has_value())
 
@@ -224,14 +224,14 @@ Original expression:
                       root, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A031 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 verifies section resize preserves the timeline split.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A032 | AutomationEditingTest::sectionResizeKeepsLabelsClickableWithoutScrollbarStrip | src/checks/automation/automationcanvaslayout.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S028 verifies the automation plot remains aligned to the preserved split.
 Original expression:
   QCOMPARE(automation->plotRect.left(), splitBefore)
 
@@ -384,8 +384,8 @@ Original expression:
   QVERIFY(!roll->plotRect.isEmpty())
 
 A057 | AutomationEditingTest::layoutAlignsPlotGutterAndRollGrid | src/checks/automation/automationcanvaslayout.cpp:194
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: requires the retired native QQuickWindow instance used for rendered layout probing — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(quickWindow)
 
@@ -487,8 +487,8 @@ Original expression:
   QVERIFY(!body.isEmpty())
 
 A074 | AutomationEditingTest::middleMousePanSurvivesRefresh | src/checks/automation/automationcanvaslayout.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts Qt::ClosedHandCursor on the native automation input during middle-button pan — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor)
 
@@ -517,8 +517,8 @@ Original expression:
   QVERIFY(!body.isEmpty())
 
 A079 | AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan | src/checks/automation/automationcanvaslayout.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts Qt::ClosedHandCursor survives the native input-item rebuild during pan — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(m_automationInput->cursor().shape(), Qt::ClosedHandCursor)
 
@@ -721,26 +721,26 @@ Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
 A113 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S030 activates Pan through AutomationPage for the zoom sequence.
 Original expression:
   QVERIFY(activateParameter(pan))
 
 A114 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S025 verifies the production automation body is nonempty.
 Original expression:
   QVERIFY(!body.isEmpty())
 
 A115 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 verifies camera zoom increases pixels per beat.
 Original expression:
   QVERIFY(view.camera().pxPerBeat() > zoomBefore)
 
 A116 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:373
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S032 verifies anchored zoom preserves the tick under the pointer.
 Original expression:
   QVERIFY(std::abs(view.camera().tickAtContentX(anchor.x()) - tickBefore) < 0.001)
 
@@ -769,20 +769,20 @@ Original expression:
   QVERIFY(afterZoom.activePage == beforeZoom.activePage)
 
 A121 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:385
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 verifies the resize target differs from the prior height.
 Original expression:
   QVERIFY(targetHeight != originalHeight)
 
 A122 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:388
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S036 verifies the page publishes the target resized height.
 Original expression:
   QTRY_COMPARE(m_page->automationViewportSize().height(), targetHeight)
 
 A123 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:390
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 verifies zoom and resize preserve the timeline split.
 Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
@@ -805,14 +805,14 @@ Original expression:
   QVERIFY(afterHeight.activePage == afterZoom.activePage)
 
 A127 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:395
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S038 verifies zoom and resize preserve document and history state.
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A128 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:396
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S039 verifies zoom and resize preserve the edit cursor.
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
@@ -925,3 +925,106 @@ S020 | drawerAutomationHitGeometry | src/checks/automation/automationcanvaslayou
 Swift expression:
   report.expectEqual(projection.cell(atRawTick: 0).tickBegin, degenerate[0].tickBegin,
                          cppID: drawerAutomationLayoutID, what: "a degenerate walk stays in the pointer's cell")
+
+S021 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:16
+Swift expression:
+  report.expect(fixture.page.projection != nil, cppID: drawerAutomationLayoutGapID,
+                message: "the active automation plot publishes a projection")
+
+S022 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:18
+Swift expression:
+  report.expectEqual(160.0, fixture.page.plotHeight, cppID: drawerAutomationLayoutGapID,
+                     what: "the plot body height equals the configured viewport height")
+
+S023 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:20
+Swift expression:
+  report.expectEqual(584.0, fixture.page.plotWidth, cppID: drawerAutomationLayoutGapID,
+                     what: "the plot body width excludes exactly the gutter")
+
+S024 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:22
+Swift expression:
+  report.expectEqual(56.0, fixture.page.plotOrigin, cppID: drawerAutomationLayoutGapID,
+                     what: "the automation plot begins at the timeline split")
+
+S025 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:24
+Swift expression:
+  report.expect(fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0,
+                cppID: drawerAutomationLayoutGapID,
+                message: "the published automation band is nonempty")
+
+S026 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:27
+Swift expression:
+  report.expect(!fixture.page.parameterLabels.isEmpty, cppID: drawerAutomationLayoutGapID,
+                message: "the published gutter exposes parameter labels")
+
+S027 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:33
+Swift expression:
+  report.expectEqual(80.0, fixture.page.plotHeight, cppID: drawerAutomationLayoutGapID,
+                     what: "section resize republishes the requested viewport height")
+
+S028 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:35
+Swift expression:
+  report.expectEqual(splitBefore, fixture.page.plotOrigin, cppID: drawerAutomationLayoutGapID,
+                     what: "section resize preserves the timeline split")
+
+S029 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:37
+Swift expression:
+  report.expect(fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0,
+                cppID: drawerAutomationLayoutGapID,
+                message: "the resized plot remains nonempty")
+
+S030 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:41
+Swift expression:
+  report.expect(fixture.page.activeParameter == fixture.panLane
+                    || fixture.page.activateParameter(fixture.panLane),
+                cppID: drawerAutomationLayoutGapID,
+                message: "wheel-zoom scenario activates Pan")
+
+S031 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:55
+Swift expression:
+  report.expect(fixture.session.camera.snapshot.pixelsPerBeat > zoomBefore,
+                cppID: drawerAutomationLayoutGapID,
+                message: "wheel-equivalent camera zoom increases pixels per beat")
+
+S032 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:58
+Swift expression:
+  report.expect(abs(fixture.session.camera.tickAtContentX(anchorX) - tickBefore) < 0.001,
+                cppID: drawerAutomationLayoutGapID,
+                message: "anchored zoom preserves the tick under the pointer")
+
+S033 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:61
+Swift expression:
+  report.expectEqual(parameterBefore, fixture.page.activeParameter,
+                     cppID: drawerAutomationLayoutGapID,
+                     what: "camera zoom preserves the active automation parameter")
+
+S034 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:64
+Swift expression:
+  report.expectEqual(selectionBefore, fixture.page.selection,
+                     cppID: drawerAutomationLayoutGapID,
+                     what: "camera zoom preserves automation selection state")
+
+S035 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:71
+Swift expression:
+  report.expect(fixture.page.plotHeight != heightBefore, cppID: drawerAutomationLayoutGapID,
+                message: "the resize target differs from the original height")
+
+S036 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:73
+Swift expression:
+  report.expectEqual(140.0, fixture.page.plotHeight, cppID: drawerAutomationLayoutGapID,
+                     what: "the page publishes the target height")
+
+S037 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:75
+Swift expression:
+  report.expectEqual(splitBefore, fixture.page.plotOrigin, cppID: drawerAutomationLayoutGapID,
+                     what: "zoom and resize preserve the timeline split")
+
+S038 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:77
+Swift expression:
+  report.expectEqual(documentBefore, fixture.snapshot, cppID: drawerAutomationLayoutGapID,
+                     what: "zoom and resize preserve document and history state")
+
+S039 | drawerAutomationPublishedLayoutAndZoom | src/checks/automation/automationcanvaslayout_gap.swift:79
+Swift expression:
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: drawerAutomationLayoutGapID,
+                     what: "zoom and resize preserve the edit cursor")

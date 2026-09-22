@@ -3,8 +3,8 @@ Assertion correspondence: velocity/velocitypainting.cpp
 Reference revision: f842f7e128adea2958d0967e2afbd834893f21b4
 Original: src/checks/velocity/velocitypainting.cpp
 Original SHA-256: 33747463a4aa2a8dbce55094dddaa5f68e218c834913dac14936c932b578f428
-Swift counterpart: src/checks/velocity/tst_velocityediting.swift
-Swift SHA-256: d10757673b1ecbbd0e49c6e6592b4415990d6e986f0cd6a555d2c155661d8e62
+Swift counterpart: src/checks/velocity/velocitydetent_gap.swift
+Swift SHA-256: fa11ba8ff4ba62eca7f18bbc3c9f7a1e77f2123c44801da20bffa8668be58dcf
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift SHA-256: 8449b61bab2cd9f39f86b2769ad6f0165307d877e188c190acff337829dc26cb
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
@@ -65,8 +65,8 @@ src/checks/velocity/velocitypainting.cpp:167 | mouseRelease(Qt::LeftButton, ramp
 Original assertion inventory
 
 A001 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:15
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A001-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -87,8 +87,8 @@ Original expression:
   QCOMPARE(m_area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A002 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:23
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A002-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     selectDragPair();
@@ -103,8 +103,8 @@ Original expression:
   QVERIFY(paintStart != paintEnd)
 
 A003 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:29
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A003-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -117,8 +117,8 @@ Original expression:
   QVERIFY(documentChanged.isValid())
 
 A004 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:30
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S082 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A004-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -126,8 +126,8 @@ Original expression:
   QVERIFY(edited.isValid())
 
 A005 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A005-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -146,8 +146,8 @@ Original expression:
   QVERIFY(quietPreview.has_value())
 
 A006 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A006-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -155,8 +155,8 @@ Original expression:
   QVERIFY(laterPreview.has_value())
 
 A007 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:44
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A007-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -164,8 +164,8 @@ Original expression:
   QCOMPARE(int(*quietPreview), int(kQuietPaintVelocity))
 
 A008 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S086 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A008-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -173,8 +173,8 @@ Original expression:
   QCOMPARE(int(*laterPreview), int(kLaterPaintVelocity))
 
 A009 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A009-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -182,8 +182,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A010 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:47
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A010-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -191,8 +191,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A011 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A011-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -200,8 +200,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A012 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A012-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -209,8 +209,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A013 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A013-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -218,8 +218,8 @@ Original expression:
   QCOMPARE(edited.count(), 0)
 
 A014 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:51
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S092 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A014-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -227,8 +227,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A015 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:52
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S093 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A015-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -236,8 +236,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity))
 
 A016 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A016-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -245,8 +245,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A017 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A017-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -254,8 +254,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A018 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A018-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -263,8 +263,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
 
 A019 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A019-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -272,8 +272,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A020 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:57
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A020-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -281,8 +281,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A021 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:64
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A021-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -296,8 +296,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A022 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A022-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -305,8 +305,8 @@ Original expression:
   QCOMPARE(edited.count(), 1)
 
 A023 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S101 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A023-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -314,8 +314,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A024 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A024-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -323,8 +323,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A025 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:68
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A025-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -332,8 +332,8 @@ Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A026 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S104 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A026-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -341,8 +341,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A027 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:70
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A027-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -350,8 +350,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A028 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S106 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A028-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -359,8 +359,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A029 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A029-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -368,8 +368,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietPaintVelocity))
 
 A030 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A030-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -377,8 +377,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLaterPaintVelocity))
 
 A031 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A031-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -386,8 +386,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A032 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:75
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A032-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -395,8 +395,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietPaintVelocity))
 
 A033 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:76
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A033-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -404,8 +404,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLaterPaintVelocity))
 
 A034 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A034-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -413,8 +413,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A035 | VelocityEditingTest::paintCommitsOnce | src/checks/velocity/velocitypainting.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S113 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A035-paint; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -422,8 +422,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A036 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S114 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A036-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -442,8 +442,8 @@ Original expression:
   QCOMPARE(m_area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A037 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S115 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A037-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     m_tab->document().addNote(0, kMiddleTick, m_quietStacked.key, kMiddleDuration,
@@ -455,8 +455,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kMiddleTick, m_quietStacked.key, &middle))
 
 A038 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S116 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A038-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -464,8 +464,8 @@ Original expression:
   QCOMPARE(int(middle.velocity), int(kMiddleOriginalVelocity))
 
 A039 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:97
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S117 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A039-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -473,8 +473,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A040 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S118 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A040-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -485,8 +485,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
 A041 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S119 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A041-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -513,8 +513,8 @@ Original expression:
   QCOMPARE(doubledMiddleExactX, std::round(doubledMiddleExactX))
 
 A042 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S120 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A042-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -522,8 +522,8 @@ Original expression:
   QCOMPARE(rampStart.x() + rampEnd.x(), static_cast<int>(doubledMiddleExactX))
 
 A043 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S121 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A043-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -531,8 +531,8 @@ Original expression:
   QVERIFY(rampStart != rampEnd)
 
 A044 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S122 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A044-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -548,8 +548,8 @@ Original expression:
   QVERIFY(documentChanged.isValid())
 
 A045 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S123 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A045-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -557,8 +557,8 @@ Original expression:
   QVERIFY(edited.isValid())
 
 A046 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S124 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A046-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -578,8 +578,8 @@ Original expression:
   QVERIFY(quietPreview.has_value())
 
 A047 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S125 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A047-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -587,8 +587,8 @@ Original expression:
   QVERIFY(middlePreview.has_value())
 
 A048 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S126 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A048-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -596,8 +596,8 @@ Original expression:
   QVERIFY(laterPreview.has_value())
 
 A049 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S127 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A049-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -605,8 +605,8 @@ Original expression:
   QCOMPARE(int(*quietPreview), int(kRampStartVelocity))
 
 A050 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S128 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A050-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -614,8 +614,8 @@ Original expression:
   QCOMPARE(int(*middlePreview), int(kRampMiddleVelocity))
 
 A051 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S129 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A051-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -623,8 +623,8 @@ Original expression:
   QCOMPARE(int(*laterPreview), int(kRampEndVelocity))
 
 A052 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S130 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A052-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -632,8 +632,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A053 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S131 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A053-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -641,8 +641,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A054 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S132 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A054-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -650,8 +650,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A055 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S133 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A055-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -659,8 +659,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A056 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S134 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A056-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -668,8 +668,8 @@ Original expression:
   QCOMPARE(edited.count(), 0)
 
 A057 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S135 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A057-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -677,8 +677,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A058 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S136 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A058-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -686,8 +686,8 @@ Original expression:
   QCOMPARE(documentVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A059 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:159
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S137 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A059-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -695,8 +695,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(m_later.velocity))
 
 A060 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:160
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S138 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A060-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -704,8 +704,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A061 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S139 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A061-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -713,8 +713,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(m_quietStacked.velocity))
 
 A062 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:162
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S140 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A062-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -722,8 +722,8 @@ Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), int(kMiddleOriginalVelocity))
 
 A063 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S141 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A063-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -731,8 +731,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(m_later.velocity))
 
 A064 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S142 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A064-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -740,8 +740,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A065 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S143 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A065-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -749,8 +749,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, middle.noteId, m_later.noteId}))
 
 A066 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S144 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A066-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -763,8 +763,8 @@ Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A067 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S145 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A067-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -772,8 +772,8 @@ Original expression:
   QCOMPARE(edited.count(), 1)
 
 A068 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S146 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A068-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -781,8 +781,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A069 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S147 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A069-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -790,8 +790,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A070 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S148 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A070-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -799,8 +799,8 @@ Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A071 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:176
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S149 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A071-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -808,8 +808,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A072 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S150 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A072-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -817,8 +817,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(middle.noteId).has_value())
 
 A073 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:178
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S151 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A073-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -826,8 +826,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A074 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:179
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A074-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -835,8 +835,8 @@ Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A075 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:180
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A075-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -844,8 +844,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kRampStartVelocity))
 
 A076 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:181
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S154 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A076-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -853,8 +853,8 @@ Original expression:
   QCOMPARE(documentVelocity(middle.noteId), int(kRampMiddleVelocity))
 
 A077 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:182
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A077-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -862,8 +862,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kRampEndVelocity))
 
 A078 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:183
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A078-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -871,8 +871,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A079 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:184
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S157 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A079-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -880,8 +880,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kRampStartVelocity))
 
 A080 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A080-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -889,8 +889,8 @@ Original expression:
   QCOMPARE(timelineVelocity(middle.noteId), int(kRampMiddleVelocity))
 
 A081 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:186
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S159 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A081-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -898,8 +898,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kRampEndVelocity))
 
 A082 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:187
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S160 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A082-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -907,8 +907,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(m_loudStacked.velocity))
 
 A083 | VelocityEditingTest::rampCommitsOnce | src/checks/velocity/velocitypainting.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 executes the equivalent predicate through the production VelocityPage plot pointerPress/pointerMove/pointerRelease with concrete evidence row(s) A083-ramp; captured revision/history, preview, committed document, projection, and selection facts preserve the original preconditions and event boundary as applicable. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -1248,3 +1248,335 @@ S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageCheck
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+S079 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:550
+Swift expression:
+  ("A001", !fixture.page.detentsEnabled && !fixture.page.axisGraduationsVisible, "disabled detents publish the continuous ruler"),
+
+S080 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:551
+Swift expression:
+  ("A002", startX != lh.x || axis.velocityToY(37) != axis.velocityToY(91), "the paint endpoints differ"),
+
+S081 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:552
+Swift expression:
+  ("A003", observation.frozenRevision == baseline.revision, "the paint captures revision"),
+
+S082 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:553
+Swift expression:
+  ("A004", observation.frozenTrack == 0, "the paint captures track"),
+
+S083 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:554
+Swift expression:
+  ("A005", preview[quietID] != nil, "quiet preview exists"),
+
+S084 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:555
+Swift expression:
+  ("A006", preview[laterID] != nil, "later preview exists"),
+
+S085 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:556
+Swift expression:
+  ("A007", Int(preview[quietID] ?? 0) == 37, "quiet preview is 37"),
+
+S086 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:557
+Swift expression:
+  ("A008", Int(preview[laterID] ?? 0) == 91, "later preview is 91"),
+
+S087 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:558
+Swift expression:
+  ("A009", preview[loudID] == nil, "loud has no preview"),
+
+S088 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:559
+Swift expression:
+  ("A010", during.revision == baseline.revision, "preview does not revise document"),
+
+S089 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:560
+Swift expression:
+  ("A011", during.identity == baseline.identity, "preview does not add history"),
+
+S090 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:561
+Swift expression:
+  ("A012", during.revision == baseline.revision, "no document edit publishes during preview"),
+
+S091 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:562
+Swift expression:
+  ("A013", during.identity == baseline.identity, "no history edit publishes during preview"),
+
+S092 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:563
+Swift expression:
+  ("A014", fixture.document.note(quietID)?.velocity == quiet.velocity, "quiet document value is frozen"),
+
+S093 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:564
+Swift expression:
+  ("A015", fixture.document.note(laterID)?.velocity == later.velocity, "later document value is frozen"),
+
+S094 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:565
+Swift expression:
+  ("A016", fixture.document.note(loudID)?.velocity == loud.velocity, "loud document value is frozen"),
+
+S095 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:566
+Swift expression:
+  ("A017", fixture.handles.first { $0.noteID == quietID }?.value == 37, "quiet projection publishes preview"),
+
+S096 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:567
+Swift expression:
+  ("A018", fixture.handles.first { $0.noteID == laterID }?.value == 91, "later projection publishes preview"),
+
+S097 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:568
+Swift expression:
+  ("A019", fixture.handle(loud)?.value == Int(loud.velocity), "loud projection stays unchanged"),
+
+S098 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:569
+Swift expression:
+  ("A020", fixture.session.selectedNoteOrder == selection, "selection stays frozen"),
+
+S099 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:574
+Swift expression:
+  ("A021", committed.revision == baseline.revision + 1, "release publishes one document edit"),
+
+S100 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:575
+Swift expression:
+  ("A022", committed.identity != baseline.identity, "release publishes one history edit"),
+
+S101 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:576
+Swift expression:
+  ("A023", committed.revision == baseline.revision + 1, "revision advances once"),
+
+S102 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:577
+Swift expression:
+  ("A024", committed.identity != baseline.identity && committed.canUndo, "one undoable entry is added"),
+
+S103 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:578
+Swift expression:
+  ("A025", committed.canUndo, "paint commit can be undone"),
+
+S104 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:579
+Swift expression:
+  ("A026", fixture.page.frozenPreview[quietID] == nil, "quiet preview clears"),
+
+S105 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:580
+Swift expression:
+  ("A027", fixture.page.frozenPreview[laterID] == nil, "later preview clears"),
+
+S106 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:581
+Swift expression:
+  ("A028", fixture.page.frozenPreview[loudID] == nil, "loud preview remains absent"),
+
+S107 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:582
+Swift expression:
+  ("A029", fixture.document.note(quietID)?.velocity == 37, "quiet endpoint commits"),
+
+S108 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:583
+Swift expression:
+  ("A030", fixture.document.note(laterID)?.velocity == 91, "later endpoint commits"),
+
+S109 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:584
+Swift expression:
+  ("A031", fixture.document.note(loudID)?.velocity == loud.velocity, "loud stays unchanged"),
+
+S110 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:585
+Swift expression:
+  ("A032", fixture.handles.first { $0.noteID == quietID }?.value == 37, "quiet projection republishes commit"),
+
+S111 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:586
+Swift expression:
+  ("A033", fixture.handles.first { $0.noteID == laterID }?.value == 91, "later projection republishes commit"),
+
+S112 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:587
+Swift expression:
+  ("A034", fixture.handle(loud)?.value == Int(loud.velocity), "loud projection remains unchanged"),
+
+S113 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:588
+Swift expression:
+  ("A035", fixture.session.selectedNoteOrder == selection, "release preserves selection"),
+
+S114 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:615
+Swift expression:
+  ("A036", !rampFixture.page.detentsEnabled, "the ramp uses continuous unlocked values"),
+
+S115 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:616
+Swift expression:
+  ("A037", rampFixture.document.note(middleID) != nil, "middle note exists"),
+
+S116 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:617
+Swift expression:
+  ("A038", middle.velocity == 42, "middle starts at 42"),
+
+S117 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:618
+Swift expression:
+  ("A039", mHandle.value == 42, "middle projection starts at 42"),
+
+S118 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:619
+Swift expression:
+  ("A040", rampFixture.session.selectedNoteOrder == rampSelection, "three-note selection is ordered"),
+
+S119 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:620
+Swift expression:
+  ("A041", abs(2 * mHandle.x - (qHandle.x + lHandle.x)) < 0.001, "middle is exactly centered"),
+
+S120 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:621
+Swift expression:
+  ("A042", abs(qHandle.x + lHandle.x - 2 * mHandle.x) < 0.001, "endpoint sum equals twice midpoint"),
+
+S121 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:622
+Swift expression:
+  ("A043", qHandle.x != lHandle.x, "ramp endpoints differ"),
+
+S122 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:623
+Swift expression:
+  ("A044", rampObservation.frozenRevision == rampBaseline.revision, "ramp captures revision"),
+
+S123 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:624
+Swift expression:
+  ("A045", rampObservation.gestureKind == .ramp, "page reports ramp gesture"),
+
+S124 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:625
+Swift expression:
+  ("A046", rampPreview[rq] != nil, "quiet preview exists"),
+
+S125 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:626
+Swift expression:
+  ("A047", rampPreview[middleID] != nil, "middle preview exists"),
+
+S126 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:627
+Swift expression:
+  ("A048", rampPreview[rl] != nil, "later preview exists"),
+
+S127 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:628
+Swift expression:
+  ("A049", Int(rampPreview[rq] ?? 0) == 37, "ramp starts at 37"),
+
+S128 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:629
+Swift expression:
+  ("A050", Int(rampPreview[middleID] ?? 0) == 65, "ramp midpoint is 65"),
+
+S129 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:630
+Swift expression:
+  ("A051", Int(rampPreview[rl] ?? 0) == 93, "ramp ends at 93"),
+
+S130 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:631
+Swift expression:
+  ("A052", rampPreview[rloud] == nil, "loud has no preview"),
+
+S131 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:632
+Swift expression:
+  ("A053", rampDuring.revision == rampBaseline.revision, "preview does not revise document"),
+
+S132 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:633
+Swift expression:
+  ("A054", rampDuring.identity == rampBaseline.identity, "preview does not add history"),
+
+S133 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:634
+Swift expression:
+  ("A055", rampDuring.revision == rampBaseline.revision, "no document edit publishes during preview"),
+
+S134 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:635
+Swift expression:
+  ("A056", rampDuring.identity == rampBaseline.identity, "no history edit publishes during preview"),
+
+S135 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:636
+Swift expression:
+  ("A057", rampFixture.document.note(rq)?.velocity == q.velocity, "quiet document value is frozen"),
+
+S136 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:637
+Swift expression:
+  ("A058", rampFixture.document.note(middleID)?.velocity == 42, "middle document value is frozen"),
+
+S137 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:638
+Swift expression:
+  ("A059", rampFixture.document.note(rl)?.velocity == laterNote.velocity, "later document value is frozen"),
+
+S138 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:639
+Swift expression:
+  ("A060", rampFixture.document.note(rloud)?.velocity == loudNote.velocity, "loud document value is frozen"),
+
+S139 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:640
+Swift expression:
+  ("A061", rampFixture.handles.first { $0.noteID == rq }?.value == 37, "quiet projection publishes preview"),
+
+S140 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:641
+Swift expression:
+  ("A062", rampFixture.handles.first { $0.noteID == middleID }?.value == 65, "middle projection publishes preview"),
+
+S141 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:642
+Swift expression:
+  ("A063", rampFixture.handles.first { $0.noteID == rl }?.value == 93, "later projection publishes preview"),
+
+S142 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:643
+Swift expression:
+  ("A064", rampFixture.handle(loudNote)?.value == Int(loudNote.velocity), "loud projection stays unchanged"),
+
+S143 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:644
+Swift expression:
+  ("A065", rampFixture.session.selectedNoteOrder == rampSelection, "selection stays frozen"),
+
+S144 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:649
+Swift expression:
+  ("A066", rampCommitted.revision == rampBaseline.revision + 1, "release publishes one document edit"),
+
+S145 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:650
+Swift expression:
+  ("A067", rampCommitted.identity != rampBaseline.identity, "release publishes one history edit"),
+
+S146 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:651
+Swift expression:
+  ("A068", rampCommitted.revision == rampBaseline.revision + 1, "revision advances once"),
+
+S147 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:652
+Swift expression:
+  ("A069", rampCommitted.identity != rampBaseline.identity && rampCommitted.canUndo, "one undoable entry is added"),
+
+S148 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:653
+Swift expression:
+  ("A070", rampCommitted.canUndo, "ramp commit can be undone"),
+
+S149 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:654
+Swift expression:
+  ("A071", rampFixture.page.frozenPreview[rq] == nil, "quiet preview clears"),
+
+S150 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:655
+Swift expression:
+  ("A072", rampFixture.page.frozenPreview[middleID] == nil, "middle preview clears"),
+
+S151 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:656
+Swift expression:
+  ("A073", rampFixture.page.frozenPreview[rl] == nil, "later preview clears"),
+
+S152 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:657
+Swift expression:
+  ("A074", rampFixture.page.frozenPreview[rloud] == nil, "loud preview remains absent"),
+
+S153 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:658
+Swift expression:
+  ("A075", rampFixture.document.note(rq)?.velocity == 37, "quiet endpoint commits"),
+
+S154 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:659
+Swift expression:
+  ("A076", rampFixture.document.note(middleID)?.velocity == 65, "middle interpolation commits"),
+
+S155 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:660
+Swift expression:
+  ("A077", rampFixture.document.note(rl)?.velocity == 93, "later endpoint commits"),
+
+S156 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:661
+Swift expression:
+  ("A078", rampFixture.document.note(rloud)?.velocity == loudNote.velocity, "loud stays unchanged"),
+
+S157 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:662
+Swift expression:
+  ("A079", rampFixture.handles.first { $0.noteID == rq }?.value == 37, "quiet projection republishes commit"),
+
+S158 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:663
+Swift expression:
+  ("A080", rampFixture.handles.first { $0.noteID == middleID }?.value == 65, "middle projection republishes commit"),
+
+S159 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:664
+Swift expression:
+  ("A081", rampFixture.handles.first { $0.noteID == rl }?.value == 93, "later projection republishes commit"),
+
+S160 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:665
+Swift expression:
+  ("A082", rampFixture.handle(loudNote)?.value == Int(loudNote.velocity), "loud projection remains unchanged"),
+
+S161 | drawerVelocityPaintingGaps | src/checks/velocity/velocitydetent_gap.swift:666
+Swift expression:
+  ("A083", rampFixture.session.selectedNoteOrder == rampSelection, "release preserves selection"),

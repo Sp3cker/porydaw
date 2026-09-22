@@ -158,342 +158,342 @@ Original expression:
   Q_ASSERT(window)
 
 A003 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A003 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer)
 
 A004 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A004 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(roll)
 
 A005 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A005 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automation)
 
 A006 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A006 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocity)
 
 A007 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A007 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice)
 
 A008 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts attachment to a live QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(fixture.quick->quickWindow())
 
 A009 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A009 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer->minimumSectionHeight(), layout::fontPx(17.0 / 5.0))
 
 A010 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow is exposed and unmasked — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
 
 A011 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A011 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!chrome.barRect().isEmpty())
 
 A012 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A012 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!chrome.voiceChangesToggleRect().isEmpty())
 
 A013 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A013 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!chrome.velocityToggleRect().isEmpty())
 
 A014 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A014 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!chrome.automationToggleRect().isEmpty())
 
 A015 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A015 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.barBorderWidth(), layout::singlePixel())
 
 A016 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A016 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.toggleCheckedBackground(),
                QGuiApplication::palette().color(QPalette::Highlight))
 
 A017 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A017 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.barBackground().alpha(), 255)
 
 A018 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A018 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.barOutline().alpha(), 255)
 
 A019 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A019 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(chrome.iconRevision() > 0)
 
 A020 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A020 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A021 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A021 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A022 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A022 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A023 | DrawerPresentationTest::drawerSurfaceAndChrome | src/checks/drawerpresentation/drawer.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A023 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations)
 
 A024 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A024 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(page))
 
 A025 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A025 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerActivePage(), page)
 
 A026 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A026 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.editorDrawer()->bodyRect(page).has_value())
 
 A027 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A027 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.drawerSectionVisible(page))
 
 A028 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A028 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), originalHeight)
 
 A029 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A029 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(page))
 
 A030 | DrawerPresentationTest::drawerToggleTransactions | src/checks/drawerpresentation/drawer.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A030 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), originalHeight)
 
 A031 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A031 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.editorViewState().velocity.height.has_value())
 
 A032 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A032 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(toggle)
 
 A033 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the mounted QQuick toggle’s activeFocusOnTab behavior — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(toggle->property("activeFocusOnTab").toBool())
 
 A034 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A034 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A035 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A035 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A036 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A036 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Velocity)
 
 A037 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A037 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.chrome().velocityChecked())
 
 A038 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:174
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A038 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(fixture.velocityHandle->isVisible())
 
 A039 | DrawerPresentationTest::drawerZeroHeightKeyboardToggle | src/checks/drawerpresentation/drawer.cpp:175
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A039 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.editorViewState().velocity.height.has_value())
 
 A040 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:185
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A040 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(beforeBody)
 
 A041 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:191
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A041 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(afterBody)
 
 A042 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:198
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A042 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(afterBody)
 
 A043 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A043 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(std::abs(afterBody->height() - beforeBody->height()),
                layout::space(layout::Space::Two))
 
 A044 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A044 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.editorDrawer()->bodyRect(EditorDrawerPage::VoiceChanges) == beforeBody)
 
 A045 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A045 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.hoveredHandle(), static_cast<int>(DrawerChromeTarget::VoiceChangesHandle))
 
 A046 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts Qt::SizeVerCursor on the native resize-handle cursor — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(fixture.voiceHandle->cursor().shape(), Qt::SizeVerCursor)
 
 A047 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native resize-handle cursor-shape teardown after the press — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(fixture.voiceHandle->cursor().shape() != Qt::SizeVerCursor)
 
 A048 | DrawerPresentationTest::drawerKeyboardResizeAndHover | src/checks/drawerpresentation/drawer.cpp:218
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A048 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.hoveredHandle(), -1)
 
 A049 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A049 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocity.y() < voice.y())
 
 A050 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A050 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice.y() < automation.y())
 
 A051 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A051 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(chrome.velocityHandleRect().y() < chrome.voiceChangesHandleRect().y())
 
 A052 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A052 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(chrome.voiceChangesHandleRect().y() < chrome.automationHandleRect().y())
 
 A053 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A053 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.automationToggleRect().x(), chrome.voiceChangesToggleRect().x() +
                                                       chrome.voiceChangesToggleRect().width() +
                                                       layout::space(layout::Space::One))
 
 A054 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A054 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(chrome.velocityToggleRect().x(), chrome.automationToggleRect().x() +
                                                     chrome.automationToggleRect().width() +
                                                     layout::space(layout::Space::One))
 
 A055 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:241
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A055 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Roll,
           QStringLiteral("timelineRollInput"), QStringLiteral("timelineRollGutterInput")))
 
 A056 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A056 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Velocity,
           QStringLiteral("timelineVelocityInput"), QStringLiteral("timelineVelocityGutterInput")))
 
 A057 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:247
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A057 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::VoiceChanges,
@@ -501,8 +501,8 @@ Original expression:
           QStringLiteral("timelineVoiceChangesGutterInput")))
 
 A058 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A058 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(checks::support::physicalInputsMatchCanonical(
           view.timelineBandLayout(), *fixture.quickRoot, songview::TimelineBand::Automation,
@@ -510,262 +510,262 @@ Original expression:
           QStringLiteral("timelineAutomationGutterInput")))
 
 A059 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A059 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(geometry)
 
 A060 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A060 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(geometry->plotRect.x(), view.timelineSplitX())
 
 A061 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A061 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(geometry->plotRect.right(), geometry->rect.right())
 
 A062 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A062 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(geometry->plotRect.height(), geometry->rect.height())
 
 A063 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:266
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A063 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(checks::support::visualDescendant(
                   fixture.quickRoot, QStringLiteral("drawerAutomationScrollBar")) == nullptr)
 
 A064 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts exposure of the drawer’s live QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(quickWindow)
 
 A065 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A065 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!published.isEmpty())
 
 A066 | DrawerPresentationTest::drawerStackAndCanonicalInputs | src/checks/drawerpresentation/drawer.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A066 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(QRectF(QPointF{}, QSizeF(quickWindow->size())).contains(published))
 
 A067 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:292
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A067 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(handle)
 
 A068 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:295
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A068 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(bodyBefore)
 
 A069 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:300
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the resize handle is attached to a live QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(handle->window())
 
 A070 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A070 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer->bodyRect(page) == bodyBefore)
 
 A071 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A071 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), storedBefore)
 
 A072 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:308
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership during the native resize drag — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(handle->window()->mouseGrabberItem(), handle)
 
 A073 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A073 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(liveBody)
 
 A074 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A074 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(liveBody->height() > bodyBefore->height())
 
 A075 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A075 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer->overlayRect().bottom(), overlay.bottom())
 
 A076 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts release of QQuickWindow::mouseGrabberItem after the native resize drag — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!handle->window()->mouseGrabberItem())
 
 A077 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A077 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(page), liveBody->height())
 
 A078 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A078 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionHeight(page) > storedBefore)
 
 A079 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A079 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionHeight(page) <= drawer->maximumSectionHeight())
 
 A080 | DrawerPresentationTest::drawerResizeTransactions | src/checks/drawerpresentation/drawer.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A080 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!fixture.chrome().detentVisible() || page == EditorDrawerPage::Velocity)
 
 A081 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A081 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer)
 
 A082 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:333
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A082 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationPage && automationPage->canvas())
 
 A083 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A083 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceBefore)
 
 A084 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A084 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocityBefore)
 
 A085 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:347
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A085 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(sectionMinimum > 0)
 
 A086 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A086 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Automations), sectionMinimum)
 
 A087 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:352
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A087 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(flooredBody)
 
 A088 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A088 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(flooredBody->height(), sectionMinimum)
 
 A089 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A089 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceAtFloor)
 
 A090 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:361
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A090 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocityAtFloor)
 
 A091 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A091 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceAtFloor->height(), voiceBefore->height())
 
 A092 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A092 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(velocityAtFloor->height(), velocityBefore->height())
 
 A093 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A093 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(gutter)
 
 A094 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A094 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(qCeil(gutter->height()), sectionMinimum)
 
 A095 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A095 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!gutterBounds.isEmpty())
 
 A096 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:374
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A096 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(scroller)
 
 A097 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:375
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A097 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(scroller->property("clip").toBool())
 
 A098 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A098 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(scroller->property("contentHeight").toReal() > scroller->height())
 
 A099 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A099 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(firstTab)
 
 A100 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A100 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(checks::support::rectInside(firstTab->mapRectToScene(firstTab->boundingRect()),
                                               gutterBounds))
 
 A101 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A101 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(
               (label = checks::support::visualDescendant(
@@ -773,473 +773,473 @@ Original expression:
               label->isVisible() && label->width() > 0.0 && label->height() > 0.0)
 
 A102 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:391
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A102 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QTRY_VERIFY(checks::support::rectInside(label->mapRectToScene(label->boundingRect()),
                                                   gutterBounds))
 
 A103 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:397
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A103 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceAfterLabels && velocityAfterLabels)
 
 A104 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:398
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A104 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceAfterLabels->height(), voiceBefore->height())
 
 A105 | DrawerPresentationTest::drawerAutomationResizesHonorMeasuredLabelMinimum | src/checks/drawerpresentation/drawer.cpp:399
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A105 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(velocityAfterLabels->height(), velocityBefore->height())
 
 A106 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:408
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A106 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer)
 
 A107 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A107 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceBefore)
 
 A108 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:415
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A108 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceBefore->height(), voiceMin)
 
 A109 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:416
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A109 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceMax > voiceMin)
 
 A110 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:423
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A110 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice)
 
 A111 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A111 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice->height() > previous)
 
 A112 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:427
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A112 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice->height() <= voiceMax)
 
 A113 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A113 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceAtMax)
 
 A114 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:432
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A114 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceAtMax->height(), voiceMax)
 
 A115 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:437
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A115 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceAfter)
 
 A116 | DrawerPresentationTest::drawerVoiceHandleOverflowsToAutomation | src/checks/drawerpresentation/drawer.cpp:438
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A116 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(voiceAfter->height(), voiceMax)
 
 A117 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:451
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A117 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voiceBefore)
 
 A118 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:452
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A118 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationBefore)
 
 A119 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:453
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A119 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer.automationPage())
 
 A120 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:455
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A120 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationBefore->height() >= automationMinimum)
 
 A121 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:469
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A121 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationOverflowed)
 
 A122 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:470
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A122 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(automationOverflowed->height(), automationBefore->height() + overflow)
 
 A123 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:471
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A123 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationOverflowed->height() >= automationMinimum)
 
 A124 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A124 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer.bodyRect(EditorDrawerPage::VoiceChanges)->height(),
                drawer.voiceChangesMaximumBodyHeight())
 
 A125 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:477
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A125 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationOverflowed)
 
 A126 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:479
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A126 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer.bodyRect(EditorDrawerPage::VoiceChanges) == voiceBefore)
 
 A127 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:480
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A127 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(drawer.bodyRect(EditorDrawerPage::Automations) == automationBefore)
 
 A128 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:482
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A128 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.editorViewState().voiceChanges == stateBefore.voiceChanges)
 
 A129 | DrawerPresentationTest::drawerVoiceOverflowReversesToOriginalHeights | src/checks/drawerpresentation/drawer.cpp:483
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A129 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.editorViewState().automation == stateBefore.automation)
 
 A130 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:494
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A130 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::VoiceChanges))
 
 A131 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:495
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A131 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges), voiceHeight)
 
 A132 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:502
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A132 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::Velocity), collapsedVelocityHeight)
 
 A133 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:503
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A133 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerSectionHeight(EditorDrawerPage::VoiceChanges), collapsedVoiceHeight)
 
 A134 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:505
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A134 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.hasVisibleDrawerSection())
 
 A135 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:506
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A135 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Velocity))
 
 A136 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:507
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A136 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::Automation))
 
 A137 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:508
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A137 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(songview::TimelineBand::VoiceChanges))
 
 A138 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:509
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A138 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Roll))
 
 A139 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:510
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A139 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::OtherEvents))
 
 A140 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:516
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A140 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(view.drawerSectionVisible(EditorDrawerPage::Velocity))
 
 A141 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:517
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A141 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!view.drawerSectionVisible(EditorDrawerPage::Automations))
 
 A142 | DrawerPresentationTest::drawerCollapseAndActivePage | src/checks/drawerpresentation/drawer.cpp:518
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A142 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.drawerActivePage(), EditorDrawerPage::Automations)
 
 A143 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:528
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Requests focus through the mounted Qt Quick band and asserts native focus routing succeeded — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::Roll, Qt::OtherFocusReason))
 
 A144 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:529
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the roll band owns native Qt Quick focus — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A145 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:532
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickItem::hasActiveFocus() on the mounted drawer bar — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(fixture.bar->hasActiveFocus())
 
 A146 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:533
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick band-focus loss after focus moves to the drawer bar — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!view.focusedTimelineBand())
 
 A147 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:535
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick focus fallback to the velocity band — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A148 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:538
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Requests focus through the mounted voice band and asserts native focus routing succeeded — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::VoiceChanges, Qt::OtherFocusReason))
 
 A149 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:539
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts the voice band owns native Qt Quick focus — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::VoiceChanges)
 
 A150 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:542
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick focus fallback from voice to velocity — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Velocity)
 
 A151 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:545
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick focus fallback to automation — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Automation)
 
 A152 | DrawerPresentationTest::drawerFocusFallback | src/checks/drawerpresentation/drawer.cpp:548
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts native Qt Quick focus fallback to the roll — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QTRY_VERIFY(view.focusedTimelineBand() &&
                   *view.focusedTimelineBand() == songview::TimelineBand::Roll)
 
 A153 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:560
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A153 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(!hostBounds.isEmpty())
 
 A154 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:561
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A154 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(rollGeometry)
 
 A155 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:566
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A155 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(drawer->plotWidth(), 0)
 
 A156 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:567
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A156 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).top(), rollBefore.top())
 
 A157 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:568
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A157 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(fixture.bandRect(songview::TimelineBand::Roll).height(), rollBefore.height())
 
 A158 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:580
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A158 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice)
 
 A159 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:581
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A159 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocity)
 
 A160 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:582
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A160 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automation)
 
 A161 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:583
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A161 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice->height() >= 0)
 
 A162 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:584
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A162 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocity->height() >= 0)
 
 A163 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:585
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A163 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automation->height() >= 0)
 
 A164 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:586
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A164 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(velocity->bottom() <= voice->top())
 
 A165 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:587
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A165 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(voice->bottom() <= automation->top())
 
 A166 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:594
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A166 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(headers)
 
 A167 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:595
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A167 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(input)
 
 A168 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:596
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the track-header input is attached to a live QQuickWindow — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(input->window())
 
 A169 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:597
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A169 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(headers->rowCount(), 16)
 
 A170 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:601
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A170 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(input->bounds().contains(point))
 
 A171 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:603
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts QQuickWindow::mouseGrabberItem ownership during native header input — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QCOMPARE(input->window()->mouseGrabberItem(), input)
 
 A172 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:605
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts release of QQuickWindow::mouseGrabberItem after native header input — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(!input->window()->mouseGrabberItem())
 
 A173 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:607
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A173 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(),
                headers->data(index, songview::TrackHeaderModel::TrackRole).toInt())
 
 A174 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:611
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A174 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationGutter)
 
 A175 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:614
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A175 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationGutter->isVisible())
 
 A176 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:615
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A176 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationGutter->bounds().contains(automationGutter->bounds().center()))
 
 A177 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:616
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 row A177 in src/checks/drawerpresentation/drawer_gap.swift drives the production EditorDrawerPresenter/layout seam through attach, toggle, resize, spill and host-clamp events; the resulting published geometry, visibility, stored heights, active sections and preference records preserve the original drawer preconditions and event sequence. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(automationBand.contains(QPoint(automationBand.left(), automationBand.center().y())))
 
 A178 | DrawerPresentationTest::drawerHostClampAndHeaderRouting | src/checks/drawerpresentation/drawer.cpp:617
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow remains exposed and unmasked — no Swift-observable surface; retained by swiftrollgated.
 Original expression:
   QVERIFY(checks::support::quickWindowIsUnmasked(*fixture.quick))
 
@@ -1874,3 +1874,9 @@ Swift expression:
                     harness.layout.storedBodyHeight(.voiceChanges) == 96,
                     cppID: drawerLayoutPersistenceID,
                     message: "an unavailable kind never has its keys written and keeps its stored preference")
+
+
+S079 | drawerPresentationPortableGapChecks | src/checks/drawerpresentation/drawer_gap.swift:105
+Swift expression:
+  report.expect(contract, cppID: drawerPresentationGapID,
+                    message: "\(row)-drawer presenter geometry, toggle, resize and clamp contract")

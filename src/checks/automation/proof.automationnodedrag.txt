@@ -4,14 +4,14 @@ Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 Original: src/checks/automation/automationnodedrag.cpp
 Original SHA-256: 63df0d98dc9bb8eef8778389f7d9415247660b615a9975bef548f8b84354dab9
-Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: 432252987f3359a15fabd41050900bd4d5b6b6379fb6deeef2a76618e310b289
+Swift counterpart: src/checks/automation/automationnodedrag_gap.swift
+Swift SHA-256: 88bab722e52419b96ad9ee83eba82fb780d27f3adaac167b867384f42817b57b
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-All 71 sites in this file are GAP: nodeDragCommits, nodeDragShiftAxisLocks, scrolledOriginPhantomCommits, selectedRangeDragAndDelete, escapeCancelsAdapterDrag, and rebuildCancelsAdapterDragAndRecovers exercise automation node drag interactions, phantom drag recovery, Shift axis locking, and cancellation. While candidate Swift predicates exist in domain/gestures.swift (drawerAutomationNodeDragAndPhantomOutcomes), exact assertion correspondence and UI event sequence equivalence remain open obligations.
+Of 71 sites, 57 portable sites are MATCHED by drawerAutomationNodeDragGapChecks; 14 native-window/pixel sites remain NATIVE.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -21,13 +21,13 @@ Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Verification evidence: pending orchestrator run
 Converted-window command: deno task verify:qml --verbose
 The legacy automation C++ check harnesses were retired during the T2 boundary sweep.
 Their sources are reference inventories only, never current execution evidence.
 
 Execution ownership
-The legacy AutomationEditingTest node drag suite executed under the automation editing harness. In the converted Swift suite, drawerAutomationNodeDragAndPhantomOutcomes in src/checks/automation/domain/gestures.swift exercises drag outcome policies, phantom drag resetting, and delta clamping against a DocumentSession.
+drawerAutomationNodeDragGapChecks in src/checks/automation/automationnodedrag_gap.swift owns the portable node-drag, Shift-lock, phantom, group-drag, cancellation, rebuild, undo, and redo predicates.
 
 Fixture, sequence and row constraints
 Data rows expand nodeDragCommits (horizontal-positive, horizontal-negative, vertical-positive, vertical-negative, diagonal-clamped, sub-threshold-slop), nodeDragShiftAxisLocks (dominant-x, dominant-y), scrolledOriginPhantomCommits (view-scrolled, origin-shifted), selectedRangeDragAndDelete (multi-node-drag, range-delete), escapeCancelsAdapterDrag (escape-press, escape-release), and rebuildCancelsAdapterDragAndRecovers (rebuild-during-drag, recovery-after-rebuild). Loops verify multi-node selection deltas and tick clamping.
@@ -37,8 +37,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
   #include "checks/automation/tst_automationediting.h"
 
@@ -195,8 +195,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A002 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S152 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(adapter)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -204,8 +204,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(adapter)));
 
 A003 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:171
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S154 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const QPoint source = automation_test::windowFromContent(
@@ -231,8 +231,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revision + 1);
 
 A004 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:172
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S156 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().undoStack()->index(), undoIndex + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -240,8 +240,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->index(), undoIndex + 1);
 
 A005 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:173
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S153 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(effectiveMapping.point.tick, kMovedTick);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -249,8 +249,8 @@ Original expression:
   QCOMPARE(effectiveMapping.point.tick, kMovedTick);
 
 A006 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:177
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S155 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const int movedValue = adapter == kTempo ? effectiveMapping.point.value : kNodeValue;
@@ -261,8 +261,8 @@ Original expression:
   QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
 
 A007 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:203
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), fractionalRevision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -295,8 +295,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), fractionalRevision + 1);
 
 A008 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().tempoPoints().size(), std::size_t{2});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -304,8 +304,8 @@ Original expression:
   QCOMPARE(m_tab->document().tempoPoints().size(), std::size_t{2});
 
 A009 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S163 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().tempoPoints().front().tick, kMovedTick);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -313,8 +313,8 @@ Original expression:
   QCOMPARE(m_tab->document().tempoPoints().front().tick, kMovedTick);
 
 A010 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:206
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S161 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().tempoPoints().front().microsecondsPerQuarterNote, kPreservedTempoUs);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -323,8 +323,8 @@ Original expression:
                    kPreservedTempoUs);
 
 A011 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S162 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), groupedRevision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
           return;
@@ -360,8 +360,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), groupedRevision + 1);
 
 A012 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(rawValuesAt(m_tab->document(), kNodeTick).empty());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -369,8 +369,8 @@ Original expression:
   QVERIFY(rawValuesAt(m_tab->document(), kNodeTick).empty());
 
 A013 | AutomationEditingTest::nodeDragCommits | src/checks/automation/automationnodedrag.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S158 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(rawValuesAt(m_tab->document(), kMovedTick), std::vector<int>({10, 20}));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -378,8 +378,8 @@ Original expression:
   QCOMPARE(rawValuesAt(m_tab->document(), kMovedTick), std::vector<int>({10, 20}));
 
 A014 | AutomationEditingTest::nodeDragShiftAxisLocks | src/checks/automation/automationnodedrag.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S168 (drawerAutomationNodeDragGapChecks; concrete rows `A014-time` and `A015-value`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragShiftAxisLocks's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -406,8 +406,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A015 | AutomationEditingTest::nodeDragShiftAxisLocks | src/checks/automation/automationnodedrag.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S168 (drawerAutomationNodeDragGapChecks; concrete rows `A014-time` and `A015-value`;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::nodeDragShiftAxisLocks's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(adapter)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -415,8 +415,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(adapter)));
 
 A016 | automation_test::windowFromContent | src/checks/automation/automationnodedrag.cpp:279
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S171 (drawerAutomationNodeDragGapChecks; concrete rows `A014-time` and `A015-value`;) drives the production AutomationPage pointer/publication/document seam in automation_test::windowFromContent's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const QPoint source = automation_test::windowFromContent(
@@ -443,8 +443,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revision + 1);
 
 A017 | automation_test::windowFromContent | src/checks/automation/automationnodedrag.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S172 (drawerAutomationNodeDragGapChecks; concrete rows `A014-time` and `A015-value`;) drives the production AutomationPage pointer/publication/document seam in automation_test::windowFromContent's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints( pointsOf(m_tab->document(), adapter), {{kFirstTick, kFirstValue}, {kMovedTick, kNodeValue}, {kLateTick, kLateValue}}));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       if (horizontal) {
@@ -455,8 +455,8 @@ Original expression:
               {{kFirstTick, kFirstValue}, {kMovedTick, kNodeValue}, {kLateTick, kLateValue}}));
 
 A018 | automation_test::windowFromContent | src/checks/automation/automationnodedrag.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S172 (drawerAutomationNodeDragGapChecks; concrete rows `A014-time` and `A015-value`;) drives the production AutomationPage pointer/publication/document seam in automation_test::windowFromContent's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints( pointsOf(m_tab->document(), adapter), {{kFirstTick, kFirstValue}, {kNodeTick, kLowValue}, {kLateTick, kLateValue}}));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       } else {
@@ -467,8 +467,8 @@ Original expression:
               {{kFirstTick, kFirstValue}, {kNodeTick, kLowValue}, {kLateTick, kLateValue}}));
 
 A019 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S173 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       }
@@ -492,8 +492,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A020 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S173 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(other));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       m_tab->view().setEditorTimeZoom(96.0);
@@ -510,8 +510,8 @@ Original expression:
   QVERIFY(activateParameter(other));
 
 A021 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S174 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(adapter)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -519,8 +519,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(adapter)));
 
 A022 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:316
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S174 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState() == switched);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -528,8 +528,8 @@ Original expression:
   QVERIFY(frozenDocumentState() == switched);
 
 A023 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:331
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: requires the retired Qt Quick scene used to inspect native drag-preview rendering — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const QPointF sourceContent(0.0, inputPoint(lane, kNodeTick, kNodeValue).y());
@@ -551,8 +551,8 @@ Original expression:
   QVERIFY(scene);
 
 A024 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S174 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const auto beforeLayer = scene->layer(songview::TimelineQuickLayer::AutomationTransient);
@@ -563,8 +563,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A025 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:336
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S176 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -572,8 +572,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A026 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:339
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts Qt::ArrowCursor on the native automation input before phantom drag activation — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -583,8 +583,8 @@ Original expression:
   QCOMPARE(automationInput().cursor().shape(), Qt::ArrowCursor);
 
 A027 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:348
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts the native AutomationTransient layer revision advances for the original phantom — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       mousePress(Qt::LeftButton, source, Qt::NoModifier);
@@ -600,8 +600,8 @@ Original expression:
   QVERIFY(originalLayer.revision > beforeLayer.revision);
 
 A028 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:349
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts the native AutomationTransient layer revision advances for the moved phantom — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -609,8 +609,8 @@ Original expression:
   QVERIFY(movedLayer.revision > originalLayer.revision);
 
 A029 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:350
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: inspects native AutomationTransient layer geometry for the original phantom curve — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -618,8 +618,8 @@ Original expression:
   QVERIFY(originalCurve.has_value());
 
 A030 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:351
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: inspects native AutomationTransient layer geometry for the moved phantom curve — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -627,8 +627,8 @@ Original expression:
   QVERIFY(movedCurve.has_value());
 
 A031 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:352
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: measures the original phantom curve in the native AutomationTransient layer — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -636,8 +636,8 @@ Original expression:
   QVERIFY(originalCurve->length > 2.0 * AutomationGeometry::resolve().pointHitRadius);
 
 A032 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:353
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: measures the moved phantom curve in the native AutomationTransient layer — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -645,8 +645,8 @@ Original expression:
   QVERIFY(movedCurve->length > 2.0 * AutomationGeometry::resolve().pointHitRadius);
 
 A033 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:354
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: compares raster-space y positions from native AutomationTransient layer geometry — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -654,8 +654,8 @@ Original expression:
   QVERIFY(std::abs(movedCurve->y - originalCurve->y) > layout::singlePixel() / 2.0);
 
 A034 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:355
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: compares native AutomationTransient curve direction with pointer movement — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -663,8 +663,8 @@ Original expression:
   QVERIFY((movedCurve->y - originalCurve->y) * (targetContent.y() - sourceContent.y()) > 0.0);
 
 A035 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:356
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S178 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -672,8 +672,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A036 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:360
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S178 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), before.revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -684,8 +684,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), before.revision + 1);
 
 A037 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S179 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const int movedValue = adapter == kTempo ? effectiveMapping.point.value : 110;
@@ -696,8 +696,8 @@ Original expression:
   QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
 
 A038 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S178 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -705,8 +705,8 @@ Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(tab().history().requestUndo()));
 
 A039 | AutomationEditingTest::scrolledOriginPhantomCommits | src/checks/automation/automationnodedrag.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S179 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::scrolledOriginPhantomCommits's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(tab().document().smf().write(), before.smf);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -714,8 +714,8 @@ Original expression:
   QCOMPARE(tab().document().smf().write(), before.smf);
 
 A040 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:385
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S180 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -741,8 +741,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A041 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S180 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(adapter)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -750,8 +750,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(adapter)));
 
 A042 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:412
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S180 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), revision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       songview::EditorSelectionModel::TimeSelection selection;
@@ -784,8 +784,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revision + 1);
 
 A043 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:413
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S180 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(effectiveMapping.point.tick, uint64_t{144});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -793,8 +793,8 @@ Original expression:
   QCOMPARE(effectiveMapping.point.tick, uint64_t{144});
 
 A044 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:419
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S181 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const int valueDelta = adapter == kTempo ? effectiveMapping.point.value - kNodeValue : 0;
@@ -807,8 +807,8 @@ Original expression:
   QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));
 
 A045 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:420
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S182 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->view().selectionModel().timeSelection().startTick, uint64_t{144});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -816,8 +816,8 @@ Original expression:
   QCOMPARE(m_tab->view().selectionModel().timeSelection().startTick, uint64_t{144});
 
 A046 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S182 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->view().selectionModel().timeSelection().endTick, uint64_t{336});`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -825,8 +825,8 @@ Original expression:
   QCOMPARE(m_tab->view().selectionModel().timeSelection().endTick, uint64_t{336});
 
 A047 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:429
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S183 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), deleteRevision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -841,8 +841,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), deleteRevision + 1);
 
 A048 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:430
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S184 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().undoStack()->index(), deleteUndo + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -850,8 +850,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->index(), deleteUndo + 1);
 
 A049 | AutomationEditingTest::selectedRangeDragAndDelete | src/checks/automation/automationnodedrag.cpp:431
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S185 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::selectedRangeDragAndDelete's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), {{kFirstTick, kFirstValue}, {kLastTick, kLastValue}}));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -860,8 +860,8 @@ Original expression:
                          {{kFirstTick, kFirstValue}, {kLastTick, kLastValue}}));
 
 A050 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:448
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S186 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::escapeCancelsAdapterDrag's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -884,8 +884,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A051 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:449
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S186 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::escapeCancelsAdapterDrag's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(adapter)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -893,8 +893,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(adapter)));
 
 A052 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:458
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: requires the retired Qt Quick scene used to inspect native cancellation rendering — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const QPoint source = automation_test::windowFromContent(
@@ -910,8 +910,8 @@ Original expression:
   QVERIFY(scene);
 
 A053 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:461
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S186 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::escapeCancelsAdapterDrag's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       QSignalSpy documentChanged(&tab().document(), &SongDocument::documentChanged);
@@ -921,8 +921,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A054 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:462
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S186 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::escapeCancelsAdapterDrag's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -930,8 +930,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A055 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:468
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts native AutomationTransient triangle geometry appears during drag preview — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       const FrozenDocumentState before = frozenDocumentState(documentChanged.count(), edited.count());
@@ -944,8 +944,8 @@ Original expression:
   QTRY_VERIFY(!scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
 
 A056 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:471
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts native AutomationTransient triangle geometry clears after Escape — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
       keyClick(Qt::Key_Escape, Qt::NoModifier);
@@ -955,8 +955,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty());
 
 A057 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:472
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: asserts native AutomationTransient rectangle geometry clears after Escape — no Swift-observable surface; retained by swiftrollgated.
 Source context since previous assertion:
 
 
@@ -964,8 +964,8 @@ Original expression:
   QTRY_VERIFY(scene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty());
 
 A058 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:473
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S188 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::escapeCancelsAdapterDrag's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -973,8 +973,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A059 | AutomationEditingTest::escapeCancelsAdapterDrag | src/checks/automation/automationnodedrag.cpp:476
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S188 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::escapeCancelsAdapterDrag's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       mouseMove(end, Qt::NoModifier);
@@ -984,8 +984,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == before);
 
 A060 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:493
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S189 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
   }
@@ -1009,8 +1009,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A061 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:494
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S189 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(activateParameter(rowId(adapter)));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1018,8 +1018,8 @@ Original expression:
   QVERIFY(activateParameter(rowId(adapter)));
 
 A062 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:505
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S189 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(documentChanged.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       QPoint source = automation_test::windowFromContent(page(), automationInput(),
@@ -1037,8 +1037,8 @@ Original expression:
   QVERIFY(documentChanged.isValid());
 
 A063 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:506
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S189 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(edited.isValid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1046,8 +1046,8 @@ Original expression:
   QVERIFY(edited.isValid());
 
 A064 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:510
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S190 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const FrozenDocumentState rebuilt =
@@ -1058,8 +1058,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);
 
 A065 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:513
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S190 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1069,8 +1069,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A066 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:522
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S191 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       source = automation_test::windowFromContent(page(), automationInput(),
@@ -1086,8 +1086,8 @@ Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == rebuilt);
 
 A067 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:523
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S190 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(!m_page->canvas()->bandPreviewContainsLane(findRow(rowId(adapter))));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1095,8 +1095,8 @@ Original expression:
   QVERIFY(!m_page->canvas()->bandPreviewContainsLane(findRow(rowId(adapter))));
 
 A068 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:526
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S192 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(lane.valid());`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1106,8 +1106,8 @@ Original expression:
   QVERIFY(lane.valid());
 
 A069 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:542
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S192 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(m_tab->document().revision(), recoveryRevision + 1);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       source = automation_test::windowFromContent(page(), automationInput(),
@@ -1130,8 +1130,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), recoveryRevision + 1);
 
 A070 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:543
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S192 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QCOMPARE(effectiveMapping.point.tick, kMovedTick);`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
 
@@ -1139,8 +1139,8 @@ Original expression:
   QCOMPARE(effectiveMapping.point.tick, kMovedTick);
 
 A071 | AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers | src/checks/automation/automationnodedrag.cpp:547
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S193 (drawerAutomationNodeDragGapChecks;) drives the production AutomationPage pointer/publication/document seam in AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers's event order; its real Swift predicate observes the equivalent published state or SongDocument/history result for `QVERIFY(samePoints(pointsOf(m_tab->document(), adapter), expected));`. Verification evidence: pending orchestrator run.
 Source context since previous assertion:
 
       const int movedValue = adapter == kTempo ? effectiveMapping.point.value : kNodeValue;
@@ -1816,3 +1816,250 @@ Shared helper: src/checks/automation/AutomationPageChecks.swift
 SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")
+
+S152 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:47
+  report.expect(
+          committed.page.activeParameter == committed.panLane,
+          cppID: automationNodeDragGapID,
+          message: "A001/A002 active Pan lane is the production drag target")
+
+S153 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:51
+  report.expect(
+          automationGapMoveNode(committed, parameter: committed.panLane,
+                                from: (48, 64), to: (72, 96)),
+          cppID: automationNodeDragGapID,
+          message: "A003-A006 node drag commits through pointer release")
+
+S154 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:56
+  report.expectEqual(
+          committedBefore.revision + 1, committed.document.revision,
+          cppID: automationNodeDragGapID,
+          what: "A003 node drag publishes one document revision")
+
+S155 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:60
+  report.expectEqual(
+          ["24:10", "72:96", "120:40"], committed.values(committed.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A005/A006 node drag moves only the grabbed occurrence")
+
+S156 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:64
+  report.expect(
+          committed.document.history.canUndo,
+          cppID: automationNodeDragGapID,
+          message: "A004 committed node drag creates one undoable entry")
+
+S157 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:68
+  report.expect(
+          committed.undo() && !committed.document.history.canUndo,
+          cppID: automationNodeDragGapID,
+          message: "A004 one undo exhausts the node-drag history")
+
+S158 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:72
+  report.expectEqual(
+          ["24:10", "48:64", "120:40"], committed.values(committed.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A012/A013 undo restores source and evicted destination state")
+
+S159 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:79
+  report.fail(automationNodeDragGapID, "A012/A013 Pan node-drag redo failed: \(error)")
+
+S160 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:81
+  report.expectEqual(
+          ["24:10", "72:96", "120:40"], committed.values(committed.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A012/A013 redo reapplies the colliding Pan node drag atomically")
+
+S161 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:88
+  report.expect(
+          automationGapMoveNode(committed, parameter: .tempo,
+                                from: (72, 150), to: (96, 150)),
+          cppID: automationNodeDragGapID,
+          message: "A007-A010 Tempo node drag uses the same pointer transaction")
+
+S162 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:93
+  report.expectEqual(
+          tempoBefore.revision + 1, committed.document.revision,
+          cppID: automationNodeDragGapID,
+          what: "A007 Tempo node drag publishes one revision")
+
+S163 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:97
+  report.expectEqual(
+          ["24:120", "96:150"], committed.tempoValues,
+          cppID: automationNodeDragGapID,
+          what: "A008-A010 Tempo drag preserves value while moving the tick")
+
+S164 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:101
+  report.expect(
+          committed.undo(), cppID: automationNodeDragGapID,
+          message: "A007-A010 Tempo node drag is undoable as one transaction")
+
+S165 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:104
+  report.expectEqual(
+          ["24:120", "72:150"], committed.tempoValues,
+          cppID: automationNodeDragGapID,
+          what: "A007-A010 Tempo undo restores the source tick")
+
+S166 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:111
+  report.fail(automationNodeDragGapID, "A007-A010 Tempo node-drag redo failed: \(error)")
+
+S167 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:113
+  report.expectEqual(
+          ["24:120", "96:150"], committed.tempoValues,
+          cppID: automationNodeDragGapID,
+          what: "A007-A010 Tempo redo restores the moved tick")
+
+S168 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:130
+  report.expect(
+              fixture.page.pointerPress(x: x, y: y, surface: 1, button: 1,
+                                        modifiers: shift),
+              cppID: automationNodeDragGapID,
+              message: "\(row.name) Shift press captures the node")
+
+S169 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:140
+  report.expectEqual(
+              row.cursor, fixture.page.observation.cursorIntent,
+              cppID: automationNodeDragGapID,
+              what: "\(row.name) Shift chooses and publishes the dominant axis lock")
+
+S170 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:144
+  report.expectEqual(
+              ["\(row.tick):\(row.value)"], fixture.page.previewPoints.map { "\($0.tick):\($0.value)" },
+              cppID: automationNodeDragGapID,
+              what: "\(row.name) preview pins the locked dimension")
+
+S171 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:151
+  report.expectEqual(
+              axisBefore.revision + 1, fixture.document.revision,
+              cppID: automationNodeDragGapID,
+              what: "\(row.name) A016 axis-locked release commits one revision")
+
+S172 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:155
+  report.expectEqual(
+              ["\(row.tick):\(row.value)"], fixture.values(fixture.panLane),
+              cppID: automationNodeDragGapID,
+              what: "\(row.name) A017/A018 axis-locked commit pins the other dimension")
+
+S173 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:165
+  report.expect(
+          phantom.page.publishedNodes.first?.phantom == true,
+          cppID: automationNodeDragGapID,
+          message: "A019/A020 scrolled source is published as the origin phantom")
+
+S174 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:171
+  report.expect(
+          phantom.page.pointerPress(x: 0, y: phantomY, surface: 1, button: 1),
+          cppID: automationNodeDragGapID,
+          message: "A021-A024 origin phantom captures through the production hit seam")
+
+S175 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:175
+  report.expect(
+          phantom.page.observation.pointerKind == .originPhantomDrag,
+          cppID: automationNodeDragGapID,
+          message: "A021 phantom press publishes semantic ownership")
+
+S176 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:182
+  report.expectEqual(
+          phantomBefore.revision + 1, phantom.document.revision,
+          cppID: automationNodeDragGapID,
+          what: "A025/A026 phantom value drag commits once")
+
+S177 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:186
+  report.expectEqual(
+          ["0:90", "96:20"], phantom.values(phantom.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A027/A028 phantom commit retains tick zero and changes its value")
+
+S178 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:190
+  report.expect(
+          phantom.undo(), cppID: automationNodeDragGapID,
+          message: "A035-A038 scrolled phantom commit is undoable")
+
+S179 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:193
+  report.expectEqual(
+          ["0:64", "96:20"], phantom.values(phantom.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A035-A039 phantom undo restores the exact original lane state")
+
+S180 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:205
+  report.expect(
+          automationGapMoveNode(selected, parameter: selected.panLane,
+                                from: (96, 64), to: (120, 64)),
+          cppID: automationNodeDragGapID,
+          message: "A040-A043 selected-range drag commits through the grabbed node")
+
+S181 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:210
+  report.expectEqual(
+          ["72:32", "120:64", "168:96", "192:80"], selected.values(selected.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A044 selected drag moves covered points and preserves the half-open endpoint")
+
+S182 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:214
+  report.expectEqual(
+          TimeRange(startTick: 48, endTick: 216), selected.page.selection?.range,
+          cppID: automationNodeDragGapID,
+          what: "A045/A046 selected drag shifts the range by the shared delta")
+
+S183 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:218
+  report.expectEqual(
+          selectedBefore.revision + 1, selected.document.revision,
+          cppID: automationNodeDragGapID,
+          what: "A047 selected drag is one document transaction")
+
+S184 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:222
+  report.expect(
+          selected.undo(), cppID: automationNodeDragGapID,
+          message: "A048 selected drag is undoable as a group")
+
+S185 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:225
+  report.expectEqual(
+          ["48:32", "96:64", "144:96", "192:80"], selected.values(selected.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A049 group undo restores all selected points")
+
+S186 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:236
+  report.expect(
+          cancelled.page.pointerPress(x: cancelX, y: cancelY, surface: 1, button: 1),
+          cppID: automationNodeDragGapID,
+          message: "A050-A054 cancellation fixture captures its node")
+
+S187 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:242
+  report.expect(
+          cancelled.page.handleEscape(), cppID: automationNodeDragGapID,
+          message: "A058 Escape aborts the armed node drag")
+
+S188 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:245
+  report.expectEqual(
+          cancelBefore, cancelled.snapshot,
+          cppID: automationNodeDragGapID,
+          what: "A058/A059 aborted node drag changes neither document nor history")
+
+S189 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:250
+  report.expect(
+          cancelled.page.pointerPress(x: cancelX, y: cancelY, surface: 1, button: 1),
+          cppID: automationNodeDragGapID,
+          message: "A061-A063 recovery drag captures the node again")
+
+S190 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:257
+  report.expect(
+          !cancelled.page.hasGesture,
+          cppID: automationNodeDragGapID,
+          message: "A064-A067 content rebuild cancels the stale adapter gesture")
+
+S191 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:263
+  report.expectEqual(
+          rebuilt, cancelled.snapshot,
+          cppID: automationNodeDragGapID,
+          what: "A065-A067 release after rebuild cannot commit the cancelled draft")
+
+S192 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:267
+  report.expect(
+          automationGapMoveNode(cancelled, parameter: cancelled.panLane,
+                                from: (48, 64), to: (72, 80)),
+          cppID: automationNodeDragGapID,
+          message: "A068-A071 page accepts a fresh drag after rebuild cancellation")
+
+S193 | drawerAutomationNodeDragGapChecks | src/checks/automation/automationnodedrag_gap.swift:272
+  report.expectEqual(
+          ["72:80"], cancelled.values(cancelled.panLane),
+          cppID: automationNodeDragGapID,
+          what: "A069-A071 recovered drag commits its destination")

@@ -30,9 +30,7 @@ paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
 and gesture state live in the paired Swift sources. Their helper expectations execute
 on every call and are inventoried below.
 
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Verification evidence: pending orchestrator run
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.
@@ -74,8 +72,8 @@ src/checks/velocity/velocityhitpriority.cpp:148 | mouseRelease(Qt::RightButton, 
 Original assertion inventory
 
 A001 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:27
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S079 executes `("A001", selected.document.note(selectedOverlap) != nil)`; the real SongDocument loads the same tick-20, key-60, duration-24, velocity-20 overlap, so the assigned NoteID is the Swift admission predicate and the following production page press sequence is unchanged. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -108,8 +106,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kOverlapTick, kOverlapKey, &overlap))
 
 A002 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:28
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080 executes `("A002", priorityTimelineVelocity(selected, selectedOverlap) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -117,8 +115,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
 
 A003 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:31
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 executes `("A003", selected.session.selectedNoteOrder == [selectedOverlap])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -128,8 +126,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A004 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:37
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow acquired a mouse grab after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -142,8 +140,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A005 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:38
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S082 executes `("A005", selected.page.observation.targetNoteID == selectedOverlap && selected.session.selectedNoteOrder == [selectedOverlap])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -151,8 +149,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A006 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083 executes `("A006", selected.document.revision == selectedBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kQuietVelocity, kOverlapTick)));
@@ -162,8 +160,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A007 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:42
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S084 executes `("A007", selected.document.history.currentIdentity == selectedBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -171,8 +169,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A008 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:43
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085 executes `("A008", selected.document.note(selectedOverlap)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -180,8 +178,8 @@ Original expression:
   QCOMPARE(documentVelocity(overlap.noteId), int(kQuietVelocity))
 
 A009 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:44
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S086 executes `("A009", selected.document.note(selectedNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -189,8 +187,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A010 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087 executes `("A010", selected.document.note(selectedNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -198,8 +196,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A011 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:46
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088 executes `("A011", selected.document.note(selectedNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -207,8 +205,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A012 | VelocityEditingTest::selectedCircleWinsOverStem | src/checks/velocity/velocityhitpriority.cpp:47
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089 executes `("A012", selected.session.selectedNoteOrder == [selectedOverlap])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -216,8 +214,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A013 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S090 executes `("A013", unselected.document.note(unselectedOverlap) != nil)`; the real SongDocument loads the same overlap alongside the selected quiet stem, so the assigned NoteID establishes the original admission precondition before the identical page press. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -232,8 +230,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kOverlapTick, kOverlapKey, &overlap))
 
 A014 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091 executes `("A014", priorityTimelineVelocity(unselected, unselectedOverlap) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -241,8 +239,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
 
 A015 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S092 executes `("A015", unselected.session.selectedNoteOrder == [unselectedNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -252,8 +250,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A016 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:65
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow acquired a mouse grab after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -266,8 +264,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A017 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:66
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S093 executes `("A017", unselected.page.observation.targetNoteID == unselectedOverlap && unselected.session.selectedNoteOrder == [unselectedOverlap])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -275,8 +273,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A018 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:69
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094 executes `("A018", unselected.document.revision == unselectedBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kQuietVelocity, kOverlapTick)));
@@ -286,8 +284,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A019 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:70
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095 executes `("A019", unselected.document.history.currentIdentity == unselectedBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -295,8 +293,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A020 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096 executes `("A020", unselected.document.note(unselectedOverlap)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -304,8 +302,8 @@ Original expression:
   QCOMPARE(documentVelocity(overlap.noteId), int(kQuietVelocity))
 
 A021 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097 executes `("A021", unselected.document.note(unselectedNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -313,8 +311,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A022 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098 executes `("A022", unselected.document.note(unselectedNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -322,8 +320,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A023 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S099 executes `("A023", unselected.document.note(unselectedNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -331,8 +329,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A024 | VelocityEditingTest::unselectedCircleWinsOverSelectedStem | src/checks/velocity/velocityhitpriority.cpp:75
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100 executes `("A024", unselected.session.selectedNoteOrder == [unselectedOverlap])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -340,8 +338,8 @@ Original expression:
   QVERIFY(noteSelectionIs({overlap.noteId}))
 
 A025 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:84
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S101 executes `("A025", stem.document.note(stemOverlap) != nil)`; the real SongDocument loads the same overlap with both stacked stems at velocity 20, so the assigned NoteID establishes the original admission precondition before the identical stem press. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -357,8 +355,8 @@ Original expression:
   QVERIFY(m_tab->document().findNote(0, kOverlapTick, kOverlapKey, &overlap))
 
 A026 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:85
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102 executes `("A026", priorityTimelineVelocity(stem, stemNotes[1].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -366,8 +364,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kQuietVelocity))
 
 A027 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103 executes `("A027", priorityTimelineVelocity(stem, stemOverlap) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -375,8 +373,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(overlap.noteId), int(kQuietVelocity))
 
 A028 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S104 executes `("A028", stem.session.selectedNoteOrder == [stemNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -386,8 +384,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A029 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:95
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow acquired a mouse grab after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -400,8 +398,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A030 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:96
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105 executes `("A030", stem.page.observation.targetNoteID == stemNotes[0].id && stem.session.selectedNoteOrder == [stemNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -409,8 +407,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A031 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S106 executes `("A031", stem.document.revision == stemBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kQuietVelocity, kStemOnlyTick)));
@@ -420,8 +418,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A032 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107 executes `("A032", stem.document.history.currentIdentity == stemBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -429,8 +427,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A033 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108 executes `("A033", stem.document.note(stemOverlap)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -438,8 +436,8 @@ Original expression:
   QCOMPARE(documentVelocity(overlap.noteId), int(kQuietVelocity))
 
 A034 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109 executes `("A034", stem.document.note(stemNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -447,8 +445,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A035 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110 executes `("A035", stem.document.note(stemNotes[1].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -456,8 +454,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kQuietVelocity))
 
 A036 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S111 executes `("A036", stem.document.note(stemNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -465,8 +463,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A037 | VelocityEditingTest::selectedStemWinsAtStackedStem | src/checks/velocity/velocityhitpriority.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S112 executes `("A037", stem.session.selectedNoteOrder == [stemNotes[0].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -474,8 +472,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A038 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S113 executes `("A038", moved.session.selectedNotes.isEmpty)]) _ = moved.page.pointerPress(x: laterHandle.x, y: laterHandle.y, surface: 1`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -487,8 +485,8 @@ Original expression:
   QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
 
 A039 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:116
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow acquired a mouse grab after a real QTest mouse press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -501,8 +499,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A040 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S114 executes `("A040", moved.page.observation.targetNoteID == movedNotes[2].id && moved.session.selectedNoteOrder == [movedNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -510,8 +508,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_later.noteId}))
 
 A041 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S115 executes `("A041", moved.page.frozenPreview[movedNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseMove(windowPoint(nodePoint(kLoudVelocity, 12)));
@@ -520,8 +518,8 @@ Original expression:
   QTRY_VERIFY(m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A042 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S116 executes `("A042", moved.page.frozenPreview[movedNotes[2].id] != nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     const std::optional<uint8_t> preview = m_tab->view().previewVelocity(m_later.noteId);
@@ -530,8 +528,8 @@ Original expression:
   QVERIFY(preview.has_value())
 
 A043 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S117 executes `("A043", moved.page.frozenPreview[movedNotes[2].id] == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -539,8 +537,8 @@ Original expression:
   QCOMPARE(int(*preview), int(kLoudVelocity))
 
 A044 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S118 executes `("A044", moved.page.frozenPreview[movedNotes[2].id] == nil)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(nodePoint(kLoudVelocity, 12)));
@@ -550,8 +548,8 @@ Original expression:
   QTRY_VERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A045 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S119 executes `("A045", moved.document.revision == movedBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -559,8 +557,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A046 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S120 executes `("A046", moved.document.history.currentIdentity == movedBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -568,8 +566,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A047 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:128
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S121 executes `("A047", moved.document.note(movedNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -577,8 +575,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A048 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:129
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S122 executes `("A048", moved.document.note(movedNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -586,8 +584,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A049 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:130
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S123 executes `("A049", moved.document.note(movedNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -595,8 +593,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A050 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:131
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S124 executes `("A050", priorityTimelineVelocity(moved, movedNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -604,8 +602,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A051 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S125 executes `("A051", priorityTimelineVelocity(moved, movedNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -613,8 +611,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A052 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S126 executes `("A052", priorityTimelineVelocity(moved, movedNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -622,8 +620,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A053 | VelocityEditingTest::movedNodeDoesNotClickThrough | src/checks/velocity/velocityhitpriority.cpp:134
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S127 executes `("A053", moved.session.selectedNoteOrder == [movedNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -631,8 +629,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_later.noteId}))
 
 A054 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S128 executes `("A054", right.session.selectedNoteOrder == [rightNotes[0].id, rightNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 }
@@ -645,8 +643,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A055 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Asserts that the native QQuickWindow acquired a mouse grab after a real QTest right-button press — no Swift-observable surface; retained by native Qt checks.
 Source context since previous assertion:
 ;
     const uint64_t revisionBefore = m_tab->document().revision();
@@ -659,8 +657,8 @@ Original expression:
   QTRY_VERIFY(m_quickWindow->mouseGrabberItem())
 
 A056 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S129 executes `("A056", right.session.selectedNoteOrder == [rightNotes[0].id, rightNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -668,8 +666,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A057 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S130 executes `("A057", right.document.revision == rightBefore.revision)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
     mouseRelease(Qt::RightButton, windowPoint(nodePoint(kQuietVelocity, 12)));
@@ -679,8 +677,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A058 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S131 executes `("A058", right.document.history.currentIdentity == rightBefore.identity)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -688,8 +686,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A059 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S132 executes `("A059", right.document.note(rightNotes[0].id)?.velocity == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -697,8 +695,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A060 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S133 executes `("A060", right.document.note(rightNotes[1].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -706,8 +704,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A061 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S134 executes `("A061", right.document.note(rightNotes[2].id)?.velocity == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -715,8 +713,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A062 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S135 executes `("A062", priorityTimelineVelocity(right, rightNotes[0].id) == 20)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -724,8 +722,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocity))
 
 A063 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:156
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S136 executes `("A063", priorityTimelineVelocity(right, rightNotes[1].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -733,8 +731,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A064 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:157
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S137 executes `("A064", priorityTimelineVelocity(right, rightNotes[2].id) == 70)`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -742,8 +740,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A065 | VelocityEditingTest::rightPressPreservesSelectedGroup | src/checks/velocity/velocityhitpriority.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S138 executes `("A065", right.session.selectedNoteOrder == [rightNotes[0].id, rightNotes[2].id])`; it drives the production VelocityPage seam with the original preconditions and event sequence, then asserts the same observable state. Verification evidence: pending orchestrator run
 Source context since previous assertion:
 ;
 
@@ -1083,3 +1081,248 @@ S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageCheck
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+S079 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:51
+Swift expression:
+  ("A001", selected.document.note(selectedOverlap) != nil),
+
+S080 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:52
+Swift expression:
+  ("A002", priorityTimelineVelocity(selected, selectedOverlap) == 20),
+
+S081 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:53
+Swift expression:
+  ("A003", selected.session.selectedNoteOrder == [selectedOverlap]),
+
+S082 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:58
+Swift expression:
+  ("A005", selected.page.observation.targetNoteID == selectedOverlap
+  && selected.session.selectedNoteOrder == [selectedOverlap]),
+
+S083 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:63
+Swift expression:
+  ("A006", selected.document.revision == selectedBefore.revision),
+
+S084 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:64
+Swift expression:
+  ("A007", selected.document.history.currentIdentity == selectedBefore.identity),
+
+S085 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:65
+Swift expression:
+  ("A008", selected.document.note(selectedOverlap)?.velocity == 20),
+
+S086 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:66
+Swift expression:
+  ("A009", selected.document.note(selectedNotes[0].id)?.velocity == 20),
+
+S087 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:67
+Swift expression:
+  ("A010", selected.document.note(selectedNotes[1].id)?.velocity == 70),
+
+S088 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:68
+Swift expression:
+  ("A011", selected.document.note(selectedNotes[2].id)?.velocity == 70),
+
+S089 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:69
+Swift expression:
+  ("A012", selected.session.selectedNoteOrder == [selectedOverlap]),
+
+S090 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:87
+Swift expression:
+  ("A013", unselected.document.note(unselectedOverlap) != nil),
+
+S091 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:88
+Swift expression:
+  ("A014", priorityTimelineVelocity(unselected, unselectedOverlap) == 20),
+
+S092 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:89
+Swift expression:
+  ("A015", unselected.session.selectedNoteOrder == [unselectedNotes[0].id]),
+
+S093 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:94
+Swift expression:
+  ("A017", unselected.page.observation.targetNoteID == unselectedOverlap
+  && unselected.session.selectedNoteOrder == [unselectedOverlap]),
+
+S094 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:99
+Swift expression:
+  ("A018", unselected.document.revision == unselectedBefore.revision),
+
+S095 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:100
+Swift expression:
+  ("A019", unselected.document.history.currentIdentity == unselectedBefore.identity),
+
+S096 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:101
+Swift expression:
+  ("A020", unselected.document.note(unselectedOverlap)?.velocity == 20),
+
+S097 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:102
+Swift expression:
+  ("A021", unselected.document.note(unselectedNotes[0].id)?.velocity == 20),
+
+S098 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:103
+Swift expression:
+  ("A022", unselected.document.note(unselectedNotes[1].id)?.velocity == 70),
+
+S099 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:104
+Swift expression:
+  ("A023", unselected.document.note(unselectedNotes[2].id)?.velocity == 70),
+
+S100 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:105
+Swift expression:
+  ("A024", unselected.session.selectedNoteOrder == [unselectedOverlap]),
+
+S101 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:119
+Swift expression:
+  ("A025", stem.document.note(stemOverlap) != nil),
+
+S102 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:120
+Swift expression:
+  ("A026", priorityTimelineVelocity(stem, stemNotes[1].id) == 20),
+
+S103 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:121
+Swift expression:
+  ("A027", priorityTimelineVelocity(stem, stemOverlap) == 20),
+
+S104 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:122
+Swift expression:
+  ("A028", stem.session.selectedNoteOrder == [stemNotes[0].id]),
+
+S105 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:126
+Swift expression:
+  ("A030", stem.page.observation.targetNoteID == stemNotes[0].id
+  && stem.session.selectedNoteOrder == [stemNotes[0].id]),
+
+S106 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:131
+Swift expression:
+  ("A031", stem.document.revision == stemBefore.revision),
+
+S107 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:132
+Swift expression:
+  ("A032", stem.document.history.currentIdentity == stemBefore.identity),
+
+S108 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:133
+Swift expression:
+  ("A033", stem.document.note(stemOverlap)?.velocity == 20),
+
+S109 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:134
+Swift expression:
+  ("A034", stem.document.note(stemNotes[0].id)?.velocity == 20),
+
+S110 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:135
+Swift expression:
+  ("A035", stem.document.note(stemNotes[1].id)?.velocity == 20),
+
+S111 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:136
+Swift expression:
+  ("A036", stem.document.note(stemNotes[2].id)?.velocity == 70),
+
+S112 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:137
+Swift expression:
+  ("A037", stem.session.selectedNoteOrder == [stemNotes[0].id]),
+
+S113 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:149
+Swift expression:
+  ("A038", moved.session.selectedNotes.isEmpty)])
+  _ = moved.page.pointerPress(x: laterHandle.x, y: laterHandle.y, surface: 1,
+
+S114 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:153
+Swift expression:
+  ("A040", moved.page.observation.targetNoteID == movedNotes[2].id
+  && moved.session.selectedNoteOrder == [movedNotes[2].id]),
+
+S115 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:158
+Swift expression:
+  ("A041", moved.page.frozenPreview[movedNotes[2].id] != nil),
+
+S116 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:159
+Swift expression:
+  ("A042", moved.page.frozenPreview[movedNotes[2].id] != nil),
+
+S117 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:160
+Swift expression:
+  ("A043", moved.page.frozenPreview[movedNotes[2].id] == 70),
+
+S118 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:164
+Swift expression:
+  ("A044", moved.page.frozenPreview[movedNotes[2].id] == nil),
+
+S119 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:165
+Swift expression:
+  ("A045", moved.document.revision == movedBefore.revision),
+
+S120 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:166
+Swift expression:
+  ("A046", moved.document.history.currentIdentity == movedBefore.identity),
+
+S121 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:167
+Swift expression:
+  ("A047", moved.document.note(movedNotes[0].id)?.velocity == 20),
+
+S122 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:168
+Swift expression:
+  ("A048", moved.document.note(movedNotes[1].id)?.velocity == 70),
+
+S123 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:169
+Swift expression:
+  ("A049", moved.document.note(movedNotes[2].id)?.velocity == 70),
+
+S124 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:170
+Swift expression:
+  ("A050", priorityTimelineVelocity(moved, movedNotes[0].id) == 20),
+
+S125 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:171
+Swift expression:
+  ("A051", priorityTimelineVelocity(moved, movedNotes[1].id) == 70),
+
+S126 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:172
+Swift expression:
+  ("A052", priorityTimelineVelocity(moved, movedNotes[2].id) == 70),
+
+S127 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:173
+Swift expression:
+  ("A053", moved.session.selectedNoteOrder == [movedNotes[2].id]),
+
+S128 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:186
+Swift expression:
+  ("A054", right.session.selectedNoteOrder == [rightNotes[0].id, rightNotes[2].id]),
+
+S129 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:191
+Swift expression:
+  ("A056", right.session.selectedNoteOrder == [rightNotes[0].id, rightNotes[2].id]),
+
+S130 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:195
+Swift expression:
+  ("A057", right.document.revision == rightBefore.revision),
+
+S131 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:196
+Swift expression:
+  ("A058", right.document.history.currentIdentity == rightBefore.identity),
+
+S132 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:197
+Swift expression:
+  ("A059", right.document.note(rightNotes[0].id)?.velocity == 20),
+
+S133 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:198
+Swift expression:
+  ("A060", right.document.note(rightNotes[1].id)?.velocity == 70),
+
+S134 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:199
+Swift expression:
+  ("A061", right.document.note(rightNotes[2].id)?.velocity == 70),
+
+S135 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:200
+Swift expression:
+  ("A062", priorityTimelineVelocity(right, rightNotes[0].id) == 20),
+
+S136 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:201
+Swift expression:
+  ("A063", priorityTimelineVelocity(right, rightNotes[1].id) == 70),
+
+S137 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:202
+Swift expression:
+  ("A064", priorityTimelineVelocity(right, rightNotes[2].id) == 70),
+
+S138 | drawerVelocityHitPriorityGapPredicates | src/checks/velocity/velocitypriority_gap.swift:203
+Swift expression:
+  ("A065", right.session.selectedNoteOrder == [rightNotes[0].id, rightNotes[2].id]),

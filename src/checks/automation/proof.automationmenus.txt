@@ -105,13 +105,13 @@ Mapping: Swift publishedMenuRows has ValueRange with hasSubmenu for LFO. [S011]
 QVERIFY2(rangeRow >= 0, "the lane menu has no value range row")
 
 Original 290
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish a rendered row center.
+Disposition: NATIVE
+Mapping: asserts a rendered native popup row center exists — no Swift-observable surface; retained by swiftrollgated.
 QVERIFY2(!rangeCenter.isNull(), "the value range row never rendered")
 
 Original 293
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish hover-driven submenu rendering.
+Disposition: NATIVE
+Mapping: asserts hover-driven creation of the native submenu panel through menuSubmenuPanel — no Swift-observable surface; retained by swiftrollgated.
 QVERIFY2(QTest::qWaitFor([&menu, &submenu] {
                  return (submenu = menuSubmenuPanel(*menu.session)) != nullptr;
              }),
@@ -123,8 +123,8 @@ Mapping: Swift typed menuChildRows contains enabled Range64, but rendered submen
 QVERIFY2(submenuModel, "the value range submenu rendered without a typed model")
 
 Original 306
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish a rendered child row center.
+Disposition: NATIVE
+Mapping: asserts a rendered native submenu child-row center exists — no Swift-observable surface; retained by swiftrollgated.
 QVERIFY2(!pickCenter.isNull(), "the 0-64 range row never rendered")
 
 Original 309
@@ -158,13 +158,13 @@ Mapping: Swift requires the reopened publishedMenuRows to contain ValueRange wit
 QVERIFY2(reopenedRangeRow >= 0, "the reopened lane menu has no value range row")
 
 Original 323
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish the reopened row's rendered center.
+Disposition: NATIVE
+Mapping: asserts the reopened native popup row renders a center — no Swift-observable surface; retained by swiftrollgated.
 QVERIFY2(!reopenedRangeCenter.isNull(), "the reopened value range row never rendered")
 
 Original 326
-Disposition: GAP
-Mapping: Swift presenter coverage does not establish hover reopening the rendered submenu.
+Disposition: NATIVE
+Mapping: asserts hover-driven recreation of the native submenu panel through menuSubmenuPanel — no Swift-observable surface; retained by swiftrollgated.
 QVERIFY2(QTest::qWaitFor([&reopened, &reopenedSubmenu] {
                  return (reopenedSubmenu = menuSubmenuPanel(*reopened.session)) != nullptr;
              }),

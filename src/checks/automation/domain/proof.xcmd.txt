@@ -38,14 +38,14 @@ src/checks/automation/domain/xcmd.cpp:284 | while (doc.undoStack()->index() > be
 Original assertion inventory
 
 A001 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S017 compares the projected echo-volume point identity/tick/value from a real selector/payload epoch. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{96, 34}}))
 
 A002 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S018 compares the projected echo-length point identity/tick/value from a real selector/payload epoch. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_LENGTH).points(), {{96, 17}}))
 
@@ -66,14 +66,14 @@ Original expression:
   QVERIFY(isOneEdit(moveBefore, snapshot()))
 
 A005 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S021 proves the rewritten canonical emissions move echo volume to tick 192 with value 35. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(samePoints(CCLaneAdapter(doc, kTrack, DOC_CC_ECHO_VOLUME).points(), {{192, 35}}))
 
 A006 | AutomationDomainTest::xcmdCanonicalEdits | src/checks/automation/domain/xcmd.cpp:121
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S021 compares the exact selector 0x08 and payload 35 controller emissions at tick 192. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(xcmdBytesAt(doc, kTrack, 192) ==
               (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x08},
@@ -205,20 +205,20 @@ Original expression:
                                                         {xcmd::kPayloadController, 18}}))
 
 A025 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:193
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S034 drives SongDocument.writeLane into the same opaque epoch and compares the complete document state before and after. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(snapshot() == opaqueBefore)
 
 A026 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:204
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S035 proves the canonical append is exactly one SongDocument revision under the malformed-traffic precondition. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(isOneEdit(malformedBefore, snapshot()))
 
 A027 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:205
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S036 compares the complete raw CC traffic after the append, including all opaque bytes and the canonical selector/payload pair. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(xcmdBytes(doc, kTrack) ==
               (std::vector<std::pair<uint8_t, uint8_t>>{{xcmd::kSelectorController, 0x01},
@@ -230,8 +230,8 @@ Original expression:
                                                         {xcmd::kPayloadController, 30}}))
 
 A028 | AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection | src/checks/automation/domain/xcmd.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S037 drives SongDocument.writeLane into the malformed selector epoch and compares the complete document state before and after. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(snapshot() == rejectedBefore)
 
@@ -431,39 +431,39 @@ Original expression:
   QCOMPARE(snapshot().smf, rightAfter.smf)
 
 A057 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:377
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S027/S028 apply the production range edit and prove exactly one document revision. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(isOneEdit(before, snapshot()))
 
 A058 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:379
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S029 proves track expansion creates exactly two engine tracks. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(doc.engineTrackCount(), newTrack + 1)
 
 A059 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:380
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S030 compares the projected expanded-track XCMD point tick and value. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(samePoints(CCLaneAdapter(doc, newTrack, DOC_CC_ECHO_VOLUME).points(), {{96, 34}}))
 
 A060 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:381
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S031 compares exact selector/payload controller bytes in the expanded raw track. Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(ccChain(doc, newTrack) == (std::vector<CcByte>{{96, xcmd::kSelectorController, 0x08},
                                                              {96, xcmd::kPayloadController, 34}}))
 
 A061 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:384
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S032 proves undo restores the exact pre-expansion raw chunks. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(doc.smf().write(), before.smf)
 
 A062 | AutomationDomainTest::xcmdExpansionPaste | src/checks/automation/domain/xcmd.cpp:386
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S033 proves redo restores the exact post-expansion raw chunks. Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(snapshot().smf, after.smf)
 
@@ -562,3 +562,151 @@ Swift expression:
           expansion.lanePoints(track: 1, lane: .controller(Xcmd.echoLengthLane)).count == 1,
           cppID: "automation-domain/AutomationDomainTest::xcmdExpansionPaste",
           message: "track expansion builds descriptor traffic through the canonical planner")
+
+S017 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:21
+Swift expression:
+  report.expectEqual(["251:96:34:2:0:0"],
+                     projection.points.filter { $0.lane == Xcmd.echoVolumeLane }.map {
+                         "\($0.lane):\($0.tick):\($0.value):\($0.index):\($0.stream):\($0.channel)"
+                     }, cppID: automationXcmdGapID,
+                     what: "A001 echo-volume selector/payload projects as one logical point")
+
+S018 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:27
+Swift expression:
+  report.expectEqual(["252:96:17:4:0:0"],
+                     projection.points.filter { $0.lane == Xcmd.echoLengthLane }.map {
+                         "\($0.lane):\($0.tick):\($0.value):\($0.index):\($0.stream):\($0.channel)"
+                     }, cppID: automationXcmdGapID,
+                     what: "A002 echo-length selector/payload projects as one logical point")
+
+S019 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:33
+Swift expression:
+  report.expectEqual([1, 2, 3, 4], projection.consumed,
+                     cppID: automationXcmdGapID,
+                     what: "A003 both controller-byte pairs are consumed atomically")
+
+S020 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:41
+Swift expression:
+  report.expectEqual([1, 2], replacement?.removeEvents ?? [],
+                     cppID: automationXcmdGapID,
+                     what: "A004-A006 rewriting a known payload removes its selector pair")
+
+S021 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:44
+Swift expression:
+  report.expectEqual(["192:30:8:1:0", "192:29:35:2:0"],
+                     (replacement?.inserts ?? []).map {
+                         "\($0.tick):\($0.controller):\($0.value):\($0.sourceIndex ?? 0):\($0.channel)"
+                     }, cppID: automationXcmdGapID,
+                     what: "A005-A006 moved echo volume expands to canonical bytes")
+
+S022 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:59
+Swift expression:
+  report.expect(assessment.blocks.count == 1
+      && assessment.blocks[0].kind == .unknownSelectorEpoch
+      && assessment.blocks[0].payloadCount == 2,
+                cppID: automationXcmdGapID,
+                message: "A025 opaque selector epoch is classified as one protected block")
+
+S023 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:64
+Swift expression:
+  report.expect(Xcmd.rewrite(unknown, removing: [11], writing: []) == nil,
+                cppID: automationXcmdGapID,
+                message: "A025 partial opaque rewrite is rejected byte-exact")
+
+S024 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:67
+Swift expression:
+  report.expect(Xcmd.reconcile(unknown, removing: [11], moving: [], copying: []) == nil,
+                cppID: automationXcmdGapID,
+                message: "A028 partial opaque reconciliation is rejected")
+
+S025 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:127
+Swift expression:
+  report.expectEqual([10, 11, 12], opaqueMove?.removeEvents ?? [],
+                     cppID: automationXcmdGapID,
+                     what: "A026 whole opaque block relocation removes every original member")
+
+S026 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:130
+Swift expression:
+  report.expectEqual(["140:30:42:10:0", "141:29:99:11:0", "142:29:100:12:0"],
+                     (opaqueMove?.inserts ?? []).map {
+                         "\($0.tick):\($0.controller):\($0.value):\($0.sourceIndex ?? 0):\($0.channel)"
+                     }, cppID: automationXcmdGapID,
+                     what: "A027 whole opaque block relocation preserves controller bytes")
+
+S027 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:146
+Swift expression:
+  report.expect(expansion.applyRangeEdit(edit), cppID: automationXcmdGapID,
+                message: "A057 expansion edit is accepted")
+
+S028 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:148
+Swift expression:
+  report.expectEqual(before + 1, expansion.revision, cppID: automationXcmdGapID,
+                     what: "A057 expansion is one document edit")
+
+S029 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:150
+Swift expression:
+  report.expectEqual(2, expansion.engineTracks.usedTrackCount,
+                     cppID: automationXcmdGapID,
+                     what: "A058 expansion creates the requested engine track")
+
+S030 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:153
+Swift expression:
+  report.expectEqual(["96:34"], expansion.lanePoints(
+      track: 1, lane: .controller(Xcmd.echoVolumeLane)).map { "\($0.tick):\($0.value)" },
+                     cppID: automationXcmdGapID,
+                     what: "A059 expanded track projects the XCMD point")
+
+S031 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:164
+Swift expression:
+  report.expectEqual([[Xcmd.selectorController, 0x08],
+                      [Xcmd.payloadController, 34]], traffic,
+                     cppID: automationXcmdGapID,
+                     what: "A060 expanded track stores canonical selector/payload bytes")
+
+S032 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:170
+Swift expression:
+  report.expectEqual(rawBefore, expansion.rawChunks, cppID: automationXcmdGapID,
+                     what: "A061 expansion undo restores exact raw traffic")
+
+S033 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:173
+Swift expression:
+  report.expectEqual(rawAfter, expansion.rawChunks, cppID: automationXcmdGapID,
+                     what: "A062 expansion redo restores exact raw traffic")
+
+S034 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:79
+Swift expression:
+  let opaqueBefore = opaqueDocument.state
+  opaqueDocument.writeLane(track: 0, lane: .controller(Xcmd.echoVolumeLane),
+                           from: 1, through: 1,
+                           points: [LaneWrite(tick: 1, value: 30)])
+  report.expectEqual(opaqueBefore, opaqueDocument.state, cppID: automationXcmdGapID,
+                     what: "A025 write inside an opaque epoch changes no document state")
+
+S035 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:95
+Swift expression:
+  let malformedBefore = malformed.state
+  let malformedRevision = malformed.revision
+  malformed.writeLane(track: 0, lane: .controller(Xcmd.echoVolumeLane),
+                      from: 400, through: 400,
+                      points: [LaneWrite(tick: 400, value: 30)])
+  report.expect(malformed.state != malformedBefore
+      && malformed.revision == malformedRevision + 1,
+                cppID: automationXcmdGapID,
+                message: "A026 write outside opaque epochs is exactly one document edit")
+
+S036 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:109
+Swift expression:
+  report.expectEqual([
+      "4:30:1", "5:29:1", "6:29:2", "8:30:3", "9:29:99",
+      "400:30:8", "400:29:30",
+  ], malformedTraffic, cppID: automationXcmdGapID,
+                     what: "A027 opaque traffic is preserved before the canonical append")
+
+S037 | drawerAutomationXcmdPortableGaps | src/checks/automation/domain/xcmd_gap.swift:114
+Swift expression:
+  let rejectedBefore = malformed.state
+  malformed.writeLane(track: 0, lane: .controller(Xcmd.echoVolumeLane),
+                      from: 8, through: 8,
+                      points: [LaneWrite(tick: 8, value: 30)])
+  report.expectEqual(rejectedBefore, malformed.state, cppID: automationXcmdGapID,
+                     what: "A028 write inside a malformed opaque epoch changes no document state")
