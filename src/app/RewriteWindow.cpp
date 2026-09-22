@@ -153,6 +153,8 @@ RewriteWindow::RewriteWindow(QWidget *parent)
     keymap::Registry::instance().attach(QStringLiteral("edit.redo"), m_redoAction);
     editMenu->addSeparator();
     addGridActions(*editMenu);
+    connect(QApplication::clipboard(), &QClipboard::dataChanged, this,
+            &RewriteWindow::updateGridActions);
 
     auto *transportMenu = menuBar()->addMenu(tr("&Transport"));
     m_playPauseAction = transportMenu->addAction(tr("Play/Pause"), this, &RewriteWindow::playPause);
