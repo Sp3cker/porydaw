@@ -1,10 +1,10 @@
 Assertion correspondence: swiftrollgated/notevisuals.cpp
 
-Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
+Reference revision: 084e6049ec7ebff04cf0465ca22b165172774aeb
 Original: src/checks/swiftrollgated/notevisuals.cpp
-Original SHA-256: 4645863a3b68289a910d275140a40f1bcf44c1609df37bc405af27076bed5931
+Original SHA-256: b81b356e4f41b0dcb0000eade8d27b2132132b5c61d31d21bfb40faccc7517fb
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: ad6b435c13a3df031787816508ea95f14b5ec8b96a8539df4fb620a3107f08a3
+Swift SHA-256: 1589104de593a1b0ba252e96a432c89d677f94ae4d97fd59665a33a5e812ce05
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -20,9 +20,9 @@ is recorded as GAP. Bookkeeping must not overclaim.
 Note raster parity for the swiftrollgated surface: unselected face contract, display-scaled black border, selection ring + inset border, face preservation across selection, and small-font border thinning. Rendered-pixel and live-window sites are NATIVE; noteSummary parsing and camera/viewport programming pair PARTIAL with the Swift projection/viewport predicates.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
+Command: integrated native swiftrollgated check run
 Result: pending integrated run; source hashes pin the tree inspected here.
-The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
+The native swiftrollgated harnesses are registered in src/checks/CMakeLists.txt and checkcatalog.cpp; verification remains pending the integrated run recorded above.
 
 Execution and ownership
 runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) via checkOrderedSelection, checkViewport, checkProjection and checkIsolation executes the paired presenter checks. No same-directory Swift file exists for these C++ sources; no shared Swift fixture file carrying expects was identified (CoreCheckSupport.swift carries no report.expect predicates).
@@ -34,13 +34,13 @@ revision remain authoritative; this inventory does not replace those sources.
 
 Original assertion inventory
 
-A001 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:241
+A001 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:240
 Disposition: NATIVE
 Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 
-#include "app/RewriteWindow.h"
+#include "nativefixture.h"
 #include "ui/theme/color_math.h"
 #include "ui/theme/themeruntime.h"
 #include "ui/theme/trackidentitycolors.h"
@@ -79,7 +79,6 @@ struct PublishedNote {
 
 struct VisibleNote {
     PublishedNote note;
-    QQuickItem *item = nullptr;
     QRect deviceRect;
 };
 
@@ -143,7 +142,7 @@ std::optional<VisibleNote> visibleNote(QQuickItem *fills, const QRectF &plotScen
         const QRect deviceRect = deviceRectFor(item, image);
         const int area = deviceRect.width() * deviceRect.height();
         if (deviceRect.width() >= 5 && deviceRect.height() >= 5 && area > bestArea) {
-            best = VisibleNote{note, item, deviceRect};
+            best = VisibleNote{note, deviceRect};
             bestArea = area;
         }
     }
@@ -268,7 +267,7 @@ std::optional<VisibleNote> thinnedVisibleNote(QQuickItem *fills, const QRectF &p
         const int ring = fittedFrameThickness(rect, ringRequest, 0);
         const int border = fittedFrameThickness(rect, borderRequest, ring);
         if (ring > 0 && border > 0 && border < borderRequest)
-            return VisibleNote{note, item, rect};
+            return VisibleNote{note, rect};
     }
     return std::nullopt;
 }
@@ -279,86 +278,30 @@ void SwiftRollGatedTest::noteRasterParity()
 {
     if (m_mode != QStringLiteral("swiftrollgated"))
 Original expression:
-        QSKIP("note raster parity belongs to the swiftrollgated surface");
+QSKIP("note raster parity belongs to the swiftrollgated surface");
 
 A002 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:244
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Native fixture startup and final Quick-surface readiness are observable only in the registered C++ harness.
 Source context since previous assertion:
 
-    RewriteWindow window;
+    gridcheck::NativeScene scene;
+    QString openError;
 Original expression:
-    QVERIFY(window.isReady());
+QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
 
 A003 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:249
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
+    QObject *const session = scene.session;
+    QQuickView *const view = scene.view;
+    QQuickItem *const root = scene.root;
+    QObject *const grid = scene.grid;
 Original expression:
-    QVERIFY(session != nullptr);
+QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
 
-A004 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:250
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
-
-A005 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:251
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
-
-A006 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:252
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
-
-A007 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:255
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-    QQuickView *const view = window.gridView();
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
-
-A008 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:257
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
-Original expression:
-    QVERIFY(root != nullptr);
-
-A009 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:259
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-Original expression:
-    QVERIFY(grid != nullptr);
-
-A010 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:260
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
-
-A011 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:266
+A004 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:255
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -368,34 +311,41 @@ Source context since previous assertion:
     QQuickItem *const fills =
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
 Original expression:
-    QVERIFY(plot != nullptr);
+QVERIFY(plot != nullptr);
 
-A012 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:267
+A005 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:256
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(fills != nullptr);
+QVERIFY(fills != nullptr);
 
-A013 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:269
+A006 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:258
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, plotScene) > 0, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, plotScene) > 0, 5'000);
 
-A014 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:272
+A007 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:260
+Disposition: NATIVE
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::awaitFrame(view));
+
+A008 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:262
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
     const QImage unselectedImage = view->grabWindow();
 Original expression:
-    QVERIFY(!unselectedImage.isNull());
+QVERIFY(!unselectedImage.isNull());
 
-A015 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:276
+A009 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:266
 Disposition: PARTIAL
 Mapping/reason: Related S025 (checkProjection camera movement preserves noteSummary); unproved: exact parse of the native noteSummary string.
 Source context since previous assertion:
@@ -403,18 +353,18 @@ Source context since previous assertion:
     const auto initialNotes =
         publishedNotes(grid->property("noteSummary").toString(), &summaryError);
 Original expression:
-    QVERIFY2(initialNotes.has_value(), qPrintable(summaryError));
+QVERIFY2(initialNotes.has_value(), qPrintable(summaryError));
 
-A016 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:278
+A010 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:268
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const auto unselected = visibleNote(fills, plotScene, unselectedImage, *initialNotes, false);
 Original expression:
-    QVERIFY2(unselected.has_value(),
+QVERIFY2(unselected.has_value(),
              "the retained fixture has no fully visible unselected note for a raster probe");
 
-A017 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:291
+A011 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:281
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -430,9 +380,9 @@ Source context since previous assertion:
             .arg(expectedFace.name(QColor::HexArgb))
             .arg(unselectedFace.name(QColor::HexArgb));
 Original expression:
-    QVERIFY2(gridcheck::colorsNear(unselectedFace, expectedFace), qPrintable(faceFailure));
+QVERIFY2(gridcheck::colorsNear(unselectedFace, expectedFace), qPrintable(faceFailure));
 
-A018 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:296
+A012 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:286
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -441,9 +391,9 @@ Source context since previous assertion:
     const int borderRequest = (std::max)(1, qRound(dpr));
     const int unselectedBorder = fittedFrameThickness(unselected->deviceRect, borderRequest, 0);
 Original expression:
-    QCOMPARE(unselectedBorder, borderRequest);
+QCOMPARE(unselectedBorder, borderRequest);
 
-A019 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:301
+A013 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:291
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -452,47 +402,65 @@ Source context since previous assertion:
                           QStringLiteral("unselected note %1 lost its display-scaled black border")
                               .arg(unselected->note.id));
 Original expression:
-    QVERIFY2(unselectedBorderFailure.isEmpty(), qPrintable(unselectedBorderFailure));
+QVERIFY2(unselectedBorderFailure.isEmpty(), qPrintable(unselectedBorderFailure));
 
-A020 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:303
+A014 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:293
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(
+QVERIFY(
         QMetaObject::invokeMethod(session, "performGridCommand", Q_ARG(int, kSelectAllCommand)));
 
-A021 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:305
+A015 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:295
 Disposition: PARTIAL
 Mapping/reason: Related S001/S010 (checkOrderedSelection selection order predicates); unproved: native select-all command path.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(publishedSelectionContains(grid, unselected->note.id), 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(publishedSelectionContains(grid, unselected->note.id), 5'000);
 
-A022 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:308
+A016 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:297
+Disposition: NATIVE
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::awaitFrame(view));
+
+A017 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:299
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
     const QImage selectedImage = view->grabWindow();
 Original expression:
-    QVERIFY(!selectedImage.isNull());
+QVERIFY(!selectedImage.isNull());
 
-A023 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:314
+A018 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:304
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-    const QRect selectedRect = deviceRectFor(unselected->item, selectedImage);
+    // Model publication may replace delegates. Keep the note identity, not a
+    // pointer into the previous frame's delegate tree.
+    QQuickItem *const selectedItem =
+        gridcheck::visualDescendant(fills, QStringLiteral("gridNote_%1").arg(unselected->note.id));
+Original expression:
+QVERIFY(selectedItem && selectedItem->isVisible());
+
+A019 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:310
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const QRect selectedRect = deviceRectFor(selectedItem, selectedImage);
     const int ringRequest =
         (std::max)(1, qRound(grid->property("baseFontPx").toDouble() * kSelectionRingFontFraction *
                              selectedImage.devicePixelRatio()));
     const int ring = fittedFrameThickness(selectedRect, ringRequest, 0);
 Original expression:
-    QVERIFY2(ring > 0, "selected note is too small to retain a visible selection ring");
+QVERIFY2(ring > 0, "selected note is too small to retain a visible selection ring");
 
-A024 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:321
+A020 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:317
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -503,18 +471,18 @@ Source context since previous assertion:
                                          "themes::Role::item_selected_background")
                               .arg(unselected->note.id));
 Original expression:
-    QVERIFY2(ringFailure.isEmpty(), qPrintable(ringFailure));
+QVERIFY2(ringFailure.isEmpty(), qPrintable(ringFailure));
 
-A025 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:324
+A021 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:320
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
     const int selectedBorder = fittedFrameThickness(selectedRect, borderRequest, ring);
 Original expression:
-    QVERIFY2(selectedBorder > 0, "selected note has no room for its inset black border");
+QVERIFY2(selectedBorder > 0, "selected note has no room for its inset black border");
 
-A026 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:328
+A022 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:324
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -522,9 +490,9 @@ Source context since previous assertion:
         selectedImage, selectedRect, ring, selectedBorder,
         QStringLiteral("selected note %1 lost its inset black border").arg(unselected->note.id));
 Original expression:
-    QVERIFY2(selectedBorderFailure.isEmpty(), qPrintable(selectedBorderFailure));
+QVERIFY2(selectedBorderFailure.isEmpty(), qPrintable(selectedBorderFailure));
 
-A027 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:337
+A023 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:333
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -537,11 +505,11 @@ Source context since previous assertion:
             .arg(selectedFace.name(QColor::HexArgb))
             .arg(expectedFace.name(QColor::HexArgb));
 Original expression:
-    QVERIFY2(gridcheck::colorsNear(selectedFace, unselectedFace) &&
+QVERIFY2(gridcheck::colorsNear(selectedFace, unselectedFace) &&
                  gridcheck::colorsNear(selectedFace, expectedFace),
              qPrintable(selectedFaceFailure));
 
-A028 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:343
+A024 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:339
 Disposition: PARTIAL
 Mapping/reason: Related S017/S018/S019 (checkViewport font-push scale predicates); unproved: native QML viewport/font path and exact scale.
 Source context since previous assertion:
@@ -549,19 +517,19 @@ Source context since previous assertion:
     const double smallFontPx =
         borderRequest > 1 ? kSmallFontForScaledBorder : kSmallFontForSinglePixelBorder;
 Original expression:
-    QVERIFY(QMetaObject::invokeMethod(grid, "configureViewport", Q_ARG(double, plot->width()),
+QVERIFY(QMetaObject::invokeMethod(grid, "configureViewport", Q_ARG(double, plot->width()),
                                       Q_ARG(double, plot->height()), Q_ARG(double, smallFontPx),
                                       Q_ARG(double, dpr)));
 
-A029 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:346
+A025 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:342
 Disposition: PARTIAL
 Mapping/reason: Related S017/S018/S019 (checkViewport font-push scale predicates); unproved: native QML viewport/font path and exact scale.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(grid->property("baseFontPx").toDouble(), smallFontPx, 5'000);
+QTRY_COMPARE_WITH_TIMEOUT(grid->property("baseFontPx").toDouble(), smallFontPx, 5'000);
 
-A030 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:350
+A026 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:346
 Disposition: PARTIAL
 Mapping/reason: Related S012/S016 (checkViewport camera bounds and reclamp); unproved: exact 128-row bound on the native grid model.
 Source context since previous assertion:
@@ -569,37 +537,44 @@ Source context since previous assertion:
     // Re-home through the production camera operation after the font/DPR push,
     // then prove its published vertical bound is the projected row height.
 Original expression:
-    QVERIFY(QMetaObject::invokeMethod(grid, "resetCameraScroll"));
+QVERIFY(QMetaObject::invokeMethod(grid, "resetCameraScroll"));
 
-A031 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:353
+A027 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:349
 Disposition: PARTIAL
 Mapping/reason: Related S012/S016 (checkViewport camera bounds and reclamp); unproved: exact 128-row bound on the native grid model.
 Source context since previous assertion:
     const double maxSmallScrollY =
         (std::max)(0.0, 128.0 * grid->property("rowHeight").toDouble() - plot->height());
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(
+QTRY_VERIFY_WITH_TIMEOUT(
         qAbs(grid->property("cameraMaxVScroll").toDouble() - maxSmallScrollY) < 0.01, 5'000);
 
-A032 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:357
+A028 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:353
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const double smallScrollY = grid->property("cameraScrollY").toDouble();
     const QRectF smallPlotScene = plot->mapRectToScene(plot->boundingRect());
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, smallPlotScene) > 0, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(fills, smallPlotScene) > 0, 5'000);
 
-A033 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:360
+A029 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:355
+Disposition: NATIVE
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::awaitFrame(view));
+
+A030 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:357
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
     const QImage smallImage = view->grabWindow();
 Original expression:
-    QVERIFY(!smallImage.isNull());
+QVERIFY(!smallImage.isNull());
 
-A034 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:364
+A031 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:361
 Disposition: PARTIAL
 Mapping/reason: Related S025 (checkProjection camera movement preserves noteSummary); unproved: exact parse of the native noteSummary string.
 Source context since previous assertion:
@@ -607,9 +582,9 @@ Source context since previous assertion:
     const auto smallNotes =
         publishedNotes(grid->property("noteSummary").toString(), &smallSummaryError);
 Original expression:
-    QVERIFY2(smallNotes.has_value(), qPrintable(smallSummaryError));
+QVERIFY2(smallNotes.has_value(), qPrintable(smallSummaryError));
 
-A035 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:387
+A032 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:384
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -636,19 +611,19 @@ Source context since previous assertion:
                 .arg(smallPlotScene.height())
                 .arg(smallNotes->size());
 Original expression:
-        QVERIFY2(small.has_value(), qPrintable(smallSetupFailure));
+QVERIFY2(small.has_value(), qPrintable(smallSetupFailure));
 
-A036 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:390
+A033 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:387
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     } else {
         small = visibleNote(fills, smallPlotScene, smallImage, *smallNotes, true);
 Original expression:
-        QVERIFY2(small.has_value(),
+QVERIFY2(small.has_value(),
                  "the public small-font viewport has no fully visible selected note");
 
-A037 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:396
+A034 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:393
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -657,19 +632,19 @@ Source context since previous assertion:
     const int smallRing = fittedFrameThickness(small->deviceRect, smallRingRequest, 0);
     const int smallBorder = fittedFrameThickness(small->deviceRect, smallBorderRequest, smallRing);
 Original expression:
-    QVERIFY2(smallRing > 0 && smallBorder > 0,
+QVERIFY2(smallRing > 0 && smallBorder > 0,
              "small selected note geometry cannot preserve both ring and inset border");
 
-A038 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:399
+A035 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:396
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     if (smallBorderRequest > 1)
 Original expression:
-        QVERIFY2(smallBorder < smallBorderRequest,
+QVERIFY2(smallBorder < smallBorderRequest,
                  "small selected note did not exercise physical border thinning");
 
-A039 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:405
+A036 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:402
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -678,9 +653,9 @@ Source context since previous assertion:
                           QStringLiteral("small selected note %1 lost its fitted selection ring")
                               .arg(small->note.id));
 Original expression:
-    QVERIFY2(smallRingFailure.isEmpty(), qPrintable(smallRingFailure));
+QVERIFY2(smallRingFailure.isEmpty(), qPrintable(smallRingFailure));
 
-A040 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:410
+A037 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:407
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -689,9 +664,9 @@ Source context since previous assertion:
         QStringLiteral("small selected note %1 border vanished instead of thinning")
             .arg(small->note.id));
 Original expression:
-    QVERIFY2(smallBorderFailure.isEmpty(), qPrintable(smallBorderFailure));
+QVERIFY2(smallBorderFailure.isEmpty(), qPrintable(smallBorderFailure));
 
-A041 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:419
+A038 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:416
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -704,7 +679,7 @@ Source context since previous assertion:
             .arg(smallExpectedFace.name(QColor::HexArgb))
             .arg(smallFace.name(QColor::HexArgb));
 Original expression:
-    QVERIFY2(gridcheck::colorsNear(smallFace, smallExpectedFace), qPrintable(smallFaceFailure));
+QVERIFY2(gridcheck::colorsNear(smallFace, smallExpectedFace), qPrintable(smallFaceFailure));
 
 Remaining original source (closing sequence and helper bodies):
 }

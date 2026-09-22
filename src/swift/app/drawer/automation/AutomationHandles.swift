@@ -1,8 +1,8 @@
 import QtBridge
 
-// The Automation page's bridged records: the published selector tab, node,
-// ramp and menu-row handles QML reads. Each carries its own equality so the
-// publication sync paths can leave unchanged storage untouched.
+// Qt-owned automation records. Equality and snapshots live in the plain value
+// descriptors; these handles are allocated only after reconciliation finds a
+// changed row.
 
 // MARK: - Published records
 
@@ -24,12 +24,16 @@ public final class AutomationTabHandle {
 
     public init() {}
 
-    @QtIgnored
-    func matches(_ other: AutomationTabHandle) -> Bool {
-        index == other.index && label == other.label && tempo == other.tempo
-            && active == other.active && ghosted == other.ghosted && included == other.included
-            && available == other.available && eventCount == other.eventCount
-            && primitiveName == other.primitiveName
+    init(_ value: borrowing AutomationTabValue) {
+        index = value.index
+        label = value.label
+        tempo = value.tempo
+        active = value.active
+        ghosted = value.ghosted
+        included = value.included
+        available = value.available
+        eventCount = value.eventCount
+        primitiveName = value.primitiveName
     }
 }
 
@@ -59,15 +63,23 @@ public final class AutomationNodeHandle {
 
     public init() {}
 
-    @QtIgnored
-    func matches(_ other: AutomationNodeHandle) -> Bool {
-        x == other.x && y == other.y && tick == other.tick && value == other.value
-            && radius == other.radius && ringRadius == other.ringRadius
-            && outlineWidth == other.outlineWidth && fillColor == other.fillColor
-            && outlineColor == other.outlineColor && ringColor == other.ringColor
-            && selected == other.selected && hovered == other.hovered
-            && projected == other.projected && phantom == other.phantom
-            && identity == other.identity && primitiveName == other.primitiveName
+    init(_ value: borrowing AutomationNodeValue) {
+        x = value.x
+        y = value.y
+        tick = value.tick
+        self.value = value.value
+        radius = value.radius
+        ringRadius = value.ringRadius
+        outlineWidth = value.outlineWidth
+        fillColor = value.fillColor
+        outlineColor = value.outlineColor
+        ringColor = value.ringColor
+        selected = value.selected
+        hovered = value.hovered
+        projected = value.projected
+        phantom = value.phantom
+        identity = value.identity
+        primitiveName = value.primitiveName
     }
 }
 
@@ -84,20 +96,13 @@ public final class AutomationRampHandle {
 
     public init() {}
 
-    init(x0: Double, y0: Double, dx: Double, dy: Double, color: String,
-         primitiveName: String) {
-        self.x0 = x0
-        self.y0 = y0
-        self.dx = dx
-        self.dy = dy
-        self.color = color
-        self.primitiveName = primitiveName
-    }
-
-    @QtIgnored
-    func matches(_ other: AutomationRampHandle) -> Bool {
-        x0 == other.x0 && y0 == other.y0 && dx == other.dx && dy == other.dy
-            && color == other.color && primitiveName == other.primitiveName
+    init(_ value: borrowing AutomationRampValue) {
+        x0 = value.x0
+        y0 = value.y0
+        dx = value.dx
+        dy = value.dy
+        color = value.color
+        primitiveName = value.primitiveName
     }
 }
 
@@ -131,11 +136,15 @@ public final class AutomationMenuRowHandle {
         primitiveName = "automationMenuSeparator"
     }
 
-    @QtIgnored
-    func matches(_ other: AutomationMenuRowHandle) -> Bool {
-        actionId == other.actionId && text == other.text && enabled == other.enabled
-            && separator == other.separator && primitiveName == other.primitiveName
-            && checkable == other.checkable && checked == other.checked
-            && hasSubmenu == other.hasSubmenu && shortcutText == other.shortcutText
+    init(_ value: borrowing AutomationMenuRowValue) {
+        actionId = value.actionId
+        text = value.text
+        enabled = value.enabled
+        separator = value.separator
+        checkable = value.checkable
+        checked = value.checked
+        hasSubmenu = value.hasSubmenu
+        shortcutText = value.shortcutText
+        primitiveName = value.primitiveName
     }
 }

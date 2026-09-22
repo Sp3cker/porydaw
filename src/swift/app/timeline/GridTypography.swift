@@ -54,7 +54,7 @@ struct GridTypography {
         beatMetrics = beat
         signatureMetrics = measure(.sig)
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
-        chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
+        chipWidths = (0..<128).map { chip.advance(GridSceneBuilder.keyName($0)) }
         var specs = fonts
         if let keyLabel = specs[.keyLabel] {
             specs[.keyLabel] = GridFontSpec(

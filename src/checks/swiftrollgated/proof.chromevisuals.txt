@@ -1,10 +1,10 @@
 Assertion correspondence: swiftrollgated/chromevisuals.cpp
 
-Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
+Reference revision: 084e6049ec7ebff04cf0465ca22b165172774aeb
 Original: src/checks/swiftrollgated/chromevisuals.cpp
-Original SHA-256: 1912beb70940207f7504aae791e961e51e0ac51e66379b9f0c6236664bccd23d
+Original SHA-256: fb16ea07001c2c341b736ab109630e712f3e52c06079bb24c64903ed21949bda
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: ad6b435c13a3df031787816508ea95f14b5ec8b96a8539df4fb620a3107f08a3
+Swift SHA-256: 1589104de593a1b0ba252e96a432c89d677f94ae4d97fd59665a33a5e812ce05
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -20,15 +20,15 @@ is recorded as GAP. Bookkeeping must not overclaim.
 Chrome raster parity for the swiftrollgated surface: C4/C#4 row role colors, keyboard key roles, C4 separator alignment, bar/beat line compositing, wheel scrolling and the hover chip. Nearly every site observes rendered pixels or live window input, so the inventory is dominated by NATIVE obligations with a few PARTIAL model-scale pairings.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
+Command: integrated native swiftrollgated check run
 Result: pending integrated run; source hashes pin the tree inspected here.
-The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
+The native swiftrollgated harnesses are registered in src/checks/CMakeLists.txt and checkcatalog.cpp; verification remains pending the integrated run recorded above.
 
 Execution and ownership
 runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) via checkOrderedSelection, checkViewport, checkProjection and checkIsolation executes the paired presenter checks. No same-directory Swift file exists for these C++ sources; no shared Swift fixture file carrying expects was identified (CoreCheckSupport.swift carries no report.expect predicates).
 
 Fixture, sequence and row constraints
-Single retained song fixture opened through RewriteWindow::openStartup; no data rows. Wheel direction guards on (initialScrollY < maximumScrollY - 1.0); beat alpha guards on visibleGridTicks == 1 (200) else (160). Row probes sample the 10%-90% plot band; bar/beat probes scan every visible device column because TimeAxis restarts its lattice at each signature event.
+Single retained song fixture opened through gridcheck::NativeScene::open; no data rows. Wheel direction guards on (initialScrollY < maximumScrollY - 1.0); beat alpha guards on visibleGridTicks == 1 (200) else (160). Row probes sample the 10%-90% plot band; bar/beat probes scan every visible device column because TimeAxis restarts its lattice at each signature event.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
@@ -40,7 +40,7 @@ Mapping/reason: Mode-gating harness precondition: routes this case to its owning
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 
-#include "app/RewriteWindow.h"
+#include "nativefixture.h"
 #include "ui/theme/themeruntime.h"
 
 #include <QColor>
@@ -183,7 +183,7 @@ void SwiftRollGatedTest::chromeRasterParity()
 {
     if (m_mode == QStringLiteral("swiftbandkeys"))
 Original expression:
-        QSKIP("chrome raster parity belongs to the swiftrollgated surface");
+QSKIP("chrome raster parity belongs to the swiftrollgated surface");
 
 A002 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:147
 Disposition: NATIVE
@@ -191,7 +191,7 @@ Mapping/reason: Mode-gating harness precondition: routes this case to its owning
 Source context since previous assertion:
     if (m_mode == QStringLiteral("swiftqtml"))
 Original expression:
-        QSKIP("chrome raster parity belongs to the swiftrollgated surface");
+QSKIP("chrome raster parity belongs to the swiftrollgated surface");
 
 A003 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:149
 Disposition: NATIVE
@@ -199,7 +199,7 @@ Mapping/reason: Mode-gating harness precondition: routes this case to its owning
 Source context since previous assertion:
     if (m_mode == QStringLiteral("selectionkey"))
 Original expression:
-        QSKIP("chrome raster parity belongs to the swiftrollgated surface");
+QSKIP("chrome raster parity belongs to the swiftrollgated surface");
 
 A004 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:150
 Disposition: NATIVE
@@ -207,86 +207,29 @@ Mapping/reason: Native window/fixture/rendering obligation (native session, view
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QCOMPARE(m_mode, QStringLiteral("swiftrollgated"));
+QCOMPARE(m_mode, QStringLiteral("swiftrollgated"));
 
-A005 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:153
+A005 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:154
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Native fixture startup and final Quick-surface readiness are observable only in the registered C++ harness.
 Source context since previous assertion:
 
-    RewriteWindow window;
+    gridcheck::NativeScene scene;
+    QString openError;
 Original expression:
-    QVERIFY(window.isReady());
+QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
 
 A006 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:158
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
+    QQuickView *const view = scene.view;
+    QQuickItem *const root = scene.root;
+    QObject *const grid = scene.grid;
 Original expression:
-    QVERIFY(session != nullptr);
+QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
 
-A007 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:159
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
-
-A008 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:160
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
-
-A009 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:161
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
-
-A010 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:164
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-    QQuickView *const view = window.gridView();
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
-
-A011 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:166
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
-Original expression:
-    QVERIFY(root != nullptr);
-
-A012 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:168
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-Original expression:
-    QVERIFY(grid != nullptr);
-
-A013 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:169
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
-
-A014 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:185
+A007 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:174
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -306,57 +249,57 @@ Source context since previous assertion:
     QQuickItem *const chip =
         gridcheck::visualDescendant(root, QStringLiteral("timelineQuickPianoHoverChip"));
 Original expression:
-    QVERIFY(plot != nullptr);
+QVERIFY(plot != nullptr);
 
-A015 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:186
+A008 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:175
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(gutter != nullptr);
+QVERIFY(gutter != nullptr);
 
-A016 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:187
+A009 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:176
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(surface != nullptr);
+QVERIFY(surface != nullptr);
 
-A017 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:188
+A010 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:177
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(rows != nullptr);
+QVERIFY(rows != nullptr);
 
-A018 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:189
+A011 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:178
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(time != nullptr);
+QVERIFY(time != nullptr);
 
-A019 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:190
+A012 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:179
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(keys != nullptr);
+QVERIFY(keys != nullptr);
 
-A020 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:191
+A013 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:180
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(chip != nullptr);
+QVERIFY(chip != nullptr);
 
-A021 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:195
+A014 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:184
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -364,25 +307,25 @@ Source context since previous assertion:
     const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
     const QRectF gutterScene = gutter->mapRectToScene(gutter->boundingRect());
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(rows, plotScene) > 0, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(rows, plotScene) > 0, 5'000);
 
-A022 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:196
+A015 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:185
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(time, plotScene) > 0, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(time, plotScene) > 0, 5'000);
 
-A023 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:197
+A016 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:186
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(keys, gutterScene) > 0, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(gridcheck::visiblePrimitiveCount(keys, gutterScene) > 0, 5'000);
 
-A024 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:201
+A017 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:190
 Disposition: PARTIAL
 Mapping/reason: Related S011/S014 (checkViewport viewport dimensions and published scales); unproved: exact positive rowHeight on the native grid model via the production font/DPR path.
 Source context since previous assertion:
@@ -390,34 +333,41 @@ Source context since previous assertion:
     const qreal rowHeight = grid->property("rowHeight").toDouble();
     const qreal keyboardWidth = grid->property("keyboardWidth").toDouble();
 Original expression:
-    QVERIFY(rowHeight > 0.0);
+QVERIFY(rowHeight > 0.0);
 
-A025 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:202
+A018 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:191
 Disposition: PARTIAL
 Mapping/reason: Related S011 (checkViewport viewport dimensions); unproved: exact positive keyboardWidth on the native grid model.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(keyboardWidth > 0.0);
+QVERIFY(keyboardWidth > 0.0);
 
-A026 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:205
+A019 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:193
+Disposition: NATIVE
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::awaitFrame(view));
+
+A020 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:195
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
     QImage image;
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(!(image = view->grabWindow()).isNull(), 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(!(image = view->grabWindow()).isNull(), 5'000);
 
-A027 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:206
+A021 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:196
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(image.devicePixelRatio() > 0.0);
+QVERIFY(image.devicePixelRatio() > 0.0);
 
-A028 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:212
+A022 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:202
 Disposition: PARTIAL
 Mapping/reason: Related S012 (checkViewport camera bounds derivation); unproved: exact finite camera snapshot on the native grid model.
 Source context since previous assertion:
@@ -427,17 +377,17 @@ Source context since previous assertion:
     const qreal cameraScrollX = grid->property("cameraScrollX").toDouble();
     const qreal cameraScrollY = grid->property("cameraScrollY").toDouble();
 Original expression:
-    QVERIFY(std::isfinite(cameraScrollX));
+QVERIFY(std::isfinite(cameraScrollX));
 
-A029 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:213
+A023 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:203
 Disposition: PARTIAL
 Mapping/reason: Related S012 (checkViewport camera bounds derivation); unproved: exact finite camera snapshot on the native grid model.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(std::isfinite(cameraScrollY));
+QVERIFY(std::isfinite(cameraScrollY));
 
-A030 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:223
+A024 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:213
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -451,19 +401,19 @@ Source context since previous assertion:
     const auto rowProbes = findUncoveredRows(image, *surface, visibleLeft, visibleRight, naturalY,
                                              accidentalY, natural, accidental);
 Original expression:
-    QVERIFY2(rowProbes.has_value(),
+QVERIFY2(rowProbes.has_value(),
              "the C4/C#4 row centers did not expose the production role colors");
 
-A031 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:225
+A025 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:215
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY2(rowProbes->matchingColumns >= rowProbes->sampledColumns / 4,
+QVERIFY2(rowProbes->matchingColumns >= rowProbes->sampledColumns / 4,
              "less than one quarter of the C4/C#4 row-center region kept both role colors");
 
-A032 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:235
+A026 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:225
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -476,17 +426,17 @@ Source context since previous assertion:
     const QColor expectedAccidentalKey =
         themes::color(themes::Role::song_view_piano_keyboard_black_key);
 Original expression:
-    QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, naturalKey), expectedNaturalKey));
+QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, naturalKey), expectedNaturalKey));
 
-A033 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:236
+A027 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:226
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, accidentalKey), expectedAccidentalKey));
+QVERIFY(gridcheck::colorsNear(gridcheck::pixelAt(image, accidentalKey), expectedAccidentalKey));
 
-A034 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:245
+A028 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:235
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -499,25 +449,25 @@ Source context since previous assertion:
     const auto gutterSeparatorRow = separatorDeviceRow(image, gutterBoundary, separator);
     const auto rollSeparatorRow = separatorDeviceRow(image, rollBoundary, separator);
 Original expression:
-    QVERIFY2(gutterSeparatorRow.has_value(), "the keyboard C4 separator is not role-colored");
+QVERIFY2(gutterSeparatorRow.has_value(), "the keyboard C4 separator is not role-colored");
 
-A035 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:246
+A029 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:236
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY2(rollSeparatorRow.has_value(), "the roll C4 separator is not role-colored");
+QVERIFY2(rollSeparatorRow.has_value(), "the roll C4 separator is not role-colored");
 
-A036 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:247
+A030 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:237
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QCOMPARE(*gutterSeparatorRow, *rollSeparatorRow);
+QCOMPARE(*gutterSeparatorRow, *rollSeparatorRow);
 
-A037 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:257
+A031 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:247
 Disposition: GAP
 Mapping/reason: Theme-role color-math precondition with no theme predicate in the Swift counterpart; the distinguishability obligation remains open.
 Source context since previous assertion:
@@ -531,21 +481,21 @@ Source context since previous assertion:
     const QColor expectedBeatNatural = sourceOver(beatInk, natural);
     const QColor expectedBeatAccidental = sourceOver(beatInk, accidental);
 Original expression:
-    QVERIFY2(!gridcheck::colorsNear(expectedBarNatural, natural) &&
+QVERIFY2(!gridcheck::colorsNear(expectedBarNatural, natural) &&
                  !gridcheck::colorsNear(expectedBarAccidental, accidental),
              "the active theme makes bar lines indistinguishable from both row roles");
 
-A038 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:260
+A032 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:250
 Disposition: GAP
 Mapping/reason: Theme-role color-math precondition with no theme predicate in the Swift counterpart; the distinguishability obligation remains open.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY2(!gridcheck::colorsNear(expectedBeatNatural, natural) &&
+QVERIFY2(!gridcheck::colorsNear(expectedBeatNatural, natural) &&
                  !gridcheck::colorsNear(expectedBeatAccidental, accidental),
              "the active theme makes beat lines indistinguishable from both row roles");
 
-A039 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:269
+A033 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:259
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -556,20 +506,20 @@ Source context since previous assertion:
     const auto barProbes = findLine(image, *surface, visibleLeft, visibleRight, naturalY,
                                     accidentalY, expectedBarNatural, expectedBarAccidental);
 Original expression:
-    QVERIFY2(barProbes.has_value(),
+QVERIFY2(barProbes.has_value(),
              "no visible bar line composited the grid role over both row backgrounds");
 
-A040 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:273
+A034 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:263
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const auto beatProbes = findLine(image, *surface, visibleLeft, visibleRight, naturalY,
                                      accidentalY, expectedBeatNatural, expectedBeatAccidental);
 Original expression:
-    QVERIFY2(beatProbes.has_value(),
+QVERIFY2(beatProbes.has_value(),
              "no visible beat line composited the relative-alpha grid role over both rows");
 
-A041 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:280
+A035 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:270
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -579,10 +529,10 @@ Source context since previous assertion:
     const int wheelAngle = initialScrollY < maximumScrollY - 1.0 ? -120 : 120;
     sendVerticalWheel(*view, *gutter, wheelAngle);
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(
+QTRY_VERIFY_WITH_TIMEOUT(
         std::abs(grid->property("cameraScrollY").toDouble() - initialScrollY) > 0.5, 5'000);
 
-A042 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:291
+A036 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:281
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -596,17 +546,17 @@ Source context since previous assertion:
     const QPointF hoverCenter = gutter->mapToScene(QPointF(keyboardWidth * 0.5, hoverViewportY));
     QTest::mouseMove(view, hoverCenter.toPoint());
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(grid->property("hoverKey").toInt() == hoverPitch && chip->isVisible(),
+QTRY_VERIFY_WITH_TIMEOUT(grid->property("hoverKey").toInt() == hoverPitch && chip->isVisible(),
                              5'000);
 
-A043 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:295
+A037 | SwiftRollGatedTest::chromeRasterParity | src/checks/swiftrollgated/chromevisuals.cpp:285
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const qreal chipCenterY = chip->mapToScene(QPointF(0.0, chip->height() * 0.5)).y();
     const qreal oneDevicePixel = 1.0 / image.devicePixelRatio();
 Original expression:
-    QVERIFY2(std::abs(chipCenterY - hoverCenter.y()) <= oneDevicePixel,
+QVERIFY2(std::abs(chipCenterY - hoverCenter.y()) <= oneDevicePixel,
              "the scrolled keyboard hover chip is not centered on the hovered pitch row");
 
 Remaining original source (closing sequence and helper bodies):

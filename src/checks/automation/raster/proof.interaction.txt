@@ -6,6 +6,8 @@ Original: src/checks/automation/raster/interaction.cpp
 Original SHA-256: 00cd17232f6c2c1f17bb91c10ce626c5f935a79d2f41e09292379f3f2c0d10a8
 Swift counterpart: none identified
 Swift SHA-256: n/a
+QML supplemental source: src/checks/editorqml/tst_EditorDrawer.qml
+QML SHA-256: cc37de34b01836aea64d66f9cb4e5ed03ff3e459b7c08ba37fe794bc83f2d8d1
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -16,6 +18,8 @@ MATCHED identifies equivalent model predicates; execution must still be verified
 PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
+NATIVE-SETUP identifies a retained production-QML fixture or delegate precondition;
+it does not establish a presenter-level replacement predicate.
 GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
@@ -1246,12 +1250,56 @@ these final-surface assertions no longer depend on that embedding boundary.
 No production QWidget compensation or speculative QML DPR handler was retained.
 
 Verification after integration:
-- deno task verify: 24/24 harnesses pass.
-- deno task verify:qml: 1/1 lane passes.
-- deno task lsp:swift: 6/6 targets indexed.
-The QML outside-right-click retarget scenario now reuses its existing menu-open
-helper, which waits for realized rows and keyboard focus before choosing Delete.
-Its retarget/deletion assertions remain intact.
+Result: pending integrated native/QML run; source hashes pin the tree inspected here.
+
+QML supplemental assertion inventory and source sequence
+
+Q001 | test_productionAutomationOutsideRightRetarget | src/checks/editorqml/tst_EditorDrawer.qml:4504
+Disposition: NATIVE-SETUP
+Mapping/reason: The production QML fixture must expose a second written node outside the open menu frame. No presenter-level Swift predicate establishes this delegate-geometry precondition.
+Source context since previous QML assertion:
+    function test_productionAutomationOutsideRightRetarget() {
+        if (testCase.containerPhase) skip("production composition only")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("automation-menu-retarget"))
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var nodes = testCase.automationLaneNodes()
+        var first = testCase.automationWrittenNodeIndex()
+        verify(first >= 0)
+        var firstTick = nodes[first].model.tick
+        verify(testCase.openAutomationNodeMenu(first))
+        var panel = findChild(testCase.surface, "automationMenuPanel")
+        panel = findChild(panel, "quickMenuFrame")
+        verify(panel, "the point menu has a drawn frame")
+        var targetIndex = -1
+        for (var i = 0; i < nodes.length; ++i) {
+            if (i === first || nodes[i].model.projected) continue
+            var p = testCase.automationNodePoint(nodes[i])
+            var local = panel.mapFromItem(testCase.automationPlotInput(), p.x, p.y)
+            if (local.x < 0 || local.x > panel.width || local.y < 0 || local.y > panel.height) {
+                targetIndex = i
+                break
+            }
+        }
+Original expression:
+verify(targetIndex >= 0, "another written node lies outside the open menu")
+
+Q002 | test_productionAutomationOutsideRightRetarget | src/checks/editorqml/tst_EditorDrawer.qml:4508
+Disposition: NATIVE
+Mapping/reason: The shared production-QML helper delivers the outside right click and observes rebuilt menu rows plus keyboard focus. No presenter-level Swift predicate establishes that live QML readiness contract.
+Source context since previous QML assertion:
+        var targetTick = nodes[targetIndex].model.tick
+        // Retargeting rebuilds the menu too; use the same drawn-row and keyboard
+        // readiness contract as the initial open rather than the old open flag.
+Original expression:
+verify(testCase.openAutomationNodeMenu(targetIndex))
+
+Remaining QML source (retarget and deletion assertions):
+        compare(bootstrap.automationMenuOpen(), true, "outside right click retargets rather than dismisses")
+        verify(testCase.triggerAutomationMenuRow(2))
+        var remaining = bootstrap.automationLaneTicks().split(",")
+        compare(remaining.indexOf(String(targetTick)), -1, "Delete acts on the newly hit node")
+        verify(remaining.indexOf(String(firstTick)) >= 0, "the original menu target survives")
+    }
 
 Cohesion review: accepted exception for existing gesturechecks.cpp (688 lines),
 clipboardchecks.cpp (640) and tabfixture.cpp (628): only input, frame and baseline

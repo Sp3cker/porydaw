@@ -1,10 +1,10 @@
 Assertion correspondence: swiftrollgated/tst_swiftrollgated.cpp
 
-Reference revision: 2e8e087964913cb52b5d6f7d97a0a6943e2425d3
+Reference revision: 084e6049ec7ebff04cf0465ca22b165172774aeb
 Original: src/checks/swiftrollgated/tst_swiftrollgated.cpp
-Original SHA-256: 11c1141c818b2a348ac42ae76977da28f31f718cb53fa4b5e0a2f5fda9b2af11
+Original SHA-256: b2ae4c9731df4f9989a11fe857718ecaf25a8f7146a2a0693243d71e6df78ccd
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: ad6b435c13a3df031787816508ea95f14b5ec8b96a8539df4fb620a3107f08a3
+Swift SHA-256: 1589104de593a1b0ba252e96a432c89d677f94ae4d97fd59665a33a5e812ce05
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -20,9 +20,9 @@ is recorded as GAP. Bookkeeping must not overclaim.
 Failed-open scene preservation (swiftqtml) and selection-reticle raster translucency (swiftrollgated). Filesystem-failure injection, modal error dialog, signal spy and all reticle compositing probes are NATIVE; only the noteSummary survival comparison pairs PARTIAL, and post-failure session open state is GAP.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
+Command: integrated native swiftrollgated check run
 Result: pending integrated run; source hashes pin the tree inspected here.
-The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
+The native swiftrollgated harnesses are registered in src/checks/CMakeLists.txt and checkcatalog.cpp; verification remains pending the integrated run recorded above.
 
 Execution and ownership
 runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) via checkOrderedSelection, checkViewport, checkProjection and checkIsolation executes the paired presenter checks. No same-directory Swift file exists for these C++ sources; no shared Swift fixture file carrying expects was identified (CoreCheckSupport.swift carries no report.expect predicates).
@@ -34,13 +34,14 @@ revision remain authoritative; this inventory does not replace those sources.
 
 Original assertion inventory
 
-A001 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:283
+A001 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:305
 Disposition: NATIVE
 Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 
 #include "app/RewriteWindow.h"
+#include "nativefixture.h"
 
 #include "ui/theme/themeruntime.h"
 
@@ -96,6 +97,27 @@ bool colorsNear(const QColor &actual, const QColor &expected)
            std::abs(actual.red() - expected.red()) <= kChannelTolerance &&
            std::abs(actual.green() - expected.green()) <= kChannelTolerance &&
            std::abs(actual.blue() - expected.blue()) <= kChannelTolerance;
+}
+
+bool activateWindow(QQuickWindow *window)
+{
+    QWindow *host = window;
+    while (host->parent())
+        host = host->parent();
+    host->raise();
+    host->requestActivate();
+    if (!QTest::qWaitForWindowActive(host, 5'000))
+        return false;
+    window->requestActivate();
+    return QTest::qWaitFor([window] { return QGuiApplication::focusWindow() == window; }, 5'000);
+}
+
+bool awaitFrame(QQuickWindow *window)
+{
+    // Published model state may precede queued delegate updates and a render.
+    QSignalSpy swapped(window, &QQuickWindow::frameSwapped);
+    window->update();
+    return QTest::qWaitFor([&swapped] { return !swapped.isEmpty(); }, 5'000);
 }
 
 } // namespace gridcheck
@@ -317,13 +339,13 @@ void SwiftRollGatedTest::init()
     QTest::failOnWarning(QRegularExpression(QStringLiteral("TypeError|ReferenceError")));
 }
 
-void SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError()
+void SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError()
 {
     if (m_mode != QStringLiteral("swiftqtml"))
 Original expression:
-        QSKIP("failed open error surface belongs to swiftqtml");
+QSKIP("failed open error surface belongs to swiftqtml");
 
-A002 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:290
+A002 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:312
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -334,62 +356,79 @@ Source context since previous assertion:
 
     QObject *const session = window.sessionObject();
 Original expression:
-    QVERIFY(session != nullptr);
+QVERIFY(session != nullptr);
 
-A003 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:291
+A003 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:313
 Disposition: GAP
 Mapping/reason: Session open-state survival across the failure path has no Swift counterpart predicate; the obligation remains open.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool() &&
+QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool() &&
                                  session->property("songOpen").toBool(),
                              15'000);
 
-A004 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:294
+A004 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:316
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr && window.gridView()->isExposed() &&
+QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr && window.gridView()->isExposed() &&
                                  window.gridView()->rootObject() != nullptr,
                              5'000);
 
-A005 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:299
+A005 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:321
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
-    QQuickItem *const root = qobject_cast<QQuickItem *>(window.gridView()->rootObject());
+    QObject *const controller = session->property("songTabs").value<QObject *>();
 Original expression:
-    QVERIFY(root != nullptr);
+QVERIFY(controller != nullptr);
 
-A006 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:301
+A006 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:324
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    QQuickView *const view = window.gridView();
+    QQuickItem *const root = qobject_cast<QQuickItem *>(view->rootObject());
+Original expression:
+QVERIFY(root != nullptr);
+
+A007 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:326
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     QObject *const grid = root->property("gridModel").value<QObject *>();
 Original expression:
-    QVERIFY(grid != nullptr);
+QVERIFY(grid != nullptr);
 
-A007 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:303
+A008 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:328
 Disposition: PARTIAL
 Mapping/reason: Related S025 (checkProjection noteSummary invariant); unproved: summary preservation across the native failure path.
 Source context since previous assertion:
     const QString baselineSummary = grid->property("noteSummary").toString();
 Original expression:
-    QVERIFY(!baselineSummary.isEmpty());
+QVERIFY(!baselineSummary.isEmpty());
 
-A008 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:304
+A009 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:329
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(window.centralWidget() != nullptr);
+QVERIFY(window.centralWidget() != nullptr);
 
-A009 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:313
+A010 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:331
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    const int tabId = controller->property("selectedId").toInt();
+Original expression:
+QVERIFY(tabId >= 0);
+
+A011 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:340
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -402,17 +441,17 @@ Source context since previous assertion:
     const QString backupPath = songPath + QStringLiteral(".testbak");
     QFile::remove(backupPath);
 Original expression:
-    QVERIFY2(QFile::exists(songPath), qPrintable(songPath));
+QVERIFY2(QFile::exists(songPath), qPrintable(songPath));
 
-A010 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:314
+A012 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:341
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY2(QFile::rename(songPath, backupPath), qPrintable(songPath));
+QVERIFY2(QFile::rename(songPath, backupPath), qPrintable(songPath));
 
-A011 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:323
+A013 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:350
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -425,9 +464,9 @@ Source context since previous assertion:
 
     QSignalSpy openFailedSpy(session, SIGNAL(openFailed(QString)));
 Original expression:
-    QVERIFY(openFailedSpy.isValid());
+QVERIFY(openFailedSpy.isValid());
 
-A012 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:337
+A014 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:364
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -443,98 +482,187 @@ Source context since previous assertion:
         }
     });
     dismissTimer->start();
-
 Original expression:
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel),
-                                      Q_ARG(bool, true)));
+QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
 
-A013 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:340
+A015 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:366
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(openFailedSpy.size(), 1, 5'000);
+QTRY_COMPARE_WITH_TIMEOUT(openFailedSpy.size(), 1, 5'000);
 
-A014 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:341
+A016 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:367
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_COMPARE_WITH_TIMEOUT(errorDialogCount, 1, 5'000);
+QTRY_COMPARE_WITH_TIMEOUT(errorDialogCount, 1, 5'000);
 
-A015 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:344
+A017 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:370
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
     dismissTimer->stop();
 Original expression:
-    QVERIFY2(QFile::rename(backupPath, songPath), qPrintable(backupPath));
+QVERIFY2(QFile::rename(backupPath, songPath), qPrintable(backupPath));
 
-A016 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:351
+A018 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:378
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     QCoreApplication::processEvents();
 
-    // The previously visible musical data is still live: the window still shows
-    // a functional grid scene with the same note data and the song still open.
-    // No exact QObject/container identity assertion: replacement policy owns
-    // object identity, the user-visible contract is live scene plus data.
+    // Tab semantics own the reopen: re-opening the selected song is the in-place
+    // reload path, so the tab closed first — cleanly, with no gate — and the
+    // failed load then installed nothing. The strip is empty, the mounted view
+    // survives its empty strip, and the failure reached the session and the
+    // window rather than leaving a half-open tab behind.
 Original expression:
-    QVERIFY(window.gridView() != nullptr);
+QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
 
-A017 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:352
+A019 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:379
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(window.gridView()->rootObject() != nullptr);
+QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
 
-A018 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:353
+A020 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:380
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(window.centralWidget() != nullptr);
+QCOMPARE(controller->property("selectedId").toInt(), -1);
 
-A019 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:355
+A021 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:381
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    QQuickItem *const currentRoot = qobject_cast<QQuickItem *>(window.gridView()->rootObject());
-Original expression:
-    QVERIFY(currentRoot != nullptr);
-
-A020 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:357
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    QObject *const currentGrid = currentRoot->property("gridModel").value<QObject *>();
-Original expression:
-    QVERIFY(currentGrid != nullptr);
-
-A021 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:358
-Disposition: PARTIAL
-Mapping/reason: Related S025 (checkProjection noteSummary invariant); unproved: summary preservation across the native failure path.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QCOMPARE(currentGrid->property("noteSummary").toString(), baselineSummary);
+QVERIFY(!session->property("songOpen").toBool());
 
-A022 | SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:359
+A022 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:382
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(!session->property("lastSaveError").toString().isEmpty());
+
+A023 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:383
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(view == window.gridView());
+
+A024 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:384
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(view->isExposed());
+
+A025 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:385
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(view->rootObject() != nullptr);
+
+A026 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:386
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(window.centralWidget() != nullptr);
+
+A027 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:387
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(root->property("gridModel").value<QObject *>() == nullptr);
+
+A028 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:388
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::visualDescendant(root, QStringLiteral("songTab_%1").arg(tabId)) == nullptr);
+
+A029 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:392
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+
+    // The failed load left no broken state behind: the restored song opens again
+    // in the same view with its original content.
+Original expression:
+QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
+
+A030 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:393
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
+
+A031 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:394
 Disposition: GAP
 Mapping/reason: Session open-state survival across the failure path has no Swift counterpart predicate; the obligation remains open.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(session->property("songOpen").toBool());
+QVERIFY(session->property("songOpen").toBool());
 
-A023 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:368
+A032 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:396
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    QQuickItem *const reopenedRoot = qobject_cast<QQuickItem *>(view->rootObject());
+Original expression:
+QVERIFY(reopenedRoot != nullptr);
+
+A033 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:398
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+    QObject *const reopenedGrid = reopenedRoot->property("gridModel").value<QObject *>();
+Original expression:
+QVERIFY(reopenedGrid != nullptr);
+
+A034 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:399
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QTRY_VERIFY_WITH_TIMEOUT(reopenedGrid->property("renderedNoteCount").toInt() > 0, 5'000);
+
+A035 | SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError | src/checks/swiftrollgated/tst_swiftrollgated.cpp:400
+Disposition: NATIVE
+Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QCOMPARE(reopenedGrid->property("noteSummary").toString(), baselineSummary);
+
+A036 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:409
 Disposition: NATIVE
 Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
 Source context since previous assertion:
@@ -547,86 +675,37 @@ void SwiftRollGatedTest::selectionReticleRasterTranslucency()
 
     if (m_mode != QStringLiteral("swiftrollgated"))
 Original expression:
-        QSKIP("selection reticle raster belongs to the swiftrollgated surface");
+QSKIP("selection reticle raster belongs to the swiftrollgated surface");
 
-A024 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:371
+A037 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:413
+Disposition: NATIVE
+Mapping/reason: Native fixture startup and final Quick-surface readiness are observable only in the registered C++ harness.
+Source context since previous assertion:
+
+    gridcheck::NativeScene scene;
+    QString openError;
+Original expression:
+QVERIFY2(scene.open(m_projectRoot, m_songLabel, &openError), qPrintable(openError));
+
+A038 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:417
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
-    RewriteWindow window;
+    QQuickView *const view = scene.view;
+    QQuickItem *const root = scene.root;
+    QObject *const grid = scene.grid;
 Original expression:
-    QVERIFY(window.isReady());
+QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
 
-A025 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:376
+A039 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:418
 Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    window.show();
-    window.openStartup(m_projectRoot, m_songLabel);
-
-    QObject *const session = window.sessionObject();
-Original expression:
-    QVERIFY(session != nullptr);
-
-A026 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:377
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("projectOpen").toBool(), 15'000);
-
-A027 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:378
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(session->property("songOpen").toBool(), 15'000);
+QVERIFY(gridcheck::awaitFrame(view));
 
-A028 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:379
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(window.gridView() != nullptr, 5'000);
-
-A029 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:382
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-
-    QQuickView *const view = window.gridView();
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(view->rootObject() != nullptr && view->isExposed(), 5'000);
-
-A030 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:384
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    auto *const root = qobject_cast<QQuickItem *>(view->rootObject());
-Original expression:
-    QVERIFY(root != nullptr);
-
-A031 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:386
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-    QObject *const grid = root->property("gridModel").value<QObject *>();
-Original expression:
-    QVERIFY(grid != nullptr);
-
-A032 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:387
-Disposition: NATIVE
-Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
-Source context since previous assertion:
-(adjacent assertion sites; no intervening source lines.)
-Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(grid->property("renderedNoteCount").toInt() > 0, 5'000);
-
-A033 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:393
+A040 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:424
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -636,42 +715,42 @@ Source context since previous assertion:
     QQuickItem *const notes = visualDescendant(root, QStringLiteral("timelineQuickPianoNoteFills"));
     QQuickItem *const overlay = visualDescendant(root, QStringLiteral("timelineQuickPianoOverlay"));
 Original expression:
-    QVERIFY(plot != nullptr);
+QVERIFY(plot != nullptr);
 
-A034 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:394
+A041 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:425
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(input != nullptr);
+QVERIFY(input != nullptr);
 
-A035 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:395
+A042 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:426
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(notes != nullptr);
+QVERIFY(notes != nullptr);
 
-A036 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:396
+A043 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:427
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(overlay != nullptr);
+QVERIFY(overlay != nullptr);
 
-A037 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:399
+A044 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:430
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 
     const QRectF plotScene = plot->mapRectToScene(plot->boundingRect());
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(notes, plotScene) > 0, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(notes, plotScene) > 0, 5'000);
 
-A038 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:406
+A045 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:437
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -682,60 +761,67 @@ Source context since previous assertion:
         plot->mapToScene(QPointF(plot->width() * 0.85, plot->height() * 0.80)).toPoint();
     const QRect reticle = QRect(start, finish).normalized();
 Original expression:
-    QVERIFY(reticle.width() > 80);
+QVERIFY(reticle.width() > 80);
 
-A039 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:407
+A046 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:438
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(reticle.height() > 80);
+QVERIFY(reticle.height() > 80);
 
-A040 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:408
+A047 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:439
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
+QVERIFY(input->mapRectToScene(input->boundingRect()).contains(reticle));
 
-A041 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:411
+A048 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:441
+Disposition: NATIVE
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::awaitFrame(view));
+
+A049 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:443
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
     const QImage baseline = view->grabWindow();
 Original expression:
-    QVERIFY(!baseline.isNull());
+QVERIFY(!baseline.isNull());
 
-A042 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:413
+A050 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:445
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const auto probes = distinctInteriorProbes(baseline, reticle);
 Original expression:
-    QVERIFY2(probes.has_value(),
+QVERIFY2(probes.has_value(),
              "the visible roll did not provide two distinct flat pixels under the reticle");
 
-A043 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:416
+A051 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:448
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const auto noteProbe = noteFaceProbe(notes, baseline, reticle);
 Original expression:
-    QVERIFY2(noteProbe.has_value(), "no visible note face was covered by the reticle");
+QVERIFY2(noteProbe.has_value(), "no visible note face was covered by the reticle");
 
-A044 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:418
+A052 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:450
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     const auto outsideProbes = outsideReticleProbes(baseline, plotScene, reticle, notes);
 Original expression:
-    QVERIFY2(outsideProbes.has_value(),
+QVERIFY2(outsideProbes.has_value(),
              "the visible roll did not provide three untouched flat pixels outside the reticle");
 
-A045 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:426
+A053 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:458
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -746,34 +832,41 @@ Source context since previous assertion:
         qScopeGuard([&] { QTest::mouseRelease(view, Qt::RightButton, Qt::NoModifier, finish); });
     QTest::mouseMove(view, finish, 20);
 Original expression:
-    QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
+QTRY_VERIFY_WITH_TIMEOUT(visiblePrimitiveCount(overlay, QRectF(reticle)) >= 5, 5'000);
 
-A046 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:429
+A054 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:460
+Disposition: NATIVE
+Mapping/reason: Native window focus/render synchronization is observable only in the registered C++ harness.
+Source context since previous assertion:
+(adjacent assertion sites; no intervening source lines.)
+Original expression:
+QVERIFY(gridcheck::awaitFrame(view));
+
+A055 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:462
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
-
     const QImage during = view->grabWindow();
 Original expression:
-    QVERIFY(!during.isNull());
+QVERIFY(!during.isNull());
 
-A047 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:430
+A056 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:463
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QCOMPARE(during.size(), baseline.size());
+QCOMPARE(during.size(), baseline.size());
 
-A048 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:431
+A057 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:464
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QCOMPARE(during.devicePixelRatio(), baseline.devicePixelRatio());
+QCOMPARE(during.devicePixelRatio(), baseline.devicePixelRatio());
 
-A049 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:442
+A058 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:475
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -788,9 +881,9 @@ Source context since previous assertion:
                 .arg(probe.baseline.name(QColor::HexArgb))
                 .arg(actualOutside.name(QColor::HexArgb));
 Original expression:
-        QVERIFY2(colorsNear(actualOutside, probe.baseline), qPrintable(failure));
+QVERIFY2(colorsNear(actualOutside, probe.baseline), qPrintable(failure));
 
-A050 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:459
+A059 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:492
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -811,18 +904,18 @@ Source context since previous assertion:
                 .arg(expected.name(QColor::HexArgb))
                 .arg(actual[index].name(QColor::HexArgb));
 Original expression:
-        QVERIFY2(colorsNear(actual[index], expected), qPrintable(failure));
+QVERIFY2(colorsNear(actual[index], expected), qPrintable(failure));
 
-A051 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:461
+A060 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:494
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
     }
 Original expression:
-    QVERIFY2(actual[0].rgb() != actual[1].rgb(),
+QVERIFY2(actual[0].rgb() != actual[1].rgb(),
              "the reticle erased contrast between distinct underlying pixels");
 
-A052 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:471
+A061 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:504
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -835,9 +928,9 @@ Source context since previous assertion:
             .arg(expectedNote.name(QColor::HexArgb))
             .arg(actualNote.name(QColor::HexArgb));
 Original expression:
-    QVERIFY2(colorsNear(actualNote, expectedNote), qPrintable(noteFailure));
+QVERIFY2(colorsNear(actualNote, expectedNote), qPrintable(noteFailure));
 
-A053 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:476
+A062 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:509
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
@@ -846,24 +939,24 @@ Source context since previous assertion:
     const QRectF leftEdge(reticle.left() - 2.0, reticle.top(), 4.0, reticle.height());
     const HorizontalEdgeScan topEdge = scanHorizontalEdge(during, reticle, edge);
 Original expression:
-    QVERIFY2(topEdge.matches >= 4, "the reticle's horizontal dashed edge was not visible");
+QVERIFY2(topEdge.matches >= 4, "the reticle's horizontal dashed edge was not visible");
 
-A054 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:477
+A063 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:510
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY2(topEdge.matches <= topEdge.span * 3 / 4,
+QVERIFY2(topEdge.matches <= topEdge.span * 3 / 4,
              "the reticle's horizontal edge rendered solid instead of dashed");
 
-A055 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:479
+A064 | SwiftRollGatedTest::selectionReticleRasterTranslucency | src/checks/swiftrollgated/tst_swiftrollgated.cpp:512
 Disposition: NATIVE
 Mapping/reason: Native window/fixture/rendering obligation (native session, view exposure, QML object tree, grabbed frame, pixel probes, theme composites, real input events). A presenter-level Swift check cannot establish this observation.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
-    QVERIFY2(matchingPixelCount(during, leftEdge, edge) >= 4,
+QVERIFY2(matchingPixelCount(during, leftEdge, edge) >= 4,
              "the reticle's vertical dashed edge was not visible");
 
 Remaining original source (closing sequence and helper bodies):

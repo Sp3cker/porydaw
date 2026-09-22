@@ -35,8 +35,8 @@ public enum AutomationPagePolicy {
     public static let accessibleName = "Automation"
 }
 
-// Mouse-hint profile IDs moved to AutomationLifecycle.swift, which owns the
-// hover-hint publication that resolves them.
+// Mouse-hint profiles are plain scene values; the Qt-facing publication owns
+// their reconciliation.
 
 @MainActor
 @QtBridgeable
@@ -108,11 +108,9 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored public private(set) var playing = false
     /// The shared pencil tool's state, owned by the window's edit commands.
     @QtTracked public var isPencilMode: Bool = false {
-        willSet {
-            if newValue != isPencilMode {
-                publishHoverHintProfile(
-                    targetOverride: hoverHintTargetAtPointer(),
-                    pencilModeOverride: newValue)
+        didSet {
+            if oldValue != isPencilMode {
+                publishHoverHintProfile()
             }
         }
     }
@@ -228,10 +226,10 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored public var menuTargetIsPoint: Bool { if case .point = menu?.target { return true }; return false }
     @QtIgnored public var promptForExistingNode: Bool { prompt?.forExistingNode ?? false }
     @QtIgnored public var tapTempoSession: AutomationTapTempoSession { tapSession }
-    @QtIgnored public var publishedTabs: [AutomationTabHandle] { tabSnapshots }
-    @QtIgnored public var publishedNodes: [AutomationNodeHandle] { nodeSnapshots }
-    @QtIgnored public var publishedMenuRows: [AutomationMenuRowHandle] { menuRowSnapshots }
-    @QtIgnored public var publishedCurveRuns: [SceneRect] { curveRunSnapshots }
+    @QtIgnored var publishedTabs: [AutomationTabValue] { tabSnapshots }
+    @QtIgnored var publishedNodes: [AutomationNodeValue] { nodeSnapshots }
+    @QtIgnored var publishedMenuRows: [AutomationMenuRowValue] { menuRowSnapshots }
+    @QtIgnored var publishedCurveRuns: [DrawerRectValue] { curveRunSnapshots }
 
     /// The first catalog index whose parameter satisfies `predicate`, so a lane
     /// reads the same selector order the page publishes.
@@ -336,12 +334,23 @@ public final class AutomationPage: EditorDrawerPage {
     var hoverY: Double = 0
     var lastPresentation: (tick: Tick, playing: Bool)?
 
-    // Published-model snapshots: the lane reads the same values the QML renders.
-    var tabSnapshots: [AutomationTabHandle] = []
-    var nodeSnapshots: [AutomationNodeHandle] = []
-    var curveRunSnapshots: [SceneRect] = []
-    var menuRowSnapshots: [AutomationMenuRowHandle] = []
-    let projectionFacts = AutomationProjectionCache()
+    // Plain descriptors from the last publication. Qt rows are produced only
+    // after these values differ.
+    var tabSnapshots: [AutomationTabValue] = []
+    var nodeSnapshots: [AutomationNodeValue] = []
+    var curveRunSnapshots: [DrawerRectValue] = []
+    var rampSnapshots: [AutomationRampValue] = []
+    var gridLineSnapshots: [DrawerRectValue] = []
+    var valueLineSnapshots: [DrawerRectValue] = []
+    var valueLabelSnapshots: [DrawerTextValue] = []
+    var selectionRectSnapshots: [DrawerRectValue] = []
+    var previewRectSnapshots: [DrawerRectValue] = []
+    var menuRowSnapshots: [AutomationMenuRowValue] = []
+    var menuChildRowSnapshots: [AutomationMenuRowValue] = []
+    var captionFontSnapshot: GridFontSpec?
+    var titleFontSnapshot: GridFontSpec?
+    var sceneCache = AutomationScene.detached
+    let projectionFacts = AutomationSceneAdapter()
 
     public init(baseFontPx: Double = AutomationPagePolicy.seedBaseFontPx) {
         bodyPolicy = EditorDrawerBodyPolicy { hostHeight, metrics in
@@ -355,8 +364,8 @@ public final class AutomationPage: EditorDrawerPage {
         publishTypography()
     }
 
-    // Content rebuilds and the owned-state application helpers moved to
-    // AutomationLifecycle.swift; this file keeps the bridge surface, stored
+    // Scene construction, adapter sampling and publication live in
+    // AutomationPublication.swift; this file keeps the bridge surface, stored
     // state and entry points.
 
     /// Installs the document and palette owners. Called before the container
@@ -392,11 +401,7 @@ public final class AutomationPage: EditorDrawerPage {
         frozenCamera = nil
         tapSession.reset()
         tapGuard = nil
-        publishMenuRows()
-        publishPrompt()
-        publishTapTempo()
-        publishContent(nil)
-        publishInteractionState()
+        publish(.clear)
     }
 
     @QtIgnored var palette = GridPalette()
@@ -404,10 +409,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// origin or drag-distance change rebuilds exactly once.
     @QtIgnored var lastBodyOrigin: Double = 0
     @QtIgnored var lastBodyDragDistance: Double = AutomationPagePolicy.dragDistance
-    @QtIgnored var captionMetrics: AutomationCaption?
-    @QtIgnored var titleMetrics: AutomationCaption?
-
-    // Owned-state application moved to AutomationLifecycle.swift.
+    // Native typography and document projection caches belong to the adapter.
 
     // MARK: Composition input
 

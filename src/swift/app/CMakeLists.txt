@@ -21,6 +21,7 @@ add_library(PorydawApp STATIC
     roll/PianoGrid.swift
     roll/GridGesture.swift
     roll/GridScene.swift
+    roll/GridPublication.swift
     roll/NoteCommands.swift
     timeline/EditorCamera.swift
     timeline/DocumentProjectionCache.swift
@@ -59,20 +60,17 @@ add_library(PorydawApp STATIC
     drawer/automation/AutomationParameter.swift
     drawer/automation/AutomationLaneProjection.swift
     drawer/automation/AutomationProjection.swift
-    drawer/automation/AutomationProjectionCache.swift
     drawer/automation/AutomationTransactions.swift
+    drawer/automation/AutomationPublication.swift
     drawer/automation/AutomationDrawingTransactions.swift
     drawer/automation/AutomationNodeTransactions.swift
     drawer/automation/AutomationEdits.swift
     drawer/automation/AutomationSelectionCommands.swift
     drawer/automation/AutomationScene.swift
     drawer/automation/AutomationHandles.swift
-    drawer/automation/AutomationContentPublication.swift
-    drawer/automation/AutomationOverlayPublication.swift
     drawer/automation/AutomationInteraction.swift
     drawer/automation/AutomationModal.swift
     drawer/automation/AutomationTapTempo.swift
-    drawer/automation/AutomationLifecycle.swift
     drawer/automation/AutomationPage.swift
     headers/TrackHeaders.swift
     headers/TrackActivity.swift
