@@ -26,7 +26,7 @@ import { poryaaaaConfiguration } from "./poryaaaa_source.ts";
 import { SetupProgress } from "./setup_reporter.ts";
 
 const root = Deno.cwd();
-const buildDirectory = "build";
+const buildDirectory = "build-release";
 const cacheDirectory = setupCacheDirectory(root);
 const virtualEnvironment = setupVirtualEnvironment(root);
 const toolsetMarker = setupToolsetMarker(root);
@@ -117,19 +117,19 @@ function platform(): Platform {
       return {
         label: "macOS",
         qt,
-        launchCommand: "open build/porydaw.app",
+        launchCommand: "open build-release/porydaw.app",
       };
     case "linux":
       return {
         label: qt.host === "linux_arm64" ? "Linux arm64" : "Linux x86_64",
         qt,
-        launchCommand: "./build/porydaw",
+        launchCommand: "./build-release/porydaw",
       };
     case "windows":
       return {
         label: "Windows x86_64",
         qt,
-        launchCommand: ".\\build\\Release\\porydaw.exe",
+        launchCommand: ".\\build-release\\Release\\porydaw.exe",
       };
     default:
       throw new Error(`unsupported platform ${Deno.build.os}`);
@@ -227,6 +227,7 @@ async function configurePorydaw(
     poryaaaaArgument: poryaaaa.cmakeArgument,
     qtPrefix,
     buildChecks: true,
+    buildType: "Release",
   });
   await run("configuring Porydaw", cmake, configureArgs);
 }

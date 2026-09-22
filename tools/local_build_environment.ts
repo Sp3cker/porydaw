@@ -14,7 +14,9 @@ type CmakeConfigureOptions = {
   buildDirectory: string;
   poryaaaaArgument: string;
   qtPrefix?: string;
-  buildChecks?: boolean;
+  buildChecks: boolean;
+  // Single-config generators only. Multi-config selects at build time.
+  buildType: "Debug" | "Release";
 };
 
 async function exists(path: string): Promise<boolean> {
@@ -176,6 +178,7 @@ export async function cmakeConfigureArgs({
   poryaaaaArgument,
   qtPrefix,
   buildChecks,
+  buildType,
 }: CmakeConfigureOptions): Promise<string[]> {
   const generatorArguments =
     await exists(join(buildDirectory, "CMakeCache.txt"))
@@ -188,10 +191,8 @@ export async function cmakeConfigureArgs({
     "-B",
     buildDirectory,
     ...generatorArguments,
-    "-DCMAKE_BUILD_TYPE=Release",
-    ...(buildChecks === undefined
-      ? []
-      : [`-DPORYDAW_BUILD_CHECKS=${buildChecks ? "ON" : "OFF"}`]),
+    `-DCMAKE_BUILD_TYPE=${buildType}`,
+    `-DPORYDAW_BUILD_CHECKS=${buildChecks ? "ON" : "OFF"}`,
     ...(qtPrefix ? [`-DCMAKE_PREFIX_PATH=${qtPrefix}`] : []),
     ...(swiftToolchain ? [swiftToolchain] : []),
     poryaaaaArgument,

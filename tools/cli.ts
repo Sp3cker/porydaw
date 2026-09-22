@@ -1,9 +1,9 @@
 // Singular CLI for porydaw build/verify/format lanes.
 // Builds print only summaries and diagnostics; verify uses a quiet reporter with a live name line.
 // Usage:
-// deno task build:app [--release] -> build porydaw only
-// deno task build:checks [--release] -> build porydaw + porydaw_checks + mid2agb
-// deno task build:render [--release] -> build porydaw_render_cli only
+// deno task build:app [--release] -> Debug porydaw; --release uses build-release
+// deno task build:checks [--release] -> Debug checks; --release uses build-release
+// deno task build:render [--release] -> Debug renderer; --release uses build-release
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
 // deno task format [--check] [files...]
@@ -22,7 +22,8 @@ import {
 } from "./checks_options.ts";
 
 const decoder = new TextDecoder();
-const BUILD_DIR = "build";
+const DEBUG_BUILD_DIR = "build";
+const RELEASE_BUILD_DIR = "build-release";
 
 type Subcommand =
   | "build:app"
@@ -50,7 +51,7 @@ function help(command?: Subcommand): string {
           ? "build the Swift-backed offline renderer"
           : "build the application, checks, and mid2agb"
       }
-  --release       configure and build Release
+  --release       build Release in build-release; default is Debug in build
   --verbose, -v   accepted; successful builds remain concise
   --help          show this help without building
 
@@ -117,12 +118,16 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-async function hasBuildSystem(): Promise<boolean> {
-  const ninjaFile = join(BUILD_DIR, "build.ninja");
-  const makefile = join(BUILD_DIR, "Makefile");
+function buildDirectory(release: boolean): string {
+  return release ? RELEASE_BUILD_DIR : DEBUG_BUILD_DIR;
+}
+
+async function hasBuildSystem(directory: string): Promise<boolean> {
+  const ninjaFile = join(directory, "build.ninja");
+  const makefile = join(directory, "Makefile");
   if ((await exists(ninjaFile)) || (await exists(makefile))) return true;
   try {
-    for await (const entry of Deno.readDir(BUILD_DIR)) {
+    for await (const entry of Deno.readDir(directory)) {
       if (entry.isFile && entry.name.endsWith(".sln")) return true;
     }
   } catch (error) {
@@ -132,25 +137,51 @@ async function hasBuildSystem(): Promise<boolean> {
   return false;
 }
 
-async function usesMultiConfigBuild(): Promise<boolean> {
+type CachedBuildConfiguration = {
+  buildType?: string;
+  buildChecks?: boolean;
+  multiConfig: boolean;
+};
+
+async function cachedBuildConfiguration(
+  directory: string,
+): Promise<CachedBuildConfiguration> {
   try {
-    const cache = await Deno.readTextFile(join(BUILD_DIR, "CMakeCache.txt"));
-    return /^CMAKE_CONFIGURATION_TYPES:[^=]*=.+$/m.test(cache);
+    const cache = await Deno.readTextFile(join(directory, "CMakeCache.txt"));
+    const checks = /^PORYDAW_BUILD_CHECKS:BOOL=(.*)$/m.exec(cache)?.[1];
+    return {
+      buildType: /^CMAKE_BUILD_TYPE:STRING=(.*)$/m.exec(cache)?.[1],
+      buildChecks: checks === "ON"
+        ? true
+        : checks === "OFF"
+        ? false
+        : undefined,
+      multiConfig: /^CMAKE_CONFIGURATION_TYPES:[^=]*=.+$/m.test(cache),
+    };
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) return false;
+    if (error instanceof Deno.errors.NotFound) return { multiConfig: false };
     throw error;
   }
 }
 
 async function ensureConfigured(release: boolean): Promise<void> {
-  const poryaaaa = await poryaaaaConfiguration(BUILD_DIR);
-  if (!release && (await hasBuildSystem()) && poryaaaa.cacheMatches) return;
+  const directory = buildDirectory(release);
+  const poryaaaa = await poryaaaaConfiguration(directory);
+  const buildType = release ? "Release" : "Debug";
+  const cached = await cachedBuildConfiguration(directory);
+  const typeMatches = cached.multiConfig || cached.buildType === buildType;
+  if (
+    (await hasBuildSystem(directory)) && poryaaaa.cacheMatches && typeMatches &&
+    cached.buildChecks === true
+  ) return;
   const localQt = await localQtPrefix();
   const result = await new Deno.Command("cmake", {
     args: await cmakeConfigureArgs({
-      buildDirectory: BUILD_DIR,
+      buildDirectory: directory,
       poryaaaaArgument: poryaaaa.cmakeArgument,
       qtPrefix: localQt,
+      buildType,
+      buildChecks: true,
     }),
     stdout: "piped",
     stderr: "piped",
@@ -171,9 +202,10 @@ async function runBuild(
 ): Promise<void> {
   const started = performance.now();
   await ensureConfigured(release);
+  const directory = buildDirectory(release);
   const nproc = String(navigator.hardwareConcurrency);
-  const args = ["--build", BUILD_DIR, "-j", nproc];
-  if (release || (await usesMultiConfigBuild())) {
+  const args = ["--build", directory, "-j", nproc];
+  if (release || (await cachedBuildConfiguration(directory)).multiConfig) {
     args.push("--config", "Release");
   }
   if (targets.length > 0) {
@@ -201,7 +233,6 @@ async function runBuild(
   // Filter progress noise: only show summary, not per-target [%] lines
   console.log(`build: ok (${sec}s)`);
 }
-
 // One verify lane = the build targets it needs plus the harness it runs through
 // tools/run_checks.ts. Options, filters and the --qt payload are identical.
 interface VerifyLane {
@@ -291,8 +322,9 @@ async function runVerify(
     ? `${lane.binary}.exe`
     : lane.binary;
   const binary = join(
-    BUILD_DIR,
-    ...((Deno.build.os === "windows" && await usesMultiConfigBuild())
+    DEBUG_BUILD_DIR,
+    ...((Deno.build.os === "windows" &&
+        (await cachedBuildConfiguration(DEBUG_BUILD_DIR)).multiConfig)
       ? ["Release"]
       : []),
     executable,
@@ -404,7 +436,10 @@ switch (normalized) {
     await runBuild(["porydaw"], buildRelease(rest, "build:app"));
     break;
   case "build:render":
-    await runBuild(["porydaw_render_cli"], buildRelease(rest, "build:render"));
+    await runBuild(
+      ["porydaw_render_cli"],
+      buildRelease(rest, "build:render"),
+    );
     break;
   case "build:checks":
     await runBuild(
