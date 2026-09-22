@@ -213,7 +213,6 @@ func drawerAutomationBandSelectionIsolationGapChecks(
     report.expect(fixture.page.pointerRelease(
         x: bandEndX,
         y: 108,
-        surface: AutomationInputSurface.plot.rawValue,
         button: 2,
         modifiers: 0
     ), cppID: id, message: "A010 tempo right drag commits a band")
@@ -255,7 +254,6 @@ func drawerAutomationBandSelectionIsolationGapChecks(
     report.expect(fixture.page.pointerRelease(
         x: destinationX,
         y: sourceY,
-        surface: AutomationInputSurface.plot.rawValue,
         button: 1,
         modifiers: DrawerModifiers.shiftBit
     ), cppID: id, message: "A018 selected tempo drag commits")
@@ -289,7 +287,6 @@ func drawerAutomationBandSelectionIsolationGapChecks(
     _ = fixture.page.pointerRelease(
         x: bandEndX,
         y: 108,
-        surface: AutomationInputSurface.plot.rawValue,
         button: 2,
         modifiers: 0
     )
@@ -433,7 +430,7 @@ func drawerAutomationMultiLaneSelectionDragGapChecks(
     report.expect(fixture.snapshot == baseline && fixture.document.state == baselineState,
                   cppID: id, message: "A037-A039 selected-drag preview writes no document or history")
     _ = fixture.page.pointerRelease(
-        x: destinationX, y: sourceY, surface: AutomationInputSurface.plot.rawValue,
+        x: destinationX, y: sourceY,
         button: 1, modifiers: DrawerModifiers.shiftBit
     )
     report.expect(fixture.document.revision == baseline.revision + 1
@@ -585,7 +582,7 @@ func drawerAutomationSelectionDragRebuildAbortGapChecks(
                       && fixture.document.state == baselineState,
                   cppID: id, message: "A107-A110 document rebuild aborts preview without an edit")
     _ = fixture.page.pointerRelease(
-        x: destinationX, y: sourceY, surface: AutomationInputSurface.plot.rawValue,
+        x: destinationX, y: sourceY,
         button: 1, modifiers: DrawerModifiers.shiftBit
     )
     report.expect(fixture.tempoValues == ["0:120", "48:150"]
@@ -639,7 +636,7 @@ func drawerAutomationMultiCCSelectionDragGapChecks(
     report.expect(fixture.snapshot == baseline && fixture.document.state == baselineState,
                   cppID: id, message: "A122-A124 multi-CC drag preview writes nothing")
     _ = fixture.page.pointerRelease(
-        x: destinationX, y: sourceY, surface: AutomationInputSurface.plot.rawValue,
+        x: destinationX, y: sourceY,
         button: 1, modifiers: DrawerModifiers.shiftBit
     )
     report.expect(fixture.document.revision == baseline.revision + 1

@@ -34,10 +34,10 @@ func drawerAutomationFixturePreconditions(
                       && point.y >= 0 && point.y <= fixture.page.plotHeight,
                   cppID: drawerAutomationFixtureGapID,
                   message: "the staged pilot point lies inside the plot bounds")
-    report.expectEqual(40, fixture.lanePoints(fixture.panLane).first { $0.tick == 48 }?.value ?? -1,
+    report.expectEqual(40, fixture.lanePoints(fixture.panLane).first { $0.tick == 48 }?.value ?? 0,
                        cppID: drawerAutomationFixtureGapID,
                        what: "the pilot dragged point has its staged value")
-    report.expectEqual(100, fixture.lanePoints(fixture.panLane).first { $0.tick == 96 }?.value ?? -1,
+    report.expectEqual(100, fixture.lanePoints(fixture.panLane).first { $0.tick == 96 }?.value ?? 0,
                        cppID: drawerAutomationFixtureGapID,
                        what: "the pilot independent point has its staged value")
     fixture.page.plotFocused = true

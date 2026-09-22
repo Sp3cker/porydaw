@@ -170,10 +170,10 @@ func drawerAutomationCrossLaneClipboardClamping(
     report.expectEqual(1, tempoToCC.lanePoints(tempoToCC.panLane).count,
                        cppID: drawerAutomationRangeID,
                        what: "tempo-to-controller paste writes one point")
-    report.expectEqual(Tick(48), tempoToCC.lanePoints(tempoToCC.panLane).first?.tick ?? -1,
+    report.expectEqual(Tick(48), tempoToCC.lanePoints(tempoToCC.panLane).first?.tick ?? 0,
                        cppID: drawerAutomationRangeID,
                        what: "tempo-to-controller paste preserves the tick")
-    report.expectEqual(127, tempoToCC.lanePoints(tempoToCC.panLane).first?.value ?? -1,
+    report.expectEqual(127, tempoToCC.lanePoints(tempoToCC.panLane).first?.value ?? 0,
                        cppID: drawerAutomationRangeID,
                        what: "tempo-to-controller paste clamps to the controller maximum")
 
@@ -209,7 +209,7 @@ func drawerAutomationCrossLaneClipboardClamping(
     report.expectEqual(1, ccToTempo.document.state.tempo.count,
                        cppID: drawerAutomationRangeID,
                        what: "controller-to-tempo paste writes one point")
-    report.expectEqual(Tick(96), ccToTempo.document.state.tempo.first?.tick ?? -1,
+    report.expectEqual(Tick(96), ccToTempo.document.state.tempo.first?.tick ?? 0,
                        cppID: drawerAutomationRangeID,
                        what: "controller-to-tempo paste preserves the tick")
     report.expectEqual(

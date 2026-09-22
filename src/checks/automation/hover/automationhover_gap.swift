@@ -65,7 +65,7 @@ func drawerAutomationHoverPortableGaps(_ report: CheckReport, suite: DocumentSes
     let fineEndpoint = fine.page.previewPoints.last
     report.expect(fineEndpoint != nil, cppID: automationHoverGapID,
                   message: "A133 fine sweep publishes an endpoint")
-    report.expectEqual(127, fineEndpoint?.value ?? -1, cppID: automationHoverGapID,
+    report.expectEqual(127, fineEndpoint?.value ?? 0, cppID: automationHoverGapID,
                        what: "A137 endpoint value clamps to the lane maximum")
     _ = fine.page.pointerRelease(x: endX, y: endY, button: 1,
                                  modifiers: DrawerModifiers.altBit)

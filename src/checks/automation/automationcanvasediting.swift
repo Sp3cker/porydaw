@@ -283,10 +283,10 @@ func drawerAutomationActivationAndSelectionContracts(
     report.expect(fixture.page.selection?.scope == .lanes,
                   cppID: drawerAutomationCancelID,
                   message: "selection publishes lane scope")
-    report.expectEqual(Tick(24), fixture.page.selection?.range.startTick ?? -1,
+    report.expectEqual(Tick(24), fixture.page.selection?.range.startTick ?? 0,
                        cppID: drawerAutomationCancelID,
                        what: "selection publishes its start tick")
-    report.expectEqual(Tick(120), fixture.page.selection?.range.endTick ?? -1,
+    report.expectEqual(Tick(120), fixture.page.selection?.range.endTick ?? 0,
                        cppID: drawerAutomationCancelID,
                        what: "selection publishes its end tick")
 
@@ -294,7 +294,7 @@ func drawerAutomationActivationAndSelectionContracts(
     report.expect(fixture.page.selection?.isActive != true,
                   cppID: drawerAutomationCancelID,
                   message: "clearing makes the time selection inactive")
-    report.expect((fixture.page.selection?.scope ?? .tracks) == .tracks,
+    report.expect((fixture.page.selection?.scope ?? .tracks([])) == .tracks([]),
                   cppID: drawerAutomationCancelID,
                   message: "clearing restores the default Tracks scope")
     report.expect((fixture.page.selection?.range.startTick ?? 0) == 0
