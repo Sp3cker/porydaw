@@ -16,7 +16,7 @@ src/checks/midi/MidiChecks.swift (SHA-256
 exact canonical bytes, chunk/event counts, placed names, and the wasFormatZero
 flag. Live-tempo absence shares the NoteChecks "typed tempo is removed from raw
 chunks" predicate (NoteChecks SHA-256
-4628d76755f6a71171d8ab16f5a13761e9dda55e7041b71fec79303cc921ae63). The legacy
+338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4). The legacy
 C++ editcheck suite is not registered in the current checkcatalog, so no native
 run of these sites is claimed.
 

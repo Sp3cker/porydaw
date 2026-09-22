@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_document.cpp
 Original SHA-256: c73b4bcc38040e9e0866aceb87e7295c0c33b4d7b8c66bfa2859498618732d99
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 4628d76755f6a71171d8ab16f5a13761e9dda55e7041b71fec79303cc921ae63
+Swift SHA-256: 338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4
 
 Scope
 All 250 original assertion sites are listed below across 12 methods. The primary

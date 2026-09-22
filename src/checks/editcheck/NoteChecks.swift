@@ -12,6 +12,7 @@ func runNoteEditsSuite(_ report: CheckReport) {
     velocityEditing(report)
     compatibilityRegressions(report)
     coreNoteTransactionChecks(report)
+    coreNoteCorpusChecks(report)
 }
 
 @MainActor

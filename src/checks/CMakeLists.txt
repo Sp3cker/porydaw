@@ -119,6 +119,7 @@ if(APPLE)
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
         editcheck/tst_songdocument_songnotes.swift
+        editcheck/NoteCorpusChecks.swift
         playback/projection.swift
         playback/rewrites.swift
         playback/opaque.swift

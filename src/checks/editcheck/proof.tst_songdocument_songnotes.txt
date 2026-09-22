@@ -4,11 +4,13 @@ Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_songnotes.cpp
 Original SHA-256: 6f00bd37b89259ec40b7681dee5a90b2b925f9f27aeaa3566a87388e69c53f67
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 4628d76755f6a71171d8ab16f5a13761e9dda55e7041b71fec79303cc921ae63
+Swift SHA-256: 338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4
 Swift counterpart: src/checks/editcheck/tst_songdocument_songnotes.swift
 Swift SHA-256: a165d3fbd055f7120332a1cfca0d8c1be711314e6b982c0f579d0dc7bc63bf3c
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
 Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+Swift counterpart: src/checks/editcheck/NoteCorpusChecks.swift
+Swift SHA-256: 5bee9b4788d6e6bf117256841e2caf53bd07c9bb608e8ec48d38cfa3fc2a9381
 Shared helper: src/checks/editcheck/tst_songdocument_songranges.swift
 Shared SHA-256: b5e6d6e2404d710db924f74452a4a3d32114b4463a4436727be2e09bac619624
 
@@ -31,13 +33,13 @@ Batch-collision case is synthetic: three conflicting insertion batches looped ag
 Corpus cases (noteEditingBasic/Batch/Abutting) enumerate every staged EditableTrack row at distantBase/step arithmetic. Basic covers the full gesture chain on one note: add, move by (8 steps, +3 keys), trailing resize, leading resizes (including the duration-1 clamp and end preservation), velocity set/nudge/clamp-to-127, and delete. Batch covers two-note insertion with single-entry undo/redo. Abutting covers seam-adjacent [seam-2step,seam)/[seam,seam+2step) notes with endIndex distinctness and a raw-event pairing-boundary scan.
 
 Execution and ownership
-runNoteEditsSuite (adoptionAndPairing, insertionAndCollision, movementAndResize, velocityEditing, compatibilityRegressions, coreNoteTransactionChecks), dispatched through pdcSuiteRun. coreNoteTransactionChecks (tst_songdocument_songnotes.swift) owns A001-A069 via coreNoteResizeChecks and coreNoteBatchCollisionChecks; it reuses the internal helpers coreRangeHistoryPosition and coreRangeNotePairsConsistent from tst_songdocument_songranges.swift. Synthetic fixtures are built by coreNoteDocument (throwing MidiFile encode/decode round trip, matching native makeDocument staging) plus direct addNotes/resizeNotes/resizeNoteLengths calls; no shared editcheck fixture file carries expects for these suites.
+runNoteEditsSuite (adoptionAndPairing, insertionAndCollision, movementAndResize, velocityEditing, compatibilityRegressions, coreNoteTransactionChecks, coreNoteCorpusChecks), dispatched through pdcSuiteRun. coreNoteTransactionChecks (tst_songdocument_songnotes.swift) owns A001-A069 via coreNoteResizeChecks and coreNoteBatchCollisionChecks; it reuses the internal helpers coreRangeHistoryPosition and coreRangeNotePairsConsistent from tst_songdocument_songranges.swift. Synthetic fixtures are built by coreNoteDocument (throwing MidiFile encode/decode round trip, matching native makeDocument staging) plus direct addNotes/resizeNotes/resizeNoteLengths calls; coreNoteCorpusChecks (NoteCorpusChecks.swift) owns A070-A111, using coreEditCorpusSongs and firstNoteTrack for the same EditableTrack eligibility, fresh decode per method/row, and coreEditHistoryCountAtTip for exact batch history cardinality. Every required family fails rather than passing vacuously if no eligible row exists. The synthetic and corpus scenarios have separate owners because their fixture selection and execution contracts differ.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory
-Result: PASS (focused noteEdits/documentHistory), followed by full deno task
-verify PASS 24/24 (33.66s) and lsp:swift index 6/6 on the companion-prefix
-version hashed above (artifact://64).
+Result: PASS (focused noteEdits/documentHistory, artifact://79), followed by
+full deno task verify PASS 24/24 (35.83s) and lsp:swift index 6/6.
+All 111 original sites are MATCHED; A070-A111 now execute on the staged corpus.
 Focused run history: an earlier focused run passed the other targeted predicates
 but false-failed A052/A054 on revision because the mismatch helper traversed
 history before comparing revision; the fix compares direct invariants first and probes
@@ -844,9 +846,9 @@ Original expression:
   QCOMPARE(doc.smf().write(), duplicateBytes)
 
 A070 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:188
-Disposition: GAP
-Swift: none identified
-Mapping/reason: Synthetic fixtures replace corpus rows by construction; no Swift predicate observes the staged-row midPath precondition.
+Disposition: MATCHED
+Swift: S118 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: Every eligible corpus row has a nonempty staged MIDI path. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
   }
@@ -865,9 +867,9 @@ Original expression:
   QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for basic note editing")
 
 A071 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:192
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes MIDI load success; SongDocument(file:) is infallible and decode failure only reaches the suite failure catch.
+Disposition: MATCHED
+Swift: S119 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: Throwing MIDI decode and SongDocument construction succeed for the staged row; failure reports the row rather than passing the load site. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -878,9 +880,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A072 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:194
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate classifies the first editable track; baseFile() fixes a single editable track by construction.
+Disposition: MATCHED
+Swift: S120 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: The freshly loaded row has a first track containing notes, matching firstEditableTrack. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -889,9 +891,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A073 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:199
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same operations; raw chunk tick ordering is not asserted.
+Disposition: MATCHED
+Swift: S121 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After insertion, every adjacent raw-event tick in every chunk is nondecreasing. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -903,9 +905,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A074 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:201
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after add; insertion success is only a guard-fail (S001), not a find assertion.
+Disposition: MATCHED
+Swift: S122 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After insertion, the note is found by track, base tick, and pitch 60. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       DocNote note;
@@ -914,9 +916,9 @@ Original expression:
   QVERIFY(document.findNote(track, base, 60, &note))
 
 A075 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:203
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same operations; raw chunk tick ordering is not asserted.
+Disposition: MATCHED
+Swift: S123 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After movement, every adjacent raw-event tick in every chunk is nondecreasing. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.moveNotes({note}, int64_t(step) * 8, 3);
@@ -925,9 +927,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A076 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:204
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after move; S002/S004 assert move outcomes under other cppIDs, not positional lookup.
+Disposition: MATCHED
+Swift: S124 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After movement by eight steps and three keys, lookup finds the note at base+8step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -935,9 +937,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 8, 63, &note))
 
 A077 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:206
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after trailing resize; S030 asserts end-event bytes, not lookup presence.
+Disposition: MATCHED
+Swift: S125 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After trailing resize, lookup still finds the note at base+8step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.resizeNotes({note}, int64_t(step) * 2);
@@ -946,9 +948,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 8, 63, &note))
 
 A078 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:207
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts durations after a trailing resize; S030 (same cppID) covers end-event bytes only.
+Disposition: MATCHED
+Swift: S126 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Trailing resize produces duration 6step. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -956,9 +958,9 @@ Original expression:
   QCOMPARE(note.duration, step * 6)
 
 A079 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:209
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after leading resize; S010/S012 assert tick/end values via accessors, not findNote presence.
+Disposition: MATCHED
+Swift: S127 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Leading resize by -2step finds the note at base+6step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.resizeNotesLeft({note}, -int64_t(step) * 2);
@@ -967,9 +969,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 6, 63, &note))
 
 A080 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:210
-Disposition: PARTIAL
-Swift: S012 (related) | src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Related Swift S012 asserts a leading resize preserves note end under the same cppID; unproved: resulting duration step * 8 on the corpus note.
+Disposition: MATCHED
+Swift: S128 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Leading resize produces duration 8step. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -978,8 +980,8 @@ Original expression:
 
 A081 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:212
 Disposition: MATCHED
-Swift: S010 | src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Swift S010 asserts the leading-resize clamp tick (Tick(29) == end - 1) under the same cppID, matching the end-1 clamp observation.
+Swift: S129 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Leading resize by +100step clamps the lookup location to base+14step-1, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.resizeNotesLeft({note}, int64_t(step) * 100);
@@ -988,9 +990,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 14 - 1, 63, &note))
 
 A082 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:213
-Disposition: PARTIAL
-Swift: S011 (related) | src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Related Swift S011 asserts resize enforces minimum duration 1 under editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart; unproved: same clamp on the basic corpus note and the method link.
+Disposition: MATCHED
+Swift: S130 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: The clamped note has duration one tick. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -998,9 +1000,9 @@ Original expression:
   QCOMPARE(note.duration, uint32_t(1))
 
 A083 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:215
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after leading resize; S010/S012 assert tick/end values via accessors, not findNote presence.
+Disposition: MATCHED
+Swift: S131 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Leading resize by -8step+1 restores the lookup location base+6step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.resizeNotesLeft({note}, -int64_t(step) * 8 + 1);
@@ -1009,9 +1011,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 6, 63, &note))
 
 A084 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:216
-Disposition: PARTIAL
-Swift: S012 (related) | src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Related Swift S012 asserts a leading resize preserves note end under the same cppID; unproved: restored duration step * 8 on the corpus note.
+Disposition: MATCHED
+Swift: S132 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: The restored note has duration 8step. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1019,9 +1021,9 @@ Original expression:
   QCOMPARE(note.duration, step * 8)
 
 A085 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:218
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after setting velocity; velocityEditing observes via note(id) without asserting findNote presence.
+Disposition: MATCHED
+Swift: S133 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After setting velocity, positional lookup still finds the note. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.setNotesVelocity({note}, 88);
@@ -1030,9 +1032,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 6, 63, &note))
 
 A086 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:219
-Disposition: PARTIAL
-Swift: S022 (related) | src/checks/editcheck/NoteChecks.swift :: velocityEditing
-Mapping/reason: Related Swift S022 asserts batch velocity set/clamp outcomes under editcheck/EditCheckTest::documentVelocityAtomic; unproved: single-note set to 88 via setNotesVelocity on the corpus note.
+Disposition: MATCHED
+Swift: S134 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Absolute velocity assignment produces velocity 88. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1040,9 +1042,9 @@ Original expression:
   QCOMPARE(note.velocity, uint8_t(88))
 
 A087 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:221
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after nudging velocity; velocityEditing observes via note(id) without asserting findNote presence.
+Disposition: MATCHED
+Swift: S135 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After nudging velocity -30, positional lookup still finds the note. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.nudgeNotesVelocity({note}, -30);
@@ -1051,9 +1053,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 6, 63, &note))
 
 A088 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:222
-Disposition: PARTIAL
-Swift: S024 (related) | src/checks/editcheck/NoteChecks.swift :: velocityEditing
-Mapping/reason: Related Swift S024 asserts relative velocity clamps each note under velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation; unproved: nudge -30 yielding 58 on the corpus note.
+Disposition: MATCHED
+Swift: S136 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: The negative velocity nudge produces velocity 58. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1061,9 +1063,9 @@ Original expression:
   QCOMPARE(note.velocity, uint8_t(58))
 
 A089 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:224
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate looks a note up by (track, tick, key) after nudging velocity; velocityEditing observes via note(id) without asserting findNote presence.
+Disposition: MATCHED
+Swift: S137 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After nudging velocity +200, positional lookup still finds the note. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.nudgeNotesVelocity({note}, 200);
@@ -1072,9 +1074,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 6, 63, &note))
 
 A090 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:225
-Disposition: PARTIAL
-Swift: S022 (related) | src/checks/editcheck/NoteChecks.swift :: velocityEditing
-Mapping/reason: Related Swift S022 asserts velocity clamps to 127 under editcheck/EditCheckTest::documentVelocityAtomic; unproved: the nudgeNotesVelocity +200 path on the corpus note.
+Disposition: MATCHED
+Swift: S138 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: The positive velocity nudge clamps velocity to 127. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1082,9 +1084,9 @@ Original expression:
   QCOMPARE(note.velocity, uint8_t(127))
 
 A091 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:227
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate deletes a non-empty note selection and observes its absence; insertionAndCollision covers empty-delete no-ops only.
+Disposition: MATCHED
+Swift: S139 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: Deletion removes the note from positional lookup. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.deleteNotes({note});
@@ -1093,9 +1095,9 @@ Original expression:
   QVERIFY(!document.findNote(track, base + step * 6, 63, &note))
 
 A092 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:228
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Ordered note shapes and end-event bytes are asserted on the same operations; raw chunk tick ordering is not asserted.
+Disposition: MATCHED
+Swift: S140 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Mapping/reason: After deletion, every adjacent raw-event tick in every chunk is nondecreasing. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1103,9 +1105,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A093 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:240
-Disposition: GAP
-Swift: none identified
-Mapping/reason: Synthetic fixtures replace corpus rows by construction; no Swift predicate observes the staged-row midPath precondition.
+Disposition: MATCHED
+Swift: S141 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: Every eligible batch corpus row has a nonempty staged MIDI path. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
   }
@@ -1124,9 +1126,9 @@ Original expression:
   QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for batch note editing")
 
 A094 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:244
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes MIDI load success; SongDocument(file:) is infallible and decode failure only reaches the suite failure catch.
+Disposition: MATCHED
+Swift: S142 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: Throwing MIDI decode and SongDocument construction succeed on a fresh batch row; failures report the row. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1137,9 +1139,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A095 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:246
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate classifies the first editable track; baseFile() fixes a single editable track by construction.
+Disposition: MATCHED
+Swift: S143 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: The freshly loaded batch row has a first track containing notes. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -1148,9 +1150,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A096 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:255
-Disposition: PARTIAL
-Swift: S019 (related) | src/checks/editcheck/NoteChecks.swift :: insertionAndCollision
-Mapping/reason: Related Swift S019 asserts batch-inserted notes remain present in aggregate under the same cppID; unproved: distinct-position per-note lookup at base + 20 steps, key 64.
+Disposition: MATCHED
+Swift: S144 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: The single batch insertion creates the first note at base+20step, pitch 64. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -1166,9 +1168,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 20, 64, &first))
 
 A097 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:256
-Disposition: PARTIAL
-Swift: S019 (related) | src/checks/editcheck/NoteChecks.swift :: insertionAndCollision
-Mapping/reason: Related Swift S019 asserts batch-inserted notes remain present in aggregate under the same cppID; unproved: distinct-position per-note lookup at base + 22 steps, key 67.
+Disposition: MATCHED
+Swift: S145 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: The same batch insertion creates the second note at base+22step, pitch 67. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1176,9 +1178,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 22, 67, &second))
 
 A098 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:257
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: movementAndResize
-Mapping/reason: Related undo/redo-restore predicates execute in movementAndResize/compatibilityRegressions; the exact QUndoStack entry count is never asserted.
+Disposition: MATCHED
+Swift: S146 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: Public undo/redo traversal counts exactly one added history entry and restores the exact document state and identity before continuing. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1186,9 +1188,9 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), before + 1)
 
 A099 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:259
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: insertionAndCollision / compatibilityRegressions
-Mapping/reason: Undo removes the batch insertion; related undo-restore predicates execute for other operations but batch-add undo presence is not asserted.
+Disposition: MATCHED
+Swift: S147 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: One undo removes the first note from positional lookup. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.undoStack()->undo();
@@ -1197,9 +1199,9 @@ Original expression:
   QVERIFY(!document.findNote(track, base + step * 20, 64, &first))
 
 A100 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:260
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: insertionAndCollision / compatibilityRegressions
-Mapping/reason: Undo removes the batch insertion; related undo-restore predicates execute for other operations but batch-add undo presence is not asserted.
+Disposition: MATCHED
+Swift: S148 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: That same undo removes the second note from positional lookup. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1207,9 +1209,9 @@ Original expression:
   QVERIFY(!document.findNote(track, base + step * 22, 67, &second))
 
 A101 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:262
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: insertionAndCollision / compatibilityRegressions
-Mapping/reason: Redo restores the batch insertion; related redo-restore predicates execute for other operations but batch-add redo presence is not asserted.
+Disposition: MATCHED
+Swift: S149 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: One redo restores the first note at its original batch position. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.undoStack()->redo();
@@ -1218,9 +1220,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 20, 64, &first))
 
 A102 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:263
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: insertionAndCollision / compatibilityRegressions
-Mapping/reason: Redo restores the batch insertion; related redo-restore predicates execute for other operations but batch-add redo presence is not asserted.
+Disposition: MATCHED
+Swift: S150 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Mapping/reason: That same redo restores the second note at its original batch position. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1228,9 +1230,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 22, 67, &second))
 
 A103 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:275
-Disposition: GAP
-Swift: none identified
-Mapping/reason: Synthetic fixtures replace corpus rows by construction; no Swift predicate observes the staged-row midPath precondition, and no predicate covers abutting notes.
+Disposition: MATCHED
+Swift: S151 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: Every eligible abutting corpus row has a nonempty staged MIDI path. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
   }
@@ -1249,9 +1251,9 @@ Original expression:
   QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for abutting notes")
 
 A104 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:279
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes MIDI load success, and no predicate covers abutting notes; decode failure only reaches the suite failure catch.
+Disposition: MATCHED
+Swift: S152 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: Throwing MIDI decode and SongDocument construction succeed on a fresh abutting row; failures report the row. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1262,9 +1264,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A105 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:281
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate classifies the first editable track, and no predicate covers abutting notes; baseFile() fixes a single track by construction.
+Disposition: MATCHED
+Swift: S153 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Mapping/reason: The freshly loaded abutting row has a first track containing notes. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -1273,9 +1275,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A106 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:293
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate inserts seam-abutting notes, compares endIndex distinctness, or scans raw events for pairing-boundary residue; movementAndResize covers overlap/merge trims only.
+Disposition: MATCHED
+Swift: S154 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Mapping/reason: After right-first then left-second insertion, lookup finds the left note at seam-2step, pitch 60. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -1294,9 +1296,9 @@ Original expression:
   QVERIFY(document.findNote(track, seam - step * 2, 60, &left))
 
 A107 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:294
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate inserts seam-abutting notes, compares endIndex distinctness, or scans raw events for pairing-boundary residue; movementAndResize covers overlap/merge trims only.
+Disposition: MATCHED
+Swift: S155 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Mapping/reason: The same insertion sequence finds the right note at seam, pitch 60. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1304,9 +1306,9 @@ Original expression:
   QVERIFY(document.findNote(track, seam, 60, &right))
 
 A108 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:295
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate inserts seam-abutting notes, compares endIndex distinctness, or scans raw events for pairing-boundary residue; movementAndResize covers overlap/merge trims only.
+Disposition: MATCHED
+Swift: S156 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Mapping/reason: The left note has duration 2step and ends at the seam. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1314,9 +1316,9 @@ Original expression:
   QCOMPARE(left.duration, step * 2)
 
 A109 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:296
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate inserts seam-abutting notes, compares endIndex distinctness, or scans raw events for pairing-boundary residue; movementAndResize covers overlap/merge trims only.
+Disposition: MATCHED
+Swift: S157 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Mapping/reason: The right note has duration 2step. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1324,9 +1326,9 @@ Original expression:
   QCOMPARE(right.duration, step * 2)
 
 A110 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:297
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate inserts seam-abutting notes, compares endIndex distinctness, or scans raw events for pairing-boundary residue; movementAndResize covers overlap/merge trims only.
+Disposition: MATCHED
+Swift: S158 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Mapping/reason: The two notes have distinct end-event indices. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
 
@@ -1334,9 +1336,9 @@ Original expression:
   QVERIFY(left.endIndex != right.endIndex)
 
 A111 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:301
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate inserts seam-abutting notes, compares endIndex distinctness, or scans raw events for pairing-boundary residue; movementAndResize covers overlap/merge trims only.
+Disposition: MATCHED
+Swift: S159 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Mapping/reason: After deleting both notes, every raw event in the mapped MIDI chunk is checked: no channel note-on or note-end remains at or after seam-2step. Executed on every staged EditableTrack row in the original method sequence.
 Source context since previous assertion:
   ;
       document.deleteNotes({left, right});
@@ -1867,9 +1869,171 @@ Shared SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
 coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
 rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
 at the tip and asserts equal traversal counts with exact restored SongState and
-DocumentIdentity. The range/raw suites invoke these helpers (see their proofs);
-the suites paired here use synthetic fixtures and do not invoke them. Their one
-report predicate is:
+DocumentIdentity. The range/raw suites and the corpus note scenarios invoke these helpers. Their
+history-restoration predicate is:
   report.expect(count == replayed && document.state == restoredState &&
       document.history.currentIdentity == restoredIdentity, cppID: cppID,
       message: "counting public undo entries restores the exact state and identity")
+
+Corpus predicate inventory (A070-A111)
+Shared lookup predicate, requireCorpusNote, NoteCorpusChecks.swift:68-69:
+    report.expect(note != nil, cppID: id,
+                  message: "\(site) note exists at track \(track), tick \(tick), pitch \(pitch)")
+The lookup searches notes(in: track) by tick and pitch. Each call below supplies
+the exact site ID; its trailing comment describes this shared predicate.
+Shared sortedness predicate: corpusTracksSorted checks nondecreasing ticks
+across every raw chunk, matching tracksSorted rather than note-only ordering.
+
+S118 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19 | A070
+                report.expect(!loaded.midiPath.isEmpty, cppID: id,
+                              message: "\(pathSite) corpus row has a MIDI path")
+
+S119 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24 | A071
+                    report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded")
+
+S120 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26 | A072
+                    report.expect(track != nil, cppID: id,
+                                  message: "\(trackSite) classified row reloads with an editable track")
+
+S121 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:86 | A073
+    report.expect(corpusTracksSorted(document), cppID: id, message: "A073 insertion keeps all tracks sorted")
+
+S122 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:87 | A074
+    guard let inserted = requireCorpusNote(document, track, base, 60, report, id, "A074") else { return }
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S123 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:89 | A075
+    report.expect(corpusTracksSorted(document), cppID: id, message: "A075 movement keeps all tracks sorted")
+
+S124 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:90 | A076
+    guard let moved = requireCorpusNote(document, track, base + step * 8, 63, report, id, "A076")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S125 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:93 | A077
+    guard let extended = requireCorpusNote(document, track, base + step * 8, 63, report, id, "A077")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S126 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:95 | A078
+    report.expectEqual(step * 6, extended.duration, cppID: id, what: "A078 trailing resize adds two steps")
+
+S127 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:97 | A079
+    guard let leading = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A079")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S128 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:99 | A080
+    report.expectEqual(step * 8, leading.duration, cppID: id, what: "A080 leading resize preserves the end")
+
+S129 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:101 | A081
+    guard let clamped = requireCorpusNote(document, track, base + step * 14 - 1, 63, report, id, "A081")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S130 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:103 | A082
+    report.expectEqual(Tick(1), clamped.duration, cppID: id, what: "A082 leading resize clamps to one tick")
+
+S131 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:105 | A083
+    guard let restored = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A083")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S132 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:107 | A084
+    report.expectEqual(step * 8, restored.duration, cppID: id, what: "A084 leading resize restores eight steps")
+
+S133 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:110 | A085
+    guard let set = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A085")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S134 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:112 | A086
+    report.expectEqual(UInt8(88), set.velocity, cppID: id, what: "A086 velocity is set to 88")
+
+S135 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:114 | A087
+    guard let lowered = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A087")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S136 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:116 | A088
+    report.expectEqual(UInt8(58), lowered.velocity, cppID: id, what: "A088 negative nudge yields 58")
+
+S137 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:118 | A089
+    guard let raised = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A089")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S138 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:120 | A090
+    report.expectEqual(UInt8(127), raised.velocity, cppID: id, what: "A090 positive nudge clamps to 127")
+
+S139 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:123 | A091
+    report.expect(corpusNote(document, track, base + step * 6, 63) == nil, cppID: id,
+                  message: "A091 deleted note is absent")
+
+S140 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:124 | A092
+    report.expect(corpusTracksSorted(document), cppID: id, message: "A092 deletion keeps all tracks sorted")
+
+S141 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19 | A093
+                report.expect(!loaded.midiPath.isEmpty, cppID: id,
+                              message: "\(pathSite) corpus row has a MIDI path")
+
+S142 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24 | A094
+                    report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded")
+
+S143 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26 | A095
+                    report.expect(track != nil, cppID: id,
+                                  message: "\(trackSite) classified row reloads with an editable track")
+
+S144 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:135 | A096
+    guard requireCorpusNote(document, track, base + step * 20, 64, report, id, "A096") != nil,
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S145 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:136 | A097
+          requireCorpusNote(document, track, base + step * 22, 67, report, id, "A097") != nil else { return }
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S146 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:138 | A098
+    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
+                       cppID: id, what: "A098 batch adds exactly one undo entry")
+
+S147 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:141 | A099
+    report.expect(corpusNote(document, track, base + step * 20, 64) == nil, cppID: id,
+                  message: "A099 one undo removes first batch note")
+
+S148 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:143 | A100
+    report.expect(corpusNote(document, track, base + step * 22, 67) == nil, cppID: id,
+                  message: "A100 one undo removes second batch note")
+
+S149 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:145 | A101
+    _ = requireCorpusNote(document, track, base + step * 20, 64, report, id, "A101")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S150 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:146 | A102
+    _ = requireCorpusNote(document, track, base + step * 22, 67, report, id, "A102")
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S151 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19 | A103
+                report.expect(!loaded.midiPath.isEmpty, cppID: id,
+                              message: "\(pathSite) corpus row has a MIDI path")
+
+S152 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24 | A104
+                    report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded")
+
+S153 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26 | A105
+                    report.expect(track != nil, cppID: id,
+                                  message: "\(trackSite) classified row reloads with an editable track")
+
+S154 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:159 | A106
+    guard let left = requireCorpusNote(document, track, seam - step * 2, 60, report, id, "A106"),
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S155 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:160 | A107
+          let right = requireCorpusNote(document, track, seam, 60, report, id, "A107") else { return }
+    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
+
+S156 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:161 | A108
+    report.expectEqual(step * 2, left.duration, cppID: id, what: "A108 left note ends at the seam")
+
+S157 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:162 | A109
+    report.expectEqual(step * 2, right.duration, cppID: id, what: "A109 right note retains its full duration")
+
+S158 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:163 | A110
+    report.expect(left.endIndex != right.endIndex, cppID: id, message: "A110 abutting notes have distinct ends")
+
+S159 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:169 | A111
+        report.expect(!(event.isChannel && event.tick >= seam - step * 2 &&
+                        (event.isNoteOn || event.isNoteEnd)), cppID: id,
+                      message: "A111 deleting both notes leaves no note endpoints at or beyond the seam")
+

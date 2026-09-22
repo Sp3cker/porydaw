@@ -4,7 +4,7 @@ Reference revision: f2b0b0451b911e7f7faef860f26f04f63f460ffe
 Original: src/checks/editcheck/tst_songdocument_logic.cpp
 Original SHA-256: f7b940c2e589c8fc69d2a17ab0ab4db3e424db7d8d3bfbdff8c99995d2fe7c39
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 4628d76755f6a71171d8ab16f5a13761e9dda55e7041b71fec79303cc921ae63
+Swift SHA-256: 338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4
 
 Scope
 All 60 original assertion sites are listed below. This file is NOT compiled
