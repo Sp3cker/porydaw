@@ -4,13 +4,13 @@ Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_songnotes.cpp
 Original SHA-256: 6f00bd37b89259ec40b7681dee5a90b2b925f9f27aeaa3566a87388e69c53f67
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4
+Swift SHA-256: db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac
 Swift counterpart: src/checks/editcheck/tst_songdocument_songnotes.swift
-Swift SHA-256: 7027ac6701c4f833fb44e1e8e601a4efd1d08da5a352b08ecdd8c650add667c6
+Swift SHA-256: 17115616495723d9812ffc39039ac6435815f1351c75da6cb870d232a9aec542
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
 Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
 Swift counterpart: src/checks/editcheck/NoteCorpusChecks.swift
-Swift SHA-256: 5bee9b4788d6e6bf117256841e2caf53bd07c9bb608e8ec48d38cfa3fc2a9381
+Swift SHA-256: 8d789f67288946585e461481fc9ac21492625dbeb363ec8dc6abb0ea58d1caf5
 Shared helper: src/checks/editcheck/tst_songdocument_songranges.swift
 Shared SHA-256: b5e6d6e2404d710db924f74452a4a3d32114b4463a4436727be2e09bac619624
 

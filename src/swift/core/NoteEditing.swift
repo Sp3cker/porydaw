@@ -92,44 +92,6 @@ extension SongDocument {
         commit(mutation, group: nil, operation: .deleteNotes)
     }
 
-    /// `tickDelta` and `keyDelta` are cumulative from the gesture's starting
-    /// notes when `group` is reused; they are not per-update increments.
-    public func moveNotes(_ ids: [NoteID], byTicks tickDelta: Int64, byKeys keyDelta: Int,
-                          group: HistoryGroup? = nil) {
-        guard history.acceptsDocumentMutation else { return }
-        guard !ids.isEmpty else { return }
-        let operation = HistoryOperation.moveNotes(ids.sorted { $0.rawValue < $1.rawValue })
-        let base = origin(for: group, operation: operation)
-        guard let original = resolve(ids, in: base) else { return }
-        var destinations: [(Tick, UInt8)] = []
-        destinations.reserveCapacity(original.count)
-        for note in original {
-            if tickDelta > 0, tickDelta > Int64(TimeDefaults.maxTick) - Int64(note.tick) {
-                return
-            }
-            destinations.append((shiftedTick(note.tick, by: tickDelta),
-                                 shiftedPitch(note.pitch, by: keyDelta)))
-        }
-        move(ids, original: original, destinations: destinations, base: base,
-             group: group, operation: operation)
-    }
-
-    /// `pitches` is the cumulative gesture result relative to the notes at the
-    /// group's start when `group` is reused.
-    public func moveNotes(_ ids: [NoteID], toPitches pitches: [UInt8],
-                          group: HistoryGroup? = nil) {
-        guard history.acceptsDocumentMutation else { return }
-        guard !ids.isEmpty, ids.count == pitches.count, pitches.allSatisfy({ $0 <= 127 }) else {
-            return
-        }
-        let operation = HistoryOperation.moveNotesToPitches(
-            ids.sorted { $0.rawValue < $1.rawValue })
-        let base = origin(for: group, operation: operation)
-        guard let original = resolve(ids, in: base) else { return }
-        let destinations = zip(original, pitches).map { ($0.tick, $1) }
-        move(ids, original: original, destinations: destinations, base: base,
-             group: group, operation: operation)
-    }
 
     /// `delta` is cumulative from the gesture's starting edge when `group` is
     /// reused; it is not a per-update increment.
@@ -287,27 +249,11 @@ extension SongDocument {
         commit(mutation, group: nil, operation: .setVelocities, changed: changed)
     }
 
-    private func move(_ ids: [NoteID], original: [Note], destinations: [(Tick, UInt8)],
-                      base: SongState, group: HistoryGroup?, operation: HistoryOperation) {
-        guard original.count == destinations.count else { return }
-        var relocations: [RelocatedNote] = []
-        relocations.reserveCapacity(original.count)
-        for (index, note) in original.enumerated() {
-            let destination = destinations[index]
-            let end = note.endTick.map {
-                UInt64(destination.0) + ($0 - UInt64(note.tick))
-            }
-            if let end, end > UInt64(TimeDefaults.maxTick) { return }
-            relocations.append(RelocatedNote(
-                original: note, tick: destination.0, pitch: destination.1, endTick: end))
-        }
-        relocate(ids, base: base, group: group, operation: operation,
-                 relocations: relocations)
-    }
 
-    private func relocate(_ ids: [NoteID], base: SongState, group: HistoryGroup?,
-                          operation: HistoryOperation, relocations: [RelocatedNote]) {
-        guard ids.count == relocations.count else { return }
+    @discardableResult
+    internal func relocate(_ ids: [NoteID], base: SongState, group: HistoryGroup?,
+                           operation: HistoryOperation, relocations: [RelocatedNote]) -> Bool {
+        guard ids.count == relocations.count else { return false }
         var active: [Int] = []
         active.reserveCapacity(relocations.count)
         var spans: [PlannedNote] = []
@@ -325,7 +271,8 @@ extension SongDocument {
             }
             active.append(index)
         }
-        guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return }
+        if active.isEmpty, group == nil { return true }
+        guard participantsAreCompatible(spans, allowExactDuplicates: false) else { return false }
         var mutation = DocumentMutation(base)
         let activeIDs = active.map { ids[$0] }
         applyEditedWins(spans: spans, editedIDs: Set(ids),
@@ -333,7 +280,7 @@ extension SongDocument {
         if let selectedInCandidate = resolve(activeIDs, in: mutation.state) {
             remove(selectedInCandidate, from: &mutation)
         } else if !activeIDs.isEmpty {
-            return
+            return false
         }
         for index in active {
             let relocation = relocations[index]
@@ -343,9 +290,10 @@ extension SongDocument {
         commit(mutation, group: group, operation: operation,
                changed: !active.isEmpty || group != nil,
                returnsToOrigin: active.isEmpty)
+        return true
     }
 
-    private func resolve(_ ids: [NoteID], in songState: SongState) -> [Note]? {
+    internal func resolve(_ ids: [NoteID], in songState: SongState) -> [Note]? {
         resolve(ids, using: projectedNoteMap(in: songState))
     }
 
@@ -501,7 +449,7 @@ extension SongDocument {
     }
 }
 
-private struct RelocatedNote {
+internal struct RelocatedNote {
     let original: Note
     let tick: Tick
     let pitch: UInt8
@@ -539,8 +487,3 @@ private func shiftedTick(_ tick: Tick, by delta: Int64) -> Tick {
     return Tick(min(max(sum, 0), Int64(TimeDefaults.maxTick)))
 }
 
-private func shiftedPitch(_ pitch: UInt8, by delta: Int) -> UInt8 {
-    let (sum, overflow) = Int(pitch).addingReportingOverflow(delta)
-    if overflow { return delta < 0 ? 0 : 127 }
-    return UInt8(min(max(sum, 0), 127))
-}

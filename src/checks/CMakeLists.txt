@@ -120,6 +120,8 @@ if(APPLE)
         editcheck/tst_songdocument_songranges.swift
         editcheck/tst_songdocument_songnotes.swift
         editcheck/NoteCorpusChecks.swift
+        editcheck/NoteMoveTransactionChecks.swift
+        editcheck/NoteMoveCorpusChecks.swift
         playback/projection.swift
         playback/rewrites.swift
         playback/opaque.swift

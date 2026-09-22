@@ -50,18 +50,18 @@ internal func coreNoteCorpusChecks(_ report: CheckReport) {
 }
 
 @MainActor
-private func firstNoteTrack(_ document: SongDocument) -> Int? {
+internal func firstNoteTrack(_ document: SongDocument) -> Int? {
     (0..<document.engineTracks.usedTrackCount).first { !document.notes(in: $0).isEmpty }
 }
 
 @MainActor
-private func corpusNote(_ document: SongDocument, _ track: Int, _ tick: Tick,
+internal func corpusNote(_ document: SongDocument, _ track: Int, _ tick: Tick,
                         _ pitch: UInt8) -> Note? {
     document.notes(in: track).first { $0.tick == tick && $0.pitch == pitch }
 }
 
 @MainActor
-private func requireCorpusNote(_ document: SongDocument, _ track: Int, _ tick: Tick,
+internal func requireCorpusNote(_ document: SongDocument, _ track: Int, _ tick: Tick,
                                _ pitch: UInt8, _ report: CheckReport, _ id: String,
                                _ site: String) -> Note? {
     let note = corpusNote(document, track, tick, pitch)
@@ -71,7 +71,7 @@ private func requireCorpusNote(_ document: SongDocument, _ track: Int, _ tick: T
 }
 
 @MainActor
-private func corpusTracksSorted(_ document: SongDocument) -> Bool {
+internal func corpusTracksSorted(_ document: SongDocument) -> Bool {
     document.rawChunks.allSatisfy { chunk in
         zip(chunk.events, chunk.events.dropFirst()).allSatisfy { $0.tick <= $1.tick }
     }

@@ -161,7 +161,7 @@ extension AutomationPage {
                                               from: session.document).tracks.flatMap(\.notes)
         guard !notes.isEmpty, notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) }) else { return }
         let before = session.document.revision
-        session.document.moveNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
+        session.document.nudgeNotes(notes.map(\.id), byTicks: 0, byKeys: semitones)
         if session.document.revision != before {
             let edge = notes.reduce(Int(notes[0].pitch)) {
                 semitones > 0 ? max($0, Int($1.pitch)) : min($0, Int($1.pitch))

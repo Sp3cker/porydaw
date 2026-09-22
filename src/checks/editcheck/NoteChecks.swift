@@ -13,6 +13,8 @@ func runNoteEditsSuite(_ report: CheckReport) {
     compatibilityRegressions(report)
     coreNoteTransactionChecks(report)
     coreNoteCorpusChecks(report)
+    coreNoteMoveTransactionChecks(report)
+    coreNoteMoveCorpusChecks(report)
 }
 
 @MainActor

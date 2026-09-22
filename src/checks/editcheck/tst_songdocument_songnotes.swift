@@ -14,7 +14,7 @@ internal func coreNoteTransactionChecks(_ report: CheckReport) {
 // Native makeDocument stages the SMF through a real file; the equivalent here is
 // a throwing encode/decode round trip into SongDocument(file:).
 @MainActor
-private func coreNoteDocument(trackCount: Int) throws -> SongDocument {
+internal func coreNoteDocument(trackCount: Int) throws -> SongDocument {
     let file = MidiFile(division: 24, chunks:
         [MidiChunk(events: [.meta(type: 0x01, data: Array("contract fixture".utf8))], endTick: 48)]
         + (0..<trackCount).map {
@@ -30,7 +30,7 @@ private func coreNoteFind(_ document: SongDocument, track: Int, tick: Tick,
 }
 
 // SavedDocState equivalent: every observable a rejected or no-op edit must keep.
-private struct CoreNoteDocState {
+internal struct CoreNoteDocState {
     let bytes: [UInt8]
     let revision: UInt64
     let identity: DocumentIdentity // captureSaveSnapshot().saveStateToken analogue
@@ -43,7 +43,7 @@ private struct CoreNoteDocState {
 }
 
 @MainActor
-private func coreNoteCaptureState(_ document: SongDocument, _ report: CheckReport,
+internal func coreNoteCaptureState(_ document: SongDocument, _ report: CheckReport,
                                   _ id: String, track: Int = 0) throws -> CoreNoteDocState {
     // The history traversal can publish a revision; snapshot revision after it.
     let position = coreRangeHistoryPosition(document, report, id)
@@ -63,7 +63,7 @@ private func coreNoteCaptureState(_ document: SongDocument, _ report: CheckRepor
 // observations only: a history traversal publishes a revision, so undo
 // count/cursor are verified once per site against saved.position instead.
 @MainActor
-private func coreNoteStateMismatch(_ document: SongDocument, _ saved: CoreNoteDocState,
+internal func coreNoteStateMismatch(_ document: SongDocument, _ saved: CoreNoteDocState,
                                    track: Int = 0) throws -> String? {
     if try document.state.file.encoded() != saved.bytes { return "smf bytes" }
     if document.revision != saved.revision { return "revision" }

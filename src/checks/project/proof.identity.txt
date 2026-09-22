@@ -4,7 +4,7 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/project/identity.cpp
 Original SHA-256: eb1c1ce402caed41c83397af9c262da13d2589dbe7216512eed5b0a979575399
 Swift counterpart: src/checks/editcheck/NoteChecks.swift
-Swift SHA-256: 338eb644903bf5e2d940ae4cad787ada0a80bfad45a867c593e3f6faf84778f4
+Swift SHA-256: db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac
 Additional Swift counterpart: src/checks/workspace/SessionChecks.swift
 Additional Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
 
