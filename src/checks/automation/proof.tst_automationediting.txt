@@ -42,470 +42,529 @@ src/checks/automation/tst_automationediting.cpp:269 | for (int index = 0; index 
 Original assertion inventory
 
 A001 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:45
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(quickScene)
 
 A002 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:49
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A003 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(edited.isValid())
 
 A004 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S018] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(arm.has_value())
 
 A005 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:58
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                   arm->transientRevisionBefore)
 
 A006 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(transientLayerContainsNodeAt(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient), arm->targetViewport))
 
 A007 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:62
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S041] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
 
 A008 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:63
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
 
 A009 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:64
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A010 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:71
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A011 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A012 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:73
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S022] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), frozen.revision + 1)
 
 A013 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S022] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), frozen.undoCount + 1)
 
 A014 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:75
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S022] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->index(), frozen.undoIndex + 1)
 
 A015 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:76
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S022] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->document().smf().write() != frozen.smf)
 
 A016 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:77
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kCommittedValue)
 
 A017 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A018 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(timelineCcValue(kDraggedTick), kCommittedValue)
 
 A019 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:80
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S020] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
 
 A020 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:82
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S023] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A021 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:83
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S023] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()))
 
 A022 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:84
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
 
 A023 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:85
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A024 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:86
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(timelineCcValue(kDraggedTick), kDraggedValue)
 
 A025 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:87
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S024] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
 
 A026 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S042] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_tab->history().canRedo())
 
 A027 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S043] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()))
 
 A028 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:91
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S025] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kCommittedValue)
 
 A029 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:92
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S025] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A030 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:93
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S025] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(timelineCcValue(kDraggedTick), kCommittedValue)
 
 A031 | AutomationEditingTest::ccDragCommitsOnce | src/checks/automation/tst_automationediting.cpp:94
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S025] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(timelineCcValue(kIndependentTick), kIndependentValue)
 
 A032 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(quickScene)
 
 A033 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:104
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A034 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(edited.isValid())
 
 A035 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S026] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(arm.has_value())
 
 A036 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).revision >
                   arm->transientRevisionBefore)
 
 A037 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(transientLayerContainsNodeAt(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient), arm->targetViewport))
 
 A038 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:117
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S028] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
 
 A039 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:118
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S028] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
 
 A040 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S028] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A041 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:122
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty())
 
 A042 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty())
 
 A043 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S029] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
 
 A044 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S030] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
 
 A045 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S030] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A046 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:132
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).rects.empty())
 
 A047 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:133
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QTRY_VERIFY(
           quickScene->layer(songview::TimelineQuickLayer::AutomationTransient).triangles.empty())
 
 A048 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:136
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S031] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
 
 A049 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S031] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
 
 A050 | AutomationEditingTest::escapeCancelsCcDrag | src/checks/automation/tst_automationediting.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S031] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A051 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S032] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(m_automationInput->bounds().contains(blank))
 
 A052 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S032] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kBlankTick), -1)
 
 A053 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A054 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(edited.isValid())
 
 A055 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S034] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QTRY_COMPARE(m_tab->view().editCursorTick(), kBlankTick)
 
 A056 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:162
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().smf().write(), smfBefore)
 
 A057 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:163
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A058 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:164
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoCountBefore)
 
 A059 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:165
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->index(), undoIndexBefore)
 
 A060 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:166
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A061 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:167
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S035] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(edited.count(), 0)
 
 A062 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:168
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S036] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kDraggedTick), kDraggedValue)
 
 A063 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:169
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S036] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kIndependentTick), kIndependentValue)
 
 A064 | AutomationEditingTest::releaseWithoutActivationDoesNotCommit | src/checks/automation/tst_automationediting.cpp:170
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S036] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(laneValue(kBlankTick), -1)
 
 A065 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:250
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A066 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:251
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE
+Mapping/reason: Native Qt Quick scene-layer or QSignalSpy setup/presentation mechanics have no typed Swift-observable surface; retained by the native UI suite.
 Original expression:
   QVERIFY(edited.isValid())
 
 A067 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S037] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenSelection.active())
 
 A068 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:268
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S037] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(labelCount > 1)
 
 A069 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S044] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(row.has_value())
 
 A070 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S044] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(activateParameter(*row))
 
 A071 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S044] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(page().canvas()->activeParameter(), index)
 
 A072 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S039] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(current.scope, frozenSelection.scope)
 
 A073 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S039] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(current.startTick, frozenSelection.startTick)
 
 A074 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:278
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S039] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(current.endTick, frozenSelection.endTick)
 
 A075 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:279
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S039] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QCOMPARE(current.tempo, frozenSelection.tempo)
 
 A076 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S039] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(current.lanes == frozenSelection.lanes)
 
 A077 | AutomationEditingTest::parameterTabsPreserveDocumentAndSelection | src/checks/automation/tst_automationediting.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: [S040] The Swift fixture uses the same parameter/event arrangement and drives the production page's typed event route; the predicate asserts the equivalent published state plus document/history outcome after that sequence.
+Verification evidence: pending orchestrator run
 Original expression:
   QVERIFY(frozenDocumentState(documentChanged.count(), edited.count()) == frozen)
 
@@ -597,3 +656,151 @@ S017 | drawerAutomationHistoryUndoRedo | src/checks/automation/tst_automationedi
 Swift expression:
   report.expect(!two.undo(), cppID: drawerAutomationHistoryID,
                     message: "a third undo finds nothing and reports nothing")
+
+
+Portable GAP-closing Swift assertion predicates
+The S entries below are executable predicates in the new production-seam check file.
+
+S018 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:22
+Swift expression:
+  report.expect(drag.page.activeParameter == drag.panLane && drag.page.projection != nil,
+                    cppID: id, message: "A001-A004 Pan and its production projection are active")
+
+S019 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:24
+Swift expression:
+  report.expect(drag.page.drag(drag.panLane, from: dragged, to: targetValue, armPixels: 30),
+                    cppID: id, message: "A005-A006 the typed pointer route previews and releases the node drag")
+
+S020 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:26
+Swift expression:
+  report.expectEqual(["24:90", "120:40"], drag.values(drag.panLane), cppID: id,
+                         what: "A008-A011 and A016-A019 release changes only the grabbed CC occurrence")
+
+S021 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:28
+Swift expression:
+  report.expect(drag.document.state != dragState && drag.document.revision == dragBefore.revision + 1,
+                    cppID: id, message: "A010-A015 the release publishes exactly one document revision")
+
+S022 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:30
+Swift expression:
+  report.expect(drag.document.history.canUndo && drag.snapshot.identity != dragBefore.identity,
+                    cppID: id, message: "A012-A015 the release records one undoable history identity")
+
+S023 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:32
+Swift expression:
+  report.expect(drag.undo(), cppID: id, message: "A020-A021 the committed drag is undoable")
+
+S024 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:33
+Swift expression:
+  report.expectEqual(["24:64", "120:40"], drag.values(drag.panLane), cppID: id,
+                         what: "A022-A025 undo restores both target and independent CC occurrences")
+
+S025 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:41
+Swift expression:
+  report.expectEqual(["24:90", "120:40"], drag.values(drag.panLane), cppID: id,
+                         what: "A028-A031 redo restores the committed target and preserves the independent occurrence")
+
+S026 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:52
+Swift expression:
+  report.expect(cancel.page.pointerPress(x: sourceX, y: sourceY, surface: AutomationInputSurface.plot.rawValue,
+                                             button: 1, modifiers: 0),
+                    cppID: id, message: "A032-A035 the production pointer route arms the written node")
+
+S027 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:56
+Swift expression:
+  report.expect(cancel.page.hasGesture && !cancel.page.previewPoints.isEmpty,
+                    cppID: id, message: "A036-A040 motion publishes an automation preview while the document remains frozen")
+
+S028 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:58
+Swift expression:
+  report.expect(cancel.document.state == cancelState && cancel.snapshot == cancelBefore,
+                    cppID: id, message: "A038-A040 preview motion writes no document or history state")
+
+S029 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:60
+Swift expression:
+  report.expect(cancel.page.handleEscape(), cppID: id,
+                    message: "A041-A043 Escape is consumed by the live production gesture")
+
+S030 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:62
+Swift expression:
+  report.expect(!cancel.page.hasGesture && cancel.page.previewPoints.isEmpty && !cancel.page.interactionActive,
+                    cppID: id, message: "A041-A047 Escape synchronously clears preview and interaction state")
+
+S031 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:65
+Swift expression:
+  report.expect(cancel.document.state == cancelState && cancel.snapshot == cancelBefore
+                        && cancel.values(cancel.panLane) == ["24:64", "120:40"],
+                    cppID: id, message: "A043-A050 release after cancellation cannot commit and preserves both occurrences")
+
+S032 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:76
+Swift expression:
+  report.expect(blankX >= 0 && blankX <= idle.page.plotWidth
+                        && !idle.values(idle.panLane).contains(where: { $0.hasPrefix("72:") }),
+                    cppID: id, message: "A051-A052 the blank target is inside the production plot and has no CC event")
+
+S033 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:79
+Swift expression:
+  report.expect(idle.page.pointerPress(x: blankX, y: 60, surface: AutomationInputSurface.plot.rawValue,
+                                           button: 1, modifiers: 0),
+                    cppID: id, message: "A053-A055 the blank press is routed and parks the shared edit cursor")
+
+S034 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:82
+Swift expression:
+  report.expect(!idle.page.pointerRelease(x: blankX, y: 60, button: 1, modifiers: 0),
+                    cppID: id, message: "A055 release without activation reports no edit")
+
+S035 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:84
+Swift expression:
+  report.expect(idle.document.state == idleState && idle.snapshot == idleBefore,
+                    cppID: id, message: "A056-A061 release without activation preserves bytes, revision, and history")
+
+S036 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:86
+Swift expression:
+  report.expectEqual(["24:64", "120:40"], idle.values(idle.panLane), cppID: id,
+                         what: "A062-A064 release without activation preserves both CC events and leaves the blank tick empty")
+
+S037 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:99
+Swift expression:
+  report.expect(tabs.page.selection == selection && tabs.page.publishedTabs.count > 1,
+                    cppID: id, message: "A065-A068 an active noncontiguous selection and multiple parameter tabs are published")
+
+S038 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:106
+Swift expression:
+  report.expect(index >= 0 && tabs.page.activateParameter(index: index)
+                            && tabs.page.activeParameter == parameter,
+                        cppID: id, message: "\(row) each catalog row activates through the production page")
+
+S039 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:109
+Swift expression:
+  report.expect(tabs.page.selection == selection,
+                        cppID: id, message: "A072-A076-\(parameter) tab activation preserves scope, range, tempo flag, and lane set")
+
+S040 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:112
+Swift expression:
+  report.expect(tabs.document.state == tabState && tabs.snapshot == tabBefore,
+                    cppID: id, message: "A077 all tab activations preserve document revision and history")
+
+S041 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:130
+Swift expression:
+  report.expect(previewOnly.page.hasGesture && !previewOnly.page.previewPoints.isEmpty
+                        && previewOnly.document.state == previewOnlyState
+                        && previewOnly.snapshot == previewOnlyBefore,
+                    cppID: id, message: "A007 drag preview is visible while document and history remain frozen")
+
+S042 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:143
+Swift expression:
+  report.expect(redo.document.history.canRedo,
+                    cppID: id, message: "A026 undo publishes the committed drag as redoable")
+
+S043 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:151
+Swift expression:
+  report.expect(redo.values(redo.panLane) == ["24:90", "120:40"]
+                        && redo.document.history.canUndo && !redo.document.history.canRedo,
+                    cppID: id, message: "A027 redo applies the same single transaction")
+
+S044 | drawerAutomationEditingGapChecks | src/checks/automation/automationediting_gap.swift:157
+Swift expression:
+  report.expect(index >= 0 && tabs.page.activateParameter(index: index)
+                            && tabs.page.activeParameter == parameter,
+                        cppID: id,
+                        message: "A069-A071-\(parameter) every catalog row resolves and activates")
