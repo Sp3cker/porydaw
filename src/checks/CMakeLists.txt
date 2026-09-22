@@ -159,7 +159,10 @@ if(APPLE)
         automation/automationmenus.swift
         selectionkey/localinputtier_text.swift
         drawerpresentation/velocity.swift
-        drawerpresentation/voice.swift
+        drawerpresentation/voice_projection.swift
+        drawerpresentation/voice_picker.swift
+        drawerpresentation/voice_interaction.swift
+        drawerpresentation/voice_lifecycle.swift
         drawerpresentation/voicemenus.swift
         drawerpresentation/drawer_basics.swift
         drawerpresentation/drawer_resize.swift
