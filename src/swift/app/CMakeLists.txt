@@ -41,8 +41,10 @@ add_library(PorydawApp STATIC
     drawer/velocity/VelocityAxis.swift
     drawer/velocity/VelocityTransactions.swift
     drawer/velocity/VelocityProjection.swift
+    drawer/velocity/VelocitySceneValues.swift
     drawer/velocity/VelocityScene.swift
     drawer/velocity/VelocityInteraction.swift
+    drawer/velocity/VelocityPublication.swift
     drawer/velocity/VelocityPage.swift
     drawer/voicechanges/VoiceLanePolicy.swift
     drawer/voicechanges/VoiceChangesProjection.swift
