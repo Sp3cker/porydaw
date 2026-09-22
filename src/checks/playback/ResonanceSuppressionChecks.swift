@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 
 func runResonanceSuppressionChecks(_ report: CheckReport) {
     resonanceLawChecks(report)

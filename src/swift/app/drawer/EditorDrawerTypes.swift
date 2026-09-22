@@ -104,6 +104,54 @@ public struct EditorDrawerMetrics: Equatable, Sendable {
     }
 }
 
+// MARK: - Page facts
+
+/// Plain, fixed-slot page facts for one layout pass. An absent slot is
+/// unavailable. The presenter resolves URLs once, but re-evaluates each attached
+/// page's preferred-height closure against the current host and metrics.
+public struct EditorDrawerPageFacts: Equatable, Sendable {
+    public struct Page: Equatable, Sendable {
+        public let resolvedContentUrl: String
+        public let preferredBodyHeight: Int
+        public let maximumBodyHeight: Int?
+
+        public init(resolvedContentUrl: String, preferredBodyHeight: Int,
+                    maximumBodyHeight: Int? = nil) {
+            self.resolvedContentUrl = resolvedContentUrl
+            self.preferredBodyHeight = preferredBodyHeight
+            self.maximumBodyHeight = maximumBodyHeight
+        }
+    }
+
+    public var automation: Page?
+    public var velocity: Page?
+    public var voiceChanges: Page?
+
+    public init(automation: Page? = nil, velocity: Page? = nil,
+                voiceChanges: Page? = nil) {
+        self.automation = automation
+        self.velocity = velocity
+        self.voiceChanges = voiceChanges
+    }
+
+    public subscript(kind: DrawerSectionKind) -> Page? {
+        get {
+            switch kind {
+            case .automation: return automation
+            case .velocity: return velocity
+            case .voiceChanges: return voiceChanges
+            }
+        }
+        set {
+            switch kind {
+            case .automation: automation = newValue
+            case .velocity: velocity = newValue
+            case .voiceChanges: voiceChanges = newValue
+            }
+        }
+    }
+}
+
 // MARK: - Published values
 
 /// One section's published values, drawer-local (origin at the container's
@@ -194,7 +242,7 @@ public struct EditorDrawerSectionPreference: Equatable, Sendable {
 
 /// What one operation caused: whether the published values changed, the values
 /// themselves, a focus request, the preference-change records and the sections
-/// whose attached pages were cancelled synchronously.
+/// whose attached pages the presenter must cancel synchronously.
 public struct EditorDrawerChangeSet: Equatable, Sendable {
     public let published: Bool
     public let snapshot: EditorDrawerSnapshot
@@ -214,13 +262,6 @@ public struct EditorDrawerChangeSet: Equatable, Sendable {
         self.sectionPreferences = sectionPreferences
         self.activePagePreference = activePagePreference
         self.cancelledSections = cancelledSections
-    }
-
-    /// The result of an operation that changed nothing and published nothing.
-    public static func untouched(_ snapshot: EditorDrawerSnapshot) -> EditorDrawerChangeSet {
-        EditorDrawerChangeSet(published: false, snapshot: snapshot, focusRequest: nil,
-                              sectionPreferences: [], activePagePreference: nil,
-                              cancelledSections: [])
     }
 
     public var isEmpty: Bool {

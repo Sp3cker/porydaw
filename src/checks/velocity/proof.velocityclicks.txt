@@ -4,11 +4,13 @@ Reference revision: f842f7e128adea2958d0967e2afbd834893f21b4
 Original: src/checks/velocity/velocityclicks.cpp
 Original SHA-256: c77b810320fbc033a61ad2623fd0b34aaa0dc2184460fd0d054cd9cacf697f1c
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
-Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
+Swift SHA-256: d10757673b1ecbbd0e49c6e6592b4415990d6e986f0cd6a555d2c155661d8e62
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
-Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
+Additional Swift SHA-256: 8449b61bab2cd9f39f86b2769ad6f0165307d877e188c190acff337829dc26cb
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 2600bfa468ac1bc6c628468de33d1ccdf81c3ac7826b7b9211e5d8b8c7538648
+Additional Swift SHA-256: 0aabd70533f5efc4ce77ceb10d2470f0ea2fd619fd2e4e407fb9d8beb326737b
+Exact click Swift counterpart: src/checks/velocity/velocityclicks.swift
+Exact click Swift SHA-256: db6c84025c1bb68864edb2c302692ef08d3c81b1d9e4bba1a6396753888d1309
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -22,17 +24,46 @@ A method name or related Swift case alone never establishes an assertion match.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
 
 Execution and ownership
+drawerVelocityExactClickSequences (velocity/velocityclicks.swift) owns the exact
+three-note event sequence and document/history predicates.
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
 drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift), and
-drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift) execute the
-paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
-(drawerVelocityVelocityPageFixture, drawerVelocityVelocityFixture); per-case document
-and gesture state live in the paired Swift sources. Their helper expectations execute
-on every call and are inventoried below.
+drawerVelocityCommandAvailability (velocity/VelocityPageChecks.swift) retain the
+broader paired checks. The exact click fixture and per-case state live in
+velocity/velocityclicks.swift.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
+
+Authored exact Swift mappings (pending the integrated command above; no GAP
+disposition is advanced without execution evidence):
+A001 -> velocity/velocityclicks.swift:82-84
+A002-A003 -> velocity/velocityclicks.swift:91-96
+A005 -> velocity/velocityclicks.swift:101-103
+A006 -> velocity/velocityclicks.swift:105-106
+A007-A008 -> velocity/velocityclicks.swift:107-109
+A009-A011 -> velocity/velocityclicks.swift:110-114
+A012-A014 -> velocity/velocityclicks.swift:115-119
+A015 -> velocity/velocityclicks.swift:124-126
+A023 -> velocity/velocityclicks.swift:133-135
+A024-A025 -> velocity/velocityclicks.swift:136-140
+A026 -> velocity/velocityclicks.swift:141-143
+A027 -> velocity/velocityclicks.swift:144-147
+A028 -> velocity/velocityclicks.swift:153-155
+A029-A031 -> velocity/velocityclicks.swift:136-140,149-152
+A032-A034 -> velocity/velocityclicks.swift:156-160
+A035 -> velocity/velocityclicks.swift:169-174
+A036,A038-A040 -> velocity/velocityclicks.swift:169-174
+A037 -> velocity/velocityclicks.swift:179-183
+A042-A043 -> velocity/velocityclicks.swift:190-192
+A044 -> velocity/velocityclicks.swift:197-199
+A045 -> velocity/velocityclicks.swift:211-213
+A046 -> velocity/velocityclicks.swift:214-216
+A047-A049 -> velocity/velocityclicks.swift:201-205
+A050-A052 -> velocity/velocityclicks.swift:206-210
+A053 -> velocity/velocityclicks.swift:217-219
+A004, A016-A022 and A041 remain native/setup gaps.
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.

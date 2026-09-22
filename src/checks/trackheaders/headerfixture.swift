@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 let trackHeadersUnattachedID = "swiftcore/TrackHeaders::unattachedModelPublishesSafeZeroGeometry"

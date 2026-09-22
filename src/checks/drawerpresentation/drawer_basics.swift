@@ -1,4 +1,4 @@
-import PorydawApp
+@testable import PorydawApp
 
 // Existing scenarios paired with drawer.cpp.
 // Entry order remains in EditorDrawerChecks.swift.
@@ -57,9 +57,11 @@ func drawerLayoutCheckDrawerNoPageAndAvailability(_ report: CheckReport) {
     }
 
     let restored = harness.apply {
-        $0.restorePreferences(velocityVisible: 1, velocityHeight: 220, automationVisible: -1,
-                              automationHeight: 0, voiceChangesVisible: -1, voiceChangesHeight: 0,
-                              activePage: -1)
+        $0.restorePreferences(
+            velocityVisible: 1, velocityHeight: 220,
+            automationVisible: -1, automationHeight: 0,
+            voiceChangesVisible: -1, voiceChangesHeight: 0,
+            activePage: -1, pages: $1)
     }
     report.expect(harness.layout.isVisible(.velocity) &&
                   harness.layout.storedBodyHeight(.velocity) == 220 &&
@@ -72,9 +74,7 @@ func drawerLayoutCheckDrawerNoPageAndAvailability(_ report: CheckReport) {
     drawerLayoutExpectNoDrawerRecords(report, cppID: drawerLayoutAvailabilityID, restored,
                           message: "restoring stored preferences records no preference change")
 
-    let velocity = drawerLayoutDrawerStubPage(kind: .velocity, url: drawerLayoutDrawerVelocityUrl,
-                                  policy: drawerLayoutDrawerStubPolicy(divisor: 6), harness: harness)
-    let attached = harness.apply { $0.attachPage(velocity) }
+    let attached = harness.attachPage(.velocity)
     report.expect(attached.published && harness.layout.isAvailable(.velocity) &&
                   attached.snapshot[.velocity].contentUrl == drawerLayoutDrawerVelocityUrl &&
                   attached.snapshot[.velocity].bodyHeight == 220 &&
@@ -83,47 +83,49 @@ func drawerLayoutCheckDrawerNoPageAndAvailability(_ report: CheckReport) {
                   cppID: drawerLayoutAvailabilityID,
                   message: "attaching a page turns a stored visible section into visible content in the same publication")
 
-    let duplicate = harness.apply { $0.attachPage(velocity) }
+    let duplicate = harness.attachPage(.velocity)
     report.expect(!duplicate.published && duplicate.isEmpty &&
-                  harness.layout.attachedPage(.velocity) === velocity &&
-                  duplicate.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 220,
+                  duplicate.snapshot.height ==
+                      drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 220,
                   cppID: drawerLayoutAvailabilityID,
                   message: "a kind that already holds a page rejects a second attach and publishes nothing")
 
-    let emptyUrl = drawerLayoutDrawerStubPage(kind: .voiceChanges, url: "", policy: drawerLayoutDrawerStubPolicy(),
-                                  harness: harness)
-    let rejected = harness.apply { $0.attachPage(emptyUrl) }
-    report.expect(!rejected.published && rejected.isEmpty &&
-                  !harness.layout.isAvailable(.voiceChanges) &&
-                  harness.layout.attachedPage(.voiceChanges) == nil &&
-                  rejected.snapshot.height == drawerLayoutDrawerBarHeight + drawerLayoutDrawerHandleHeight + 220,
+    let validatingPresenter = EditorDrawerPresenter()
+    let emptyUrl = drawerLayoutDrawerStubPage(
+        kind: .voiceChanges, url: "", policy: drawerLayoutDrawerStubPolicy())
+    validatingPresenter.attachSection(emptyUrl)
+    report.expect(!validatingPresenter.voiceChangesSection.available &&
+                  validatingPresenter.voiceChangesSection.contentUrl.isEmpty,
                   cppID: drawerLayoutAvailabilityID,
-                  message: "an empty content URL is rejected without changing any state")
+                  message: "the presenter rejects an empty content URL without changing published state")
 
-    let detachedToggle = harness.apply { $0.toggleSection(.voiceChanges, drawerOwnsFocus: true) }
-    let detachedHeight = harness.apply { $0.setSectionBodyHeight(.voiceChanges, height: 150) }
-    let detachedVisible = harness.apply {
-        $0.setSectionVisible(.voiceChanges, visible: true, drawerOwnsFocus: false)
+    let detachedToggle = harness.apply {
+        $0.toggleSection(.voiceChanges, drawerOwnsFocus: true, pages: $1)
     }
-    let detachedResize = harness.apply { $0.beginResize(.voiceChanges) }
+    let detachedHeight = harness.apply {
+        $0.setSectionBodyHeight(.voiceChanges, height: 150, pages: $1)
+    }
+    let detachedVisible = harness.apply {
+        $0.setSectionVisible(
+            .voiceChanges, visible: true, drawerOwnsFocus: false, pages: $1)
+    }
+    let detachedResize = harness.apply { $0.beginResize(.voiceChanges, pages: $1) }
     report.expect(!detachedToggle.published && !detachedHeight.published &&
                   !detachedVisible.published && !detachedResize.published &&
                   detachedToggle.isEmpty && detachedResize.isEmpty &&
                   harness.layout.resizeKind == nil && !harness.layout.isVisible(.voiceChanges) &&
                   harness.layout.storedBodyHeight(.voiceChanges) == nil &&
-                  harness.layout.activePage == .automation && emptyUrl.cancelCount == 0,
+                  harness.layout.activePage == .automation,
                   cppID: drawerLayoutAvailabilityID,
                   message: "visibility, height and resize calls are ignored for a kind with no attached page")
 
-    let detached = harness.apply { $0.detachPage(velocity) }
+    let detached = harness.detachPage(.velocity)
     report.expect(detached.published && !harness.layout.isAvailable(.velocity) &&
-                  harness.layout.attachedPage(.velocity) == nil &&
                   harness.layout.isVisible(.velocity) &&
                   harness.layout.storedBodyHeight(.velocity) == 220 &&
-                  detached.snapshot.height == 0 && detached.cancelledSections == [.velocity] &&
-                  velocity.cancelCount == 1 && velocity.publishedHeightsAtCancel == [246],
+                  detached.snapshot.height == 0 && detached.cancelledSections == [.velocity],
                   cppID: drawerLayoutAvailabilityID,
-                  message: "detaching cancels its page synchronously and drops its controls while stored visibility and height survive")
+                  message: "detaching returns one cancellation effect and drops controls while stored visibility and height survive")
     drawerLayoutExpectNoDrawerRecords(report, cppID: drawerLayoutAvailabilityID, detached,
                           message: "detaching records no preference change")
 }
@@ -184,15 +186,15 @@ func drawerLayoutCheckDrawerStackingAndToggles(_ report: CheckReport) {
                   snapshot.detentSize == 16 && snapshot.detentIconInset == 1.5,
                   cppID: drawerLayoutStackingID,
                   message: "detents occupy the velocity body's lower-left corner, not the bar")
-    let narrow = stored.harness.apply {
-        $0.configureHost(hostWidth: 9, hostHeight: drawerLayoutDrawerHostHeight, gutterWidth: drawerLayoutDrawerGutterWidth)
-    }.snapshot
+    let narrow = stored.harness.configure(
+        hostWidth: 9, hostHeight: drawerLayoutDrawerHostHeight,
+        gutterWidth: drawerLayoutDrawerGutterWidth, metrics: drawerLayoutDrawerMetrics()).snapshot
     report.expect(narrow.detentSize == 9 && narrow.detentY == 55,
                   cppID: drawerLayoutStackingID,
                   message: "detent hit geometry is bounded by the visible velocity gutter")
 
     let slots = drawerLayoutMakeStoredDrawerHarness()
-    let detached = slots.harness.apply { $0.detachPage(slots.pages[.voiceChanges]!) }
+    let detached = slots.harness.detachPage(.voiceChanges)
     let afterDetach = slots.harness.layout.snapshot
     report.expect(detached.published && afterDetach[.automation].toggleX == 1 + buttonSize + 3 &&
                   afterDetach[.velocity].toggleX == 1 + 2 * (buttonSize + 3) &&
@@ -206,7 +208,8 @@ func drawerLayoutCheckDrawerStackingAndToggles(_ report: CheckReport) {
 func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
     let harness = drawerLayoutMakeStoredDrawerHarness().harness
     let hidden = harness.apply {
-        $0.setSectionVisible(.automation, visible: false, drawerOwnsFocus: false)
+        $0.setSectionVisible(
+            .automation, visible: false, drawerOwnsFocus: false, pages: $1)
     }
     let hiddenGeometry = harness.layout.snapshot[.automation]
     report.expect(hidden.published && harness.layout.storedBodyHeight(.automation) == 100 &&
@@ -224,7 +227,8 @@ func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
                            message: "an interactive hide records the kind visibility and stored height")
 
     let shown = harness.apply {
-        $0.setSectionVisible(.automation, visible: true, drawerOwnsFocus: false)
+        $0.setSectionVisible(
+            .automation, visible: true, drawerOwnsFocus: false, pages: $1)
     }
     report.expect(shown.published && harness.layout.snapshot.height ==
                       drawerLayoutDrawerBarHeight + 3 * drawerLayoutDrawerHandleHeight + 60 + 50 + 100 &&
@@ -233,17 +237,24 @@ func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
                   message: "re-showing a hidden section restores its stored body height")
 
     let equalVisibility = harness.apply {
-        $0.setSectionVisible(.velocity, visible: true, drawerOwnsFocus: true)
+        $0.setSectionVisible(
+            .velocity, visible: true, drawerOwnsFocus: true, pages: $1)
     }
-    let equalHeight = harness.apply { $0.setSectionBodyHeight(.automation, height: 100) }
-    let zeroDirection = harness.apply { $0.adjustResizeHandle(.automation, direction: 0) }
+    let equalHeight = harness.apply {
+        $0.setSectionBodyHeight(.automation, height: 100, pages: $1)
+    }
+    let zeroDirection = harness.apply {
+        $0.adjustResizeHandle(.automation, direction: 0, pages: $1)
+    }
     report.expect(!equalVisibility.published && equalVisibility.isEmpty &&
                   equalVisibility.focusRequest == nil && !equalHeight.published &&
                   equalHeight.isEmpty && !zeroDirection.published && zeroDirection.isEmpty,
                   cppID: drawerLayoutVisibilityID,
                   message: "equal visibility and height setters publish nothing and request no focus")
 
-    let toggled = harness.apply { $0.toggleSection(.velocity, drawerOwnsFocus: false) }
+    let toggled = harness.apply {
+        $0.toggleSection(.velocity, drawerOwnsFocus: false, pages: $1)
+    }
     report.expect(toggled.published && !harness.layout.isVisible(.velocity) &&
                   harness.layout.storedBodyHeight(.velocity) == 60 &&
                   harness.layout.activePage == .velocity &&
@@ -253,7 +264,9 @@ func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
                   cppID: drawerLayoutVisibilityID,
                   message: "toggling hides the section, keeps its stored height, moves the active page and records both")
 
-    let restoredHeight = harness.apply { $0.toggleSection(.velocity, drawerOwnsFocus: false) }
+    let restoredHeight = harness.apply {
+        $0.toggleSection(.velocity, drawerOwnsFocus: false, pages: $1)
+    }
     report.expect(restoredHeight.published && harness.layout.isVisible(.velocity) &&
                   harness.layout.snapshot[.velocity].bodyHeight == 60 &&
                   restoredHeight.activePagePreference == nil &&
@@ -261,7 +274,9 @@ func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
                   cppID: drawerLayoutVisibilityID,
                   message: "re-showing through the toggle restores the height and records no page change")
 
-    let unset = harness.apply { $0.setSectionBodyHeight(.automation, height: 0) }
+    let unset = harness.apply {
+        $0.setSectionBodyHeight(.automation, height: 0, pages: $1)
+    }
     report.expect(unset.published && harness.layout.storedBodyHeight(.automation) == nil &&
                   harness.layout.snapshot[.automation].bodyHeight == 80,
                   cppID: drawerLayoutVisibilityID,
@@ -270,7 +285,9 @@ func drawerLayoutCheckDrawerVisibilityAndStoredHeights(_ report: CheckReport) {
                            storedBodyHeight: nil,
                            message: "an unset height is recorded as the unset marker")
 
-    let floored = harness.apply { $0.setSectionBodyHeight(.velocity, height: 20) }
+    let floored = harness.apply {
+        $0.setSectionBodyHeight(.velocity, height: 20, pages: $1)
+    }
     report.expect(floored.published && harness.layout.storedBodyHeight(.velocity) == 20 &&
                   harness.layout.snapshot[.velocity].bodyHeight == drawerLayoutDrawerMinimumBody,
                   cppID: drawerLayoutVisibilityID,

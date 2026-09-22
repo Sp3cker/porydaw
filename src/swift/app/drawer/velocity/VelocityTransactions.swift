@@ -37,68 +37,6 @@ public struct VelocityFrozenNote: Sendable {
     }
 }
 
-public enum VelocityGestureKind: Int, Sendable {
-    case relative = 0
-    case paint = 1
-    case ramp = 2
-    case pendingBand = 3
-    case band = 4
-    /// Middle-drag pan: the shared camera's own scroll, requested by the page.
-    case pan = 5
-}
-
-/// One live gesture: the frozen targets, the captured document/track identity,
-/// the axis map it started on and the preview it publishes.
-public struct VelocityGestureState: Sendable {
-    public var kind: VelocityGestureKind
-    public var revision: UInt64
-    public var track: Int
-    public private(set) var notes: [VelocityFrozenNote]
-    private var noteIndices: [NoteID: Int]
-
-    public func frozenNote(_ id: NoteID) -> VelocityFrozenNote? {
-        noteIndices[id].map { notes[$0] }
-    }
-
-    public mutating func append(_ note: VelocityFrozenNote) {
-        noteIndices[note.noteID] = notes.count
-        notes.append(note)
-    }
-    public var axis: VelocityAxisModel
-    public var detentUnlock: Bool
-    public var activationDistance: Double
-    public var relativeActivated: Bool = false
-    public var pressX: Double
-    public var pressY: Double
-    public var previousX: Double
-    public var previousY: Double
-    public var bandX: Double
-    public var bandY: Double
-    public var preview: [NoteID: UInt8] = [:]
-    public var bandPreview: [NoteID] = []
-    public var controlPress: Bool = false
-
-    public init(kind: VelocityGestureKind, revision: UInt64, track: Int,
-                notes: [VelocityFrozenNote], axis: VelocityAxisModel, detentUnlock: Bool,
-                activationDistance: Double, pressX: Double, pressY: Double,
-                controlPress: Bool = false) {
-        self.kind = kind
-        self.revision = revision
-        self.track = track
-        self.notes = notes
-        noteIndices = Dictionary(uniqueKeysWithValues: notes.enumerated().map { ($0.element.noteID, $0.offset) })
-        self.axis = axis
-        self.detentUnlock = detentUnlock
-        self.activationDistance = activationDistance
-        self.pressX = pressX
-        self.pressY = pressY
-        self.previousX = pressX
-        self.previousY = pressY
-        self.bandX = pressX
-        self.bandY = pressY
-        self.controlPress = controlPress
-    }
-}
 
 /// The gesture's whole rule set as pure functions: absolute resolution, the
 /// relative delta, the ramp, the paint sweep and the commit payload.
@@ -116,7 +54,7 @@ public enum VelocityGesturePolicy {
     /// One relative drag step: one clamped delta covers every frozen note at
     /// once, so relative offsets never collapse. Nothing moves until the drag
     /// leaves the activation distance or crosses an intrinsic level.
-    public static func applyRelative(_ gesture: inout VelocityGestureState, y: Double) {
+    public static func applyRelative(_ gesture: inout VelocityEditGesture, y: Double) {
         guard !gesture.notes.isEmpty else { return }
         if !gesture.relativeActivated {
             let intrinsicChange = !gesture.detentUnlock && gesture.axis.mode == .intrinsic
@@ -146,7 +84,7 @@ public enum VelocityGesturePolicy {
     /// One ramp step: a straight line from the press position to the pointer,
     /// evaluated at each frozen note's own x. Notes outside the swept column
     /// keep their captured velocity.
-    public static func applyRamp(_ gesture: inout VelocityGestureState, x: Double, y: Double,
+    public static func applyRamp(_ gesture: inout VelocityEditGesture, x: Double, y: Double,
                                  hitRadius: Double, xForNote: (VelocityFrozenNote) -> Double) {
         guard !gesture.notes.isEmpty else { return }
         let first = min(gesture.pressX, x) - hitRadius
@@ -193,8 +131,35 @@ public enum VelocityGesturePolicy {
         return updates
     }
 
+    /// Allocation-free paint update for the reducer's press-time candidate
+    /// positions. Participants join the revision-bound edit only when a swept
+    /// column reaches them.
+    static func applyPaint(_ paint: inout VelocityPaintGesture,
+                           from: (x: Double, y: Double), to: (x: Double, y: Double),
+                           hitRadius: Double) {
+        let deltaX = to.x - from.x
+        let lower = min(from.x, to.x) - hitRadius
+        let upper = max(from.x, to.x) + hitRadius
+        for candidate in paint.candidates {
+            if deltaX == 0 {
+                if abs(candidate.x - to.x) > hitRadius { continue }
+            } else if candidate.x < lower || candidate.x > upper {
+                continue
+            }
+            if paint.edit.frozenNote(candidate.note.noteID) == nil {
+                paint.edit.append(candidate.note)
+                paint.edit.noteX[candidate.note.noteID] = candidate.x
+            }
+            let y = deltaX == 0 ? to.y : velocityRampValue(
+                at: candidate.x, x0: from.x, y0: from.y, x1: to.x, y1: to.y)
+            paint.edit.preview[candidate.note.noteID] = resolvedVelocity(
+                axis: paint.edit.axis, noteMap: candidate.note.map,
+                detentUnlock: paint.edit.detentUnlock, y: y)
+        }
+    }
+
     /// The commit payload in frozen order: every previewed value, once.
-    public static func updates(_ gesture: VelocityGestureState) -> [NoteVelocity] {
+    public static func updates(_ gesture: borrowing VelocityEditGesture) -> [NoteVelocity] {
         gesture.notes.compactMap { note in
             guard let velocity = gesture.preview[note.noteID],
                   velocity != note.velocity

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with tst_velocityediting.cpp.
@@ -108,11 +108,17 @@ func drawerVelocityGestureTransactions(_ report: CheckReport, session: DocumentS
     let rulerY = (page.axisModel.top + page.axisModel.bottom) / 2
     report.expect(page.pointerPress(x: 10, y: rulerY, surface: 0, button: 1, modifiers: 0),
                   cppID: drawerVelocityTransactionID, message: "the ruler consumes its own press")
+    report.expectEqual(rulerBaseline.revision + 1, document.revision,
+                       cppID: drawerVelocityTransactionID,
+                       what: "the ruler commits on press, before release")
+    let rulerIdentity = document.history.currentIdentity
+    report.expect(rulerIdentity != rulerBaseline.identity, cppID: drawerVelocityTransactionID,
+                  message: "the ruler press makes its one history entry")
     _ = page.pointerRelease(x: 10, y: rulerY, button: 1)
     report.expectEqual(rulerBaseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID,
-                       what: "one ruler click makes one revision")
-    report.expect(document.history.currentIdentity != rulerBaseline.identity, cppID: drawerVelocityTransactionID,
-                  message: "one ruler click makes one history entry")
+                       what: "the ruler release makes no second revision")
+    report.expect(document.history.currentIdentity == rulerIdentity, cppID: drawerVelocityTransactionID,
+                  message: "the ruler release makes no second history entry")
     report.expect(!page.pointerPress(x: 200, y: rulerY, surface: 0, button: 1, modifiers: 0),
                   cppID: drawerVelocityTransactionID, message: "a press inside the plot is not the ruler's")
     _ = try? drawerVelocityRunBlocking { try await fixture.session.undo() }

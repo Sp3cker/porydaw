@@ -4,11 +4,11 @@ Reference revision: c9e901546626af1df12471504999c581e5eb4519
 Original: src/checks/velocity/velocityselection.cpp
 Original SHA-256: fc656fe130c148789ac3f867935c06643065655ab96393839daf7717ffe99246
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
-Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
+Swift SHA-256: d10757673b1ecbbd0e49c6e6592b4415990d6e986f0cd6a555d2c155661d8e62
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
-Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
+Additional Swift SHA-256: 8449b61bab2cd9f39f86b2769ad6f0165307d877e188c190acff337829dc26cb
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 2600bfa468ac1bc6c628468de33d1ccdf81c3ac7826b7b9211e5d8b8c7538648
+Additional Swift SHA-256: 0aabd70533f5efc4ce77ceb10d2470f0ea2fd619fd2e4e407fb9d8beb326737b
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

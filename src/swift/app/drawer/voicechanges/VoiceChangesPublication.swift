@@ -1,367 +1,243 @@
-import PorydawCore
 import QtBridge
 
-// Publication machinery for the drawer's Voice Changes section: the content
-// rebuild that republishes every static projection, the scene-input assembly
-// each build reads, the marker/span/grid/gutter apply paths that sync the
-// published primitives and item models, the picker-row publication, and the
-// readout, transient and hover-hint publications, plus the metrics and entry
-// caches those paths reuse.
-//
-// Ownership: an extension of the page, never a separate object. Published
-// state and the caches stay declared on `VoiceChangesPage` — `@QtBridgeable`
-// registers class-body members only and stored properties cannot move to an
-// extension — so this file reads and writes the page's own state and publishes
-// through `setPublished` and `syncModel`: it holds no session, no cache and no
-// bridge type of its own.
+struct VoiceChangesPublicationScope: OptionSet, Sendable {
+    let rawValue: Int
+
+    static let content = Self(rawValue: 1 << 0)
+    static let markers = Self(rawValue: 1 << 1)
+    static let hover = Self(rawValue: 1 << 2)
+    static let transient = Self(rawValue: 1 << 3)
+    static let modal = Self(rawValue: 1 << 4)
+    static let interaction = Self(rawValue: 1 << 5)
+    static let readout = Self(rawValue: 1 << 6)
+    static let clear = Self(rawValue: 1 << 7)
+    static let capability = Self(rawValue: 1 << 8)
+    static let typography = Self(rawValue: 1 << 9)
+    static let projection = Self(rawValue: 1 << 10)
+}
 
 @MainActor
 extension VoiceChangesPage {
-    // MARK: Internals: projection
-
+    /// The only Voice Changes publication entry. It builds/reuses plain scene
+    /// blocks, reconciles value descriptors into stable Qt models, and assigns
+    /// every scalar only when its value changed.
     @QtIgnored
-    func lanePoints() -> [LanePoint] {
-        guard let session, let track = currentTrack(session) else { return [] }
-        return session.projectionCache.lanePoints(track: track, lane: .voice)
-    }
-
-    @QtIgnored
-    func firstProgram() -> Int {
-        guard let session, let track = currentTrack(session) else { return -1 }
-        return session.timeline.tracks[track].firstProgram
-    }
-
-    @QtIgnored
-    func slotViews() -> [BankSlotView] { session?.bankSlots ?? [] }
-
-    /// The page's binding of the scene's plot rules to the live session: the
-    /// shared camera, the cached grid metrics and the document's own clock
-    /// lattice. The rules themselves live in `VoiceChangesScene`.
-    @QtIgnored
-    func xForTick(_ tick: Tick) -> Double {
-        guard let session else { return 0 }
-        return VoiceChangesScene.xForTick(tick, camera: session.camera,
-                                          devicePixelRatio: devicePixelRatio)
-    }
-
-    @QtIgnored
-    func snapTick(at x: Double, fine: Bool = false) -> Tick {
-        guard let session else { return 0 }
-        return VoiceChangesScene.snapTick(
-            at: x, fine: fine, camera: session.camera, metrics: gridMetrics(session),
-            division: session.document.ticksPerBeat,
-            extendedClocks: session.document.state.config.extendedClocks)
-    }
-
-    @QtIgnored
-    func markerHit(at x: Double) -> LanePoint? {
-        guard let session else { return nil }
-        return VoiceChangesScene.markerHit(
-            at: x, points: lanePoints(), camera: session.camera,
-            devicePixelRatio: devicePixelRatio,
-            hitRadius: fontPx(VoiceChangesPagePolicy.markerHitRadiusFactor))
-    }
-
-    @QtIgnored
-    func effectiveContextTick() -> Tick {
-        guard let session else { return 0 }
-        return VoiceChangesScene.effectiveContextTick(playing: playing,
-                                                     presentedTick: contextTick,
-                                                     editCursor: session.editCursor)
-    }
-
-    @QtIgnored
-    func contextKey(at tick: Tick) -> VoiceContextKey {
-        VoiceChangesScene.contextKey(tick: tick, firstProgram: firstProgram(),
-                                     points: lanePoints(), playing: playing)
-    }
-
-    // MARK: Content rebuild
-
-    /// Rebuilds every static projection: the typography, the gutter texts, the
-    /// held spans, the grid and the markers.
-    @QtIgnored
-    func rebuildContent() {
-        guard let session, plotHeight > 0 || plotWidth > 0 else { return }
-        contentBuildCount &+= 1
-        let entries = markerEntries()
-        let snapshot = VoiceChangesSceneSnapshot.build(
-            sceneInput(session, entries: entries), palette: palette, title: title,
-            caption: caption)
-        trackAvailable = snapshot.trackAvailable
-        publishGutter(snapshot.gutterTexts)
-        publishSpans(snapshot.spans)
-        publishGrid(snapshot.gridLines)
-        projectMarkers(snapshot.entries)
-        publishReadout(snapshot.readout)
-        publishTransient()
-    }
-
-    /// The page's own facts for one scene build: the lane, the bank, the track,
-    /// the body geometry and the live interaction, over the marker entries the
-    /// caller already projected.
-    private func sceneInput(_ session: DocumentSession,
-                            entries: [VoiceProjectionEntry]) -> VoiceChangesSceneInput {
-        let track = currentTrack(session)
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
-        return VoiceChangesSceneInput(
-            points: lanePoints(),
-            entries: entries,
-            slots: slotViews(),
-            track: track ?? 0,
-            firstProgram: firstProgram(),
-            lengthTicks: session.timeline.lengthTicks,
-            trackAvailable: track != nil,
-            gutterTitle: gutterTitle,
-            contextTick: effectiveContextTick(),
-            plotOrigin: plotOrigin,
-            plotWidth: plotWidth,
-            plotHeight: plotHeight,
-            devicePixelRatio: devicePixelRatio,
-            pad: pad,
-            gap: max(fontPx(VoiceChangesPagePolicy.hoverPaintPaddingFactor), pad),
-            stairLimit: fontPx(VoiceChangesPagePolicy.spaceFourFactor),
-            camera: session.camera,
-            metrics: gridMetrics(session),
-            division: session.document.ticksPerBeat,
-            extendedClocks: session.document.state.config.extendedClocks,
-            interaction: interactionSnapshot())
-    }
-
-    /// The live interaction one rebuild reads: the frozen drag, the hovered
-    /// occurrence and the pressed selection.
-    private func interactionSnapshot() -> VoiceInteractionSnapshot {
-        VoiceInteractionSnapshot(drag: drag, hoverIdentity: hoverIdentity,
-                                 selectedIdentity: selectedIdentity)
-    }
-
-
-    @QtIgnored
-    func publishTypography() {
-        let pixelSize = max(1, Int(baseFontPx.rounded()))
-        let caption = VoiceCaption(pixelSize: pixelSize, weight: 400)
-        let title = VoiceCaption(pixelSize: pixelSize, weight: 600)
-        self.caption = caption
-        self.title = title
-        setPublishedFont(&captionFont, caption.fontMap)
-        setPublishedFont(&titleFont, title.fontMap)
-    }
-
-    /// Applies the scene's gutter lines: the title, then the change summary the
-    /// legacy band publishes while a track is presented.
-    @QtIgnored
-    func publishGutter(_ values: [SceneText]) {
-        VoiceChangesProjection.syncTexts(gutterTexts, values)
-    }
-
-    /// Applies the scene's held spans: one rect per program section, from the
-    /// previous change to this one, then the tail to the song's end.
-    @QtIgnored
-    func publishSpans(_ values: [SceneRect]) {
-        VoiceChangesProjection.syncRects(heldSpans, values)
-    }
-
-    /// Applies the scene's vertical grid: the roll's own subdivision, beat,
-    /// fine-beat and bar lines, through the same grid metrics.
-    @QtIgnored
-    func publishGrid(_ values: [SceneRect]) {
-        VoiceChangesProjection.syncRects(gridLines, values)
-    }
-
-    /// The marker projection: the scene computes one marker rule and one label
-    /// box per entry from the page's own geometry, and the page publishes them
-    /// through its model seam while keeping the geometry lookup a repaint reuses.
-    @QtIgnored
-    func projectMarkers(_ entries: [VoiceProjectionEntry], reuseGeometry: Bool = false) {
-        if !reuseGeometry { markerLookup.removeAll(keepingCapacity: true) }
-        guard let session else {
-            publishMarkers([])
-            return
-        }
-        publishMarkers(VoiceChangesScene.markers(
-            sceneInput(session, entries: entries), palette: palette, caption: caption,
-            reusing: markerLookup))
-    }
-
-    /// The drag's transient: where the frozen occurrence currently drafts.
-    @QtIgnored
-    func publishTransient() {
-        guard let live = drag, live.active else {
-            setPublished(&previewVisible, false)
-            setPublished(&previewX, 0)
-            setPublished(&previewTick, 0)
-            return
-        }
-        setPublished(&previewVisible, true)
-        setPublished(&previewX, xForTick(live.previewTick))
-        setPublished(&previewTick, Double(live.previewTick))
-    }
-
-    /// The current legacy lane hint: marker-specific while the pointer hits a
-    /// change rule, horizontal scrolling everywhere else in the plot.
-    @QtIgnored
-    func publishHoverHintProfile(marker: Bool) {
-        let profile = marker ? VoiceHintProfile.marker : VoiceHintProfile.horizontalScroll
-        if hoverHintProfile != profile { hoverHintProfile = profile }
-    }
-
-    /// The readout from live page facts: the cursor-only publication path, which
-    /// applies it without a rebuild.
-    @QtIgnored
-    func publishReadout() {
-        publishReadout(VoiceChangesScene.readout(
-            firstProgram: firstProgram(),
-            tick: effectiveContextTick(),
-            points: lanePoints(),
-            slots: slotViews(),
-            pad: fontPx(VoiceChangesPagePolicy.spaceOneFactor),
-            plotWidth: plotWidth,
-            plotHeight: plotHeight))
-    }
-
-    /// Applies the scene's readout values: the effective context's label,
-    /// right-aligned in the plot. The page always publishes them; the QML draws
-    /// them while a track is presented, exactly as the legacy band does.
-    private func publishReadout(_ values: VoiceReadoutValues) {
-        setPublished(&contextSlot, values.slot)
-        setPublished(&contextBlank, values.blank)
-        setPublished(&contextSymbol, values.symbol)
-        setPublished(&readoutText, values.text)
-        setPublished(&readoutVisible, trackAvailable)
-        setPublishedRect(&readoutRect,
-                         VoiceMarkerHandle.rect(values.x, values.y, values.width, values.height))
-    }
-
-    // MARK: Internals: picker publication
-
-    @QtIgnored
-    func publishPicker() {
-        guard let live = picker else {
-            syncPickerRows([])
-            return
-        }
-        pickerCache.resolve(filter: live.filter)
-        if let soundingProgram, pickerCache.indices[Int(soundingProgram)] == nil {
-            releasePickerAudition()
-        }
-        syncPickerRows(pickerCache.selectedRows(program: live.program))
-        setPublished(&pickerFilter, live.filter)
-        setPublished(&pickerIndex, pickerCache.indices[live.program] ?? -1)
-        setPublished(&pickerHasMatch, live.program >= 0)
-    }
-
-    /// A bank publication while the picker is open: the captured target still
-    /// holds, so the picker stays open and its rows, title and filter context
-    /// are re-resolved against the new bank's slots. A selection the new bank
-    /// no longer publishes falls back to the first visible row, the same
-    /// resolution `openPicker` applies.
-    @QtIgnored
-    func refreshPicker() {
-        releasePickerAudition()
-        guard var live = picker else { return }
-        pickerCache.resolve(filter: live.filter)
-        let visible = pickerCache.programs
-        if !visible.contains(live.program) {
-            live.program = visible.first ?? -1
-        }
-        picker = live
-        setPublished(&pickerTitle, live.title)
-        publishPicker()
-    }
-
-
-    @QtIgnored
-    func selectPickerProgram(_ program: Int) {
-        guard var live = picker, live.program != program else { return }
-        live.program = program
-        picker = live
-        publishPicker()
-    }
-
-    // MARK: Internals: publication plumbing
-
-    @QtIgnored
-    func publishMarkers(_ values: [VoiceMarkerHandle]) {
-        published = values
-        if values.isEmpty { markerLookup.removeAll(keepingCapacity: true) }
-        for value in values where markerLookup[value.identity] !== value {
-            markerLookup[value.identity] = value
-        }
-        syncModel(markers, values, matches: { $0.matches($1) })
-    }
-
-    /// The marker entries one repaint draws: the document's own entries from the
-    /// page's revision/track cache, with the frozen drag's preview applied.
-    @QtIgnored
-    func markerEntries() -> [VoiceProjectionEntry] {
-        guard let session, let track = currentTrack(session) else { return [] }
-        if entriesRevision != session.document.revision || entriesTrack != track {
-            cachedEntries = VoiceChangesProjection.entries(points: lanePoints())
-            entriesRevision = session.document.revision
-            entriesTrack = track
-        }
-        return VoiceChangesScene.projectedEntries(
-            cachedEntries, interaction: interactionSnapshot())
-    }
-
-
-    @QtIgnored
-    func syncPickerRows(_ values: [VoicePickerRowHandle]) {
-        let samePrograms = pickerRowSnapshots.count == values.count
-            && zip(pickerRowSnapshots, values).allSatisfy { pair in
-                pair.0.program == pair.1.program
-            }
-        pickerRowSnapshots = values
-        if samePrograms {
-            VoiceChangesProjection.syncPickerRows(pickerRows, values)
+    func publish(_ scope: VoiceChangesPublicationScope) {
+        guard !scope.isEmpty else { return }
+        let publishedState = state
+        let capabilityAvailable = onAuditionVoice != nil
+        var next = sceneCache
+        var spanProjectionChanged = false
+        if scope.contains(.clear) {
+            next = .detached
+        } else if scope.contains(.content) {
+            contentBuildCount &+= 1
+            next = VoiceChangesScene.build(sceneInput(
+                refreshTypography: scope.contains(.typography)))
         } else {
-            // VoicePickerModel::setFilter resets when the visible program set
-            // changes; row updates are reserved for selection/label changes.
-            pickerRows.reset(to: values)
+            if scope.contains(.projection) {
+                let input = sceneInput()
+                let entries = VoiceChangesScene.projectedEntries(input.entries, state: state)
+                next.entries = entries
+                next.markers = VoiceChangesScene.markerValues(input, entries: entries)
+                next.spans = VoiceChangesScene.spanValues(input, entries: entries)
+                spanProjectionChanged = true
+                next.gridLines = VoiceChangesScene.gridValues(input)
+                next.hover = VoiceChangesScene.hoverValue(state)
+                next.transient = VoiceChangesScene.transientValue(state)
+            } else if scope.contains(.markers) {
+                let input = sceneInput()
+                let entries = VoiceChangesScene.projectedEntries(input.entries, state: state)
+                let entriesChanged = next.entries != entries
+                next.entries = entries
+                next.markers = VoiceChangesScene.markerValues(input, entries: entries)
+                if entriesChanged {
+                    next.spans = VoiceChangesScene.spanValues(input, entries: entries)
+                    spanProjectionChanged = true
+                }
+            }
+            if scope.contains(.hover) {
+                next.hover = VoiceChangesScene.hoverValue(state)
+            }
+            if scope.contains(.transient) {
+                next.transient = VoiceChangesScene.transientValue(state)
+            }
+            if scope.contains(.readout) {
+                next.readout = VoiceChangesScene.readoutValue(state)
+            }
+            if scope.contains(.modal) {
+                next.modal = VoiceChangesScene.modalValues(state)
+            }
+        }
+        sceneCache = next
+
+        let content = scope.contains(.content) || scope.contains(.clear)
+        if content { publishBody(state: publishedState) }
+        if content || scope.contains(.markers) || scope.contains(.projection) {
+            publishMarkers(next.markers)
+        }
+        if content || scope.contains(.projection) || spanProjectionChanged {
+            publishSpans(next.spans)
+        }
+        if content || scope.contains(.projection) { publishGrid(next.gridLines) }
+        if content { publishGutter(next.gutterTexts) }
+        if scope.contains(.capability) {
+            setPublished(&auditionAvailable, capabilityAvailable)
+            setPublished(&auditionDiagnostic,
+                         capabilityAvailable ? "" : "Voice audition is unavailable.")
+        }
+        if content || scope.contains(.readout) { publishReadout(next.readout) }
+        if content || scope.contains(.hover) || scope.contains(.projection) {
+            publishHover(next.hover)
+        }
+        if content || scope.contains(.transient) || scope.contains(.projection) {
+            publishTransient(next.transient)
+        }
+        if content || scope.contains(.modal) { publishModal(next.modal) }
+        if content || scope.contains(.interaction) { publishInteraction(publishedState) }
+        if content { setPublished(&trackAvailable, next.trackAvailable) }
+    }
+
+    private func sceneInput(refreshTypography: Bool = false) -> VoiceChangesSceneInput {
+        let entries = markerEntries()
+        let font = state.view?.baseFontPx ?? baseFontPx
+        let type: VoiceTypographyValues
+        if !refreshTypography, let typographySnapshot {
+            type = typographySnapshot
+        } else {
+            type = typography.values(
+                baseFontPx: font,
+                labels: VoiceChangesScene.measurementLabels(entries: entries, bank: state.bank))
+            typographySnapshot = type
+        }
+        let track = state.lane.track ?? 0
+        return VoiceChangesSceneInput(
+            state: state,
+            entries: entries,
+            palette: VoiceScenePalette(
+                primaryText: palette.primaryText,
+                secondaryText: palette.secondaryText,
+                gridLineSub1: palette.gridLineSub1,
+                gridLineSub2: palette.gridLineSub2,
+                gridLineSub3: palette.gridLineSub3,
+                gridLineBar: palette.gridLineBar,
+                gridLineBeat: palette.gridLineBeat,
+                gridLineBeatFine: palette.gridLineBeatFine,
+                heldSpan: PaletteMath.hex(PaletteMath.trackIdentityOklab(track), alpha: 18),
+                markerLine: PaletteMath.trackIdentityFills[
+                    PaletteMath.trackIdentityIndex(track)]),
+            typography: type,
+            gutterTitle: gutterTitle)
+    }
+
+    private func publishBody(state publishedState: borrowing VoiceChangesState) {
+        let view = publishedState.view
+        setPublished(&plotOrigin, view?.plotOrigin ?? 0)
+        setPublished(&plotWidth, view?.plotWidth ?? 0)
+        setPublished(&plotHeight, view?.plotHeight ?? 0)
+        setPublished(&devicePixelRatio, view?.devicePixelRatio ?? 1)
+        let font = view?.baseFontPx ?? baseFontPx
+        setPublished(&baseFontPx, font)
+        setPublishedVariant(&promptAppearance, PromptAppearance.metrics(base: font))
+        setPublishedVariant(&promptFont, PromptAppearance.font(base: font))
+        let type = typographySnapshot
+            ?? typography.values(baseFontPx: font, labels: ["No voice"])
+        setPublishedVariant(&captionFont, type.captionFont.map)
+        setPublishedVariant(&titleFont, type.titleFont.map)
+    }
+
+    /// Structural rows are published before the booleans and indexes that make
+    /// their corresponding surfaces active.
+    private func publishSpans(_ values: borrowing [DrawerRectValue]) {
+        syncModel(heldSpans, previous: &spanRows, values) {
+            VoiceChangesPresentation.rect($0)
         }
     }
 
+    private func publishGrid(_ values: borrowing [DrawerRectValue]) {
+        syncModel(gridLines, previous: &gridRows, values) {
+            VoiceChangesPresentation.rect($0)
+        }
+    }
 
+    private func publishGutter(_ values: borrowing [DrawerTextValue]) {
+        syncModel(gutterTexts, previous: &gutterRows, values) {
+            VoiceChangesPresentation.text($0)
+        }
+    }
 
-    /// Writes one published primitive only when it really changed, so a repeated
-    /// equal publication emits nothing.
+    private func publishMarkers(_ values: borrowing [VoiceMarkerValue]) {
+        syncModel(markers, previous: &markerRows, values) { VoiceMarkerHandle($0) }
+    }
+
+    private func publishReadout(_ value: borrowing VoiceReadoutValue) {
+        setPublished(&contextSlot, value.slot)
+        setPublished(&contextBlank, value.blank)
+        setPublished(&contextSymbol, value.symbol)
+        setPublished(&readoutText, value.text)
+        setPublishedRect(&readoutRect, value.rect)
+        setPublished(&readoutVisible, sceneCache.trackAvailable)
+    }
+
+    private func publishHover(_ value: borrowing VoiceHoverValue) {
+        setPublished(&hoverText, value.text)
+        setPublishedRect(&hoverLabelRect, value.rect)
+        setPublished(&hoverTick, Double(value.tick))
+        setPublished(&hoverHintProfile,
+                     value.marker ? VoiceHintProfile.marker : VoiceHintProfile.horizontalScroll)
+        setPublished(&hoverVisible, value.visible)
+    }
+
+    private func publishTransient(_ value: borrowing VoiceTransientValue) {
+        setPublished(&previewX, value.x)
+        setPublished(&previewTick, Double(value.tick))
+        setPublished(&previewVisible, value.visible)
+    }
+
+    private func publishModal(_ value: borrowing VoiceModalValues) {
+        syncModel(pickerRows, previous: &pickerRowDescriptors, value.pickerRows) {
+            VoicePickerRowHandle($0)
+        }
+        syncModel(menuRows, previous: &menuRowDescriptors, value.menuRows) {
+            VoiceMenuRowHandle($0)
+        }
+        setPublished(&pickerTitle, value.pickerTitle)
+        setPublished(&pickerFilter, value.pickerFilter)
+        setPublished(&pickerHasMatch, value.pickerHasMatch)
+        setPublished(&menuX, value.menuX)
+        setPublished(&menuY, value.menuY)
+        setPublished(&pickerOpen, value.pickerOpen)
+        setPublished(&pickerIndex, value.pickerIndex)
+        setPublished(&menuOpen, value.menuOpen)
+    }
+
+    private func publishInteraction(_ publishedState: borrowing VoiceChangesState) {
+        setPublished(&selectedIdentity,
+                     publishedState.pointerMode.drag?.identity
+                         ?? publishedState.selectedOccurrence?.text ?? "")
+        setPublished(&cursorKind, publishedState.pointerMode.activeDrag == nil ? 0 : 3)
+        setPublished(&interactionActive, publishedState.interactionActive)
+    }
+
     @QtIgnored
     func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
         if storage != value { storage = value }
     }
 
-    /// The variant-typed records compare through their published spelling:
-    /// `[String: QVariantSettable]` is not `Equatable`, and an equal record must
-    /// leave its storage untouched.
     @QtIgnored
     func setPublishedRect(_ storage: inout [String: QVariantSettable],
-                          _ value: [String: QVariantSettable]) {
-        if !VoiceMarkerHandle.rectMatches(storage, value) { storage = value }
+                          _ value: borrowing DrawerRectValue) {
+        let next = VoiceMarkerHandle.rect(value.x, value.y, value.width, value.height)
+        if !VoiceMarkerHandle.rectMatches(storage, next) { storage = next }
     }
-
-    private func setPublishedFont(_ storage: inout [String: QVariantSettable],
-                                  _ value: [String: QVariantSettable]) {
-        if !VoiceChangesProjection.fontMatches(storage, value) { storage = value }
-    }
-
-    // MARK: Internals: shared metrics
 
     @QtIgnored
-    func fontPx(_ multiplier: Double) -> Double {
-        multiplier == 0 ? 0 : max(1, (baseFontPx * multiplier).rounded())
+    func setPublishedVariant(_ storage: inout [String: QVariantSettable],
+                             _ value: [String: QVariantSettable]) {
+        guard storage.count != value.count || storage.contains(where: { key, current in
+            guard let next = value[key] else { return true }
+            return String(describing: current) != String(describing: next)
+        }) else { return }
+        storage = value
     }
-
-    private func gridMetrics(_ session: DocumentSession) -> GridMetrics {
-        let key = MetricsKey(revision: session.document.revision, font: baseFontPx,
-                             dpr: devicePixelRatio, width: plotWidth, height: plotHeight)
-        if metricsKey == key, let cachedMetrics { return cachedMetrics }
-        let metrics = GridMetrics(baseFontPx: baseFontPx, dpr: devicePixelRatio,
-                                  width: plotWidth, height: plotHeight,
-                                  timeAxis: session.projectionCache.timeAxis)
-        metricsKey = key
-        cachedMetrics = metrics
-        return metrics
-    }
-
-    static let fontFamily = "Atkinson Hyperlegible Next"
 }

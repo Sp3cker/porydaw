@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Direct coverage for the Voice Changes page. The pure layer (labels, context

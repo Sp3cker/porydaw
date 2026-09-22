@@ -1,4 +1,4 @@
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 import PorydawProjectService
 

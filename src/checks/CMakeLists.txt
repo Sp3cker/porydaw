@@ -168,6 +168,7 @@ if(APPLE)
         drawerpresentation/drawer_resize.swift
         drawerpresentation/drawer_state.swift
         velocity/velocitydetentdragging.swift
+        velocity/velocityclicks.swift
         velocity/tst_velocityediting.swift
         rollcheck/velocity_prompt.swift
         rollcheck/EditorGridCameraChecks.swift

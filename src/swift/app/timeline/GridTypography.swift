@@ -1,11 +1,11 @@
 import NativeGridTypography
 import QtBridge
 
-enum GridFontKind {
+enum GridFontKind: Hashable, Sendable {
     case ruler, beat, bold, sig, chip, keyLabel
 }
 
-struct GridFontSpec {
+struct GridFontSpec: Equatable, Sendable {
     let family: String
     let pixelSize: Int
     let weight: Int
@@ -34,6 +34,7 @@ struct GridTypography {
     private let signatureMetrics: NativeFontMetrics
     private let chipWidths: [Double]
     private let fontMaps: [GridFontKind: [String: QVariantSettable]]
+    private let fontSpecs: [GridFontKind: GridFontSpec]
 
     init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double) {
         func measure(_ kind: GridFontKind) -> NativeFontMetrics {
@@ -54,9 +55,14 @@ struct GridTypography {
         signatureMetrics = measure(.sig)
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
         chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
-        var maps = fonts.mapValues { $0.map }
-        maps[.keyLabel]!["pixelSize"] = keyLabelFit
-        fontMaps = maps
+        var specs = fonts
+        if let keyLabel = specs[.keyLabel] {
+            specs[.keyLabel] = GridFontSpec(
+                family: keyLabel.family, pixelSize: keyLabelFit, weight: keyLabel.weight,
+                letterSpacing: keyLabel.letterSpacing)
+        }
+        fontSpecs = specs
+        fontMaps = specs.mapValues(\.map)
     }
 
     static func barLabel(_ bar: Int) -> String { "\(bar)" }
@@ -78,6 +84,8 @@ struct GridTypography {
     func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
 
     func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
+
+    func fontSpec(_ kind: GridFontKind) -> GridFontSpec { fontSpecs[kind]! }
 
     static func fonts(metrics m: GridMetrics) -> [GridFontKind: GridFontSpec] {
         let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())

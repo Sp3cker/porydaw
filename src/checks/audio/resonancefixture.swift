@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 
 // Signal generators and independent probes translated from resonancefixture.cpp.
 // Numeric acceptance bounds come from tst_resonancelaw.cpp/tst_resonancetiming.cpp.

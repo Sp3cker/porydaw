@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with velocitydetentdragging.cpp.
@@ -38,8 +38,8 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
 
     var axisGeometry = page.axisModel.geometry
     let axis = VelocityAxisModel(map: VelocityMap(voiceKind: .unresolved), geometry: axisGeometry)
-    var gesture = VelocityGestureState(
-        kind: .relative, revision: fixture.document.revision, track: 0,
+    var gesture = VelocityEditGesture(
+        revision: fixture.document.revision, track: 0,
         notes: [
             VelocityFrozenNote(noteID: NoteID(1), tick: 0, duration: 24, pitch: 60, velocity: 10,
                                map: VelocityMap(voiceKind: .unresolved), exactOrigin: 10),
@@ -64,8 +64,8 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     let psgMap = VelocityMap(voiceKind: .square1)
     axisGeometry.height = 120
     let psgAxis = VelocityAxisModel(map: psgMap, geometry: axisGeometry, activeValues: [60, 76])
-    var psgGesture = VelocityGestureState(
-        kind: .relative, revision: 1, track: 0,
+    var psgGesture = VelocityEditGesture(
+        revision: 1, track: 0,
         notes: [
             VelocityFrozenNote(noteID: NoteID(3), tick: 0, duration: 24, pitch: 60, velocity: 60,
                                map: psgMap, exactOrigin: 60),
@@ -119,8 +119,8 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     let midpoint = VelocityFrozenNote(noteID: NoteID(7), tick: 24, duration: 24, pitch: 60,
                                       velocity: 40,
                                       map: VelocityMap(voiceKind: .unresolved), exactOrigin: 40)
-    var ramp = VelocityGestureState(
-        kind: .ramp, revision: 1, track: 0, notes: frozen + [midpoint], axis: axis,
+    var ramp = VelocityEditGesture(
+        revision: 1, track: 0, notes: frozen + [midpoint], axis: axis,
         detentUnlock: false, activationDistance: 1, pressX: 10, pressY: axis.velocityToY(100))
     VelocityGesturePolicy.applyRamp(&ramp, x: 50, y: axis.velocityToY(50), hitRadius: 5) { note in
         note.tick == 0 ? 10 : note.tick == 24 ? 30 : 90
@@ -135,8 +135,8 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
     // preview resolves every note back to the value frozen at gesture start
     // makes no history entry, and a preview that moves one note commits exactly
     // that note.
-    var flatState = VelocityGestureState(
-        kind: .ramp, revision: 1, track: 0, notes: frozen, axis: axis, detentUnlock: false,
+    var flatState = VelocityEditGesture(
+        revision: 1, track: 0, notes: frozen, axis: axis, detentUnlock: false,
         activationDistance: 1, pressX: 10, pressY: axis.velocityToY(40))
     flatState.preview = Dictionary(uniqueKeysWithValues: frozen.map { ($0.noteID, $0.velocity) })
     report.expect(VelocityGesturePolicy.updates(flatState).isEmpty, cppID: drawerVelocityGestureID,
@@ -155,4 +155,31 @@ func drawerVelocityFrozenGesturePolicy(_ report: CheckReport, session: DocumentS
                   cppID: drawerVelocityGestureID, message: "a vertical span resolves to the near endpoint")
     report.expect(thirdHandle.hitRadius > 0, cppID: drawerVelocityGestureID,
                   message: "the published hit radius is font-relative and positive")
+
+    let decoded = DrawerPointerInput(
+        x: 3, y: 4, qtButton: 8, qtButtons: 1 | 4 | 8,
+        qtModifiers: DrawerModifiers.shiftBit | DrawerModifiers.controlBit,
+        phase: .move)
+    report.expect(decoded.changedButton == .other(8)
+                      && decoded.heldButtons.contains(.primary)
+                      && decoded.heldButtons.contains(.middle)
+                      && decoded.heldButtons.contains(.other(8)),
+                  cppID: drawerVelocityGestureID,
+                  message: "the Qt seam keeps changed and held buttons distinct, including unknown bits")
+    report.expect(decoded.modifiers.shift && decoded.modifiers.control
+                      && decoded.modifiers.isExact(shift: true, control: true),
+                  cppID: drawerVelocityGestureID,
+                  message: "the Qt seam decodes exact Control+Shift membership")
+    let extraQtNoise = DrawerModifiers(qtModifiers: DrawerModifiers.controlBit | 0x01)
+    let disqualified = DrawerModifiers(
+        qtModifiers: DrawerModifiers.controlBit | DrawerModifiers.altBit)
+    report.expect(extraQtNoise.isExact(control: true)
+                      && !disqualified.isExact(control: true),
+                  cppID: drawerVelocityGestureID,
+                  message: "non-shortcut Qt bits are ignored while Alt disqualifies exact Control")
+    report.expect(!page.pointerPress(x: 10, y: 10, surface: 99, button: 1, modifiers: 0)
+                      && !page.pointerPress(x: 10, y: 10, surface: 1,
+                                            button: 8, modifiers: 0),
+                  cppID: drawerVelocityGestureID,
+                  message: "unknown surfaces and buttons remain unconsumed at the Qt adapter")
 }

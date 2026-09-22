@@ -51,12 +51,6 @@ struct TrackHeaderSnapshot: Equatable {
     var activityRightHeight: Double = 0
 }
 
-extension GridFontSpec: Equatable {
-    static func == (lhs: GridFontSpec, rhs: GridFontSpec) -> Bool {
-        lhs.family == rhs.family && lhs.pixelSize == rhs.pixelSize
-            && lhs.weight == rhs.weight && lhs.letterSpacing == rhs.letterSpacing
-    }
-}
 
 struct TrackHeadersGeometry {
     var rowHeight = 0

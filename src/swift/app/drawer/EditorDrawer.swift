@@ -1,26 +1,14 @@
+import Foundation
 import QtBridge
-
-// The editor drawer container: three independently visible sections stacked in the
-// fixed order Velocity, Voice Changes, Automations, one bottom chrome bar holding
-// one toggle per attached section, one resize handle directly above each visible
-// body, and one active page. Behaviour follows the production reference
-// `src/ui/editordrawer/{editordrawer,drawersections,drawerchrome}.{h,cpp}`.
-//
-// `EditorDrawerLayout` owns every rule — section state, metrics, stacking, the host
-// clamp, resizing (including the Voice-Changes→Automations spill), focus decisions,
-// synchronous cancellation and the preference-change records. `EditorDrawerPresenter`
-// only mirrors one layout value into published primitives and applies the container's
-// cancel-before-publish order; it holds no policy of its own. The bridge never sees
-// the layout type, the page protocol or a Core value.
 
 // MARK: - Page seam
 
-/// A page's declared body sizing. Re-read on every layout pass; the page owns its
-/// own default curve and its own maximum.
+/// A page's declared body sizing. The presenter re-reads this value and evaluates
+/// the closure on every layout pass; the layout receives only the resulting facts.
 public struct EditorDrawerBodyPolicy: Sendable {
     /// `nil` leaves the body unbounded by the page.
     public var maximumBodyHeight: Int?
-    /// Default body height for the pushed host height and metrics.
+    /// Default body height for the supplied host height and metrics.
     public var preferredBodyHeight: @Sendable (Int, EditorDrawerMetrics) -> Int
 
     public init(maximumBodyHeight: Int? = nil,
@@ -30,29 +18,52 @@ public struct EditorDrawerBodyPolicy: Sendable {
     }
 }
 
-/// The container's whole page seam. One attached page per section kind, held
-/// strongly by that kind's slot until an explicit detach; a page must not retain
-/// the presenter, so the container's reference creates no cycle.
+/// The container's page seam. A page must not retain the presenter.
 @MainActor
 public protocol EditorDrawerPage: AnyObject {
     var sectionKind: DrawerSectionKind { get }
     /// Non-empty QML URL, resolved once at attach and never re-pointed.
     var contentUrl: String { get }
     var bodyPolicy: EditorDrawerBodyPolicy { get }
-    /// True while this page owns an interaction that a follow-scroll would
-    /// disrupt. The presenter reads it synchronously and never retains it; it is
-    /// not a QML focus or pointer heuristic, and a page reports `false` again
-    /// once its own cancellation ran.
+    /// True while this page owns an interaction that follow-scroll would disrupt.
     var interactionActive: Bool { get }
-    /// Ends this page's current interaction or gesture. Called synchronously by the
-    /// container before a hide, a replace or a global cancellation publishes.
+    /// Ends this page's current interaction or gesture synchronously.
     func cancelSectionInteraction()
+}
+
+@MainActor
+private struct EditorDrawerAttachedPage {
+    let page: EditorDrawerPage
+    let resolvedContentUrl: String
+}
+
+@MainActor
+private struct EditorDrawerAttachedPages {
+    var automation: EditorDrawerAttachedPage?
+    var velocity: EditorDrawerAttachedPage?
+    var voiceChanges: EditorDrawerAttachedPage?
+
+    subscript(kind: DrawerSectionKind) -> EditorDrawerAttachedPage? {
+        get {
+            switch kind {
+            case .automation: return automation
+            case .velocity: return velocity
+            case .voiceChanges: return voiceChanges
+            }
+        }
+        set {
+            switch kind {
+            case .automation: automation = newValue
+            case .velocity: velocity = newValue
+            case .voiceChanges: voiceChanges = newValue
+            }
+        }
+    }
 }
 
 // MARK: - QML publication
 
-/// One section's published values as a stable bridged object. Only the fields that
-/// changed are written, so an unchanged layout pass emits no property signal.
+/// One section's published values as a stable bridged object.
 @MainActor
 @QtBridgeable
 public final class EditorDrawerSectionState {
@@ -72,7 +83,7 @@ public final class EditorDrawerSectionState {
     public init() {}
 
     @QtIgnored
-    func apply(_ geometry: EditorDrawerSectionGeometry) {
+    func apply(_ geometry: borrowing EditorDrawerSectionGeometry) {
         if available != geometry.available { available = geometry.available }
         if visible != geometry.visible { visible = geometry.visible }
         if contentUrl != geometry.contentUrl { contentUrl = geometry.contentUrl }
@@ -88,9 +99,7 @@ public final class EditorDrawerSectionState {
     }
 }
 
-/// The container as QML sees it: one `EditorDrawerLayout` value mirrored into
-/// published primitives, one bridged section state per kind, and the container's
-/// two preference signals. It holds no policy; every rule lives in the layout.
+/// Qt adapter and effect runner for the pure `EditorDrawerLayout`.
 @MainActor
 @QtBridgeable
 public final class EditorDrawerPresenter {
@@ -116,12 +125,13 @@ public final class EditorDrawerPresenter {
     @QtTracked public var voiceChangesSection: EditorDrawerSectionState = EditorDrawerSectionState()
 
     private var layout = EditorDrawerLayout()
+    private var attachedPages = EditorDrawerAttachedPages()
     private let unresolvedSection = EditorDrawerSectionState()
+    private var publicationRevision = 0
 
     public init() {}
 
-    /// The stable section state object for a kind raw value; an unknown value
-    /// yields an empty, always-unavailable state.
+    /// The stable section state object for a kind raw value.
     public func section(kind: Int) -> EditorDrawerSectionState {
         guard let section = DrawerSectionKind(rawValue: kind) else { return unresolvedSection }
         switch section {
@@ -131,106 +141,152 @@ public final class EditorDrawerPresenter {
         }
     }
 
-    /// The composition's layout-fact push. `fontPx` is the grid's `baseFontPx`; the
-    /// application font's line spacing sizes the bar row only.
+    /// Pushes host and font facts through one layout/publication pass.
     public func configureLayout(hostWidth: Int, hostHeight: Int, gutterWidth: Int,
                                 fontPx: Double, appFontLineSpacing: Double) {
-        publish(layout.configureMetrics(EditorDrawerMetrics.resolve(
-            baseFontPx: fontPx, appFontLineSpacing: appFontLineSpacing)))
-        publish(layout.configureHost(hostWidth: hostWidth, hostHeight: hostHeight,
-                                     gutterWidth: gutterWidth))
+        let metrics = EditorDrawerMetrics.resolve(
+            baseFontPx: fontPx, appFontLineSpacing: appFontLineSpacing)
+        let pages = pageFacts(hostHeight: hostHeight, metrics: metrics)
+        publish(layout.configure(hostWidth: hostWidth, hostHeight: hostHeight,
+                                 gutterWidth: gutterWidth, metrics: metrics, pages: pages))
     }
 
-    /// The store's one read, with `-1` for an absent visibility or page and `0` for
-    /// an absent height. Applying restored values never writes back.
+    /// Applies one settings read without writing restored values back.
     public func restoreStoredPreferences(velocityVisible: Int, velocityHeight: Int,
                                          automationVisible: Int, automationHeight: Int,
                                          voiceChangesVisible: Int, voiceChangesHeight: Int,
                                          activePage: Int) {
-        publish(layout.restorePreferences(velocityVisible: velocityVisible,
-                                          velocityHeight: velocityHeight,
-                                          automationVisible: automationVisible,
-                                          automationHeight: automationHeight,
-                                          voiceChangesVisible: voiceChangesVisible,
-                                          voiceChangesHeight: voiceChangesHeight,
-                                          activePage: activePage))
+        let pages = pageFacts()
+        publish(layout.restorePreferences(
+            velocityVisible: velocityVisible, velocityHeight: velocityHeight,
+            automationVisible: automationVisible, automationHeight: automationHeight,
+            voiceChangesVisible: voiceChangesVisible, voiceChangesHeight: voiceChangesHeight,
+            activePage: activePage, pages: pages))
     }
 
     public func toggleSection(kind: Int, drawerOwnsFocus: Bool) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.toggleSection(section, drawerOwnsFocus: drawerOwnsFocus))
+        let pages = pageFacts()
+        publish(layout.toggleSection(
+            section, drawerOwnsFocus: drawerOwnsFocus, pages: pages))
     }
 
     public func setSectionVisible(kind: Int, visible: Bool, drawerOwnsFocus: Bool) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.setSectionVisible(section, visible: visible,
-                                         drawerOwnsFocus: drawerOwnsFocus))
+        let pages = pageFacts()
+        publish(layout.setSectionVisible(
+            section, visible: visible, drawerOwnsFocus: drawerOwnsFocus, pages: pages))
     }
 
     public func setSectionBodyHeight(kind: Int, height: Int) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.setSectionBodyHeight(section, height: height))
+        let pages = pageFacts()
+        publish(layout.setSectionBodyHeight(section, height: height, pages: pages))
     }
 
     public func beginResize(kind: Int) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.beginResize(section))
+        let pages = pageFacts()
+        publish(layout.beginResize(section, pages: pages))
     }
 
     public func applyResize(kind: Int, delta: Double) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.applyResize(section, delta: delta))
+        let pages = pageFacts()
+        publish(layout.applyResize(section, delta: delta, pages: pages))
     }
 
     public func endResize(kind: Int) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.endResize(section))
+        let pages = pageFacts()
+        publish(layout.endResize(section, pages: pages))
     }
 
     public func cancelResize() {
-        publish(layout.cancelResize())
+        publish(layout.cancelResize(pages: pageFacts()))
     }
 
     public func adjustResizeHandle(kind: Int, direction: Int) {
         guard let section = DrawerSectionKind(rawValue: kind) else { return }
-        publish(layout.adjustResizeHandle(section, direction: direction))
+        let pages = pageFacts()
+        publish(layout.adjustResizeHandle(section, direction: direction, pages: pages))
     }
 
-    /// The container's global cancellation entry point. Every reason is treated
-    /// identically: the chrome resize session ends and every attached page is
-    /// cancelled synchronously in Swift.
+    /// Ends the chrome resize and every visible page interaction synchronously.
     public func inputCancelled(reason: Int) {
-        publish(layout.cancelInteractions())
+        publish(layout.cancelInteractions(pages: pageFacts()))
     }
 
-    /// The container's aggregate interaction state: the chrome resize session or
-    /// any attached page's own interaction. Swift-only: the shared playhead's
-    /// follow gate reads it, and no QML surface learns gesture state from it.
+    /// Aggregate interaction stays a synchronous adapter read, never layout state.
     @QtIgnored
-    public var interactionActive: Bool { layout.interactionActive }
+    public var interactionActive: Bool {
+        if layout.resizeKind != nil { return true }
+        for kind in DrawerSectionKind.allCases
+            where attachedPages[kind]?.page.interactionActive == true {
+            return true
+        }
+        return false
+    }
 
-    /// Emitted when an available kind's visibility or stored height really changed.
-    /// `height == 0` is the unset marker.
     @QtSignal public func drawerSectionPreferenceChanged(kind: Int, visible: Bool, height: Int)
-
-    /// Emitted when an interactive call moved the active page to an available kind.
     @QtSignal public func drawerActivePagePreferenceChanged(page: Int)
 
-    /// Swift-only page attachment; the session owns every attach and detach call.
+    /// Attaches one accepted page to its fixed kind slot.
     @QtIgnored
     public func attachSection(_ page: EditorDrawerPage) {
-        publish(layout.attachPage(page))
+        let kind = page.sectionKind
+        guard attachedPages[kind] == nil,
+              let resolvedContentUrl = Self.resolveContentUrl(page.contentUrl) else {
+            return
+        }
+        attachedPages[kind] = EditorDrawerAttachedPage(
+            page: page, resolvedContentUrl: resolvedContentUrl)
+        publish(layout.attachPage(pages: pageFacts()))
     }
 
-    /// Swift-only page detachment: cancels `page` synchronously, then publishes the
-    /// kind as unavailable.
+    /// A mismatched detach is ignored. The matching page stays retained until its
+    /// cancellation effect completes and the unavailable snapshot is published.
     @QtIgnored
     public func detachSection(_ page: EditorDrawerPage) {
-        publish(layout.detachPage(page))
+        let kind = page.sectionKind
+        guard let attached = attachedPages[kind], attached.page === page else { return }
+        let remainingPages = pageFacts(excluding: kind)
+        publish(layout.detachPage(kind, pages: remainingPages))
+        attachedPages[kind] = nil
     }
 
-    private func publish(_ change: EditorDrawerChangeSet) {
+    /// Re-reads each attached page policy for the applicable host and metrics.
+    private func pageFacts(hostHeight: Int? = nil, metrics: EditorDrawerMetrics? = nil,
+                           excluding excludedKind: DrawerSectionKind? = nil)
+        -> EditorDrawerPageFacts {
+        let effectiveHostHeight = hostHeight ?? layout.hostHeight
+        let effectiveMetrics = metrics ?? layout.metrics
+        var facts = EditorDrawerPageFacts()
+        for kind in DrawerSectionKind.allCases where kind != excludedKind {
+            guard let attached = attachedPages[kind] else { continue }
+            let policy = attached.page.bodyPolicy
+            facts[kind] = EditorDrawerPageFacts.Page(
+                resolvedContentUrl: attached.resolvedContentUrl,
+                preferredBodyHeight: policy.preferredBodyHeight(
+                    effectiveHostHeight, effectiveMetrics),
+                maximumBodyHeight: policy.maximumBodyHeight)
+        }
+        return facts
+    }
+
+    private func publish(_ change: consuming EditorDrawerChangeSet) {
         guard !change.isEmpty else { return }
+        publicationRevision &+= 1
+        let expectedRevision = publicationRevision
+        if !change.cancelledSections.isEmpty {
+            let cancellationPages = change.cancelledSections.compactMap {
+                attachedPages[$0]?.page
+            }
+            // Callbacks see the old Qt values, while the reduced layout state is
+            // already installed. A nested publication supersedes this snapshot.
+            for page in cancellationPages { page.cancelSectionInteraction() }
+        }
+        guard publicationRevision == expectedRevision else { return }
         if change.published { apply(change.snapshot) }
         for preference in change.sectionPreferences {
             drawerSectionPreferenceChanged(kind: preference.kind.rawValue,
@@ -240,29 +296,36 @@ public final class EditorDrawerPresenter {
         if let page = change.activePagePreference {
             drawerActivePagePreferenceChanged(page: page.rawValue)
         }
-        // The target is published before the revision so a handler that runs on the
-        // revision change reads the matching target.
+        // Target precedes revision so revision observers read the matching target.
         if let focus = change.focusRequest {
-            focusTarget = focus.target
-            focusRequest = focus.revision
+            if focusTarget != focus.target { focusTarget = focus.target }
+            if focusRequest != focus.revision { focusRequest = focus.revision }
         }
     }
 
-    private func apply(_ snapshot: EditorDrawerSnapshot) {
-        height = snapshot.height
-        barVisible = snapshot.barVisible
-        barX = snapshot.barX
-        barY = snapshot.barY
-        barWidth = snapshot.barWidth
-        barHeight = snapshot.barHeight
-        plotOrigin = snapshot.plotOrigin
-        plotWidth = snapshot.plotWidth
+    private func apply(_ snapshot: borrowing EditorDrawerSnapshot) {
+        if height != snapshot.height { height = snapshot.height }
+        if barVisible != snapshot.barVisible { barVisible = snapshot.barVisible }
+        if barX != snapshot.barX { barX = snapshot.barX }
+        if barY != snapshot.barY { barY = snapshot.barY }
+        if barWidth != snapshot.barWidth { barWidth = snapshot.barWidth }
+        if barHeight != snapshot.barHeight { barHeight = snapshot.barHeight }
+        if plotOrigin != snapshot.plotOrigin { plotOrigin = snapshot.plotOrigin }
+        if plotWidth != snapshot.plotWidth { plotWidth = snapshot.plotWidth }
         automationSection.apply(snapshot.automation)
-        detentX = snapshot.detentX
-        detentY = snapshot.detentY
-        detentSize = snapshot.detentSize
-        detentIconInset = snapshot.detentIconInset
+        if detentX != snapshot.detentX { detentX = snapshot.detentX }
+        if detentY != snapshot.detentY { detentY = snapshot.detentY }
+        if detentSize != snapshot.detentSize { detentSize = snapshot.detentSize }
+        if detentIconInset != snapshot.detentIconInset {
+            detentIconInset = snapshot.detentIconInset
+        }
         velocitySection.apply(snapshot.velocity)
         voiceChangesSection.apply(snapshot.voiceChanges)
+    }
+
+    private static func resolveContentUrl(_ raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, URL(string: trimmed) != nil else { return nil }
+        return trimmed
     }
 }

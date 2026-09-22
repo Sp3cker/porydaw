@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/velocity/tst_velocityediting.cpp
 Original SHA-256: 3e4a4992d28bc5e1443b055ea741e59fff79643504e57a2f0889ea60c84bc08b
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
-Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
+Swift SHA-256: d10757673b1ecbbd0e49c6e6592b4415990d6e986f0cd6a555d2c155661d8e62
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

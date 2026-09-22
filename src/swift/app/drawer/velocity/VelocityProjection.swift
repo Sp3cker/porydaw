@@ -43,9 +43,8 @@ struct VelocityProjection: Sendable {
     /// The note under the pointer: a centered circle hit beats a stem hit, a
     /// selected handle beats an unselected one, then the nearer hit, then the
     /// later row of the passed set.
-    @MainActor
     func hitTest(x: Double, y: Double, includeStems: Bool,
-                 handles: [VelocityHandle]) -> NoteID? {
+                 handles: [VelocityHandleValue]) -> NoteID? {
         let radius = geometry.hitRadius
         var best: NoteID?
         var bestCircle = false

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with voice.cpp.
@@ -261,7 +261,7 @@ func drawerVoiceAltFineClockLattice(_ report: CheckReport, suite: DocumentSessio
     let startX = fixture.markerX(dragged.tick)
     _ = page.pointerPress(x: startX, y: 10, surface: 1, button: 1, modifiers: 0)
     let altX = startX + 60
-    _ = page.pointerMove(x: altX, y: 10, buttons: 1, modifiers: VoiceModifier.alt)
+    _ = page.pointerMove(x: altX, y: 10, buttons: 1, modifiers: DrawerModifiers.altBit)
     let raw = fixture.session.camera.tickAtContentX(altX)
     report.expectEqual(TimelineSnapPolicy.fineSnap(raw, clockTicks: clock), page.dragPreviewTick,
                        cppID: drawerVoiceFineSnapID,

@@ -1,219 +1,262 @@
 import PorydawCore
 import QtBridge
 
-// Publication machinery for the drawer's Velocity section: the content rebuild
-// that resolves the presented context and republishes every static projection,
-// the scene-input assembly a build reads, and the per-row apply paths that sync
-// the published primitives and item models, plus the readout, the transient
-// gesture rendering and the typography/metrics/handle reuse caches.
-//
-// Ownership: an extension of the page, never a separate object. Published
-// state and the caches stay declared on `VelocityPage` — `@QtBridgeable`
-// registers class-body members only and stored properties cannot move to an
-// extension — so this file reads and writes the page's own state and publishes
-// through `setPublished` and `syncModel`: it holds no session, no cache and no
-// bridge type of its own.
+struct VelocityPublicationScope: OptionSet, Sendable {
+    let rawValue: Int
+
+    static let context = Self(rawValue: 1 << 0)
+    static let axis = Self(rawValue: 1 << 1)
+    static let handles = Self(rawValue: 1 << 2)
+    static let grid = Self(rawValue: 1 << 3)
+    static let bands = Self(rawValue: 1 << 4)
+    static let transient = Self(rawValue: 1 << 5)
+    static let readout = Self(rawValue: 1 << 6)
+    static let prompt = Self(rawValue: 1 << 7)
+    static let interaction = Self(rawValue: 1 << 8)
+    static let clear = Self(rawValue: 1 << 9)
+
+    static let content: Self = [
+        .context, .axis, .handles, .grid, .bands, .transient, .readout,
+        .prompt, .interaction,
+    ]
+    static let camera: Self = [.handles, .grid, .bands, .transient, .readout]
+    static let axisAndHandles: Self = [.axis, .handles, .readout]
+    static let handlesAndReadout: Self = [.handles, .readout]
+}
 
 @MainActor
 extension VelocityPage {
-    // MARK: Content rebuild
+    // MARK: State sampling
 
-    /// Rebuilds every static projection: the ruler, the grid, the PSG bands and
-    /// the note handles.
-    @QtIgnored func rebuildContent() {
-        guard session != nil, plotHeight > 0 || plotWidth > 0 else { return }
-        contentBuildCount &+= 1
-        geometry = VelocityNodeGeometry(baseFontPx: baseFontPx,
-                                        devicePixelRatio: devicePixelRatio)
-        let presented = VelocityScene.presentation(session, playing: playing,
-                                                   contextTick: contextTick)
-        resolvedContextValue = presented
-        lastContextKey = VelocityContextKey(context: presented, playing: playing)
-        contextUnsupported = !presented.editable
-        contextDiagnostic = presented.diagnostic
-        contextSlot = presented.slot
-        contextVoiceName = presented.map.voiceName
-        setPublished(&detentsAvailable, presented.status == .resolved && presented.map.isPSG)
-        let snapshot = buildScene()
-        refreshAxisAndHandles(snapshot)
-        publishGrid(snapshot)
-        publishBands(snapshot)
-        publishTransient()
+    func documentFacts() -> VelocityDocumentFacts {
+        guard let session else { return VelocityDocumentFacts() }
+        let track = session.selectedTrack ?? -1
+        let notes = track >= 0 ? session.projectionCache.notes(in: track) : []
+        let source: VelocityContextSource
+        if track >= 0, track < session.timeline.tracks.count {
+            source = VelocityContextSource(
+                firstProgram: session.timeline.tracks[track].firstProgram,
+                voiceChanges: session.projectionCache.lanePoints(track: track, lane: .voice),
+                slots: session.bankSlots)
+        } else {
+            source = .unresolved
+        }
+        return VelocityDocumentFacts(
+            revision: session.document.revision, selectedTrack: track, notes: notes,
+            orderedSelection: session.selectedNoteOrder, source: source,
+            editCursor: session.editCursor)
     }
 
-    /// Hover and detent changes republish the ruler and handle rows: a content
-    /// rebuild hands its own build in, the hover-only paths derive the scoped
-    /// axis, handle and ruler values those interactions actually change.
-    @QtIgnored func refreshAxisAndHandles(_ snapshot: VelocitySceneSnapshot? = nil) {
-        let built = snapshot.map { VelocityAxisAndHandles($0) }
-            ?? VelocitySceneSnapshot.buildAxisAndHandles(
-                sceneInput(reuseGeometry: handleReuseGeometry()), typography: typography,
-                previousHandles: handlesByID)
-        rebuildAxis(built.axis)
-        publishHandles(built.handles)
-        publishAxis(built.rows)
-        publishReadout()
-    }
-
-    /// Applies one build's value axis to the page's published axis values.
-    private func rebuildAxis(_ axis: VelocityAxisModel) {
-        self.axis = axis
-        setPublished(&axisMode, axis.mode.rawValue)
-        setPublished(&axisGraduationsVisible, axis.mode == .intrinsic && detentsEnabled)
-        setPublished(&axisAccessibleDescription, axis.accessibleDescription)
-    }
-
-    // MARK: Scene input
-
-    /// The page's one static scene build, from the live session and the page's
-    /// own state. The cached label typography and the published handle lookup are
-    /// the page's `@MainActor` objects, so they travel as build parameters.
-    func buildScene() -> VelocitySceneSnapshot {
-        VelocitySceneSnapshot.build(sceneInput(reuseGeometry: handleReuseGeometry()),
-                                    typography: typography, previousHandles: handlesByID)
-    }
-
-    /// The primary track's note rows, projected against the published axis: the
-    /// scoped build a live gesture uses, so motion never rebuilds static content.
-    @QtIgnored func projectHandles() -> [VelocityHandle] {
-        VelocitySceneSnapshot.buildHandleRows(sceneInput(reuseGeometry: handleReuseGeometry()),
-                                              axis: axis, previousHandles: handlesByID)
-    }
-
-    /// The handle-reuse decision: geometry, track, DPR and axis mode form one
-    /// key, and an unchanged key reuses the previous handle objects in place.
-    private func handleReuseGeometry() -> Bool {
-        let key = HandleGeometryKey(geometry: geometry, track: session?.selectedTrack ?? 0,
-                                    dpr: devicePixelRatio, intrinsic: axis.mode == .intrinsic)
-        let reuse = handleGeometryKey == key
-        handleGeometryKey = key
-        return reuse
-    }
-
-    /// Everything one scene build reads, as values: the session's document facts,
-    /// the page's live interaction snapshot and its cached grid metrics.
-    private func sceneInput(reuseGeometry: Bool) -> VelocitySceneInput {
-        let session = self.session
+    func sceneInput() -> VelocitySceneInput {
+        let body = state.body
         return VelocitySceneInput(
-            camera: session?.camera,
-            context: resolvedContextValue,
-            notes: VelocityScene.trackNotes(session),
-            selectedNotes: VelocityScene.selectedTrackNotes(session),
-            selectedNoteIDs: session?.selectedNotes ?? [],
-            track: session?.selectedTrack ?? 0,
-            source: VelocityScene.contextSource(session),
-            interaction: interactionSnapshot(),
-            geometry: geometry,
-            plotWidth: plotWidth,
-            plotHeight: plotHeight,
-            rulerWidth: rulerWidth,
-            devicePixelRatio: devicePixelRatio,
-            baseFontPx: baseFontPx,
+            camera: state.camera,
+            context: state.presentedContext,
+            notes: state.document.notes,
+            selectedNotes: state.selectedNotes,
+            selectedNoteIDs: state.document.selectedIDSet,
+            track: max(0, state.document.selectedTrack),
+            source: state.document.source,
+            gesture: gesture,
+            hovered: state.hovered,
+            detentsEnabled: state.detentsEnabled,
+            geometry: body.geometry,
+            plotWidth: body.plotWidth,
+            plotHeight: body.plotHeight,
+            rulerWidth: body.rulerWidth,
+            devicePixelRatio: body.devicePixelRatio,
+            baseFontPx: body.baseFontPx,
             metrics: session.map { gridMetrics($0) },
-            palette: scenePalette(),
-            reuseGeometry: reuseGeometry)
+            palette: VelocityScenePalette(
+                gridLineSub1: palette.gridLineSub1,
+                gridLineSub2: palette.gridLineSub2,
+                gridLineSub3: palette.gridLineSub3,
+                gridLineBar: palette.gridLineBar,
+                gridLineBeat: palette.gridLineBeat,
+                gridLineBeatFine: palette.gridLineBeatFine,
+                separator: palette.separator,
+                primaryText: palette.primaryText,
+                selectionRing: palette.selectionRing,
+                selectionFill: palette.selectionFill,
+                selectionEdge: palette.selectionEdge,
+                outline: palette.outline,
+                noteBorder: palette.noteBorder))
     }
 
-    /// The page's live gesture and hover facts, frozen for one build.
-    private func interactionSnapshot() -> VelocityInteractionSnapshot {
-        VelocityInteractionSnapshot(
-            frozenNotes: gesture?.notes ?? [],
-            preview: gesture?.preview ?? [:],
-            detentUnlock: gesture?.detentUnlock ?? false,
-            relativeActivated: gesture?.relativeActivated ?? false,
-            hovered: hovered,
-            detentsEnabled: detentsEnabled)
-    }
+    // MARK: Single publication pass
 
-    /// The palette colours a scene build draws with, as values.
-    private func scenePalette() -> VelocityScenePalette {
-        VelocityScenePalette(
-            gridLineSub1: palette.gridLineSub1,
-            gridLineSub2: palette.gridLineSub2,
-            gridLineSub3: palette.gridLineSub3,
-            gridLineBar: palette.gridLineBar,
-            gridLineBeat: palette.gridLineBeat,
-            gridLineBeatFine: palette.gridLineBeatFine,
-            separator: palette.separator,
-            primaryText: palette.primaryText,
-            selectionRing: palette.selectionRing,
-            outline: palette.outline,
-            noteBorder: palette.noteBorder)
-    }
-
-    /// The page's own projection for hit tests and gesture maths: the shared
-    /// camera at the page's DPR against the published value axis.
-    @QtIgnored var projection: VelocityProjection {
-        VelocityProjection(camera: session?.camera, geometry: geometry,
-                           devicePixelRatio: devicePixelRatio, axis: axis)
-    }
-
-    // MARK: Publication
-
-    /// Publishes one handle projection. The page's own array is the authoritative
-    /// copy the hit tests and the checks read, so it moves with the model.
-    @QtIgnored func publishHandles(_ values: [VelocityHandle]) {
-        publishedHandles = values
-        handlesByID = Dictionary(uniqueKeysWithValues: values.map { ($0.noteID, $0) })
-        syncModel(handles, values, matches: { $0.matches($1) })
-    }
-
-    private func syncRects(_ model: QListModel<SceneRect>, _ rects: [SceneRect]) {
-        syncModel(model, rects, matches: { $0.matches($1) })
-    }
-
-    private func syncTexts(_ model: QListModel<SceneText>, _ texts: [SceneText]) {
-        syncModel(model, texts, matches: matchesText)
-    }
-
-    /// `SceneText` publishes no comparison of its own; an equal record leaves
-    /// its row untouched. The font map is compared through its published
-    /// spelling, because its values are variant-typed.
-    private func matchesText(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.labelText == rhs.labelText && lhs.labelColor == rhs.labelColor
-            && lhs.labelBackground == rhs.labelBackground
-            && lhs.labelHorizontalAlignment == rhs.labelHorizontalAlignment
-            && lhs.labelVerticalAlignment == rhs.labelVerticalAlignment
-            && Self.rectMatches(lhs.labelRect, rhs.labelRect)
-            && Self.fontMatches(lhs.labelFont, rhs.labelFont)
-    }
-
-    private static func rectMatches(_ lhs: [String: QVariantSettable],
-                                    _ rhs: [String: QVariantSettable]) -> Bool {
-        for key in ["x", "y", "width", "height"] {
-            guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                  left == right
-            else { return false }
+    /// The only entry that builds/reuses scene blocks and writes Qt properties
+    /// or item models. Callers choose the dependency block invalidated by their
+    /// state change; untouched blocks remain cached.
+    @QtIgnored func publish(_ scope: VelocityPublicationScope) {
+        var next = sceneCache
+        if scope.contains(.clear) {
+            next = VelocityScene()
+        } else {
+            let input = sceneInput()
+            if scope.contains(.axis), scope.contains(.grid) {
+                next = VelocityScene.build(input, textMetrics: textMetrics)
+            } else if scope.contains(.grid) {
+                let rows = VelocityScene.buildHandleRows(input, axis: axis)
+                next.handles = rows.handles
+                next.grid = VelocityScene.grid(input)
+                let projection = VelocityProjection(
+                    camera: input.camera, geometry: input.geometry,
+                    devicePixelRatio: input.devicePixelRatio, axis: axis)
+                next.bands = VelocityScene.bands(input, axis: axis, projection: projection)
+                next.readout = rows.readout
+            } else if scope.contains(.axis) {
+                let built = VelocityScene.buildAxisAndHandles(input, textMetrics: textMetrics)
+                next.axis = built.axis
+                next.handles = built.handles
+                next.axisRows = built.rows
+                next.readout = built.readout
+            } else if scope.contains(.handles) {
+                let built = VelocityScene.buildHandleRows(input, axis: axis)
+                next.handles = built.handles
+                next.readout = built.readout
+            }
+            if scope.contains(.transient) {
+                next.transient = VelocityScene.transient(input)
+            }
+            if scope.contains(.readout), !scope.contains(.handles), !scope.contains(.axis) {
+                next.readout = VelocityScene.readout(input, handles: next.handles)
+            }
         }
-        return true
-    }
 
-    private static func fontMatches(_ lhs: [String: QVariantSettable],
-                                    _ rhs: [String: QVariantSettable]) -> Bool {
-        guard lhs.count == rhs.count else { return false }
-        for (key, value) in lhs {
-            guard let other = rhs[key], String(describing: value) == String(describing: other)
-            else { return false }
+        let previous = sceneCache
+        sceneCache = next
+        if scope.contains(.axis) || scope.contains(.clear) { axis = next.axis }
+        if scope.contains(.context) || scope.contains(.clear) { publishContextValues() }
+        if scope.contains(.axis) || scope.contains(.clear) { publishAxis(next.axis, rows: next.axisRows,
+                                                                        previous: previous.axisRows) }
+        if scope.contains(.handles) || scope.contains(.clear) {
+            publishHandles(next.handles, previous: previous.handles)
         }
-        return true
+        if scope.contains(.grid) || scope.contains(.clear) {
+            publishRects(gridLines, previous: previous.grid, values: next.grid)
+        }
+        if scope.contains(.bands) || scope.contains(.clear) {
+            publishRects(psgBands, previous: previous.bands, values: next.bands)
+        }
+        if scope.contains(.transient) || scope.contains(.clear) {
+            publishTransient(next.transient, previous: previous.transient)
+        }
+        if scope.contains(.readout) || scope.contains(.clear) {
+            publishReadout(next.readout)
+        }
+        if scope.contains(.context) || scope.contains(.clear) { publishContextActivation() }
+        if scope.contains(.prompt) || scope.contains(.clear) { publishPrompt() }
+        if scope.contains(.interaction) || scope.contains(.clear) {
+            setPublished(&interactionActive, gesture != nil || prompt != nil)
+        }
     }
 
-    /// Publishes one build's ruler rows: the ticks, graduations, markers and
-    /// labels `VelocityScene` derived for the presented axis.
-    private func publishAxis(_ rows: VelocityAxisRows) {
-        syncRects(axisTicks, rows.ticks)
-        syncRects(axisGraduations, rows.graduations)
-        syncRects(axisMarkers, rows.markers)
-        syncTexts(axisLabels, rows.labels)
+    private func publishContextValues() {
+        let context = state.presentedContext
+        setPublished(&contextDiagnostic, context.diagnostic)
+        setPublished(&contextSlot, context.slot)
+        setPublished(&contextVoiceName, context.map.voiceName)
     }
 
-    private var typography: GridTypography? {
+    private func publishContextActivation() {
+        let context = state.presentedContext
+        setPublished(&detentsAvailable, context.status == .resolved && context.map.isPSG)
+        setPublished(&contextUnsupported, !context.editable)
+    }
+
+    private func publishAxis(_ next: VelocityAxisModel, rows: VelocityAxisRows,
+                             previous: VelocityAxisRows) {
+        publishRects(axisTicks, previous: previous.ticks, values: rows.ticks)
+        publishRects(axisGraduations, previous: previous.graduations, values: rows.graduations)
+        publishRects(axisMarkers, previous: previous.markers, values: rows.markers)
+        publishTexts(axisLabels, previous: previous.labels, values: rows.labels)
+        setPublished(&axisMode, next.mode.rawValue)
+        setPublished(&axisAccessibleDescription, next.accessibleDescription)
+        setPublished(&axisGraduationsVisible, next.mode == .intrinsic && detentsEnabled)
+    }
+
+    private func publishHandles(_ values: [VelocityHandleValue],
+                                previous: [VelocityHandleValue]) {
+        var old = previous
+        syncModel(handles, previous: &old, values, makeRow: VelocityHandle.init)
+    }
+
+    private func publishRects(_ model: QListModel<SceneRect>, previous: [DrawerRectValue],
+                              values: [DrawerRectValue]) {
+        var old = previous
+        syncModel(model, previous: &old, values) {
+            SceneRect(x: $0.x, y: $0.y, width: $0.width, height: $0.height,
+                      fillColor: $0.fillColor, primitiveName: $0.primitiveName)
+        }
+    }
+
+    private func publishTexts(_ model: QListModel<SceneText>, previous: [DrawerTextValue],
+                              values: [DrawerTextValue]) {
+        var old = previous
+        syncModel(model, previous: &old, values) { value in
+            let row = SceneText(
+                rect: (value.rect.x, value.rect.y, value.rect.width, value.rect.height),
+                text: value.text, color: value.color, font: value.font.map,
+                horizontal: value.horizontalAlignment, vertical: value.verticalAlignment,
+                background: value.background,
+                backgroundRect: (value.backgroundRect.x, value.backgroundRect.y,
+                                 value.backgroundRect.width, value.backgroundRect.height))
+            row.labelClipRect = [
+                "x": value.clipRect.x, "y": value.clipRect.y,
+                "width": value.clipRect.width, "height": value.clipRect.height,
+            ]
+            return row
+        }
+    }
+
+    private func publishTransient(_ value: VelocityTransientValue,
+                                  previous: VelocityTransientValue) {
+        publishRects(transientRects, previous: previous.rects, values: value.rects)
+        let ramp = value.ramp
+        setPublished(&rampX0, ramp.x0)
+        setPublished(&rampY0, ramp.y0)
+        setPublished(&rampLength, ramp.length)
+        setPublished(&rampSlopeY, ramp.slopeY)
+        setPublished(&rampColor, ramp.color)
+        setPublished(&rampVisible, ramp.visible)
+    }
+
+    private func publishReadout(_ value: VelocityReadoutValue) {
+        setPublished(&readoutText, value.text)
+        setPublished(&readoutX, value.x)
+        setPublished(&readoutY, value.y)
+        setPublished(&selectedCount, value.selectedCount)
+        setPublished(&hoveredNoteText, value.hoveredNoteText)
+        setPublished(&readoutVisible, value.visible)
+    }
+
+    private func publishPrompt() {
+        setPublished(&promptDraft, prompt?.draft ?? "")
+        setPublished(&promptError, prompt?.error ?? "")
+        setPublished(&promptInitialValue, prompt?.initialValue ?? VelocityPromptPolicy.minimum)
+        setPublished(&promptOpen, prompt != nil)
+    }
+
+    // MARK: Native measurement and projection adapter
+
+
+    private var textMetrics: DrawerTextMetrics? {
         guard let session else { return nil }
         let key = TypographyKey(baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
-                               rowHeight: session.camera.snapshot.keyHeight)
+                                rowHeight: session.camera.snapshot.keyHeight)
         if let typographyCache, typographyCache.key == key { return typographyCache.value }
-        let value = VelocityScene.typography(metrics: gridMetrics(session),
-                                             rowHeight: key.rowHeight)
+        let typography = GridTypography(
+            fonts: GridTypography.fonts(metrics: gridMetrics(session)), rowHeight: key.rowHeight)
+        let kinds: [GridFontKind] = [.ruler, .beat, .bold, .sig, .chip, .keyLabel]
+        let value = DrawerTextMetrics(
+            fonts: Dictionary(uniqueKeysWithValues: kinds.map { ($0, typography.fontSpec($0)) }),
+            rulerAscent: typography.rulerAscent,
+            rulerHeight: typography.rulerHeight,
+            beatAscent: typography.beatAscent,
+            beatHeight: typography.beatHeight,
+            boldHeight: typography.boldHeight,
+            chipHeight: typography.chipHeight)
         typographyCache = (key, value)
         return value
     }
@@ -222,106 +265,19 @@ extension VelocityPage {
         let key = MetricsKey(revision: session.document.revision, font: baseFontPx,
                              dpr: devicePixelRatio, width: plotWidth, height: plotHeight)
         if let metricsCache, metricsCache.key == key { return metricsCache.value }
-        let value = VelocityScene.gridMetrics(baseFontPx: baseFontPx,
-                                              devicePixelRatio: devicePixelRatio,
-                                              width: plotWidth, height: plotHeight,
-                                              timeAxis: VelocityScene.timeAxis(session))
+        let value = VelocityScene.gridMetrics(
+            baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
+            width: plotWidth, height: plotHeight, timeAxis: session.projectionCache.timeAxis)
         metricsCache = (key, value)
         return value
     }
 
-    /// Publishes one build's time-grid rows.
-    func publishGrid(_ snapshot: VelocitySceneSnapshot) {
-        syncRects(gridLines, snapshot.grid)
+    @QtIgnored var projection: VelocityProjection {
+        VelocityProjection(camera: state.camera, geometry: state.body.geometry,
+                           devicePixelRatio: state.body.devicePixelRatio, axis: axis)
     }
 
-    /// Publishes one build's PSG level-band rows.
-    func publishBands(_ snapshot: VelocitySceneSnapshot) {
-        syncRects(psgBands, snapshot.bands)
-    }
-
-    /// The gesture's transient rendering: the ramp line and the band reticle.
-    @QtIgnored func publishTransient() {
-        var rects: [SceneRect] = []
-        setPublished(&rampVisible, false)
-        setPublished(&rampLength, 0)
-        setPublished(&rampSlopeY, 0)
-        if let gesture {
-            switch gesture.kind {
-            case .ramp:
-                let dx = gesture.previousX - gesture.pressX
-                let dy = gesture.previousY - gesture.pressY
-                setPublished(&rampX0, gesture.pressX)
-                setPublished(&rampY0, gesture.pressY)
-                setPublished(&rampLength, (dx * dx + dy * dy).squareRoot())
-                setPublished(&rampSlopeY, dy)
-                setPublished(&rampColor, palette.primaryText)
-                setPublished(&rampVisible, rampLength > 0)
-            case .band, .pendingBand:
-                let minX = min(gesture.pressX, gesture.bandX)
-                let maxX = max(gesture.pressX, gesture.bandX)
-                let minY = min(gesture.pressY, gesture.bandY)
-                let maxY = max(gesture.pressY, gesture.bandY)
-                rects.append(SceneRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY,
-                                       fillColor: palette.selectionFill,
-                                       primitiveName: "velocityBandFill"))
-                let dash = 4 * geometry.pixel
-                let gap = 2 * geometry.pixel
-                VelocityScene.appendDashed(&rects, horizontal: true, fixed: minY, from: minX,
-                                           to: maxX, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-                VelocityScene.appendDashed(&rects, horizontal: true, fixed: maxY, from: minX,
-                                           to: maxX, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-                VelocityScene.appendDashed(&rects, horizontal: false, fixed: minX, from: minY,
-                                           to: maxY, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-                VelocityScene.appendDashed(&rects, horizontal: false, fixed: maxX, from: minY,
-                                           to: maxY, dash: dash, gap: gap,
-                                           physicalPixel: geometry.pixel,
-                                           color: palette.selectionEdge)
-            case .relative, .paint, .pan:
-                break
-            }
-        }
-        syncRects(transientRects, rects)
-        publishReadout()
-    }
-
-    /// The readout: the hovered or dragged value plus the selection count. An
-    /// unchanged publication writes nothing.
-    func publishReadout() {
-        var text = ""
-        var visible = false
-        var x = 0.0
-        var y = 0.0
-        if let hovered, let handle = handlesByID[hovered] {
-            text = handle.label
-            visible = true
-            x = handle.x
-            y = handle.y
-        } else if let gesture, let first = gesture.notes.first {
-            let handle = handlesByID[first.noteID]
-            let preview = gesture.preview[first.noteID].map(Int.init) ?? Int(first.velocity)
-            text = handle?.label ?? "\(preview)"
-            visible = true
-            x = handle?.x ?? 0
-            y = handle?.y ?? 0
-        }
-        setPublished(&readoutText, text)
-        setPublished(&readoutVisible, visible)
-        setPublished(&readoutX, x)
-        setPublished(&readoutY, y)
-        setPublished(&selectedCount, publishedHandles.filter(\.selected).count)
-        setPublished(&hoveredNoteText, hovered.map(velocityNoteText) ?? "")
-    }
-
-    /// Writes one published primitive only when it really changed, so a
-    /// repeated equal publication emits nothing.
-    @QtIgnored func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
+    private func setPublished<Value: Equatable>(_ storage: inout Value, _ value: Value) {
         if storage != value { storage = value }
     }
 }

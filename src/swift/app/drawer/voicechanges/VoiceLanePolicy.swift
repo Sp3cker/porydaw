@@ -101,21 +101,6 @@ public enum VoiceLanePolicy {
         points.first { VoiceOccurrence($0) == identity }.map(VoiceOccurrence.init)
     }
 
-    /// The nearest marker whose drawn x is inside the font-relative hit radius;
-    /// ties keep the later point, exactly as the legacy scan does.
-    public static func marker(at x: Double, points: [LanePoint], displayX: (Tick) -> Double,
-                              hitRadius: Double) -> LanePoint? {
-        var best: LanePoint?
-        var distance = hitRadius + 1
-        for point in points {
-            let candidate = abs(displayX(point.tick) - x)
-            if candidate <= hitRadius, candidate <= distance {
-                best = point
-                distance = candidate
-            }
-        }
-        return best
-    }
 
     /// `VoiceChangeArea::paintTextFor`: the program number plus the slot's short
     /// name. A blank or unresolvable slot keeps the program number and gains no

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 enum HeaderProbe { case title, voice, mute, solo, add }

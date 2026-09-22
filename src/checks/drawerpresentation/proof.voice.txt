@@ -8,7 +8,7 @@ Swift SHA-256: 63088cc97982d4262cfb8e8d4649f8f2ad60d8b95c4905a171c94e72f1456a80
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
 Swift SHA-256: 460ab3d90da9857cb3da46d6e9ba7b1deb5c81f825bd7143c8d6e8e00da6c058
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
-Swift SHA-256: 97cb8d8afce68b22bcf551446e61d50034d959648ccb427514cc5b3263cab618
+Swift SHA-256: 60df6e0cab39e68765bdb2c4627549f518763bc671c6bf8f12aad62bb2969fb8
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
 Swift SHA-256: e7a97f7fab6e5d3ea60e5333f20719c19d3c995c1111b4cb9fa49f6802b43d63
 

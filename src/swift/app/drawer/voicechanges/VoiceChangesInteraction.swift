@@ -1,511 +1,665 @@
-import Foundation
 import PorydawCore
 
-// The Voice Changes page's interaction half: pointer, picker, menu, hover and
-// drag dispatch, the frozen occurrence each of them captures, and the published
-// interaction gate the container reads. Same type as the page — an extension in
-// its own file, like `AutomationInteraction.swift` — never a wiring object: the
-// page's own refresh methods read this state directly, and its publication seams
-// stay on the page file.
-//
-// Occurrence identity is the invariant this file carries: every gesture, picker
-// and menu freezes the document revision and the lane occurrence when it opens
-// and revalidates both before it commits, so no motion, filter keystroke or
-// camera scroll can retarget another occurrence.
-//
-// Ownership: an extension of the page, never a separate object. The Qt-facing
-// entry points stay declared on `VoiceChangesPage` — `@QtBridgeable` registers
-// class-body members only — and each one is a one-line forward into a `dispatch*`
-// entry here. No bridge import: this file reads and writes the page's own drag,
-// hover, picker and menu state and publishes through the page's own apply paths,
-// so a bridge-dependent call stays a page method.
+// MARK: - State facts
 
-@MainActor
-extension VoiceChangesPage {
-    // MARK: Page seam
+struct VoiceLaneFacts: Sendable {
+    var revision: UInt64 = 0
+    var track: Int?
+    var points: [LanePoint] = []
+    var firstProgram: Int = -1
+    var lengthTicks: Tick = 0
+    var division: Int = 24
+    var extendedClocks = false
+}
 
-    /// The page's local Escape: an open picker, menu, drag, pan or hover claims
-    /// the key; otherwise it stays unhandled for the shared routing.
-    func dispatchEscape() -> Bool {
-        if picker != nil || menu != nil {
-            dismissModal()
-            return true
-        }
-        if drag != nil || panRevision != nil {
-            cancelSectionInteraction()
-            return true
-        }
-        guard hoverIdentity != nil || hoverVisible else { return false }
-        clearHover()
-        return true
-    }
+struct VoiceViewFacts: Sendable {
+    var plotOrigin: Double
+    var plotWidth: Double
+    var plotHeight: Double
+    var devicePixelRatio: Double
+    var baseFontPx: Double
+    var dragDistance: Double
+    var camera: EditorCamera
+    var metrics: GridMetrics
+}
 
-    /// Ends every interaction the page owns without committing anything. Called
-    /// synchronously by the container before a hide, a replace or a global
-    /// cancellation publishes.
-    func cancelAllInteractions() {
-        cancelDrag()
-        cancelPan()
-        cancelPicker()
-        dismissVoiceMenu()
-        clearHover()
-        refreshInteractionPublished()
-    }
+struct VoiceTarget: Equatable, Sendable {
+    var revision: UInt64
+    var track: Int
+    var tick: Tick
+    var occurrence: VoiceOccurrence?
+}
 
-    // MARK: Pointer input
+struct VoiceDragState: Equatable, Sendable {
+    var revision: UInt64
+    var track: Int
+    var occurrence: VoiceOccurrence
+    var identity: String
+    var pressX: Double
+    var previewTick: Tick
+}
 
-    /// One press. `true` means the page consumed it. A press while a picker or
-    /// menu is open dismisses it and starts nothing: the dismissal never
-    /// retargets the captured occurrence.
-    @discardableResult
-    func dispatchPointerPress(x: Double, y: Double, surface: Int, button: Int,
-                              modifiers: Int) -> Bool {
-        guard session != nil, let input = VoiceInputSurface(rawValue: surface) else { return false }
-        if picker != nil || menu != nil {
-            dismissModal()
-            previousX = x
-            return true
-        }
-        if input == .gutter {
-            clearHover()
-            return false
-        }
-        previousX = x
-        switch button {
-        case VoiceQtButton.right:
-            // Capture before any signal-producing step: the target is fixed from
-            // live state, so nothing after the capture can drift it.
-            guard let target = captureTarget(at: x) else { return true }
-            openMenu(target, anchorX: x, anchorY: max(0, y))
-            return true
-        case VoiceQtButton.middle:
-            clearHover()
-            panRevision = session?.document.revision
-            refreshInteractionPublished()
-            return true
-        case VoiceQtButton.left:
-            clearHover()
-            let hit = markerHit(at: x)
-            guard let hit else {
-                selectedIdentity = ""
-                refreshInteractionPublished()
-                projectMarkers(markerEntries())
-                return true
-            }
-            let occurrence = VoiceOccurrence(hit)
-            selectedIdentity = occurrence.text
-            let target = VoiceChangesTransactions.capture(
-                revision: session?.document.revision ?? 0,
-                track: session?.selectedTrack ?? -1,
-                tick: occurrence.tick,
-                occurrence: occurrence)
-            drag = VoiceChangesTransactions.drag(target: target, pressX: x)
-            refreshInteractionPublished()
-            projectMarkers(markerEntries())
-            return true
+struct VoicePickerState: Equatable, Sendable {
+    var target: VoiceTarget
+    var filter = ""
+    var program = -1
+
+    var title: String { target.occurrence == nil ? "Insert voice change" : "Change voice" }
+}
+
+struct VoiceMenuState: Equatable, Sendable {
+    var target: VoiceTarget
+    var anchorX: Double
+    var anchorY: Double
+}
+
+enum VoicePointerMode: Sendable {
+    case idle
+    case pendingDrag(VoiceDragState)
+    case drag(VoiceDragState)
+    case pan(revision: UInt64, previousX: Double)
+
+    var drag: VoiceDragState? {
+        switch self {
+        case let .pendingDrag(value), let .drag(value):
+            return value
         default:
-            return false
+            return nil
         }
     }
 
-    /// One move: the frozen drag drafts its preview tick, a pan scrolls the
-    /// shared camera, and otherwise the pointer is hover only. `modifiers` is the
-    /// drag's own: the alt modifier switches the preview to the clock lattice.
-    @discardableResult
-    func dispatchPointerMove(x: Double, y: Double, buttons: Int, modifiers: Int = 0) -> Bool {
-        guard session != nil else { return false }
-        _ = y
-        _ = buttons
-        if var live = drag {
-            if !live.active {
-                guard abs(x - live.pressX) >= dragDistance else { return true }
-                live.active = true
-                clearHover()
+    var activeDrag: VoiceDragState? {
+        if case let .drag(value) = self { return value }
+        return nil
+    }
+
+    var isIdle: Bool {
+        if case .idle = self { return true }
+        return false
+    }
+}
+
+enum VoiceModalMode: Sendable {
+    case none
+    case picker(VoicePickerState)
+    case menu(VoiceMenuState)
+
+    var picker: VoicePickerState? {
+        if case let .picker(value) = self { return value }
+        return nil
+    }
+
+    var menu: VoiceMenuState? {
+        if case let .menu(value) = self { return value }
+        return nil
+    }
+
+    var isOpen: Bool {
+        if case .none = self { return false }
+        return true
+    }
+}
+
+struct VoicePresentationKey: Equatable, Sendable {
+    var tick: Tick
+    var playing: Bool
+}
+
+/// The complete synchronous interaction state. Document, bank and view owners
+/// remain outside; this value only stores their latest facts.
+struct VoiceChangesState: Sendable {
+    var attached = false
+    var lane = VoiceLaneFacts()
+    var bank: [BankSlotView] = []
+    var view: VoiceViewFacts?
+    var editCursor: Tick = 0
+    var presentedTick: Tick = 0
+    var playing = false
+    var contextSlot = -1
+    var lastPresentation: VoicePresentationKey?
+    var presentationCount: UInt64 = 0
+    var contextChangeCount: UInt64 = 0
+
+    var selectedOccurrence: VoiceOccurrence?
+    var hoveredOccurrence: VoiceOccurrence?
+    var hoverTick: Tick = 0
+    var hoverLabel = ""
+    var pointerMode: VoicePointerMode = .idle
+    var modalMode: VoiceModalMode = .none
+    var auditionedProgram: Int?
+
+    var interactionActive: Bool { !pointerMode.isIdle || modalMode.isOpen }
+    var effectiveContextTick: Tick { playing ? presentedTick : editCursor }
+}
+
+// MARK: - Typed input and output
+
+struct VoicePointerPress: Sendable {
+    var x: Double
+    var y: Double
+    var surface: VoiceInputSurface
+    var button: DrawerPointerButton
+    var target: VoiceTarget?
+}
+
+struct VoicePointerMove: Sendable {
+    var x: Double
+    var hit: VoiceOccurrence?
+    var snappedTick: Tick
+}
+
+struct VoicePointerRelease: Sendable {
+    var button: DrawerPointerButton
+    var hit: VoiceOccurrence?
+}
+
+struct VoicePointerDoubleClick: Sendable {
+    var target: VoiceTarget?
+    var bank: [BankSlotView]
+}
+
+enum VoiceChangesEvent: Sendable {
+    case attached(lane: VoiceLaneFacts, bank: [BankSlotView], view: VoiceViewFacts,
+                  editCursor: Tick)
+    case detached
+    case documentChanged(lane: VoiceLaneFacts, bank: [BankSlotView], view: VoiceViewFacts,
+                         editCursor: Tick)
+    case viewChanged(VoiceViewFacts)
+    case editCursorChanged(Tick)
+    case playheadChanged(tick: Tick, playing: Bool)
+    case escape
+    case cancelAll
+    case pointerPressed(VoicePointerPress)
+    case pointerMoved(VoicePointerMove)
+    case pointerReleased(VoicePointerRelease)
+    case pointerLeft
+    case pointerDoubleClicked(VoicePointerDoubleClick)
+    case pickerFilterChanged(String)
+    case pickerRowSelected(Int)
+    case pickerRowHeld(Int)
+    case pickerAuditionReleased
+    case pickerSelectionMoved(Int)
+    case pickerAccepted
+    case pickerCancelled
+    case menuActionActivated(Int)
+    case menuDismissed
+    case modalDismissed
+    case auditionOwnerWillChange
+}
+
+enum VoiceChangesEffect: Sendable {
+    case mutateCamera(deltaX: Double)
+    case commit(VoiceLaneMutation)
+    case audition(program: Int, key: Int, velocity: Int)
+}
+
+struct VoiceChangesOutcome: Sendable {
+    var consumed = false
+    var accepted = false
+    var committed = false
+
+    static let ignored = Self()
+    static let handled = Self(consumed: true)
+}
+
+struct VoiceChangesTransition: Sendable {
+    var state: VoiceChangesState
+    var effects: [VoiceChangesEffect]
+    var publication: VoiceChangesPublicationScope
+    var outcome: VoiceChangesOutcome
+}
+
+// MARK: - Pure reducer
+
+enum VoiceChangesInteraction {
+    static func reduce(_ state: VoiceChangesState,
+                       event: consuming VoiceChangesEvent) -> VoiceChangesTransition {
+        var next = state
+        var effects: [VoiceChangesEffect] = []
+        var publication: VoiceChangesPublicationScope = []
+        var outcome = VoiceChangesOutcome.ignored
+
+        switch event {
+        case let .attached(lane, bank, view, editCursor):
+            stopAudition(&next, effects: &effects)
+            let presentations = next.presentationCount
+            let changes = next.contextChangeCount
+            next = VoiceChangesState(
+                attached: true, lane: lane, bank: bank, view: view,
+                editCursor: editCursor, presentedTick: editCursor,
+                contextSlot: contextSlot(lane: lane, tick: editCursor),
+                presentationCount: presentations, contextChangeCount: changes)
+            publication = [.content, .typography, .modal, .interaction]
+
+        case .detached:
+            stopAudition(&next, effects: &effects)
+            let presentations = next.presentationCount
+            let changes = next.contextChangeCount
+            next = VoiceChangesState(
+                presentationCount: presentations, contextChangeCount: changes)
+            publication = .clear
+
+        case let .documentChanged(lane, bank, view, editCursor):
+            guard next.attached else { break }
+            let revisionChanged = next.lane.revision != lane.revision
+            let bankChanged = next.bank != bank
+            let laneChanged = next.lane.track != lane.track
+                || next.lane.points != lane.points
+                || next.lane.firstProgram != lane.firstProgram
+                || next.lane.lengthTicks != lane.lengthTicks
+                || next.lane.division != lane.division
+                || next.lane.extendedClocks != lane.extendedClocks
+            let bankOnlyRevision = revisionChanged && bankChanged && !laneChanged
+            let captureInvalidated = laneChanged || (revisionChanged && !bankOnlyRevision)
+            if bankChanged || (captureInvalidated && next.modalMode.isOpen) {
+                stopAudition(&next, effects: &effects)
             }
-            let tick = snapTick(at: x, fine: modifiers & VoiceModifier.alt != 0)
-            let changed = tick != live.previewTick
-            live.previewTick = tick
-            drag = live
-            cursorKind = 3
-            if changed {
-                projectMarkers(markerEntries(),
-                               reuseGeometry: true)
-                publishTransient()
+            next.lane = lane
+            next.view = view
+            next.bank = bank
+            next.editCursor = editCursor
+            if captureInvalidated {
+                next.pointerMode = .idle
+                next.modalMode = .none
+                next.hoveredOccurrence = nil
+                next.hoverTick = 0
+                next.hoverLabel = ""
+            } else {
+                switch next.modalMode {
+                case var .picker(picker):
+                    if bankOnlyRevision { picker.target.revision = lane.revision }
+                    let programs = visiblePrograms(bank: bank, filter: picker.filter)
+                    if !programs.contains(picker.program) {
+                        picker.program = programs.first ?? -1
+                    }
+                    next.modalMode = .picker(picker)
+                case var .menu(menu):
+                    if bankOnlyRevision { menu.target.revision = lane.revision }
+                    next.modalMode = .menu(menu)
+                case .none:
+                    break
+                }
             }
-            return true
-        }
-        if panRevision != nil {
-            let delta = x - previousX
-            previousX = x
-            if delta != 0, let session {
-                session.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
+            if let selected = next.selectedOccurrence {
+                next.selectedOccurrence = VoiceLanePolicy.occurrence(selected, in: lane.points)
             }
-            return true
+            next.contextSlot = contextSlot(lane: lane, tick: next.effectiveContextTick)
+            publication = [.content, .typography, .modal, .interaction, .hover, .transient]
+
+        case let .viewChanged(view):
+            guard next.attached else { break }
+            let projectionOnly = next.view.map {
+                $0.plotOrigin == view.plotOrigin && $0.plotWidth == view.plotWidth
+                    && $0.plotHeight == view.plotHeight
+                    && $0.devicePixelRatio == view.devicePixelRatio
+                    && $0.baseFontPx == view.baseFontPx
+                    && $0.dragDistance == view.dragDistance
+            } ?? false
+            let fontChanged = next.view?.baseFontPx != view.baseFontPx
+            next.view = view
+            publication = projectionOnly
+                ? .projection
+                : fontChanged ? [.content, .typography] : .content
+        case let .editCursorChanged(tick):
+            guard next.attached else { break }
+            next.editCursor = tick
+            guard !next.playing else { break }
+            let slot = contextSlot(lane: next.lane, tick: tick)
+            if slot != next.contextSlot {
+                next.contextChangeCount &+= 1
+                next.contextSlot = slot
+            }
+            publication = .readout
+
+        case let .playheadChanged(tick, playing):
+            guard next.attached else { break }
+            let key = VoicePresentationKey(tick: tick, playing: playing)
+            guard next.lastPresentation != key else { break }
+            next.lastPresentation = key
+            next.presentationCount &+= 1
+            let playingChanged = next.playing != playing
+            next.playing = playing
+            next.presentedTick = tick
+            let slot = contextSlot(lane: next.lane, tick: next.effectiveContextTick)
+            let contextChanged = next.contextSlot != slot
+            next.contextSlot = slot
+            if contextChanged || playingChanged {
+                next.contextChangeCount &+= 1
+                publication = .content
+            } else {
+                publication = .readout
+            }
+
+        case .escape:
+            if next.modalMode.isOpen {
+                stopAudition(&next, effects: &effects)
+                next.modalMode = .none
+                publication = [.modal, .interaction]
+                outcome = .handled
+            } else if !next.pointerMode.isIdle {
+                next.pointerMode = .idle
+                publication = [.markers, .transient, .interaction]
+                outcome = .handled
+            } else if next.hoveredOccurrence != nil || !next.hoverLabel.isEmpty {
+                clearHover(&next)
+                publication = [.markers, .hover]
+                outcome = .handled
+            }
+
+        case .cancelAll:
+            stopAudition(&next, effects: &effects)
+            next.pointerMode = .idle
+            next.modalMode = .none
+            clearHover(&next)
+            publication = [.markers, .hover, .transient, .modal, .interaction]
+
+        case let .pointerPressed(input):
+            guard next.attached else { break }
+            if next.modalMode.isOpen {
+                stopAudition(&next, effects: &effects)
+                next.modalMode = .none
+                publication = [.modal, .interaction]
+                outcome = .handled
+                break
+            }
+            if input.surface == .gutter {
+                let markerChanged = clearHover(&next)
+                publication = markerChanged ? [.markers, .hover] : .hover
+                break
+            }
+            clearHover(&next)
+            switch input.button {
+            case .secondary:
+                if let target = input.target {
+                    next.modalMode = .menu(VoiceMenuState(
+                        target: target, anchorX: input.x, anchorY: max(0, input.y)))
+                }
+                publication = [.markers, .hover, .modal, .interaction]
+                outcome = .handled
+            case .middle:
+                next.pointerMode = .pan(revision: next.lane.revision, previousX: input.x)
+                publication = [.markers, .hover, .interaction]
+                outcome = .handled
+            case .primary:
+                if let target = input.target, let occurrence = target.occurrence {
+                    next.selectedOccurrence = occurrence
+                    let drag = VoiceDragState(
+                        revision: target.revision, track: target.track,
+                        occurrence: occurrence, identity: occurrence.text,
+                        pressX: input.x, previewTick: occurrence.tick)
+                    next.pointerMode = .pendingDrag(drag)
+                } else {
+                    next.selectedOccurrence = nil
+                    next.pointerMode = .idle
+                }
+                publication = [.markers, .hover, .interaction]
+                outcome = .handled
+            default:
+                break
+            }
+
+        case let .pointerMoved(input):
+            guard next.attached else { break }
+            switch next.pointerMode {
+            case var .pendingDrag(drag):
+                outcome = .handled
+                guard let distance = next.view?.dragDistance,
+                      abs(input.x - drag.pressX) >= distance else { break }
+                drag.previewTick = input.snappedTick
+                next.pointerMode = .drag(drag)
+                clearHover(&next)
+                publication = [.markers, .hover, .transient, .interaction]
+            case var .drag(drag):
+                outcome = .handled
+                guard drag.previewTick != input.snappedTick else { break }
+                drag.previewTick = input.snappedTick
+                next.pointerMode = .drag(drag)
+                publication = [.markers, .transient]
+            case let .pan(revision, previousX):
+                let delta = input.x - previousX
+                next.pointerMode = .pan(revision: revision, previousX: input.x)
+                if delta != 0 { effects.append(.mutateCamera(deltaX: delta)) }
+                outcome = .handled
+            case .idle:
+                let markerChanged = applyHover(
+                    &next, hit: input.hit, snappedTick: input.snappedTick)
+                publication = markerChanged ? [.markers, .hover] : .hover
+                outcome = .handled
+            }
+
+        case let .pointerReleased(input):
+            switch (input.button, next.pointerMode) {
+            case (.middle, .pan):
+                next.pointerMode = .idle
+                next.hoveredOccurrence = input.hit
+                next.hoverTick = input.hit?.tick ?? 0
+                publication = [.markers, .hover, .interaction]
+                outcome = .handled
+            case (.primary, .pendingDrag):
+                next.pointerMode = .idle
+                publication = [.markers, .transient, .interaction]
+                outcome = .handled
+            case let (.primary, .drag(drag)):
+                next.pointerMode = .idle
+                let mutation = VoiceChangesTransactions.move(
+                    drag, revision: next.lane.revision, track: next.lane.track ?? -1,
+                    points: next.lane.points)
+                if let mutation { effects.append(.commit(mutation)) }
+                publication = [.markers, .transient, .interaction]
+                outcome = VoiceChangesOutcome(
+                    consumed: true, accepted: mutation != nil, committed: mutation != nil)
+            default:
+                break
+            }
+
+        case .pointerLeft:
+            guard next.pointerMode.isIdle else { break }
+            let markerChanged = clearHover(&next)
+            publication = markerChanged ? [.markers, .hover] : .hover
+
+        case let .pointerDoubleClicked(input):
+            guard next.attached else { break }
+            let bankChanged = next.bank != input.bank
+            stopAudition(&next, effects: &effects)
+            next.bank = input.bank
+            if let target = input.target {
+                next.modalMode = .picker(openPicker(target, state: next))
+            }
+            publication = bankChanged
+                ? [.content, .typography, .modal, .interaction]
+                : [.modal, .interaction]
+            outcome = .handled
+
+        case let .pickerFilterChanged(text):
+            guard case var .picker(picker) = next.modalMode else { break }
+            let filter = String(text.prefix(64))
+            guard filter != picker.filter else { break }
+            stopAudition(&next, effects: &effects)
+            picker.filter = filter
+            picker.program = visiblePrograms(bank: next.bank, filter: filter).first ?? -1
+            next.modalMode = .picker(picker)
+            publication = .modal
+
+        case let .pickerRowSelected(index):
+            guard case var .picker(picker) = next.modalMode else { break }
+            let programs = visiblePrograms(bank: next.bank, filter: picker.filter)
+            let program = programs.indices.contains(index) ? programs[index] : -1
+            guard picker.program != program else { break }
+            stopAudition(&next, effects: &effects)
+            picker.program = program
+            next.modalMode = .picker(picker)
+            publication = .modal
+
+        case let .pickerRowHeld(index):
+            guard case var .picker(picker) = next.modalMode,
+                  targetIsCurrent(picker.target, lane: next.lane) else {
+                stopAudition(&next, effects: &effects)
+                break
+            }
+            let programs = visiblePrograms(bank: next.bank, filter: picker.filter)
+            guard programs.indices.contains(index) else {
+                stopAudition(&next, effects: &effects)
+                break
+            }
+            stopAudition(&next, effects: &effects)
+            let program = programs[index]
+            picker.program = program
+            next.modalMode = .picker(picker)
+            if (0..<128).contains(program) {
+                next.auditionedProgram = program
+                effects.append(.audition(program: program, key: 60, velocity: 112))
+            }
+            publication = .modal
+
+        case .pickerAuditionReleased:
+            stopAudition(&next, effects: &effects)
+
+        case let .pickerSelectionMoved(delta):
+            guard case var .picker(picker) = next.modalMode else { break }
+            let programs = visiblePrograms(bank: next.bank, filter: picker.filter)
+            guard !programs.isEmpty else { break }
+            let index: Int
+            if let current = programs.firstIndex(of: picker.program) {
+                index = min(max(current + delta, 0), programs.count - 1)
+            } else {
+                index = 0
+            }
+            let program = programs[index]
+            guard program != picker.program else { break }
+            stopAudition(&next, effects: &effects)
+            picker.program = program
+            next.modalMode = .picker(picker)
+            publication = .modal
+
+        case .pickerAccepted:
+            guard case let .picker(picker) = next.modalMode, picker.program >= 0 else { break }
+            stopAudition(&next, effects: &effects)
+            next.modalMode = .none
+            let mutation = VoiceChangesTransactions.picker(
+                picker.target, program: picker.program, slotCount: next.bank.count,
+                revision: next.lane.revision, track: next.lane.track ?? -1,
+                points: next.lane.points)
+            if let mutation { effects.append(.commit(mutation)) }
+            publication = [.modal, .interaction]
+            outcome = VoiceChangesOutcome(
+                consumed: true, accepted: true, committed: mutation != nil)
+
+        case .pickerCancelled:
+            guard case .picker = next.modalMode else { break }
+            stopAudition(&next, effects: &effects)
+            next.modalMode = .none
+            publication = [.modal, .interaction]
+
+        case let .menuActionActivated(action):
+            guard case let .menu(menu) = next.modalMode else { break }
+            next.modalMode = .none
+            publication = [.modal, .interaction]
+            guard targetIsCurrent(menu.target, lane: next.lane) else { break }
+            switch action {
+            case VoiceChangesPagePolicy.changeVoiceAction,
+                 VoiceChangesPagePolicy.insertVoiceChangeAction:
+                next.modalMode = .picker(openPicker(menu.target, state: next))
+                outcome = VoiceChangesOutcome(consumed: true, accepted: true)
+            case VoiceChangesPagePolicy.deleteMarkerAction:
+                let mutation = VoiceChangesTransactions.delete(
+                    menu.target, revision: next.lane.revision,
+                    track: next.lane.track ?? -1, points: next.lane.points)
+                if let mutation { effects.append(.commit(mutation)) }
+                outcome = VoiceChangesOutcome(
+                    consumed: mutation != nil, accepted: mutation != nil,
+                    committed: mutation != nil)
+            default:
+                break
+            }
+
+        case .menuDismissed:
+            guard case .menu = next.modalMode else { break }
+            next.modalMode = .none
+            publication = [.modal, .interaction]
+
+        case .modalDismissed:
+            guard next.modalMode.isOpen else { break }
+            stopAudition(&next, effects: &effects)
+            next.modalMode = .none
+            publication = [.modal, .interaction]
+
+        case .auditionOwnerWillChange:
+            stopAudition(&next, effects: &effects)
         }
-        updateHover(at: x)
-        return true
+
+        return VoiceChangesTransition(
+            state: next, effects: effects, publication: publication, outcome: outcome)
     }
 
-    /// One release: the drag's only document mutation, and a pan's end.
-    @discardableResult
-    func dispatchPointerRelease(x: Double, y: Double, button: Int) -> Bool {
-        guard let session else { return false }
-        _ = y
-        if button == VoiceQtButton.middle {
-            cancelPan()
-            publishHoverHintProfile(marker: markerHit(at: x) != nil)
-            return true
+    private static func contextSlot(lane: VoiceLaneFacts, tick: Tick) -> Int {
+        VoiceLanePolicy.slot(firstProgram: lane.firstProgram, tick: tick, points: lane.points)
+    }
+
+    private static func targetIsCurrent(_ target: VoiceTarget,
+                                        lane: VoiceLaneFacts) -> Bool {
+        target.revision == lane.revision && target.track == lane.track
+    }
+
+    private static func visiblePrograms(bank: borrowing [BankSlotView],
+                                        filter: String) -> [Int] {
+        var programs: [Int] = []
+        programs.reserveCapacity(bank.count)
+        for program in bank.indices {
+            let label = VoiceLanePolicy.label(slot: program, view: bank[program])
+            guard filter.isEmpty
+                    || label.range(of: filter, options: .caseInsensitive) != nil
+            else { continue }
+            programs.append(program)
         }
-        guard button == VoiceQtButton.left, let live = drag else { return false }
-        let mutation = VoiceChangesTransactions.move(
-            live,
-            revision: session.document.revision,
-            track: currentTrack(session) ?? -1,
-            points: lanePoints())
-        cancelDrag()
-        if let mutation { commit(mutation) }
-        publishHoverHintProfile(marker: markerHit(at: x) != nil)
-        return true
+        return programs
     }
 
-    /// The pointer left: hover clears, a live gesture keeps its frozen state.
-    func dispatchPointerLeave() {
-        guard drag == nil, panRevision == nil else { return }
-        clearHover()
-    }
-
-    /// One double-click: the legacy direct picker entry. It captures the same
-    /// guarded target the context menu's own rows hand over.
-    @discardableResult
-    func dispatchPointerDoubleClick(x: Double, y: Double) -> Bool {
-        guard session != nil else { return false }
-        _ = y
-        guard let target = captureTarget(at: x) else { return true }
-        openPicker(target)
-        return true
-    }
-
-    // MARK: Picker
-
-    /// Draft filtering: presentation only, over the current bank's labels.
-    func dispatchSetPickerFilter(text: String) {
-        guard var live = picker else { return }
-        let filter = String(text.prefix(64))
-        guard filter != live.filter else { return }
-        live.filter = filter
-        pickerCache.resolve(filter: filter)
-        live.program = pickerCache.programs.first ?? -1
-        picker = live
-        publishPicker()
-    }
-
-    /// Row selection from the list's own press.
-    func dispatchSelectPickerRow(index: Int) {
-        guard let live = picker else { return }
-        pickerCache.resolve(filter: live.filter)
-        let programs = pickerCache.programs
-        selectPickerProgram(programs.indices.contains(index) ? programs[index] : -1)
-    }
-
-
-    func dispatchPressAndHoldPickerRow(index: Int) {
-        guard let live = picker, let session,
-              VoiceChangesTransactions.isCurrent(
-                  live.target, revision: session.document.revision,
-                  track: session.selectedTrack ?? -1),
-              pickerRowSnapshots.indices.contains(index)
-        else {
-            releasePickerAudition()
-            return
-        }
-        let program = pickerRowSnapshots[index].program
-        selectPickerProgram(program)
-        guard let audition = onAuditionVoice, let voice = UInt8(exactly: program),
-              voice < 128 else { return }
-        releasePickerAudition()
-        soundingProgram = voice
-        audition(voice, 60, 112)
-    }
-
-    func dispatchReleasePickerAudition() {
-        guard let program = soundingProgram else { return }
-        soundingProgram = nil
-        onAuditionVoice?(program, 60, 0)
-    }
-    /// Arrow navigation over the filtered rows.
-    func dispatchMovePickerSelection(delta: Int) {
-        guard let live = picker else { return }
-        pickerCache.resolve(filter: live.filter)
-        let programs = pickerCache.programs
-        guard !programs.isEmpty else { return }
-        guard let current = pickerCache.indices[live.program] else {
-            selectPickerProgram(programs[0])
-            return
-        }
-        selectPickerProgram(programs[min(max(current + delta, 0), programs.count - 1)])
-    }
-
-    /// Acceptance: one existing lane operation for the captured target — a value
-    /// replacement when the document still holds an occurrence at the captured
-    /// tick, an insertion otherwise — or nothing at all. `true` means a write
-    /// happened.
-    ///
-    /// The only refusal besides a stale capture is production's own:
-    /// `VoicePicker::accept` returns early when no row matches, so a program slot
-    /// the bank holds no parsed voice for is still selectable — the band then
-    /// draws that program's number with its blank truth, exactly as the legacy
-    /// projection does.
-    ///
-    /// A captured marker is replaced only while the document still holds exactly
-    /// that occurrence: the occurrence's own value is the one the picked slot
-    /// replaces, and a lane the document rebuilt under the capture writes
-    /// nothing. The captured *tick* is the insertion target only for a capture
-    /// that had no occurrence at all (the empty-lane arm), which is exactly the
-    /// legacy `addLanePoint(track, lane, tick, voice)` case.
-    @discardableResult
-    func dispatchAcceptPicker() -> Bool {
-        guard let live = picker, live.program >= 0 else { return false }
-        let selected = live.program
-        let target = live.target
-        let slotCount = slotViews().count
-        cancelPicker()
-        guard let session, let track = currentTrack(session),
-              let mutation = VoiceChangesTransactions.picker(
-                  target,
-                  program: selected,
-                  slotCount: slotCount,
-                  revision: session.document.revision,
-                  track: track,
-                  points: session.projectionCache.lanePoints(track: track, lane: .voice))
-        else { return false }
-        commit(mutation)
-        return true
-    }
-
-    /// Dismissal: capture, filter, row draft and current program drop without a
-    /// write.
-    func dispatchCancelPicker() {
-        releasePickerAudition()
-        guard picker != nil else { return }
-        picker = nil
-        pickerOpen = false
-        pickerTitle = ""
-        pickerFilter = ""
-        pickerIndex = -1
-        pickerHasMatch = false
-        syncPickerRows([])
-        refreshInteractionPublished()
-    }
-
-    // MARK: Context menu
-
-    /// One typed row activation. Every path revalidates the captured
-    /// document/track/point identity first, and a stale pick writes nothing.
-    @discardableResult
-    func dispatchActivateMenuAction(actionId: Int) -> Bool {
-        guard let live = menu else { return false }
-        dismissVoiceMenu()
-        guard let session, let track = currentTrack(session),
-              VoiceChangesTransactions.isCurrent(
-                  live.target, revision: session.document.revision, track: track)
-        else { return false }
-        switch actionId {
-        case VoiceChangesPagePolicy.changeVoiceAction,
-             VoiceChangesPagePolicy.insertVoiceChangeAction:
-            openPicker(live.target)
-            return true
-        case VoiceChangesPagePolicy.deleteMarkerAction:
-            guard let mutation = VoiceChangesTransactions.delete(
-                live.target,
-                revision: session.document.revision,
-                track: track,
-                points: session.projectionCache.lanePoints(track: track, lane: .voice))
-            else { return false }
-            commit(mutation)
-            return true
-        default:
-            return false
-        }
-    }
-
-    /// One rendered row activation by its published index: the page maps the row
-    /// it published to its typed action, so no QML surface has to read a bridged
-    /// row object back across the boundary.
-    @discardableResult
-    func dispatchActivateMenuRow(index: Int) -> Bool {
-        let rows = menuRows.asArray
-        guard rows.indices.contains(index) else { return false }
-        return activateMenuAction(actionId: rows[index].actionId)
-    }
-
-    /// Outside dismissal and the menu's own Escape: no action, no write.
-    func dispatchDismissVoiceMenu() {
-        guard menu != nil else { return }
-        menu = nil
-        menuOpen = false
-        VoiceChangesProjection.syncMenuRows(menuRows, [])
-        refreshInteractionPublished()
-    }
-
-    /// Dismisses whichever modal surface is open. The press that dismisses
-    /// activates neither a row nor a slot.
-    func dispatchDismissModal() {
-        cancelPicker()
-        dismissVoiceMenu()
-    }
-
-    // MARK: Internals: capture
-
-    func currentTrack(_ session: DocumentSession) -> Int? {
-        guard let track = session.selectedTrack, track >= 0,
-              track < session.timeline.tracks.count else { return nil }
-        return track
-    }
-
-    /// `VoiceChangeArea::captureTargetAt`: the marker under the press, or the
-    /// snapped tick of the press itself.
-    private func captureTarget(at x: Double) -> VoiceTarget? {
-        guard let session, let track = currentTrack(session) else { return nil }
-        let hit = markerHit(at: x)
-        return VoiceChangesTransactions.capture(
-            revision: session.document.revision,
-            track: track,
-            tick: hit?.tick ?? snapTick(at: x),
-            occurrence: hit.map(VoiceOccurrence.init))
-    }
-
-    /// The page's only document-commit path. Transaction policy validates and
-    /// drafts semantic edits; the document owner applies each through its
-    /// existing lane operation and therefore remains the history owner.
-    private func commit(_ mutation: VoiceLaneMutation) {
-        guard let session else { return }
-        switch mutation {
-        case let .move(track, occurrence, tick):
-            session.document.moveLanePoints(
-                track: track, lane: .voice,
-                moves: [LanePointMove(point: occurrence.point, tick: tick,
-                                      value: occurrence.value)])
-        case let .replace(track, occurrence, value):
-            session.document.moveLanePoints(
-                track: track, lane: .voice,
-                moves: [LanePointMove(point: occurrence.point, tick: occurrence.tick,
-                                      value: value)])
-        case let .insert(track, tick, value):
-            session.document.writeLane(
-                track: track, lane: .voice, from: tick, through: tick,
-                points: [LaneWrite(tick: tick, value: value)])
-        case let .delete(track, occurrence):
-            session.document.deleteLanePoints(
-                track: track, lane: .voice, points: [occurrence.point])
-        }
-    }
-
-    private func openPicker(_ target: VoiceTarget) {
-        releasePickerAudition()
-        let filter = ""
+    private static func openPicker(_ target: VoiceTarget,
+                                   state: VoiceChangesState) -> VoicePickerState {
         let initial = target.occurrence?.value
-            ?? VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: target.tick,
-                                    points: lanePoints())
-        pickerCache.resolve(filter: filter)
-        let visible = pickerCache.programs
-        picker = VoiceChangesTransactions.openPicker(
-            target: target,
-            filter: filter,
-            program: visible.contains(initial) ? initial : (visible.first ?? -1))
-        pickerOpen = true
-        pickerTitle = picker?.title ?? ""
-        pickerFilter = filter
-        refreshInteractionPublished()
-        publishPicker()
+            ?? VoiceLanePolicy.slot(
+                firstProgram: state.lane.firstProgram, tick: target.tick,
+                points: state.lane.points)
+        let programs = visiblePrograms(bank: state.bank, filter: "")
+        return VoicePickerState(
+            target: target, program: programs.contains(initial) ? initial : (programs.first ?? -1))
     }
 
-    private func openMenu(_ target: VoiceTarget, anchorX: Double, anchorY: Double) {
-        menu = VoiceChangesTransactions.openMenu(target: target)
-        menuOpen = true
-        menuX = anchorX
-        menuY = anchorY
-        VoiceChangesProjection.syncMenuRows(
-            menuRows, VoiceChangesProjection.menuRows(for: target))
-        refreshInteractionPublished()
-    }
-
-    // MARK: Internals: hover
-
-    /// `VoiceChangeArea::updateHover`: a hovered marker publishes its own tick
-    /// and no label; a background hover publishes the snapped tick's slot label.
-    private func updateHover(at x: Double) {
-        guard plotWidth > 0, plotHeight > 0, session != nil else {
-            clearHover()
-            return
-        }
-        let hit = markerHit(at: x)
-        publishHoverHintProfile(marker: hit != nil)
-        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
+    @discardableResult
+    private static func applyHover(_ state: inout VoiceChangesState,
+                                   hit: VoiceOccurrence?, snappedTick: Tick) -> Bool {
+        let markerChanged = state.hoveredOccurrence != hit
         if let hit {
-            let identity = VoiceOccurrence(hit).text
-            let lineX = xForTick(hit.tick)
-            let rect = VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
-                                              plotHeight)
-            guard hoverIdentity != identity || hoverVisible || !hoverText.isEmpty
-                || !VoiceMarkerHandle.rectMatches(hoverLabelRect, rect)
-            else { return }
-            hoverIdentity = identity
-            hoverTick = Double(hit.tick)
-            hoverText = ""
-            hoverVisible = false
-            hoverLabelRect = rect
-            return
+            state.hoveredOccurrence = hit
+            state.hoverTick = hit.tick
+            state.hoverLabel = ""
+            return markerChanged
         }
-        let tick = snapTick(at: x)
-        let slot = VoiceLanePolicy.slot(firstProgram: firstProgram(), tick: tick,
-                                        points: lanePoints())
-        let label = VoiceLanePolicy.hoverLabel(contextLabel(at: slot))
-        guard !label.isEmpty else {
-            clearHover()
-            return
-        }
-        let lineX = xForTick(tick)
-        hoverIdentity = nil
-        hoverTick = Double(tick)
-        setPublished(&hoverText, label)
-        setPublishedRect(&hoverLabelRect,
-                         VoiceMarkerHandle.rect(lineX + pad, 0, max(0, plotWidth - lineX),
-                                                plotHeight))
-        setPublished(&hoverVisible, true)
+        let slot = VoiceLanePolicy.slot(
+            firstProgram: state.lane.firstProgram, tick: snappedTick,
+            points: state.lane.points)
+        let label = state.bank.indices.contains(slot)
+            ? VoiceLanePolicy.label(slot: slot, view: state.bank[slot]) : ""
+        let hover = VoiceLanePolicy.hoverLabel(label)
+        state.hoveredOccurrence = nil
+        state.hoverTick = hover.isEmpty ? 0 : snappedTick
+        state.hoverLabel = hover
+        return markerChanged
     }
 
-    private func clearHover() {
-        publishHoverHintProfile(marker: false)
-        guard hoverIdentity != nil || hoverVisible || !hoverText.isEmpty || hoverTick != 0
-        else { return }
-        hoverIdentity = nil
-        hoverText = ""
-        hoverVisible = false
-        hoverTick = 0
-        hoverLabelRect = VoiceMarkerHandle.rect(0, 0, 0, 0)
+    @discardableResult
+    private static func clearHover(_ state: inout VoiceChangesState) -> Bool {
+        let markerChanged = state.hoveredOccurrence != nil
+        state.hoveredOccurrence = nil
+        state.hoverTick = 0
+        state.hoverLabel = ""
+        return markerChanged
     }
 
-    // MARK: Internals: gesture teardown
-
-    func cancelDrag() {
-        guard drag != nil else { return }
-        drag = nil
-        cursorKind = 0
-        refreshInteractionPublished()
-        projectMarkers(markerEntries())
-        publishTransient()
-    }
-
-    func cancelPan() {
-        guard panRevision != nil else { return }
-        panRevision = nil
-        refreshInteractionPublished()
-    }
-
-    /// Re-derives the published interaction gate from the page's own state.
-    private func refreshInteractionPublished() {
-        let active = drag != nil || panRevision != nil || picker != nil || menu != nil
-        if interactionActive != active { interactionActive = active }
-        setPublished(&selectedIdentity, drag?.identity ?? selectedIdentity)
+    private static func stopAudition(_ state: inout VoiceChangesState,
+                                     effects: inout [VoiceChangesEffect]) {
+        guard let program = state.auditionedProgram else { return }
+        state.auditionedProgram = nil
+        effects.append(.audition(program: program, key: 60, velocity: 0))
     }
 }

@@ -1,5 +1,5 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
 
 // Existing scenarios paired with velocity.cpp.
@@ -389,6 +389,7 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
     let page = fixture.page
     page.refreshPlayhead(tick: 0, playing: true)
     let handleCount = fixture.handles.count
+    let contentBuilds = page.contentBuildCount
     for tick in 1...128 {
         page.refreshPlayhead(tick: Double(tick) / 8, playing: true)
     }
@@ -398,6 +399,9 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
                        what: "the presented context slot is the bank slot at that tick")
     report.expectEqual(handleCount, fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
                        what: "playhead movement preserves the displayed note count")
+    report.expectEqual(contentBuilds, page.contentBuildCount,
+                       cppID: drawerVelocityDiagnosticsID,
+                       what: "same-context playhead movement skips static scene rebuilds")
 
     // Crossing a voice change presents its slot; stopping follows the edit cursor.
     page.refreshPlayhead(tick: 96, playing: true)
@@ -435,4 +439,75 @@ func drawerVelocityPlayheadDiagnostics(_ report: CheckReport, session: DocumentS
     page.pointerMove(x: 3, y: 3, buttons: 0)
     report.expect(!page.readoutVisible, cppID: drawerVelocityProjectionID,
                   message: "hover leaving every handle hides the readout")
+}
+
+@MainActor
+func drawerVelocityPlainScene(_ report: CheckReport, session: DocumentSession,
+                              service: ProjectService) {
+    let fixture = drawerVelocityVelocityFixture(session: session, service: service)
+    let note = fixture.notes[1]
+    var input = fixture.page.sceneInput()
+    input.selectedNotes = [note]
+    input.selectedNoteIDs = [note.id]
+    input.hovered = note.id
+    let font = GridFontSpec(family: "Atkinson Hyperlegible Next", pixelSize: 13,
+                            weight: 400, letterSpacing: 0)
+    let emphasized = GridFontSpec(family: font.family, pixelSize: font.pixelSize,
+                                  weight: 600, letterSpacing: font.letterSpacing)
+    let textMetrics = DrawerTextMetrics(
+        fonts: [.keyLabel: font, .bold: emphasized],
+        rulerAscent: 10, rulerHeight: 13, beatAscent: 10, beatHeight: 13,
+        boldHeight: 13, chipHeight: 13)
+    let scene = VelocityScene.build(input, textMetrics: textMetrics)
+    guard let handle = scene.handles.first(where: { $0.noteID == note.id }),
+          let camera = input.camera
+    else {
+        report.expect(false, cppID: drawerVelocitySceneID,
+                      message: "the plain scene builds the fixture's first handle")
+        return
+    }
+
+    let expectedX = camera.displayX(tick: Double(note.tick), origin: 0,
+                                    dpr: input.devicePixelRatio)
+    report.expect(abs(handle.x - expectedX) < 0.000_001,
+                  cppID: drawerVelocitySceneID,
+                  message: "plain handle geometry uses the supplied camera projection")
+    report.expect(handle.selected && handle.hovered, cppID: drawerVelocitySceneID,
+                  message: "plain handle values carry selection and hover state")
+    let hit = VelocityProjection(camera: camera, geometry: input.geometry,
+                                 devicePixelRatio: input.devicePixelRatio,
+                                 axis: scene.axis)
+        .hitTest(x: handle.x, y: handle.y, includeStems: false,
+                 handles: scene.handles)
+    report.expectEqual(note.id, hit ?? NoteID(0), cppID: drawerVelocitySceneID,
+                       what: "pure hit testing consumes plain handle values")
+    report.expect((!scene.axisRows.ticks.isEmpty || !scene.axisRows.graduations.isEmpty)
+                      && !scene.axisRows.labels.isEmpty,
+                  cppID: drawerVelocitySceneID,
+                  message: "the pure scene emits axis descriptors")
+    report.expect(scene.readout.visible && scene.readout.text == handle.label,
+                  cppID: drawerVelocitySceneID,
+                  message: "the pure scene emits hover readout values")
+
+    var zoomedInput = input
+    var zoomedCamera = camera
+    _ = zoomedCamera.setTimeZoom(camera.snapshot.pixelsPerBeat * 1.5)
+    zoomedInput.camera = zoomedCamera
+    let zoomed = VelocityScene.build(zoomedInput, textMetrics: textMetrics)
+    let zoomedHandle = zoomed.handles.first { $0.noteID == note.id }
+    report.expect(zoomedHandle?.x != handle.x, cppID: drawerVelocitySceneID,
+                  message: "a camera-only value change reprojects plain handles")
+
+    var gesture = VelocityEditGesture(
+        revision: fixture.document.revision,
+        track: fixture.session.selectedTrack ?? 0, notes: [], axis: scene.axis,
+        detentUnlock: false, activationDistance: input.geometry.dragActivationDistance,
+        pressX: handle.x, pressY: handle.y)
+    gesture.previousX = handle.x + 24
+    gesture.previousY = handle.y - 12
+    input.gesture = .ramp(gesture)
+    let transient = VelocityScene.transient(input)
+    report.expect(transient.ramp.visible && transient.ramp.length > 0,
+                  cppID: drawerVelocitySceneID,
+                  message: "the pure scene derives transient ramp values from gesture state")
 }

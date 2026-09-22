@@ -37,6 +37,8 @@ add_library(PorydawApp STATIC
     drawer/PromptAppearance.swift
     drawer/EditorDrawerTypes.swift
     drawer/EditorDrawerLayout.swift
+    drawer/DrawerInput.swift
+    drawer/DrawerSceneValues.swift
     drawer/velocity/VelocityContext.swift
     drawer/velocity/VelocityAxis.swift
     drawer/velocity/VelocityTransactions.swift
@@ -48,6 +50,7 @@ add_library(PorydawApp STATIC
     drawer/velocity/VelocityPage.swift
     drawer/voicechanges/VoiceLanePolicy.swift
     drawer/voicechanges/VoiceChangesProjection.swift
+    drawer/voicechanges/VoiceChangesPresentation.swift
     drawer/voicechanges/VoiceChangesTransactions.swift
     drawer/voicechanges/VoiceChangesScene.swift
     drawer/voicechanges/VoiceChangesInteraction.swift

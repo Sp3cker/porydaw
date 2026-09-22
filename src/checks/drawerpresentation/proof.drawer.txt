@@ -4,11 +4,11 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/drawer.cpp
 Original SHA-256: 3fb9b03a6e12fb8c61b20290669da95031c0451fec4dca5fd706afeabc777508
 Swift counterpart: src/checks/drawerpresentation/drawer_basics.swift
-Swift SHA-256: 9a1a3fdd4b7c1167ecd28acdad3c3e4acac15e48aea120ce413dffce071ca8b0
+Swift SHA-256: e6ecbe48d969e40eab1d644f94972dc3e825b53be489aca4adba1e73f1e94e59
 Swift counterpart: src/checks/drawerpresentation/drawer_resize.swift
-Swift SHA-256: 7d0cb530d1cbb484b3f7a1d4f3a225ca14d9f4acb32c1c2ace60552ca0964b85
+Swift SHA-256: fbc5ff7a6ccf5c3c921459658a7328253bb9154ad3c69b70081ccdc1aa7fa7fa
 Swift counterpart: src/checks/drawerpresentation/drawer_state.swift
-Swift SHA-256: 6a43240c7187acec4711a949fca0a313cba927544d5c680f7ad2a7d4c168b1cf
+Swift SHA-256: 724d8fa0d20462217a681bdd926c996f1e26ce8a98ef6be6e114d61e4189acf4
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

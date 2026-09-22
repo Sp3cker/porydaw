@@ -1,6 +1,7 @@
 import Foundation
-import PorydawApp
+@testable import PorydawApp
 import PorydawCore
+import QtBridge
 
 // Direct coverage for the Velocity page. The pure layers (voice context, the
 // value axis, the frozen gesture, the prompt transaction) are driven with
@@ -51,6 +52,9 @@ let drawerVelocityCancellationID = "swiftcore/VelocityPage::cancellationPaths"
 let drawerVelocityDiagnosticsID = "swiftcore/VelocityPage::playheadDiagnostics"
 let drawerVelocityCommandID = "swiftcore/VelocityPage::commandAvailabilityAndRoute"
 let drawerVelocityHistoryID = "swiftcore/VelocityPage::undoRedoRefresh"
+let drawerVelocitySceneID = "swiftcore/VelocityPage::plainValueScene"
+let drawerVelocityModelSyncID = "swiftcore/VelocityPage::valueRowModelSync"
+let drawerVelocityExactClicksID = "swiftcore/VelocityPage::exactClickSequences"
 
 // MARK: - Synthetic fixture
 
@@ -124,9 +128,9 @@ struct drawerVelocityVelocityFixture {
                            baseFontPx: baseFontPx, dragDistance: 10)
     }
 
-    var handles: [VelocityHandle] { page.publishedHandlesSnapshot }
+    var handles: [VelocityHandleValue] { page.publishedHandlesSnapshot }
 
-    func handle(_ note: Note) -> VelocityHandle? {
+    func handle(_ note: Note) -> VelocityHandleValue? {
         handles.first { $0.noteIdText == "\(note.id.rawValue)" }
     }
 
@@ -170,9 +174,12 @@ internal func runVelocityPageChecks(_ report: CheckReport, session: DocumentSess
                                     service: ProjectService) {
     drawerVelocityValueAxisLadder(report)
     drawerVelocityPsgIntrinsicRows(report)
+    drawerVelocityPlainScene(report, session: session, service: service)
+    drawerVelocityValueRowModelSync(report)
     drawerVelocityVoiceContextResolution(report, session: session)
     drawerVelocityFrozenGesturePolicy(report, session: session, service: service)
     drawerVelocityGestureTransactions(report, session: session, service: service)
+    drawerVelocityExactClickSequences(report, session: session, service: service)
     drawerVelocityPromptTransaction(report, session: session, service: service)
     drawerVelocityKeysplitPerNoteMapping(report, session: session, service: service)
     drawerVelocityProjectionRefresh(report, session: session, service: service)
@@ -232,4 +239,52 @@ func drawerVelocityCommandAvailability(_ report: CheckReport, session: DocumentS
     report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                        cppID: drawerVelocityCommandID,
                        what: "the command table keeps Set Velocity's consume route")
+}
+
+@MainActor
+func drawerVelocityValueRowModelSync(_ report: CheckReport) {
+    var first = VelocityHandleValue()
+    first.noteID = NoteID(1)
+    first.noteIdText = "1"
+    first.value = 32
+    var second = VelocityHandleValue()
+    second.noteID = NoteID(2)
+    second.noteIdText = "2"
+    second.value = 64
+
+    let model = QListModel<VelocityHandle>()
+    var previous: [VelocityHandleValue] = []
+    syncModel(model, previous: &previous, [first, second], makeRow: VelocityHandle.init)
+    let firstObject = model[0]
+    let secondObject = model[1]
+
+    syncModel(model, previous: &previous, [first, second], makeRow: VelocityHandle.init)
+    report.expect(model[0] === firstObject && model[1] === secondObject,
+                  cppID: drawerVelocityModelSyncID,
+                  message: "equal plain rows allocate and publish nothing")
+
+    var changed = second
+    changed.value = 96
+    syncModel(model, previous: &previous, [first, changed], makeRow: VelocityHandle.init)
+    report.expect(model[0] === firstObject && model[1] !== secondObject,
+                  cppID: drawerVelocityModelSyncID,
+                  message: "a changed descriptor replaces only its positional row")
+    report.expectEqual(96, model[1].value, cppID: drawerVelocityModelSyncID,
+                       what: "the changed QListModel row publishes its new value")
+
+    var third = VelocityHandleValue()
+    third.noteID = NoteID(3)
+    third.noteIdText = "3"
+    syncModel(model, previous: &previous, [first, changed, third],
+              makeRow: VelocityHandle.init)
+    report.expectEqual(3, model.count, cppID: drawerVelocityModelSyncID,
+                       what: "a descriptor tail inserts through QListModel")
+    report.expect(model[0] === firstObject, cppID: drawerVelocityModelSyncID,
+                  message: "tail insertion preserves the common positional prefix")
+
+    syncModel(model, previous: &previous, [first], makeRow: VelocityHandle.init)
+    report.expectEqual(1, model.count, cppID: drawerVelocityModelSyncID,
+                       what: "a removed descriptor tail removes QListModel rows")
+    report.expect(model[0] === firstObject, cppID: drawerVelocityModelSyncID,
+                  message: "tail removal preserves the remaining row instance")
 }

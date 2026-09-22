@@ -1,192 +1,95 @@
 import Foundation
-import NativeGridTypography
 import PorydawCore
-import QtBridge
 
-/// One drawn voice-change marker: its occurrence identity, projected label and
-/// marker rule, and its interaction state.
-@MainActor
-@QtBridgeable
-// Swift 6.4 misses the macro-emitted inherited conformance across source files.
-// Remove this explicit conformance once the toolchain contains swiftlang/swift#92390.
-public final class VoiceMarkerHandle: QVariantGettable {
-    public var identity: String = ""
-    public var tick: Double = 0
-    public var value: Int = 0
-    public var slotBlank: Bool = false
-    public var symbol: String = ""
-    public var label: String = ""
-    public var labelRect: [String: QVariantSettable] = VoiceMarkerHandle.rect(0, 0, 0, 0)
-    public var labelColor: String = ""
-    public var x: Double = 0
-    public var lineTop: Double = 0
-    public var lineBottom: Double = 0
-    public var lineWidth: Double = 0
-    public var lineColor: String = ""
-    public var selected: Bool = false
-    public var hovered: Bool = false
-    public var preview: Bool = false
-    public var offscreen: Bool = false
-    public var primitiveName: String = "voiceChangeMarker"
-
-    static func rect(_ x: Double, _ y: Double, _ w: Double, _ h: Double)
-        -> [String: QVariantSettable]
-    {
-        ["x": x, "y": y, "width": w, "height": h]
-    }
-
-    static func rectMatches(_ lhs: [String: QVariantSettable],
-                            _ rhs: [String: QVariantSettable]) -> Bool {
-        for key in ["x", "y", "width", "height"] {
-            guard let left = lhs[key] as? Double, let right = rhs[key] as? Double,
-                  left == right else { return false }
-        }
-        return true
-    }
-
-    @QtIgnored
-    func matches(_ other: VoiceMarkerHandle) -> Bool {
-        identity == other.identity && tick == other.tick && value == other.value
-            && slotBlank == other.slotBlank && symbol == other.symbol
-            && label == other.label && labelColor == other.labelColor
-            && x == other.x && lineTop == other.lineTop && lineBottom == other.lineBottom
-            && lineWidth == other.lineWidth && lineColor == other.lineColor
-            && selected == other.selected && hovered == other.hovered
-            && preview == other.preview && offscreen == other.offscreen
-            && primitiveName == other.primitiveName
-            && VoiceMarkerHandle.rectMatches(labelRect, other.labelRect)
-    }
-}
-
-@MainActor
-@QtBridgeable
-public final class VoicePickerRowHandle {
-    public var program: Int = 0
-    public var label: String = ""
-    public var blank: Bool = false
-    public var symbol: String = ""
-    public var selected: Bool = false
-    public var primitiveName: String = "voicePickerRow"
-
-    @QtIgnored
-    func matches(_ other: VoicePickerRowHandle) -> Bool {
-        program == other.program && label == other.label && blank == other.blank
-            && symbol == other.symbol && selected == other.selected
-            && primitiveName == other.primitiveName
-    }
-}
-
-/// Bank facts are invalidated by their actual publication, not song revision.
-/// Formatting/filtering is independent of the picker's changing selection.
-@MainActor
-final class VoicePickerProjectionCache {
-    private var slots: [BankSlotView] = []
-    private var rows: [VoicePickerRowHandle] = []
-    private var filter: String?
-    private var filtered: [VoicePickerRowHandle] = []
-    private var selectedIndex: Int?
-    private(set) var programs: [Int] = []
-    private(set) var indices: [Int: Int] = [:]
-
-    func refresh(slots: [BankSlotView]) {
-        guard self.slots != slots else { return }
-        self.slots = slots
-        rows = VoiceChangesProjection.pickerRows(
-            programs: Array(slots.indices), slots: slots, selected: -1)
-        filter = nil
-    }
-
-    func resolve(filter: String) {
-        guard self.filter != filter else { return }
-        self.filter = filter
-        filtered = rows.filter {
-            filter.isEmpty || $0.label.range(of: filter, options: .caseInsensitive) != nil
-        }
-        programs = filtered.map(\.program)
-        indices = Dictionary(uniqueKeysWithValues: programs.enumerated().map { ($1, $0) })
-        selectedIndex = nil
-    }
-
-    func selectedRows(program: Int) -> [VoicePickerRowHandle] {
-        let next = indices[program]
-        guard next != selectedIndex else { return filtered }
-        replaceSelection(at: selectedIndex, selected: false)
-        replaceSelection(at: next, selected: true)
-        selectedIndex = next
-        return filtered
-    }
-
-    private func replaceSelection(at index: Int?, selected: Bool) {
-        guard let index else { return }
-        let old = filtered[index]
-        let row = VoicePickerRowHandle()
-        row.program = old.program
-        row.label = old.label
-        row.blank = old.blank
-        row.symbol = old.symbol
-        row.selected = selected
-        filtered[index] = row
-    }
-}
-
-@MainActor
-@QtBridgeable
-public final class VoiceMenuRowHandle {
-    public var actionId: Int = 0
-    public var text: String = ""
-    public var primitiveName: String = "voiceChangeMenuRow"
-
-    @QtIgnored
-    func matches(_ other: VoiceMenuRowHandle) -> Bool {
-        actionId == other.actionId && text == other.text
-            && primitiveName == other.primitiveName
-    }
-}
-
-/// Captions measured through the native font metrics used by the roll.
-@MainActor
-final class VoiceCaption {
-    let fontMap: [String: QVariantSettable]
-    let height: Double
-    private let session: OpaquePointer
-
-    init(pixelSize: Int, weight: Int) {
-        let family = VoiceChangesPage.fontFamily
-        fontMap = ["family": family, "pixelSize": pixelSize, "weight": weight,
-                   "letterSpacing": 0.0]
-        session = family.withCString { sgf_create($0, Int32(pixelSize), Int32(weight), 0)! }
-        height = sgf_extents(session).height
-    }
-
-    isolated deinit { sgf_destroy(session) }
-
-    func advance(_ text: String) -> Double { text.withCString { sgf_advance(session, $0) } }
-
-    func elided(_ text: String, toWidth width: Double) -> String {
-        guard width > 0, advance(text) > width else { return text }
-        let characters = Array(text)
-        var lower = 0
-        var upper = max(0, characters.count - 1)
-        while lower < upper {
-            let middle = (lower + upper + 1) / 2
-            if advance(String(characters.prefix(middle)) + "…") <= width {
-                lower = middle
-            } else {
-                upper = middle - 1
-            }
-        }
-        return String(characters.prefix(lower)) + "…"
-    }
-}
-
-struct VoiceProjectionEntry {
+/// One document occurrence projected into marker order.
+struct VoiceProjectionEntry: Equatable, Sendable {
+    var occurrence: VoiceOccurrence
     var tick: Tick
     var value: Int
     var identity: String
-    var sourceOrder: Int = 0
+    var sourceOrder: Int
 }
 
-struct VoiceMarkerProjectionInput {
+/// One premeasured elision candidate. Native measurement stays in the adapter;
+/// the projection only chooses among immutable measured strings.
+struct VoiceElisionCandidate: Equatable, Sendable {
+    var text: String
+    var width: Double
+}
+
+struct VoiceTextMeasurement: Equatable, Sendable {
+    var source: String
+    var width: Double
+    var elisions: [VoiceElisionCandidate]
+
+    func fitted(toWidth limit: Double) -> (text: String, width: Double) {
+        guard width > limit else { return (source, width) }
+        var result = elisions.first ?? VoiceElisionCandidate(text: "…", width: width)
+        for candidate in elisions where candidate.width <= limit {
+            result = candidate
+        }
+        return (result.text, result.width)
+    }
+}
+
+/// Typography values sampled by the native presentation adapter before a pure
+/// scene build.
+struct VoiceTypographyValues: Equatable, Sendable {
+    var captionFont: GridFontSpec
+    var titleFont: GridFontSpec
+    var captionHeight: Double
+    var titleHeight: Double
+    var measurements: [String: VoiceTextMeasurement]
+}
+
+/// One plain marker descriptor. The exact occurrence is retained for hit tests;
+/// only its bridge-safe spelling is copied to the Qt row.
+struct VoiceMarkerValue: Equatable, Sendable {
+    var occurrence: VoiceOccurrence
+    var identity: String
+    var tick: Double
+    var value: Int
+    var slotBlank: Bool
+    var symbol: String
+    var label: String
+    var labelRect: DrawerRectValue
+    var labelColor: String
+    var x: Double
+    var lineTop: Double
+    var lineBottom: Double
+    var lineWidth: Double
+    var lineColor: String
+    var selected: Bool
+    var hovered: Bool
+    var preview: Bool
+    var offscreen: Bool
+    var primitiveName: String = "voiceChangeMarker"
+}
+
+struct VoicePickerRowValue: Equatable, Sendable {
+    var program: Int
+    var label: String
+    var blank: Bool
+    var symbol: String
+    var selected: Bool
+    var primitiveName: String = "voicePickerRow"
+}
+
+struct VoiceMenuRowValue: Equatable, Sendable {
+    var actionId: Int
+    var text: String
+    var primitiveName: String = "voiceChangeMenuRow"
+}
+
+struct VoiceReadoutValue: Equatable, Sendable {
+    var slot: Int = -1
+    var blank = true
+    var symbol = ""
+    var text = ""
+    var rect = DrawerRectValue()
+}
+
+struct VoiceMarkerProjectionInput: Sendable {
     var entries: [VoiceProjectionEntry]
     var slots: [BankSlotView]
     var plotWidth: Double
@@ -200,42 +103,36 @@ struct VoiceMarkerProjectionInput {
     var selectedIdentity: String?
     var hoverIdentity: String?
     var previewIdentity: String?
-    var caption: VoiceCaption
-    var displayX: (Tick) -> Double
+    var typography: VoiceTypographyValues
+    var camera: EditorCamera
+    var devicePixelRatio: Double
 }
 
-struct VoiceSpanProjectionInput {
+struct VoiceSpanProjectionInput: Sendable {
     var entries: [VoiceProjectionEntry]
     var firstProgram: Int
     var lengthTicks: Tick
     var plotWidth: Double
     var plotHeight: Double
     var color: String
-    var displayX: (Tick) -> Double
+    var camera: EditorCamera
+    var devicePixelRatio: Double
 }
 
-struct VoiceGutterProjectionInput {
+struct VoiceGutterProjectionInput: Sendable {
     var plotHeight: Double
     var plotOrigin: Double
     var title: String
     var summary: String?
-    var titleFont: [String: QVariantSettable]
-    var captionFont: [String: QVariantSettable]
+    var titleFont: GridFontSpec
+    var captionFont: GridFontSpec
     var titleHeight: Double
     var captionHeight: Double
     var titleColor: String
     var captionColor: String
 }
 
-struct VoiceReadoutProjection {
-    var slot: Int
-    var blank: Bool
-    var symbol: String
-    var text: String
-    var rect: [String: QVariantSettable]
-}
-
-struct VoiceGridProjectionColors {
+struct VoiceGridProjectionColors: Sendable {
     var subdivision1: String
     var subdivision2: String
     var subdivision3: String
@@ -244,25 +141,28 @@ struct VoiceGridProjectionColors {
     var fineBeat: String
 }
 
-/// Pure layout/projection of lane data into published marker, span, picker and
-/// menu records. The page supplies camera, palette and interaction facts.
-@MainActor
+/// Pure layout and projection rules for Voice Changes.
 enum VoiceChangesProjection {
-    static func entries(points: [LanePoint]) -> [VoiceProjectionEntry] {
-        points.enumerated().map { index, point in
-            VoiceProjectionEntry(tick: point.tick, value: point.value,
-                                 identity: VoiceOccurrence(point).text, sourceOrder: index)
-        }.sorted { left, right in
-            left.tick == right.tick
-                ? left.sourceOrder < right.sourceOrder : left.tick < right.tick
+    static func entries(points: borrowing [LanePoint]) -> [VoiceProjectionEntry] {
+        var entries: [VoiceProjectionEntry] = []
+        entries.reserveCapacity(points.count)
+        for index in points.indices {
+            let point = points[index]
+            let occurrence = VoiceOccurrence(point)
+            entries.append(VoiceProjectionEntry(
+                occurrence: occurrence, tick: point.tick, value: point.value,
+                identity: occurrence.text, sourceOrder: index))
         }
+        entries.sort {
+            $0.tick == $1.tick ? $0.sourceOrder < $1.sourceOrder : $0.tick < $1.tick
+        }
+        return entries
     }
 
-    /// Only the frozen occurrence moves; equal ticks keep source order.
-    static func moving(_ entries: [VoiceProjectionEntry], drag: VoiceDragState?)
-        -> [VoiceProjectionEntry]
-    {
-        guard let drag, drag.active,
+    /// Only the frozen occurrence moves; equal ticks keep document source order.
+    static func moving(_ entries: [VoiceProjectionEntry],
+                       drag: VoiceDragState?) -> [VoiceProjectionEntry] {
+        guard let drag,
               let index = entries.firstIndex(where: { $0.identity == drag.identity })
         else { return entries }
         var result = entries
@@ -284,19 +184,23 @@ enum VoiceChangesProjection {
         return result
     }
 
-    static func spans(_ input: VoiceSpanProjectionInput) -> [SceneRect] {
+    static func spans(_ input: borrowing VoiceSpanProjectionInput) -> [DrawerRectValue] {
         var program = input.firstProgram
         var spanStart: Tick = 0
-        var rects: [SceneRect] = []
+        var rects: [DrawerRectValue] = []
+        rects.reserveCapacity(input.entries.count + 1)
         func appendSpan(from begin: Tick, to end: Tick) {
-            let left = min(max(input.displayX(begin), 0), input.plotWidth)
-            let right = min(max(input.displayX(end), 0), input.plotWidth)
-            let rect = SceneRect(x: left, y: 0, width: max(0, right - left),
-                                 height: input.plotHeight, fillColor: input.color,
-                                 primitiveName: "voiceHeldSpan")
+            let left = min(max(input.camera.displayX(
+                tick: Double(begin), origin: 0, dpr: input.devicePixelRatio), 0), input.plotWidth)
+            let right = min(max(input.camera.displayX(
+                tick: Double(end), origin: 0, dpr: input.devicePixelRatio), 0), input.plotWidth)
+            let rect = DrawerRectValue(
+                x: left, y: 0, width: max(0, right - left), height: input.plotHeight,
+                fillColor: input.color, primitiveName: "voiceHeldSpan")
             if rect.width > 0 { rects.append(rect) }
         }
-        for entry in input.entries {
+        for index in input.entries.indices {
+            let entry = input.entries[index]
             if program >= 0, entry.tick > spanStart {
                 appendSpan(from: spanStart, to: entry.tick)
             }
@@ -309,44 +213,39 @@ enum VoiceChangesProjection {
         return rects
     }
 
-    static func gutterTexts(_ input: VoiceGutterProjectionInput) -> [SceneText] {
+    static func gutterTexts(_ input: borrowing VoiceGutterProjectionInput) -> [DrawerTextValue] {
         let top = max(0, (input.plotHeight - input.titleHeight - input.captionHeight) / 2)
-        var texts = [SceneText(
-            rect: (0, top, input.plotOrigin, input.titleHeight),
-            text: input.title,
-            color: input.titleColor,
-            font: input.titleFont,
-            horizontal: 0x1,
-            vertical: 0x80)]
+        var texts = [DrawerTextValue(
+            rect: DrawerRectValue(x: 0, y: top, width: input.plotOrigin,
+                                  height: input.titleHeight),
+            text: input.title, color: input.titleColor, font: input.titleFont)]
         if let summary = input.summary {
-            texts.append(SceneText(
-                rect: (0, top + input.titleHeight, input.plotOrigin, input.captionHeight),
-                text: summary,
-                color: input.captionColor,
-                font: input.captionFont,
-                horizontal: 0x1,
-                vertical: 0x80))
+            texts.append(DrawerTextValue(
+                rect: DrawerRectValue(x: 0, y: top + input.titleHeight,
+                                      width: input.plotOrigin, height: input.captionHeight),
+                text: summary, color: input.captionColor, font: input.captionFont))
         }
         return texts
     }
 
-    static func readout(firstProgram: Int, tick: Tick, points: [LanePoint],
-                        slots: [BankSlotView], pad: Double,
-                        plotWidth: Double, plotHeight: Double) -> VoiceReadoutProjection {
+    static func readout(firstProgram: Int, tick: Tick, points: borrowing [LanePoint],
+                        slots: borrowing [BankSlotView], pad: Double,
+                        plotWidth: Double, plotHeight: Double) -> VoiceReadoutValue {
         let slot = VoiceLanePolicy.slot(firstProgram: firstProgram, tick: tick, points: points)
         let view = slots.indices.contains(slot) ? slots[slot] : nil
         let label = VoiceLanePolicy.label(slot: slot, view: view)
-        return VoiceReadoutProjection(
+        return VoiceReadoutValue(
             slot: slot,
             blank: view?.voice == nil,
             symbol: view?.voice?.symbol ?? "",
             text: label.isEmpty ? "No voice" : label,
-            rect: VoiceMarkerHandle.rect(pad, 0, max(0, plotWidth - 2 * pad), plotHeight))
+            rect: DrawerRectValue(x: pad, y: 0, width: max(0, plotWidth - 2 * pad),
+                                  height: plotHeight))
     }
 
-    static func grid(metrics: GridMetrics, camera: EditorCamera, plotWidth: Double,
-                     plotHeight: Double, colors: VoiceGridProjectionColors,
-                     displayX: (Tick) -> Double) -> [SceneRect] {
+    static func grid(metrics: borrowing GridMetrics, camera: borrowing EditorCamera,
+                     plotWidth: Double, plotHeight: Double,
+                     colors: borrowing VoiceGridProjectionColors) -> [DrawerRectValue] {
         let physicalPixel = max(metrics.pixel, 0.0001)
         let roundingMargin = physicalPixel / 2
         let beginTick = camera.tickAtContentX(-roundingMargin)
@@ -355,17 +254,14 @@ enum VoiceChangesProjection {
         let range = (begin: Tick(max(0, beginTick.rounded(.down))),
                      end: Tick(max(1, endTick.rounded(.up))))
         let stroke = metrics.gridLineStroke
-        var rects: [SceneRect] = []
+        var rects: [DrawerRectValue] = []
         metrics.forEachSubdivision(from: range.begin, to: range.end, camera: camera) { tick, level in
             let color = level == 1 ? colors.subdivision1
                 : level == 2 ? colors.subdivision2 : colors.subdivision3
-            rects.append(SceneRect(
-                x: displayX(tick) - stroke / 2,
-                y: 0,
-                width: stroke,
-                height: plotHeight,
-                fillColor: color,
-                primitiveName: "voiceGrid"))
+            rects.append(DrawerRectValue(
+                x: camera.displayX(tick: Double(tick), origin: 0, dpr: metrics.dpr)
+                    - stroke / 2, y: 0, width: stroke, height: plotHeight,
+                fillColor: color, primitiveName: "voiceGrid"))
         }
         var segment = metrics.timeAxis.segmentAt(range.begin)
         var finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
@@ -374,155 +270,115 @@ enum VoiceChangesProjection {
                 segment = metrics.timeAxis.segmentAt(tick)
                 finest = metrics.visibleGridTicks(in: segment, camera: camera) == 1
             }
-            rects.append(SceneRect(
-                x: displayX(tick) - stroke / 2,
-                y: 0,
-                width: stroke,
-                height: plotHeight,
+            rects.append(DrawerRectValue(
+                x: camera.displayX(tick: Double(tick), origin: 0, dpr: metrics.dpr)
+                    - stroke / 2, y: 0, width: stroke, height: plotHeight,
                 fillColor: isBar ? colors.bar : finest ? colors.fineBeat : colors.beat,
                 primitiveName: "voiceGrid"))
         }
         return rects
     }
 
-    static func markers(_ input: VoiceMarkerProjectionInput,
-                        reusing previous: [String: VoiceMarkerHandle] = [:])
-        -> [VoiceMarkerHandle]
-    {
-        let labelHeight = input.caption.height
+    static func markers(_ input: borrowing VoiceMarkerProjectionInput) -> [VoiceMarkerValue] {
+        let labelHeight = input.typography.captionHeight
         let centerY = input.plotHeight / 2 - labelHeight / 2
         let stairStep = min(input.stairLimit,
                             (input.plotHeight - labelHeight - 2 * input.pad) / 2)
         let canStair = stairStep > 1
         var stairUp = true
-        var lastXEnd = -Double.infinity
-        var values: [VoiceMarkerHandle] = []
+        var lastEnd = -Double.infinity
+        var values: [VoiceMarkerValue] = []
         values.reserveCapacity(input.entries.count)
-        for entry in input.entries {
-            let old = previous[entry.identity]
+        for index in input.entries.indices {
+            let entry = input.entries[index]
+            let labelX = input.camera.displayX(
+                tick: Double(entry.tick), origin: 0, dpr: input.devicePixelRatio) + input.pad
             let view = input.slots.indices.contains(entry.value) ? input.slots[entry.value] : nil
-            let labelX = input.displayX(entry.tick) + input.pad
+            let label = VoiceLanePolicy.label(slot: entry.value, view: view)
+            let source = label.isEmpty ? "No voice" : label
             let maxWidth = max(0, input.plotWidth - labelX)
-            let drawn: String
-            let labelWidth: Double
-            if let old, old.tick == Double(entry.tick), old.value == entry.value {
-                drawn = old.label
-                labelWidth = old.labelRect["width"] as? Double ?? 0
-            } else {
-                let label = VoiceLanePolicy.label(slot: entry.value, view: view)
-                let source = label.isEmpty ? "No voice" : label
-                drawn = input.caption.advance(source) > maxWidth && maxWidth > 0
-                    ? input.caption.elided(source, toWidth: maxWidth.rounded(.down))
-                    : source
-                labelWidth = min(input.caption.advance(drawn), maxWidth)
-            }
-            let offscreen = labelX + labelWidth < 0 || labelX > input.plotWidth || labelWidth <= 0
+            let measured = input.typography.measurements[source]
+                ?? VoiceTextMeasurement(source: source, width: 0,
+                                        elisions: [VoiceElisionCandidate(text: "…", width: 0)])
+            let fitted = measured.fitted(toWidth: maxWidth)
+            let offscreen = labelX + fitted.width < 0 || labelX > input.plotWidth
+                || fitted.width <= 0
             var labelY = centerY
             if !offscreen {
-                if labelX < lastXEnd + input.gap, canStair {
+                if labelX < lastEnd, canStair {
                     stairUp.toggle()
                     labelY = stairUp ? centerY - stairStep : centerY + stairStep
                 }
                 let lower = input.pad
                 let upper = max(lower, input.plotHeight - labelHeight - input.pad)
                 labelY = min(max(labelY, lower), upper)
-                lastXEnd = labelX + labelWidth + input.gap
+                lastEnd = labelX + fitted.width + input.gap
             }
-            // Stair state propagates through overlapping neighbors. Walk the
-            // cheap state, retaining every unaffected immutable published row.
-            if let old, old.tick == Double(entry.tick), old.value == entry.value,
-               old.label == drawn,
-               old.labelRect["y"] as? Double == labelY,
-               old.selected == (input.selectedIdentity == entry.identity),
-               old.hovered == (input.hoverIdentity == entry.identity),
-               old.preview == (input.previewIdentity == entry.identity) {
-                values.append(old)
-                continue
-            }
-            let handle = VoiceMarkerHandle()
-            handle.identity = entry.identity
-            handle.tick = Double(entry.tick)
-            handle.value = entry.value
-            handle.slotBlank = view?.voice == nil
-            handle.symbol = view?.voice?.symbol ?? ""
-            handle.label = drawn
-            handle.labelRect = VoiceMarkerHandle.rect(labelX, labelY, labelWidth, labelHeight)
-            handle.labelColor = input.labelColor
-            handle.x = labelX - input.pad
-            handle.lineTop = input.pad
-            handle.lineBottom = max(input.pad, input.plotHeight - input.pad)
-            handle.lineWidth = 2 * input.physicalPixel
-            handle.lineColor = input.lineColor
-            handle.selected = input.selectedIdentity == entry.identity
-            handle.hovered = input.hoverIdentity == entry.identity
-            handle.preview = input.previewIdentity == entry.identity
-            handle.offscreen = offscreen
-            values.append(handle)
+            values.append(VoiceMarkerValue(
+                occurrence: entry.occurrence,
+                identity: entry.identity,
+                tick: Double(entry.tick),
+                value: entry.value,
+                slotBlank: view?.voice == nil,
+                symbol: view?.voice?.symbol ?? "",
+                label: fitted.text,
+                labelRect: DrawerRectValue(x: labelX, y: labelY, width: fitted.width,
+                                           height: labelHeight),
+                labelColor: input.labelColor,
+                x: labelX - input.pad,
+                lineTop: input.pad,
+                lineBottom: max(input.pad, input.plotHeight - input.pad),
+                lineWidth: 2 * input.physicalPixel,
+                lineColor: input.lineColor,
+                selected: input.selectedIdentity == entry.identity,
+                hovered: input.hoverIdentity == entry.identity,
+                preview: input.previewIdentity == entry.identity,
+                offscreen: offscreen))
         }
         return values
     }
 
-    static func pickerRows(programs: [Int], slots: [BankSlotView], selected: Int)
-        -> [VoicePickerRowHandle]
-    {
-        programs.map { program in
-            let view = slots.indices.contains(program) ? slots[program] : nil
-            let row = VoicePickerRowHandle()
-            row.program = program
-            row.label = VoiceLanePolicy.pickerLabel(slot: program, view: view)
-            row.blank = view?.voice == nil
-            row.symbol = view?.voice?.symbol ?? ""
-            row.selected = program == selected
-            return row
-        }
-    }
-
-    static func menuRows(for target: VoiceTarget) -> [VoiceMenuRowHandle] {
-        let values: [(Int, String)] = target.occurrence == nil
-            ? [(VoiceChangesPagePolicy.insertVoiceChangeAction, "Insert voice change")]
-            : [(VoiceChangesPagePolicy.changeVoiceAction, "Change voice"),
-               (VoiceChangesPagePolicy.deleteMarkerAction, "Delete")]
-        return values.map { action, text in
-            let row = VoiceMenuRowHandle()
-            row.actionId = action
-            row.text = text
-            return row
-        }
-    }
-
-    static func syncRects(_ model: QListModel<SceneRect>, _ values: [SceneRect]) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
-    static func syncTexts(_ model: QListModel<SceneText>, _ values: [SceneText]) {
-        syncModel(model, values, matches: textMatches)
-    }
-
-    static func syncPickerRows(_ model: QListModel<VoicePickerRowHandle>,
-                               _ values: [VoicePickerRowHandle]) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
-    static func syncMenuRows(_ model: QListModel<VoiceMenuRowHandle>,
-                             _ values: [VoiceMenuRowHandle]) {
-        syncModel(model, values, matches: { $0.matches($1) })
-    }
-
-    static func textMatches(_ lhs: SceneText, _ rhs: SceneText) -> Bool {
-        lhs.labelText == rhs.labelText && lhs.labelColor == rhs.labelColor
-            && lhs.labelHorizontalAlignment == rhs.labelHorizontalAlignment
-            && lhs.labelVerticalAlignment == rhs.labelVerticalAlignment
-            && VoiceMarkerHandle.rectMatches(lhs.labelRect, rhs.labelRect)
-            && lhs.labelFont.count == rhs.labelFont.count
-            && lhs.labelFont.allSatisfy {
-                String(describing: $1) == String(describing: rhs.labelFont[$0])
+    /// Hit the exact geometry the scene drew. Equal-distance overlaps keep the
+    /// later row, matching the legacy forward scan.
+    static func marker(at x: Double, in markers: borrowing [VoiceMarkerValue],
+                       hitRadius: Double) -> VoiceOccurrence? {
+        var hit: VoiceOccurrence?
+        var distance = Double.infinity
+        for index in markers.indices {
+            let marker = markers[index]
+            let candidate = abs(marker.x - x)
+            if candidate <= hitRadius, candidate <= distance {
+                hit = marker.occurrence
+                distance = candidate
             }
+        }
+        return hit
     }
 
-    static func fontMatches(_ lhs: [String: QVariantSettable],
-                            _ rhs: [String: QVariantSettable]) -> Bool {
-        lhs.count == rhs.count && lhs.allSatisfy {
-            String(describing: $1) == String(describing: rhs[$0])
+    static func pickerRows(slots: borrowing [BankSlotView], filter: String,
+                           selected: Int) -> [VoicePickerRowValue] {
+        var rows: [VoicePickerRowValue] = []
+        rows.reserveCapacity(slots.count)
+        for program in slots.indices {
+            let view = slots[program]
+            let label = VoiceLanePolicy.pickerLabel(slot: program, view: view)
+            guard filter.isEmpty
+                    || label.range(of: filter, options: .caseInsensitive) != nil
+            else { continue }
+            rows.append(VoicePickerRowValue(
+                program: program, label: label, blank: view.voice == nil,
+                symbol: view.voice?.symbol ?? "", selected: program == selected))
         }
+        return rows
+    }
+
+    static func menuRows(for target: borrowing VoiceTarget) -> [VoiceMenuRowValue] {
+        target.occurrence == nil
+            ? [VoiceMenuRowValue(actionId: VoiceChangesPagePolicy.insertVoiceChangeAction,
+                                 text: "Insert voice change")]
+            : [VoiceMenuRowValue(actionId: VoiceChangesPagePolicy.changeVoiceAction,
+                                 text: "Change voice"),
+               VoiceMenuRowValue(actionId: VoiceChangesPagePolicy.deleteMarkerAction,
+                                 text: "Delete")]
     }
 }

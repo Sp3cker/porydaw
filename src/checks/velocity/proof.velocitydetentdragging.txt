@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/velocity/velocitydetentdragging.cpp
 Original SHA-256: 6626e06ff84d0561d4bb68a6fdbbd16c94347c2e3fd0780312d480ca241c8e0d
 Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
-Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
+Swift SHA-256: 8449b61bab2cd9f39f86b2769ad6f0165307d877e188c190acff337829dc26cb
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
