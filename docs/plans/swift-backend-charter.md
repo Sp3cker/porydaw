@@ -146,10 +146,11 @@ dispatcher. Host implementation may migrate wholesale under INV-2, including
 Swift-owned application policy with Qt/QML event delivery; this does not
 require raw window events in Swift domain code or a permanent QWidget shell.
 
-## Platform decision (2026-09-18): Windows deferred, MinGW incidental
+## Platform decision (2026-09-18, toolchain 2026-09-22): Windows deferred, MSVC selected
 
 The rewrite proceeds macOS-first. Windows is **deferred, not dropped**:
 existing users are frozen on the last C++ release until Windows returns.
+When Windows returns it builds with **MSVC** (the `msvc2022_64` Qt kit);
 MinGW was never a decision — it is an incidental toolchain fact and binds
 nothing. Binding consequences:
 
@@ -157,8 +158,8 @@ nothing. Binding consequences:
   added or maintained anywhere in this track.
 - No dual implementations to preserve Windows: the C++ roll band's
   retirement is unconditional. Windows returns **on the Swift codebase** —
-  its own later wave covering toolchain selection (MSVC or otherwise),
-  packaging, and CI — never by keeping C++ surfaces alive.
+  its own later wave covering the MSVC toolchain, packaging, and CI —
+  never by keeping C++ surfaces alive.
 - Repo de-Windows-ification (Windows CI/release jobs, AGENTS.md toolchain
   section, windeployqt packaging, MinGW check handling) is one mechanical
   plan executed after the current wave; nothing blocks on it and no new

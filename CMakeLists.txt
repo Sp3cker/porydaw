@@ -403,11 +403,6 @@ if(WIN32)
     # Embeds resources/porydaw.ico as the executable's Explorer/taskbar icon.
     target_sources(porydaw PRIVATE resources/porydaw.rc)
     target_link_libraries(porydaw_app PRIVATE dwmapi)
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        # MinGW: statically link libgcc/libstdc++/winpthread so the exe
-        # doesn't depend on libgcc_s_seh-1.dll etc. at runtime.
-        target_link_options(porydaw PRIVATE -static)
-    endif()
 endif()
 if(APPLE)
     set_target_properties(porydaw PROPERTIES

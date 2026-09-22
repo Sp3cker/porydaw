@@ -114,23 +114,28 @@ Swift LSP (sourcekit-lsp) has no background indexing: run `deno task lsp:swift` 
 
 ### Windows toolchain and launch
 
-The Windows build is not self-contained until packaging. Before building, running checks, or
-launching a binary from `build/`, prepend the MinGW and Qt runtime directories in the same
-PowerShell process:
+Windows builds use MSVC: the `msvc2022_64` Qt kit and a Visual Studio
+developer environment. Run builds and checks from an "x64 Native Tools" /
+Developer PowerShell so `cl` and `ninja` resolve. The Windows build is not
+self-contained until packaging; before launching a binary from `build/`,
+prepend the Qt runtime directories in the same PowerShell process:
 
 ```powershell
-$env:Path = 'C:\msys64\mingw64\bin;C:\msys64\mingw64\share\qt6\bin;' + $env:Path
-$env:QT_PLUGIN_PATH = 'C:\msys64\mingw64\share\qt6\plugins'
-$env:QML2_IMPORT_PATH = 'C:\msys64\mingw64\share\qt6\qml'
+$qt = 'C:\Qt\6.9.3\msvc2022_64'   # adjust to the installed MSVC kit
+$env:Path = "$qt\bin;" + $env:Path
+$env:QT_PLUGIN_PATH = "$qt\plugins"
+$env:QML2_IMPORT_PATH = "$qt\qml"
 npx --yes deno task build:app
 Start-Process -FilePath "$PWD\build\porydaw.exe" -WorkingDirectory "$PWD\build"
 ```
 
-`Start-Process` inherits the environment of the PowerShell process that launches it. Do not
-launch `build\porydaw.exe` from a fresh process without setting all three variables. A missing
-`Path` produces a `libwinpthread-1.dll` loader popup. Missing Qt plugin or QML import paths can
-produce an immediate `0xc0000602` fail-fast in `Qt6Core.dll` when Porydaw rejects an incomplete
-QML scene. Treat either result as a loader/runtime setup failure, not an application crash.
+`Start-Process` inherits the environment of the PowerShell process that
+launches it. Do not launch `build\porydaw.exe` from a fresh process without
+setting all three variables. A missing `Path` produces a `Qt6*.dll` /
+`vcruntime140*.dll` loader popup. Missing Qt plugin or QML import paths can
+produce an immediate `0xc0000602` fail-fast in `Qt6Core.dll` when Porydaw
+rejects an incomplete QML scene. Treat either result as a loader/runtime
+setup failure, not an application crash.
 
 Any failing assertion or check MUST be brought to the user's attention and resolved before
 handoff. Never hand off work with failing assertions or checks.
