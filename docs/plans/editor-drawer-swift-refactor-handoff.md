@@ -84,19 +84,20 @@ and an exact `S###` index for every remaining `MATCHED` entry:
 |---|---:|---:|---:|---:|---:|---:|
 | `proof.drawer.txt` | 178 | 0 | 0 | 176 | 0 | 2 |
 | `proof.velocity.txt` | 125 | 0 | 0 | 123 | 0 | 2 |
-| `proof.voice.txt` | 146 | 10 | 15 | 121 | 0 | 0 |
-| `proof.voicemenus.txt` | 83 | 0 | 29 | 54 | 0 | 0 |
+| `proof.voice.txt` | 148 | 10 | 15 | 121 | 0 | 2 |
+| `proof.voicemenus.txt` | 84 | 0 | 29 | 54 | 0 | 1 |
 | `proof.valueprompt.txt` | 103 | 0 | 41 | 28 | 34 | 0 |
-| **Total** | **635** | **10** | **85** | **502** | **34** | **4** |
+| **Total** | **638** | **10** | **85** | **502** | **34** | **7** |
 
 These files are a static correspondence ledger. They do not run and Swift tests
 do not literally “pass the proof files.” A proof site becomes `MATCHED` only when
 a Swift check executes the original fixture, sequence, and predicate and the
 proof cites that exact predicate with an `S###` entry.
 
-One inventory item remains before calling the entire drawer source set
-accounted for: `src/checks/drawerpresentation/fixtures.cpp` has `qFatal` failure
-sites at lines 128 and 135 without a proof or written exclusion rationale.
+The entire drawer source set is now accounted for: the `qFatal` failure sites
+at `src/checks/drawerpresentation/fixtures.cpp` lines 128 and 135 carry
+`NATIVE-SETUP` entries or a written exclusion rationale in every proof whose
+scenarios consume the shared `createVoiceFixture` helpers.
 
 During the production-only refactor, leave proof dispositions unchanged. The
 proofs hash Swift check files, not production files, so a production file move

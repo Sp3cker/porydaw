@@ -36,16 +36,16 @@ FocusScope {
     function takeFocus() {
         if (!showing) return
         if (confirming) cancel.forceActiveFocus(Qt.PopupFocusReason)
-        else { field.forceActiveFocus(Qt.PopupFocusReason); field.selectAll() }
+        else { field.focusInput(Qt.PopupFocusReason); field.selectAll() }
     }
     onShowingChanged: {
         if (showing) { finishing = false; Qt.callLater(takeFocus) }
         else closed()
     }
     function acceptDraft() {
-        if (finishing || (!confirming && !field.acceptableInput)) return
+        if (finishing || (!confirming && !field.textInput.acceptableInput)) return
         finishing = true
-        if (!confirming) model.updatePromptDraft(field.text)
+        if (!confirming) model.updatePromptDraft(field.textInput.text)
         model.acceptPromptDraft()
     }
     function cancelDraft() {
@@ -75,7 +75,7 @@ FocusScope {
         height: implicitHeight
         appearance: promptAppearance
         minimumWidth: root.baseFontPx * 18
-        Keys.onShortcutOverride: event => event.accepted = true
+        Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Escape) root.cancelDraft()
             event.accepted = true
@@ -104,45 +104,39 @@ FocusScope {
             font: promptAppearance.font
             renderType: Text.NativeRendering
         }
-        Rectangle {
+        Shared.DragInput {
+            id: field
+
             visible: !root.confirming
             width: root.baseFontPx * 16
             height: root.baseFontPx * 2
-            color: promptAppearance.buttonBackground
-            border.width: 1
-            border.color: field.activeFocus ? promptAppearance.focus : promptAppearance.outline
-            TextInput {
-                id: field
-                objectName: "automationPromptInput"
-                anchors.fill: parent
-                anchors.leftMargin: 6
-                anchors.rightMargin: 6
-                text: root.model.promptDraft
-                color: promptAppearance.text
-                font: promptAppearance.font
-                clip: true
-                selectByMouse: true
-                horizontalAlignment: TextInput.AlignHCenter
-                verticalAlignment: TextInput.AlignVCenter
-                validator: IntValidator {
-                    bottom: root.model.promptMinimum
-                    top: root.model.promptMaximum
-                }
-                onActiveFocusChanged: if (root.showing && !activeFocus && !root.confirming)
-                    root.cancelDraft()
-                Keys.onReturnPressed: event => { root.acceptDraft(); event.accepted = true }
-                Keys.onEnterPressed: event => { root.acceptDraft(); event.accepted = true }
-                Keys.onEscapePressed: event => { root.cancelDraft(); event.accepted = true }
-                Keys.onShortcutOverride: event => event.accepted = true
-                Accessible.role: Accessible.EditableText
-                Accessible.name: root.model.promptLabel
-                Accessible.focusable: true
-            }
+            adjustmentsEnabled: false
+            inputObjectName: "automationPromptInput"
+            accessibleName: root.model.promptLabel
+            appearance: Object.assign({}, promptAppearance, {
+                background: promptAppearance.buttonBackground,
+                radius: 0,
+                horizontalPadding: 5,
+                verticalPadding: -1,
+                dragThreshold: 0
+            })
+            value: Number(root.model.promptDraft)
+            minimumValue: root.model.promptMinimum
+            maximumValue: root.model.promptMaximum
+            onValueCommitted: committed => root.model.updatePromptDraft(String(committed))
+            onEditingAccepted: committed => root.acceptDraft()
             Shared.HoverHint {
-                source: field
+                source: field.textInput
                 hintService: root.hintService
                 scopeAllowed: root.showing
                 profile: Shared.HintProfiles.TextSelection
+            }
+        }
+        Connections {
+            target: field.textInput
+            function onActiveFocusChanged() {
+                if (root.showing && !field.textInput.activeFocus && !root.confirming)
+                    root.cancelDraft()
             }
         }
         Text {

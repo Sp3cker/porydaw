@@ -28,6 +28,10 @@ Pending: root will record the exact final tree and selected Deno verification ru
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
 implementations, native event delivery and the complete order remain in the pinned source.
+src/checks/drawerpresentation/fixtures.cpp:124 | void createVoiceFixture(VoiceFixture &fixture)
+src/checks/drawerpresentation/fixtures.cpp:127 | if (!fixture.create(error))
+src/checks/drawerpresentation/fixtures.cpp:131 | void createVoiceFixture(VoiceTransactionFixture &fixture)
+src/checks/drawerpresentation/fixtures.cpp:134 | if (!fixture.create(error))
 src/checks/drawerpresentation/voice.cpp:29 | void doubleClick(VoiceTransactionFixture &fixture, Tick tick)
 src/checks/drawerpresentation/voice.cpp:31 | const QPointF point(fixture.xForTick(double(tick)), fixture.bandRect().height() / 2.0);
 src/checks/drawerpresentation/voice.cpp:32 | sendMouse(fixture.input(), QEvent::MouseButtonDblClick, point, Qt::LeftButton, Qt::LeftButton);
@@ -1120,6 +1124,18 @@ Disposition: GAP
 Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
 Original expression:
   QCOMPARE(view.camera().scrollX(), floor)
+
+A147 | createVoiceFixture | src/checks/drawerpresentation/fixtures.cpp:128
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario. Shared VoiceFixture setup precondition consumed by voiceSurfaceAndPaintLifecycle, voiceHoverLifecycle, voiceRefreshLifecycle and voiceCameraTransactions; a failed create aborts the harness rather than asserting a scenario outcome, so it is not a parity assertion.
+Original expression:
+  qFatal("%s", qPrintable(error))
+
+A148 | createVoiceFixture | src/checks/drawerpresentation/fixtures.cpp:135
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained native harness guard; the production Qt object/device/window is not constructed by this Swift model scenario. Shared VoiceTransactionFixture setup precondition consumed by voicePickerTransactions and voiceMarkerDragTransactions; a failed create aborts the harness rather than asserting a scenario outcome, so it is not a parity assertion.
+Original expression:
+  qFatal("%s", qPrintable(error))
 
 Swift executable assertion index
 The S entries are exact predicates already called by the suite. Their presence alone

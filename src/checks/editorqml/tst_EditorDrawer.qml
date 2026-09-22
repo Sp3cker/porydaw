@@ -1892,14 +1892,16 @@ TestCase {
             testCase.awaitVoiceModal("voicePicker", true)
         }
         verify(waitForPolish(target.Window.window), pane + " completed layout before capture")
+        var captureWidth = Math.floor(target.width)
+        var captureHeight = Math.floor(target.height)
         var origin = target.mapToItem(testCase.surface, 0, 0)
         var url = bootstrap.profilePngUrl(pane)
         var saved = false
         target.grabToImage(function(result) { saved = result.saveToFile(url) })
         tryVerify(function() { return saved }, 5000, pane + " rendered a PNG")
-        // The record names the production component it captured and the exact
-        // logical size it covered: the drawn root the grab held is the pane's own
-        // identity, so a record whose root is another pane's is refused.
+        // The record names the production component and the exact pixel-backed
+        // logical extent captured: the grab truncates logical bounds before DPR
+        // scaling. The drawn root still identifies the pane's own production item.
         var recorded = bootstrap.writeProfileMetadata(pane, page.Screen.devicePixelRatio,
                                               pane === "voice-picker"
                                               ? testCase.voiceModel().baseFontPx
@@ -1909,14 +1911,16 @@ TestCase {
                                               ? testCase.surface.gridModel.baseFontPx
                                               : testCase.velocityModel().baseFontPx,
                                               String(target.objectName),
-                                              target.width, target.height,
+                                              captureWidth, captureHeight,
                                               origin.x, origin.y,
-                                              target.width, target.height)
+                                              captureWidth, captureHeight)
         // Each original popup fixture retires its modal before the next case.
-        // The full-window modal must not intercept the next pane's input.
+        // The next pane's input needs the drawn modal closed and its focus restored,
+        // not merely the owner's promptOpen flag cleared.
         if (pane === "velocity-prompt") {
             testCase.velocityModel().cancelPrompt()
-            tryCompare(testCase.velocityModel(), "promptOpen", false)
+            testCase.awaitVoiceModal("velocityPrompt", false)
+            wait(0)
         } else if (pane === "voice-picker") {
             testCase.voiceModel().cancelPicker()
             testCase.awaitVoiceModal("voicePicker", false)

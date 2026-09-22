@@ -75,7 +75,7 @@ Item {
             velocityInput.selectAll()
         }
         Component.onCompleted: if (promptRoot.opened) Qt.callLater(activateInitialFocus)
-        Keys.onShortcutOverride: event => event.accepted = true
+        Keys.onShortcutOverride: event => event.accepted = event.key !== Qt.Key_Space
 
         // The focused DragInput receives accepted text-edit keys first. This
         // terminal sink claims only declined keys so timeline commands never leak
