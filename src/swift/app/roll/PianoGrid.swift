@@ -59,7 +59,9 @@ public final class PianoGrid {
     @QtIgnored private var staticContentEndTick = GridMetrics.songLengthTicks
 
     @QtTracked public var scene = GridScene()
-    @QtTracked public var palette = GridPalette()
+    /// The palette the roll draws with: assigned once by `init`, either the
+    /// session's shared instance or, for a standalone grid, one of its own.
+    @QtTracked public var palette: GridPalette
 
     @QtTracked public var renderedNoteCount = 0
     @QtTracked public var appliedRevisionText = ""
@@ -113,8 +115,16 @@ public final class PianoGrid {
     @QtIgnored
     public var interactionActive: Bool { gesture != nil }
 
-    public init(session: DocumentSession) {
+    /// Creates the roll presenter for `session`.
+    ///
+    /// - Parameter palette: The palette the roll draws with. The application
+    ///   passes the session's one instance so every tab shares it, and a
+    ///   standalone grid — checks, fixtures — keeps a palette of its own.
+    public init(session: DocumentSession, palette: GridPalette? = nil) {
         self.session = session
+        // Set before the first bake below: the roll's static layer reads the
+        // palette, so a later assignment would leave that layer with defaults.
+        self.palette = palette ?? GridPalette()
         commands = NoteCommands(session: session)
         // The existing Set Velocity row asks its owner for the prompt instead of
         // committing a value; the owner is the document-bound page the

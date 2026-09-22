@@ -134,7 +134,6 @@ class GridFixture final
 
     RewriteWindow &window() { return m_window; }
     QQuickView *view() const { return m_view; }
-    QQuickItem *root() const { return m_root; }
     QObject *grid() const { return m_grid; }
     QQuickItem *input() const { return m_input; }
     QQuickItem *surface() const { return m_surface; }
@@ -559,21 +558,39 @@ void SwiftRollGatedTest::trackFollowAndSessionReplacement()
             },
             kSettleTimeoutMs));
 
-        QPointer<QQuickView> oldView = fixture.view();
-        QPointer<QObject> oldRoot = fixture.root();
-        QPointer<QObject> oldGrid = fixture.grid();
-        QVERIFY(QMetaObject::invokeMethod(fixture.window().sessionObject(), "openSong",
-                                          Q_ARG(QString, fixture.songLabel()), Q_ARG(bool, false)));
-        QVERIFY(QTest::qWaitFor(
-            [&] {
-                return oldView.isNull() && oldRoot.isNull() && oldGrid.isNull() &&
-                       fixture.window().gridView() && fixture.window().gridView() != oldView &&
-                       fixture.window().gridView()->rootObject();
-            },
-            kOpenTimeoutMs));
+        // Re-opening the selected song is the in-place reload path: the tab
+        // closes and the same label opens again, so the tab's page and grid are
+        // replaced while the one mounted view and the application session live
+        // on.
+        const QPointer<QQuickView> reloadedView = fixture.view();
+        QObject *const session = fixture.window().sessionObject();
+        QVERIFY(session != nullptr);
+        QObject *const controller = session->property("songTabs").value<QObject *>();
+        QVERIFY(controller != nullptr);
+        const QPointer<QObject> oldGrid = fixture.grid();
+        QVERIFY(
+            QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, fixture.songLabel())));
+        const auto presentedGrid = [&fixture] {
+            QQuickView *const view = fixture.window().gridView();
+            auto *const rootItem = view ? qobject_cast<QQuickItem *>(view->rootObject()) : nullptr;
+            return rootItem ? rootItem->property("gridModel").value<QObject *>() : nullptr;
+        };
+        QVERIFY2(QTest::qWaitFor(
+                     [&] {
+                         return fixture.window().gridView() == reloadedView &&
+                                controller->property("tabCount").toInt() == 1 &&
+                                controller->property("pendingCloseId").toInt() == -1 &&
+                                presentedGrid() && presentedGrid() != oldGrid;
+                     },
+                     kOpenTimeoutMs),
+                 "re-opening the selected song did not replace its tab in place");
+        QVERIFY2(fixture.window().gridView() == reloadedView && reloadedView->isExposed(),
+                 "the mounted view did not survive the reload");
         finalView = fixture.window().gridView();
-        finalGrid = finalView->rootObject()->property("gridModel").value<QObject *>();
+        finalGrid = presentedGrid();
         QVERIFY(finalGrid && finalGrid->property("renderedNoteCount").toInt() > 0);
+        QVERIFY2(finalGrid->property("trackIndex").toInt() == 0,
+                 "the reloaded tab kept the replaced document's track selection");
     }
     QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     QCoreApplication::processEvents();

@@ -15,6 +15,7 @@ add_library(PorydawApp STATIC
     audio/AudioSampleAudition.swift
     audio/ResonanceSuppression.swift
     ApplicationSession.swift
+    SongTabsController.swift
     MouseHints.swift
     QListModelSync.swift
     roll/PianoGrid.swift

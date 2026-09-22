@@ -4,7 +4,6 @@
 #include <QPointer>
 #include <QString>
 
-#include <functional>
 #include <memory>
 
 #include <vector>
@@ -38,6 +37,7 @@ class RewriteWindow final : public QMainWindow
     QQuickView *gridView() const;
 
   protected:
+    void changeEvent(QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -57,23 +57,21 @@ class RewriteWindow final : public QMainWindow
     void updateGridActions();
     void handleOpenFailed(const QString &message);
     void handleOperationFailed(const QString &message);
+    void handleAllTabsClosed();
+    void handleCloseCancelled();
 
   private:
-    enum class DirtyDecision { Save, Discard, Cancel };
     struct GridAction {
         QString keymap;
         int command = -1;
         QAction *action = nullptr;
     };
 
-    DirtyDecision askDirtyDecision(const QString &title);
-    bool documentDirty() const;
+    int openTabCount() const;
     bool saveInProgress() const;
     QString saveError() const;
-    void invokeOpenProject(const QString &path, bool discardChanges);
-    void invokeOpenSong(const QString &label, bool discardChanges);
-    void runAfterDirtyGate(QString title, std::function<void(bool)> operation);
-    void requestSaveThen(std::function<void()> completion);
+    void invokeOpenProject(const QString &path);
+    void invokeOpenSong(const QString &label);
     void invokeNoArgs(const char *method);
     void attachGridScene();
     void applyGridPalette();
@@ -101,6 +99,6 @@ class RewriteWindow final : public QMainWindow
     QAction *m_stopAction = nullptr;
     std::vector<GridAction> m_gridActions;
     QMenu *m_gridContextMenu = nullptr;
-    std::function<void()> m_afterSave;
     bool m_isClosing = false;
+    bool m_closeAllPending = false;
 };

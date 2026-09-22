@@ -16,7 +16,7 @@ Source evidence, not a runtime certification:
 
 - `cmake/QtBridge.cmake` pins QtBridge to `407714006dd21107b70db6547ce75e43df0c8a75` and requires Qt 6.10 CorePrivate.
 - Local patch: `src/ui/songview/quick/swiftroll/qtbridge-object-return.patch`.
-- Patch scope observed during assessment: object-return macro support, optional bridged-object conversion, public QML element registration, and macro build configuration.
+- Patch scope observed during assessment: object-return macro support, optional bridged-object conversion, public QML element registration, and macro build configuration; the tab strip added genuine list-model row moves.
 - `PianoGrid.swift` uses direct QtBridge exposure; `GridScene.swift` exposes Swift `QListModel` collections.
 - Upstream: https://github.com/qt/qtbridge-swift (early-preview dependency).
 
@@ -36,8 +36,9 @@ Unverified until executed):
   baseline; advancing the pin, patch, Qt or Swift invalidates affected rows).
 
 Local patch `src/ui/songview/quick/swiftroll/qtbridge-object-return.patch`
-(74 lines, 4 hunks; **not upstreamed**; applied idempotently by
-`PatchQtBridge.cmake` with SHA256-pinned inputs):
+(179 lines, 8 hunks; **not upstreamed**; applied idempotently by
+`PatchQtBridge.cmake`, which derives the file list from the patch's own
+`diff --git` headers, with SHA256-pinned inputs):
 
 | Hunk | QtBridge source | Purpose |
 | --- | --- | --- |
@@ -45,6 +46,13 @@ Local patch `src/ui/songview/quick/swiftroll/qtbridge-object-return.patch`
 | 2 | `CMakeLists.txt:59` | Propagate host `CMAKE_MAKE_PROGRAM`/Swift compiler/flags into the macro plugin ExternalProject; `BUILD_ALWAYS`. |
 | 3 | `Sources/QtBridge/QmlInstantiable.swift:50` | Make `registerQmlElement()` public so consumer modules register QML elements. |
 | 4 | `Sources/QtBridge/QVariant.swift:95,181` | `QVariant` from `Optional<Wrapped: QObjectBuildable>` (typed null) + `Optional: QVariantGettable`. |
+| 5 | `Sources/QtBridge/QListModel.swift:109` | `QListModel.move(from:to:)`: a genuine `beginMoveRows`/`endMoveRows` move that leaves the list unchanged when the native model refuses it, never a remove/insert imitation or reset. |
+| 6 | `Sources/QtBridge/QAbstractListModel.swift:162` | Swift-side `beginMoveRows`/`endMoveRows` bridging to the C++ model. |
+| 7 | `Sources/QtBridgeCpp/abstractlistmodel.cpp:64,147` | C++ pass-throughs for the move pair. |
+| 8 | `Sources/QtBridgeCpp/include/abstractlistmodel.h:42` | The move pair's declarations. |
+
+Hunks 5-8 (the tab strip's reorder) were recorded 2026-09-21; hunks 1-4 are
+the assessment baseline.
 
 Mechanism anchors (pinned source, subject to pin changes): `@QtTracked` emits
 Qt property-change signals from `didSet` (`QtBridgeableMacro.swift:115`);
@@ -192,8 +200,8 @@ Toolchain facts (observed, not assumed):
 - `CMAKE_OSX_DEPLOYMENT_TARGET`/`CMAKE_OSX_SYSROOT` are unset — toolchain
   and SDK defaults apply. No explicit C++ interop flags on `PorydawCore`
   (Qt-free); QtBridge targets keep their existing flags from the pinned
-  patch (pin `407714006dd…`, 4 local hunks — unchanged from the 6.3.3
-  baseline).
+  patch (pin `407714006dd…`, 4 local hunks then — 8 since the tab strip's move
+  section; see the table above).
 - Language mode: `-swift-version 6` / `Swift_LANGUAGE_VERSION 6` on every
   Swift target (mode, not compiler release). Observed emit-module mode
   enforces borrow/consume diagnostics that plain typecheck does not: two

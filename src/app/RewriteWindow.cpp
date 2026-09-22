@@ -40,7 +40,6 @@
 
 #include <iterator>
 #include <limits>
-#include <utility>
 
 namespace {
 
@@ -109,6 +108,7 @@ RewriteWindow::RewriteWindow(QWidget *parent)
     }
     QQmlEngine::setObjectOwnership(m_session, QQmlEngine::CppOwnership);
     m_session->setParent(this);
+    applyGridPalette();
 
     if (!connectPropertyNotify("projectOpen", "updateWindowActions()"))
         qWarning("host-contract: projectOpen notify missing");
@@ -131,6 +131,10 @@ RewriteWindow::RewriteWindow(QWidget *parent)
         qWarning("host-contract: gridContextMenuRequested missing");
     if (!connectSessionSignal("gridCommandAvailabilityChanged()", "updateGridActions()"))
         qWarning("host-contract: gridCommandAvailabilityChanged missing");
+    if (!connectSessionSignal("allTabsClosed()", "handleAllTabsClosed()"))
+        qWarning("host-contract: allTabsClosed missing");
+    if (!connectSessionSignal("closeCancelled()", "handleCloseCancelled()"))
+        qWarning("host-contract: closeCancelled missing");
     auto *fileMenu = menuBar()->addMenu(tr("&File"));
     m_openProjectAction =
         fileMenu->addAction(tr("Open Project…"), this, &RewriteWindow::chooseProject);
@@ -202,7 +206,7 @@ void RewriteWindow::openStartup(const QString &projectPath, const QString &songL
     if (!m_session || projectPath.isEmpty())
         return;
     if (songLabel.isEmpty()) {
-        invokeOpenProject(projectPath, false);
+        invokeOpenProject(projectPath);
         return;
     }
     QMetaObject::invokeMethod(m_session, "openProjectAndSong", Q_ARG(QString, projectPath),
@@ -214,8 +218,7 @@ void RewriteWindow::chooseProject()
     const QString path = QFileDialog::getExistingDirectory(this, tr("Open Project"));
     if (path.isEmpty())
         return;
-    runAfterDirtyGate(tr("Open Project"),
-                      [this, path](bool discard) { invokeOpenProject(path, discard); });
+    invokeOpenProject(path);
 }
 
 void RewriteWindow::chooseSong()
@@ -242,8 +245,7 @@ void RewriteWindow::chooseSong()
         QInputDialog::getItem(this, tr("Open Song"), tr("Song:"), labels, 0, false, &accepted);
     if (!accepted)
         return;
-    runAfterDirtyGate(tr("Open Song"),
-                      [this, label](bool discard) { invokeOpenSong(label, discard); });
+    invokeOpenSong(label);
 }
 
 void RewriteWindow::save()
@@ -271,32 +273,46 @@ void RewriteWindow::stop()
     invokeNoArgs("stop");
 }
 
+void RewriteWindow::changeEvent(QEvent *event)
+{
+    QMainWindow::changeEvent(event);
+    // ThemeController has no signal of its own; themes::apply() restyles the
+    // application, so the palette event is the theme-change notification the
+    // window sees (the pattern the previous shell used).
+    switch (event->type()) {
+    case QEvent::ApplicationPaletteChange:
+    case QEvent::StyleChange:
+    case QEvent::ThemeChange:
+        applyGridPalette();
+        break;
+    default:
+        break;
+    }
+}
+
 void RewriteWindow::closeEvent(QCloseEvent *event)
 {
-    if (!documentDirty()) {
-        m_isClosing = true;
-        if (m_session)
-            QMetaObject::invokeMethod(m_session, "hostClosing");
-        detachGridScene();
-        event->accept();
+    if (openTabCount() > 0) {
+        // Tab semantics own the dirty gate: the session walks its tabs and
+        // answers with allTabsClosed() or closeCancelled(). Ignore first so a
+        // synchronous answer cannot accept this event, and ignore any further
+        // close request while the walk is in flight.
+        //
+        // requestCloseAll() must complete asynchronously with respect to this
+        // event: a synchronous allTabsClosed -> close() from inside closeEvent
+        // would recurse into this function before it returned.
+        event->ignore();
+        if (m_closeAllPending)
+            return;
+        m_closeAllPending = true;
+        QMetaObject::invokeMethod(m_session, "requestCloseAll");
         return;
     }
-    switch (askDirtyDecision(tr("Close Porydaw"))) {
-    case DirtyDecision::Discard:
-        m_isClosing = true;
-        if (m_session)
-            QMetaObject::invokeMethod(m_session, "hostClosing");
-        detachGridScene();
-        event->accept();
-        return;
-    case DirtyDecision::Cancel:
-        event->ignore();
-        return;
-    case DirtyDecision::Save:
-        event->ignore();
-        requestSaveThen([this] { close(); });
-        return;
-    }
+    m_isClosing = true;
+    if (m_session)
+        QMetaObject::invokeMethod(m_session, "hostClosing");
+    detachGridScene();
+    event->accept();
 }
 
 bool RewriteWindow::eventFilter(QObject *watched, QEvent *event)
@@ -336,25 +352,23 @@ bool RewriteWindow::eventFilter(QObject *watched, QEvent *event)
     return QMainWindow::eventFilter(watched, event);
 }
 
-RewriteWindow::DirtyDecision RewriteWindow::askDirtyDecision(const QString &title)
+int RewriteWindow::openTabCount() const
 {
-    QMessageBox box(QMessageBox::Warning, title, tr("The current song has unsaved changes."),
-                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, this);
-    box.setDefaultButton(QMessageBox::Save);
-    const auto result = QMessageBox::StandardButton(box.exec());
-    if (result == QMessageBox::Save)
-        return DirtyDecision::Save;
-    if (result == QMessageBox::Discard)
-        return DirtyDecision::Discard;
-    return DirtyDecision::Cancel;
-}
-
-bool RewriteWindow::documentDirty() const
-{
-    bool dirty = false;
-    if (m_session)
-        QMetaObject::invokeMethod(m_session, "isDocumentDirty", Q_RETURN_ARG(bool, dirty));
-    return dirty;
+    // A session that never started has no strip: the placeholder path already
+    // reported why, so this is not a contract break.
+    if (!m_session)
+        return 0;
+    QObject *const tabs = m_session->property("songTabs").value<QObject *>();
+    if (!tabs) {
+        qWarning("host-contract: songTabs missing");
+        return 0;
+    }
+    const QVariant count = tabs->property("tabCount");
+    if (!count.isValid()) {
+        qWarning("host-contract: songTabs.tabCount missing");
+        return 0;
+    }
+    return count.toInt();
 }
 
 bool RewriteWindow::saveInProgress() const
@@ -367,60 +381,22 @@ QString RewriteWindow::saveError() const
     return m_session ? m_session->property("lastSaveError").toString() : QString();
 }
 
-void RewriteWindow::invokeOpenProject(const QString &path, bool discardChanges)
+void RewriteWindow::invokeOpenProject(const QString &path)
 {
-    QMetaObject::invokeMethod(m_session, "openProject", Q_ARG(QString, path),
-                              Q_ARG(bool, discardChanges));
+    QMetaObject::invokeMethod(m_session, "openProject", Q_ARG(QString, path));
 }
 
-void RewriteWindow::invokeOpenSong(const QString &label, bool discardChanges)
+void RewriteWindow::invokeOpenSong(const QString &label)
 {
-    QMetaObject::invokeMethod(m_session, "openSong", Q_ARG(QString, label),
-                              Q_ARG(bool, discardChanges));
-}
-
-void RewriteWindow::runAfterDirtyGate(QString title, std::function<void(bool)> operation)
-{
-    if (!documentDirty()) {
-        operation(false);
-        return;
-    }
-    switch (askDirtyDecision(title)) {
-    case DirtyDecision::Discard:
-        operation(true);
-        break;
-    case DirtyDecision::Cancel:
-        break;
-    case DirtyDecision::Save:
-        requestSaveThen([operation = std::move(operation)] { operation(false); });
-        break;
-    }
-}
-
-void RewriteWindow::requestSaveThen(std::function<void()> completion)
-{
-    if (saveInProgress())
-        return;
-    m_afterSave = std::move(completion);
-    invokeNoArgs("requestSave");
+    QMetaObject::invokeMethod(m_session, "openSong", Q_ARG(QString, label));
 }
 
 void RewriteWindow::handleSaveStateChanged()
 {
     updateWindowActions();
-    if (saveInProgress())
+    if (saveInProgress() || saveError().isEmpty())
         return;
-    if (!saveError().isEmpty()) {
-        m_afterSave = {};
-        QMessageBox::critical(this, tr("Save Failed"), saveError());
-        return;
-    }
-    if (documentDirty())
-        return;
-    auto completion = std::move(m_afterSave);
-    m_afterSave = {};
-    if (completion)
-        completion();
+    QMessageBox::critical(this, tr("Save Failed"), saveError());
 }
 
 void RewriteWindow::handleSongOpenChanged()
@@ -428,6 +404,7 @@ void RewriteWindow::handleSongOpenChanged()
     if (m_session && m_session->property("songOpen").toBool())
         attachGridScene();
     updateWindowActions();
+    updateGridActions();
 }
 
 void RewriteWindow::handleOpenFailed(const QString &message)
@@ -444,6 +421,21 @@ void RewriteWindow::handleOperationFailed(const QString &message)
         return;
     statusBar()->showMessage(message);
     QMessageBox::critical(this, tr("Operation Failed"), message);
+}
+
+void RewriteWindow::handleAllTabsClosed()
+{
+    // The session emits this only for the walk this window requested: a walk it
+    // started for a project open continues that switch instead (see
+    // ApplicationSession.closeAllResolved). Re-enters closeEvent with no tabs
+    // left, which takes the accept path.
+    m_closeAllPending = false;
+    close();
+}
+
+void RewriteWindow::handleCloseCancelled()
+{
+    m_closeAllPending = false;
 }
 
 void RewriteWindow::attachGridScene()
@@ -476,7 +468,6 @@ void RewriteWindow::attachGridScene()
     m_sceneContainer = QWidget::createWindowContainer(view, this);
     m_sceneContainer->installEventFilter(this);
     setCentralWidget(m_sceneContainer);
-    applyGridPalette();
     statusBar()->showMessage(tr("Song open"));
 }
 
@@ -502,12 +493,18 @@ void RewriteWindow::detachGridScene()
 
 void RewriteWindow::applyGridPalette()
 {
-    if (!m_quickView || !m_quickView->rootObject())
+    // Session creation has not finished (or failed): nothing to push to yet.
+    if (!m_session)
         return;
-    QObject *grid = m_quickView->rootObject()->property("gridModel").value<QObject *>();
-    QObject *palette = grid ? grid->property("palette").value<QObject *>() : nullptr;
-    if (!palette)
+    // Task 2 contract: one session-owned GridPalette, and every tab's
+    // PianoGrid.palette IS this object (not a copy), so the theme push happens
+    // once here — at session creation, before any grid exists, and again on
+    // every theme change — instead of once per mounted grid.
+    QObject *const palette = m_session->property("palette").value<QObject *>();
+    if (!palette) {
+        qWarning("host-contract: session palette missing");
         return;
+    }
 
     static constexpr struct {
         const char *name;
@@ -565,6 +562,21 @@ void RewriteWindow::applyGridPalette()
     auto hover = themes::color(themes::Role::song_view_piano_keyboard_active_key);
     hover.setAlpha(80);
     palette->setProperty("keyboardHover", hexColor(hover));
+
+    // The palette's NOTIFY signals refresh QML bindings (EditorSurface fills,
+    // the strip), but the roll bakes palette colours into the GridScene rect
+    // models that TimelineQuickItem renders, and a palette write alone does not
+    // mark those static inputs dirty. Re-bake the presented grid so a theme
+    // change repaints it; hidden tabs' grids re-bake on their next rebuild.
+    // `gridPresenter()` requires an open song, so gate on `songOpen` — it is
+    // false at session creation and in the empty-strip state, where nothing is
+    // presented to re-bake.
+    if (!m_session->property("songOpen").toBool())
+        return;
+    QObject *grid = nullptr;
+    if (!QMetaObject::invokeMethod(m_session, "gridPresenter", Q_RETURN_ARG(QObject *, grid)) ||
+        !grid)
+        return;
     QMetaObject::invokeMethod(grid, "reloadVisuals");
 }
 
@@ -666,7 +678,10 @@ void RewriteWindow::updateWindowActions()
     if (m_redoAction)
         m_redoAction->setEnabled(songOpen && m_session && m_session->property("canRedo").toBool());
 
-    updateGridActions();
+    // Grid actions follow `gridCommandAvailabilityChanged` and `songOpen`
+    // only: a mid-gesture command query can report a transient unavailable
+    // state (the press holds the selection), and no availability emission
+    // follows the release because the settled set matches the last publish.
 }
 
 void RewriteWindow::updateGridActions()

@@ -72,3 +72,108 @@ diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
 +}
 +
  extension Bool: QVariantSettable {
+diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
+--- a/Sources/QtBridge/QListModel.swift
++++ b/Sources/QtBridge/QListModel.swift
+@@ -109,6 +109,33 @@
+         }
+     }
+ 
++    /// Moves an element to a final index within the list.
++    ///
++    /// Invalid indices, identical indices, and moves rejected by
++    /// the underlying Qt model leave the list unchanged.
++    ///
++    /// - Parameters:
++    ///   - sourceIndex: The current index of the element.
++    ///   - destinationIndex: The element's final index.
++    public func move(from sourceIndex: Int, to destinationIndex: Int) {
++        guard storage.indices.contains(sourceIndex),
++              storage.indices.contains(destinationIndex),
++              sourceIndex != destinationIndex
++        else { return }
++
++        let sourceRow = Int32(sourceIndex)
++        let destinationChild = Int32(destinationIndex > sourceIndex
++                                     ? destinationIndex + 1
++                                     : destinationIndex)
++        guard model.beginMoveRows(QModelIndex(), sourceRow, sourceRow,
++                                  QModelIndex(), destinationChild)
++        else { return }
++
++        let element = storage.remove(at: sourceIndex)
++        storage.insert(element, at: destinationIndex)
++        model.endMoveRows()
++    }
++
+     /// Inserts, removes or replaces elements within
+     /// the specified range.
+     ///
+diff --git a/Sources/QtBridge/QAbstractListModel.swift b/Sources/QtBridge/QAbstractListModel.swift
+--- a/Sources/QtBridge/QAbstractListModel.swift
++++ b/Sources/QtBridge/QAbstractListModel.swift
+@@ -162,6 +162,15 @@
+ 
+     internal func endInsertRows() -> Void { return getCppModel().endInsertRows() }
+ 
++    @discardableResult
++    internal func beginMoveRows(_ sourceParent: QModelIndex, _ sourceFirst: Int32, _ sourceLast: Int32,
++                                _ destinationParent: QModelIndex, _ destinationRow: Int32) -> Bool {
++        return getCppModel().beginMoveRows(sourceParent.cppModel, sourceFirst, sourceLast,
++                                           destinationParent.cppModel, destinationRow)
++    }
++
++    internal func endMoveRows() { getCppModel().endMoveRows() }
++
+     internal func beginRemoveRows(_ parent: QModelIndex, _ first: Int32, _ last: Int32) -> Void {
+         return getCppModel().beginRemoveRows(parent.cppModel, first, last)
+     }
+diff --git a/Sources/QtBridgeCpp/abstractlistmodel.cpp b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+--- a/Sources/QtBridgeCpp/abstractlistmodel.cpp
++++ b/Sources/QtBridgeCpp/abstractlistmodel.cpp
+@@ -64,6 +64,14 @@
+ 
+     void endInsertRows() { QAbstractListModel::endInsertRows(); }
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst, int sourceLast,
++                       const QModelIndex &destinationParent, int destinationRow) {
++        return QAbstractListModel::beginMoveRows(sourceParent, sourceFirst, sourceLast,
++                                                 destinationParent, destinationRow);
++    }
++
++    void endMoveRows() { QAbstractListModel::endMoveRows(); }
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last) {
+         QAbstractListModel::beginRemoveRows(parent, first, last);
+     }
+@@ -147,6 +155,15 @@
+ 
+ void QAbstractListModelCpp::endInsertRows() { m_impl->endInsertRows(); }
+ 
++bool QAbstractListModelCpp::beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                                          int sourceLast, const QModelIndex &destinationParent,
++                                          int destinationRow) {
++    return m_impl->beginMoveRows(sourceParent, sourceFirst, sourceLast, destinationParent,
++                                 destinationRow);
++}
++
++void QAbstractListModelCpp::endMoveRows() { m_impl->endMoveRows(); }
++
+ void QAbstractListModelCpp::beginRemoveRows(const QModelIndex &parent, int first, int last) {
+     m_impl->beginRemoveRows(parent, first, last);
+ }
+diff --git a/Sources/QtBridgeCpp/include/abstractlistmodel.h b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+--- a/Sources/QtBridgeCpp/include/abstractlistmodel.h
++++ b/Sources/QtBridgeCpp/include/abstractlistmodel.h
+@@ -42,6 +42,11 @@
+     void beginInsertRows(const QModelIndex parent, int first, int last);
+     void endInsertRows();
+ 
++    bool beginMoveRows(const QModelIndex &sourceParent, int sourceFirst,
++                       int sourceLast, const QModelIndex &destinationParent,
++                       int destinationRow);
++    void endMoveRows();
++
+     void beginRemoveRows(const QModelIndex &parent, int first, int last);
+     void endRemoveRows();
+ 

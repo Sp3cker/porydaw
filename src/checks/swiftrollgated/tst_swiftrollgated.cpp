@@ -277,7 +277,7 @@ void SwiftRollGatedTest::init()
     QTest::failOnWarning(QRegularExpression(QStringLiteral("TypeError|ReferenceError")));
 }
 
-void SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError()
+void SwiftRollGatedTest::failedReopenLeavesEmptyStripAndSurfacesError()
 {
     if (m_mode != QStringLiteral("swiftqtml"))
         QSKIP("failed open error surface belongs to swiftqtml");
@@ -295,13 +295,18 @@ void SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError()
                                  window.gridView()->rootObject() != nullptr,
                              5'000);
 
-    QQuickItem *const root = qobject_cast<QQuickItem *>(window.gridView()->rootObject());
+    QObject *const controller = session->property("songTabs").value<QObject *>();
+    QVERIFY(controller != nullptr);
+    QQuickView *const view = window.gridView();
+    QQuickItem *const root = qobject_cast<QQuickItem *>(view->rootObject());
     QVERIFY(root != nullptr);
     QObject *const grid = root->property("gridModel").value<QObject *>();
     QVERIFY(grid != nullptr);
     const QString baselineSummary = grid->property("noteSummary").toString();
     QVERIFY(!baselineSummary.isEmpty());
     QVERIFY(window.centralWidget() != nullptr);
+    const int tabId = controller->property("selectedId").toInt();
+    QVERIFY(tabId >= 0);
 
     // Model a user-reachable filesystem failure: the previously valid song file
     // is externally removed after a successful open, then the user reopens the
@@ -334,8 +339,7 @@ void SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError()
     });
     dismissTimer->start();
 
-    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel),
-                                      Q_ARG(bool, true)));
+    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
 
     QTRY_COMPARE_WITH_TIMEOUT(openFailedSpy.size(), 1, 5'000);
     QTRY_COMPARE_WITH_TIMEOUT(errorDialogCount, 1, 5'000);
@@ -344,19 +348,34 @@ void SwiftRollGatedTest::failedOpenPreservesSceneAndSurfacesError()
     QVERIFY2(QFile::rename(backupPath, songPath), qPrintable(backupPath));
     QCoreApplication::processEvents();
 
-    // The previously visible musical data is still live: the window still shows
-    // a functional grid scene with the same note data and the song still open.
-    // No exact QObject/container identity assertion: replacement policy owns
-    // object identity, the user-visible contract is live scene plus data.
-    QVERIFY(window.gridView() != nullptr);
-    QVERIFY(window.gridView()->rootObject() != nullptr);
+    // Tab semantics own the reopen: re-opening the selected song is the in-place
+    // reload path, so the tab closed first — cleanly, with no gate — and the
+    // failed load then installed nothing. The strip is empty, the mounted view
+    // survives its empty strip, and the failure reached the session and the
+    // window rather than leaving a half-open tab behind.
+    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 0, 5'000);
+    QCOMPARE(controller->property("pendingCloseId").toInt(), -1);
+    QCOMPARE(controller->property("selectedId").toInt(), -1);
+    QVERIFY(!session->property("songOpen").toBool());
+    QVERIFY(!session->property("lastSaveError").toString().isEmpty());
+    QVERIFY(view == window.gridView());
+    QVERIFY(view->isExposed());
+    QVERIFY(view->rootObject() != nullptr);
     QVERIFY(window.centralWidget() != nullptr);
-    QQuickItem *const currentRoot = qobject_cast<QQuickItem *>(window.gridView()->rootObject());
-    QVERIFY(currentRoot != nullptr);
-    QObject *const currentGrid = currentRoot->property("gridModel").value<QObject *>();
-    QVERIFY(currentGrid != nullptr);
-    QCOMPARE(currentGrid->property("noteSummary").toString(), baselineSummary);
+    QVERIFY(root->property("gridModel").value<QObject *>() == nullptr);
+    QVERIFY(gridcheck::visualDescendant(root, QStringLiteral("songTab_%1").arg(tabId)) == nullptr);
+
+    // The failed load left no broken state behind: the restored song opens again
+    // in the same view with its original content.
+    QVERIFY(QMetaObject::invokeMethod(session, "openSong", Q_ARG(QString, m_songLabel)));
+    QTRY_COMPARE_WITH_TIMEOUT(controller->property("tabCount").toInt(), 1, 15'000);
     QVERIFY(session->property("songOpen").toBool());
+    QQuickItem *const reopenedRoot = qobject_cast<QQuickItem *>(view->rootObject());
+    QVERIFY(reopenedRoot != nullptr);
+    QObject *const reopenedGrid = reopenedRoot->property("gridModel").value<QObject *>();
+    QVERIFY(reopenedGrid != nullptr);
+    QTRY_VERIFY_WITH_TIMEOUT(reopenedGrid->property("renderedNoteCount").toInt() > 0, 5'000);
+    QCOMPARE(reopenedGrid->property("noteSummary").toString(), baselineSummary);
 }
 
 void SwiftRollGatedTest::selectionReticleRasterTranslucency()

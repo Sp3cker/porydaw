@@ -81,6 +81,9 @@ qt_add_executable(porydaw_checks
     swiftrollgated/clipboardchecks.cpp
     swiftrollgated/chromevisuals.cpp
     swiftrollgated/notevisuals.cpp
+    swiftrollgated/tabchecks.cpp
+    swiftrollgated/tabfixture.cpp
+    swiftrollgated/tabfixture.h
     swiftrollgated/tst_swiftrollgated.h
     themelayout/tst_themelayout.h
     themelayout/themelayoutcheck.cpp

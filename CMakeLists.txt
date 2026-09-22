@@ -239,11 +239,22 @@ qt_add_resources(porydaw_app "swift_roll_qml"
     FILES
         src/ui/songview/quick/swiftroll/PianoRollCanvas.qml
         src/ui/songview/quick/swiftroll/EditorSurface.qml
+        src/ui/songview/quick/swiftroll/SongTabs.qml
+        src/ui/songview/quick/swiftroll/SongTab.qml
         src/ui/songview/quick/swiftroll/TrackHeaderBand.qml
         src/ui/songview/quick/swiftroll/SharedPlayhead.qml
         src/ui/songview/quick/swiftroll/SwiftRollOverlay.qml
         src/ui/songview/quick/swiftroll/TimelineQuickItem.qml
         src/ui/songview/quick/swiftroll/MouseHintStatus.qml
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-disabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-left-enabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-disabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled.png
+        src/ui/songview/quick/swiftroll/tabart/tab-arrow-right-enabled@2x.png
+        src/ui/songview/quick/swiftroll/tabart/window-close.svg
 )
 
 # Shared original controls retain relative imports from the drawer resources.
