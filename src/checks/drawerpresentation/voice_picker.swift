@@ -85,13 +85,13 @@ func drawerVoicePickerInsertion(_ report: CheckReport, suite: DocumentSession,
     report.expect(page.markerTicks.contains(96), cppID: drawerVoiceInsertionID,
                   message: "redo republishes the restored marker")
 
-    // A same-value acceptance is a no-op.
+    // A same-value acceptance is accepted but commits no document change.
     let settled = fixture.snapshot
     _ = page.pointerDoubleClick(x: fixture.markerX(96), y: 10)
     page.setPickerFilter(text: filter)
     page.selectPickerRow(index: 0)
-    report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
-                  message: "accepting the value the document already holds writes nothing")
+    report.expect(page.acceptPicker(), cppID: drawerVoiceInsertionID,
+                  message: "accepting the current value closes the valid picker")
     report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceInsertionID,
                        what: "the same-value acceptance leaves the document untouched")
 

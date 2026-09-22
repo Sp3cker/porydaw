@@ -2,75 +2,158 @@ import Foundation
 import PorydawCore
 import QtBridge
 
+/// The page samples the native clipboard and snapping policy once before dispatch.
+/// Neither value can be read by the pure command planner.
+struct AutomationSelectionRequest: Sendable {
+    let command: EditCommand
+    let clipboardAvailable: Bool
+    let snappedPasteCursor: Tick
+}
+
+enum AutomationSelectionEffect: Sendable {
+    case paste(at: Tick)
+    case range(policy: EditCommandPolicy, selection: AutomationTimeSelection, scope: TimeScope?)
+}
+
+enum AutomationSelectionCommands {
+    static func resolvedScope(_ selection: AutomationTimeSelection,
+                              usedTracks: Set<Int>) -> TimeScope? {
+        guard selection.isActive, !selection.range.hasReservedEndpoint else { return nil }
+        var scope: TimeScope
+        switch selection.scope {
+        case .lanes:
+            let lanes = selection.lanes.reduce(into: Set<TimeScope.ScopedLane>()) { result, item in
+                guard let track = item.track, let lane = item.lane else { return }
+                result.insert(TimeScope.ScopedLane(track: track, lane: lane))
+            }
+            scope = TimeScope(tracks: [], lanes: lanes, tempo: selection.tempo)
+        case let .tracks(tracks):
+            scope = TimeScope(tracks: tracks, lanes: [],
+                              tempo: selection.coversTempo(usedTracks: usedTracks))
+        }
+        scope.tracks.formIntersection(usedTracks)
+        scope.lanes = scope.lanes.filter { usedTracks.contains($0.track) }
+        return scope.tracks.isEmpty && scope.lanes.isEmpty && !scope.tempo ? nil : scope
+    }
+
+    static func available(_ state: AutomationState, command: EditCommand,
+                          clipboardAvailable: Bool) -> Bool {
+        guard state.document.attached else { return false }
+        if command == .paste { return state.activeTrack != nil && clipboardAvailable }
+        guard let selection = state.selection, selection.isActive else { return false }
+        let scope = resolvedScope(selection, usedTracks: state.document.usedTracks)
+        switch editCommandPolicy(command).rangeOperation {
+        case .none: return false
+        case .clearTimeSelection, .loopFromSelection: return true
+        case .transpose:
+            if case .lanes = selection.scope { return false }
+            return scope != nil
+        default:
+            return state.document.hasRawChunks && scope != nil
+        }
+    }
+
+    static func reduce(_ state: inout AutomationState,
+                       request: AutomationSelectionRequest) -> AutomationTransition {
+        guard state.document.attached, !state.pointerGestureActive, !state.modal.isOpen else {
+            return AutomationTransition()
+        }
+        if request.command == .paste {
+            return AutomationTransition(
+                effects: [.selection(.paste(at: request.snappedPasteCursor))],
+                outcome: AutomationOutcome(consumed: true))
+        }
+        let policy = editCommandPolicy(request.command)
+        guard let selection = state.selection, selection.isActive,
+              policy.rangeOperation != .none else { return AutomationTransition() }
+        guard available(state, command: request.command,
+                        clipboardAvailable: request.clipboardAvailable) else {
+            return AutomationTransition(outcome: AutomationOutcome(consumed: true))
+        }
+        let scope = resolvedScope(selection, usedTracks: state.document.usedTracks)
+        if policy.rangeOperation == .clearTimeSelection {
+            state.selection = nil
+            return AutomationTransition(publication: .content,
+                                        outcome: AutomationOutcome(consumed: true),
+                                        selectionBuild: true,
+                                        commandAvailabilityChanged: true)
+        }
+        return AutomationTransition(
+            effects: [.selection(.range(policy: policy, selection: selection, scope: scope))],
+            outcome: AutomationOutcome(consumed: true))
+    }
+}
+
 // Canonical window commands for the drawer's shared time selection. Scope and
 // content gathering use the same semantics as the native selection clipboard.
 @MainActor
 extension AutomationPage {
     @QtIgnored
     public func selectionCommandAvailable(command: EditCommand) -> Bool {
-        guard let session else { return false }
-        if command == .paste { return activeTrack() != nil && hasClipboard }
-        guard let selection, selection.isActive else { return false }
-        switch editCommandPolicy(command).rangeOperation {
-        case .none: return false
-        case .clearTimeSelection, .loopFromSelection: return true
-        case .transpose:
-            if case .lanes = selection.scope { return false }
-            return resolvedSelectionScope() != nil
-        default:
-            return !session.document.rawChunks.isEmpty && resolvedSelectionScope() != nil
+        AutomationSelectionCommands.available(state, command: command,
+                                              clipboardAvailable: command == .paste && hasClipboard)
+    }
+
+    func executeSelectionEffect(_ effect: AutomationSelectionEffect) {
+        guard let session else { return }
+        switch effect {
+        case let .paste(cursor):
+            _ = pasteClipboard(at: cursor)
+        case let .range(policy, selection, scope):
+            session.withStateChanges {
+                switch policy.rangeOperation {
+                case .copySelection: _ = copySelection(selection, scope: scope)
+                case .cut:
+                    if copySelection(selection, scope: scope) {
+                        _ = deleteSelection(selection, scope: scope)
+                    }
+                case .delete: _ = deleteSelection(selection, scope: scope)
+                case .clearTimeSelection: break
+                case .loopFromSelection:
+                    // The original ruler contract deliberately records two undo entries.
+                    session.document.setLoop(end: false, tick: Int64(selection.range.startTick))
+                    session.document.setLoop(end: true, tick: Int64(selection.range.endTick))
+                case .nudge: nudgeSelection(policy.nudgeDelta, selection: selection, scope: scope)
+                case .transpose:
+                    transposeSelection(policy.transposeSemitones, selection: selection, scope: scope)
+                case .duplicate, .insertTime, .removeContents:
+                    transformSelection(policy.rangeOperation, selection: selection, scope: scope)
+                case .none: break
+                }
+            }
         }
     }
 
-    /// A selection owns its command even when its mutation is unavailable or
-    /// empty. Never let an owned range command fall through to selected notes.
-    @QtIgnored
-    @discardableResult
-    public func consumeSelectionCommand(command: EditCommand) -> Bool {
-        guard let session, !pointerGestureActive, !menuOpen, !promptOpen else { return false }
-        if command == .paste {
-            let cursor = selectionSnapPolicy()?.snap(Double(session.editCursor), fine: false,
-                                                     camera: session.camera) ?? session.editCursor
-            _ = pasteClipboard(at: cursor)
-            return true
-        }
-        let policy = editCommandPolicy(command)
-        guard let selection, selection.isActive, policy.rangeOperation != .none else { return false }
-        guard selectionCommandAvailable(command: command) else { return true }
-        session.withStateChanges {
-            switch policy.rangeOperation {
-            case .copySelection: _ = copyCapturedTimeSelection()
-            case .cut: _ = cutCapturedTimeSelection()
-            case .delete: _ = deleteCapturedSelection()
-            case .clearTimeSelection: clearTimeSelection()
-            case .loopFromSelection:
-                // The original ruler contract deliberately records two undo entries.
-                session.document.setLoop(end: false, tick: Int64(selection.range.startTick))
-                session.document.setLoop(end: true, tick: Int64(selection.range.endTick))
-            case .nudge: nudgeSelection(policy.nudgeDelta)
-            case .transpose: transposeSelection(policy.transposeSemitones)
-            case .duplicate, .insertTime, .removeContents:
-                transformSelection(policy.rangeOperation)
-            case .none: break
-            }
-        }
-        return true
+    private func copySelection(_ selection: AutomationTimeSelection, scope: TimeScope?) -> Bool {
+        guard let session, let scope,
+              let clip = ClipboardSemantics.extractTimeRange(
+                selection.range, scope: scope, from: session.document,
+                unterminatedDuration: selectionSnapDuration()) else { return false }
+        return clipboard.write(clip, ticksPerBeat: UInt32(session.document.ticksPerBeat))
+    }
+
+    private func deleteSelection(_ selection: AutomationTimeSelection, scope: TimeScope?) -> Bool {
+        guard let session, let scope else { return false }
+        let changed = ClipboardSemantics.deleteTimeRange(selection.range, scope: scope,
+                                                        from: session.document)
+        if changed { refreshFromDocument() }
+        return changed
     }
 
     func resolvedSelectionScope() -> TimeScope? {
-        guard let selection, selection.isActive, !selection.range.hasReservedEndpoint else { return nil }
-        var scope = selectionScope(selection)
-        let used = usedTracks()
-        scope.tracks.formIntersection(used)
-        scope.lanes = scope.lanes.filter { used.contains($0.track) }
-        guard !scope.tracks.isEmpty || !scope.lanes.isEmpty || scope.tempo else { return nil }
-        return scope
+        guard let selection = state.selection else { return nil }
+        return AutomationSelectionCommands.resolvedScope(
+            selection, usedTracks: state.document.usedTracks)
     }
 
     func selectionSnapPolicy() -> AutomationSnapPolicy? {
         guard let session else { return nil }
-        return AutomationSnapPolicy(document: session.document, timeline: session.timeline,
-                                    baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio)
+        return AutomationSnapPolicy(
+            baseFontPx: baseFontPx, devicePixelRatio: devicePixelRatio,
+            timeAxis: session.projectionCache.timeAxis,
+            clockTicks: TimelineSnapPolicy.clockTicks(
+                division: session.document.ticksPerBeat,
+                extendedClocks: session.document.state.config.extendedClocks))
     }
 
     func selectionSnapDuration() -> Tick {
@@ -104,8 +187,10 @@ extension AutomationPage {
         }
     }
 
-    private func transformSelection(_ operation: EditRangeOperation) {
-        guard let session, var selection, let scope = resolvedSelectionScope() else { return }
+    private func transformSelection(_ operation: EditRangeOperation,
+                                    selection captured: AutomationTimeSelection, scope: TimeScope?) {
+        guard let session, let scope else { return }
+        var selection = captured
         let range = selection.range
         let changed: Bool
         switch operation {
@@ -132,9 +217,10 @@ extension AutomationPage {
         if changed { refreshFromDocument() }
     }
 
-    private func nudgeSelection(_ direction: Int) {
-        guard let session, var selection, let scope = resolvedSelectionScope(),
-              let snap = selectionSnapPolicy() else { return }
+    private func nudgeSelection(_ direction: Int, selection captured: AutomationTimeSelection,
+                                scope: TimeScope?) {
+        guard let session, let scope, let snap = selectionSnapPolicy() else { return }
+        var selection = captured
         let start = selection.range.startTick
         let destination = direction > 0
             ? snap.next(after: start, fine: false, limit: TimeDefaults.maxTick, camera: session.camera)
@@ -155,8 +241,9 @@ extension AutomationPage {
         revealSelectionRange(start: destination, end: Tick(end), preferEnd: direction > 0)
     }
 
-    private func transposeSelection(_ semitones: Int) {
-        guard let session, let selection, let scope = resolvedSelectionScope() else { return }
+    private func transposeSelection(_ semitones: Int, selection: AutomationTimeSelection,
+                                    scope: TimeScope?) {
+        guard let session, let scope else { return }
         let notes = ClipboardSemantics.gather(selection.range, scope: scope,
                                               from: session.document).tracks.flatMap(\.notes)
         guard !notes.isEmpty, notes.allSatisfy({ (0...127).contains(Int($0.pitch) + semitones) }) else { return }

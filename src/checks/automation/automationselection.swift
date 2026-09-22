@@ -17,7 +17,7 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     fixture.page.selectRange(from: 20, to: 60,
                              lanes: [fixture.panLane, fixture.volumeLane, .tempo])
     let before = fixture.snapshot
-    fixture.drag(fixture.panLane, from: (24, 60), to: 70, modifiers: AutomationQtModifier.alt)
+    fixture.drag(fixture.panLane, from: (24, 60), to: 70, modifiers: DrawerModifiers.altBit)
     report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
                        what: "selected drag moves the grabbed lane")
     report.expectEqual(["48:80"], fixture.values(fixture.volumeLane), cppID: id,
@@ -37,28 +37,28 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     let page = fixture.page
     let x = fixture.x(24)
     let y = fixture.y(fixture.panLane, 60)
-    _ = page.pointerPress(x: x, y: y, surface: 1, button: AutomationQtButton.left)
-    _ = page.pointerRelease(x: x, y: y, button: AutomationQtButton.left)
+    _ = page.pointerPress(x: x, y: y, surface: 1, button: 1)
+    _ = page.pointerRelease(x: x, y: y, button: 1)
     report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
                        what: "stationary selection click deletes grabbed node only")
     report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
                        what: "stationary selection click preserves other lanes")
-    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerRelease(x: 400, y: 90, button: AutomationQtButton.right)
+    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: 2)
+    _ = page.pointerRelease(x: 400, y: 90, button: 2)
     report.expect(page.selection == nil, cppID: id,
                   message: "outside right press clears selection before opening a menu")
     page.dismissMenu()
     page.selectRange(from: 0, to: fixture.songEndTick, lanes: [fixture.panLane])
-    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: AutomationQtButton.right)
-    _ = page.pointerMove(x: 404, y: 86, buttons: AutomationQtButton.right)
+    _ = page.pointerPress(x: 400, y: 90, surface: 1, button: 2)
+    _ = page.pointerMove(x: 404, y: 86, buttons: 2)
     report.expect(!page.bandVisible && page.selection?.range == TimeRange(
         startTick: 0, endTick: fixture.songEndTick), cppID: id,
                   message: "a pending band preserves selection below the Manhattan threshold")
-    _ = page.pointerMove(x: 405, y: 85, buttons: AutomationQtButton.right)
+    _ = page.pointerMove(x: 405, y: 85, buttons: 2)
     report.expect(page.bandVisible, cppID: id,
                   message: "diagonal travel activates at Manhattan ten before Euclidean ten")
-    _ = page.pointerMove(x: 400, y: 60, buttons: AutomationQtButton.right)
-    _ = page.pointerRelease(x: 400, y: 60, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: 400, y: 60, buttons: 2)
+    _ = page.pointerRelease(x: 400, y: 60, button: 2)
     report.expect(page.selection == nil, cppID: id,
                   message: "activated zero-width band clears selection")
 
@@ -83,8 +83,8 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     synthetic.activate(synthetic.volumeLane)
     if let point = synthetic.page.projection?.points.first {
         _ = synthetic.page.pointerPress(x: point.x, y: point.y, surface: 1,
-                                        button: AutomationQtButton.right)
-        _ = synthetic.page.pointerRelease(x: point.x, y: point.y, button: AutomationQtButton.right)
+                                        button: 2)
+        _ = synthetic.page.pointerRelease(x: point.x, y: point.y, button: 2)
         report.expect(synthetic.page.publishedMenuRows.first {
             $0.actionId == AutomationMenuAction.deleteNode.rawValue
         }?.enabled == false, cppID: id, message: "synthetic engine default cannot be deleted")
@@ -135,9 +135,9 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
                        what: "undo restores the hover-deleted point")
 
     _ = hover.page.pointerPress(x: hover.x(48), y: hover.y(hover.volumeLane, 70),
-                                 surface: 1, button: AutomationQtButton.right)
+                                 surface: 1, button: 2)
     _ = hover.page.pointerRelease(x: hover.x(48), y: hover.y(hover.volumeLane, 70),
-                                   button: AutomationQtButton.right)
+                                   button: 2)
     report.expect(hover.page.menuTargetIsPoint, cppID: id,
                   message: "the written point owns its captured menu target")
     _ = hover.page.openParameterMenu(index: hover.page.catalogIndex(of: hover.volumeLane),

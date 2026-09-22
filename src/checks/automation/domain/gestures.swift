@@ -250,23 +250,24 @@ func drawerAutomationPanNeutralSnap(_ report: CheckReport, suite: DocumentSessio
     }
     let valueNear = projection.value(atY: Double(yNear), metadata: metadata)
     let facts = fixture.facts(fixture.panLane)
-    let plain = fixture.page.mappedPoint(x: projection.x(100), y: Double(yNear), facts: facts,
-                                         modifiers: AutomationModifiers(fine: true), projection: projection)
+    let plain = projection.mappedPoint(x: projection.x(100), y: Double(yNear), facts: facts,
+                                       modifiers: AutomationModifiers(fine: true),
+                                       plotHeight: height, neutralSnapRadius: radius)
     report.expectEqual(Tick(100), plain.tick, cppID: drawerAutomationNeutralSnapID,
                        what: "the unsnapped value mapping preserves tick 100")
     report.expectEqual(valueNear, plain.value, cppID: drawerAutomationNeutralSnapID,
                        what: "the unsnapped value mapping keeps the near-neutral pixel value")
-    let snapped = fixture.page.mappedPoint(x: projection.x(100), y: Double(yNear), facts: facts,
-                                           modifiers: AutomationModifiers(fine: true, snapValue: true),
-                                           projection: projection)
+    let snapped = projection.mappedPoint(x: projection.x(100), y: Double(yNear), facts: facts,
+                                         modifiers: AutomationModifiers(fine: true, snapValue: true),
+                                         plotHeight: height, neutralSnapRadius: radius)
     report.expectEqual(Tick(100), snapped.tick, cppID: drawerAutomationNeutralSnapID,
                        what: "neutral snapping preserves tick 100")
     report.expectEqual(64, snapped.value, cppID: drawerAutomationNeutralSnapID,
                        what: "the near-neutral pixel snaps to 64")
-    let exact = fixture.page.mappedPoint(x: projection.x(200), y: projection.y(64, metadata: metadata),
-                                         facts: facts,
-                                         modifiers: AutomationModifiers(fine: true, snapValue: true),
-                                         projection: projection)
+    let exact = projection.mappedPoint(x: projection.x(200), y: projection.y(64, metadata: metadata),
+                                       facts: facts,
+                                       modifiers: AutomationModifiers(fine: true, snapValue: true),
+                                       plotHeight: height, neutralSnapRadius: radius)
     report.expectEqual(AutomationLanePoint(tick: 200, value: 64), exact,
                        cppID: drawerAutomationNeutralSnapID,
                        what: "the exact neutral maps to the original tick-200 point")

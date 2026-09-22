@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationactions.cpp
 Original SHA-256: 32f5e5de2ff62c9d9bf4b0c9b8b73f462a356dd2f83a5f22bfba1e65fad98768
 Swift counterpart: src/checks/automation/automationactions.swift
-Swift SHA-256: 1529386a279c90602e10b8ab6eea604c3a13672bbccc0724c506724aaef3c435
+Swift SHA-256: fdc0ace0e3434ea4f9d707c211c61cd8275283c4b5b1b0c7abeeb9ee3e4aa626
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -361,71 +361,71 @@ does not close any A entry. Preserve their surrounding setup and order in the pa
 
 S001 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:12
 Swift expression:
-  report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
-                         what: "no Qt bit arms no policy")
+  report.expectEqual(AutomationModifiers(), drawerAutomationDecodedModifiers(0), cppID: drawerAutomationModifierMappingID,
+                       what: "no Qt bit arms no policy")
 
 S002 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:14
 Swift expression:
   report.expectEqual(AutomationModifiers(shift: true),
-                         AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: drawerAutomationModifierMappingID,
-                         what: "Qt's shift bit arms the ramp and axis-lock policy")
+                       drawerAutomationDecodedModifiers(DrawerModifiers.shiftBit), cppID: drawerAutomationModifierMappingID,
+                       what: "Qt's shift bit arms the ramp and axis-lock policy")
 
 S003 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:17
 Swift expression:
   report.expectEqual(AutomationModifiers(snapValue: true),
-                         AutomationQtModifier.automation(AutomationQtModifier.control),
-                         cppID: drawerAutomationModifierMappingID,
-                         what: "Qt's control bit arms the value snap")
+                       drawerAutomationDecodedModifiers(DrawerModifiers.controlBit),
+                       cppID: drawerAutomationModifierMappingID,
+                       what: "Qt's control bit arms the value snap")
 
 S004 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:21
 Swift expression:
   report.expectEqual(AutomationModifiers(fine: true),
-                         AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
-                         what: "Qt's alt bit arms the fine lattice")
+                       drawerAutomationDecodedModifiers(DrawerModifiers.altBit), cppID: drawerAutomationModifierMappingID,
+                       what: "Qt's alt bit arms the fine lattice")
 
 S005 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:24
 Swift expression:
   report.expectEqual(AutomationModifiers(),
-                         AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: drawerAutomationModifierMappingID,
-                         what: "Qt's meta bit arms nothing")
+                       drawerAutomationDecodedModifiers(DrawerModifiers.metaBit), cppID: drawerAutomationModifierMappingID,
+                       what: "Qt's meta bit arms nothing")
 
 S006 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:27
 Swift expression:
   report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
-                         AutomationQtModifier.automation(AutomationQtModifier.shift
-                                                         | AutomationQtModifier.control
-                                                         | AutomationQtModifier.alt),
-                         cppID: drawerAutomationModifierMappingID,
-                         what: "the three policy bits compose through the same mapping")
+                       drawerAutomationDecodedModifiers(DrawerModifiers.shiftBit
+                                                       | DrawerModifiers.controlBit
+                                                       | DrawerModifiers.altBit),
+                       cppID: drawerAutomationModifierMappingID,
+                       what: "the three policy bits compose through the same mapping")
 
 S007 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:39
 Swift expression:
-  report.expectEqual(policy, AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
-                             cppID: drawerAutomationModifierMappingID,
-                             what: "the Qt bits that policy composes to map back to it")
+  report.expectEqual(policy, drawerAutomationDecodedModifiers(drawerAutomationQtModifiers(policy)),
+                           cppID: drawerAutomationModifierMappingID,
+                           what: "the Qt bits that policy composes to map back to it")
 
 S008 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:52
 Swift expression:
   report.expect(threshold > 1, cppID: drawerAutomationModifierMappingID,
-                    message: "the neutral radius covers more than one value step")
+                  message: "the neutral radius covers more than one value step")
 
 S009 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:56
 Swift expression:
   report.expect(plain.drag(plain.panLane, from: (24, 80), to: near, modifiers: 0),
-                    cppID: drawerAutomationModifierMappingID,
-                    message: "the pointer route took the drag without a Qt modifier bit")
+                  cppID: drawerAutomationModifierMappingID,
+                  message: "the pointer route took the drag without a Qt modifier bit")
 
 S010 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:59
 Swift expression:
   report.expectEqual(["24:\(near)"], plain.values(plain.panLane), cppID: drawerAutomationModifierMappingID,
-                         what: "a drag without the Qt control bit keeps the dragged value")
+                       what: "a drag without the Qt control bit keeps the dragged value")
 
 S011 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:64
 Swift expression:
   report.expect(snapped.drag(snapped.panLane, from: (24, 80), to: near,
-                                 modifiers: AutomationQtModifier.control),
-                    cppID: drawerAutomationModifierMappingID,
-                    message: "the pointer route took the drag carrying the Qt control bit")
+                               modifiers: DrawerModifiers.controlBit),
+                  cppID: drawerAutomationModifierMappingID,
+                  message: "the pointer route took the drag carrying the Qt control bit")
 
 S012 | drawerAutomationQtModifierMapping | src/checks/automation/automationactions.swift:68
 Swift expression:

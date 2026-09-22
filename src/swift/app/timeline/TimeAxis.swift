@@ -7,7 +7,7 @@ import PorydawCore
 // restatement is a defect even when the literals pass (spec §5).
 
 /// Time-signature change from SMF meta 0x58; mirrors C++ `TimeSigPoint`.
-struct TimeSigPoint: Equatable {
+struct TimeSigPoint: Equatable, Sendable {
     var tick: Tick
     var numerator: UInt8       // blank (0) reads as 4 via beatsPerBarFor
     var denomPow2: UInt8       // denominator = 1 << denomPow2
@@ -15,7 +15,7 @@ struct TimeSigPoint: Equatable {
 
 /// Copied musical time. Precondition (matching C++): timeSigs is tick-sorted
 /// (non-decreasing); same-tick entries are legal and the last wins.
-struct TimeMap: Equatable {
+struct TimeMap: Equatable, Sendable {
     var ticksPerBeat: UInt32 = 24
     var lengthTicks: Tick = 0
     var loopStartTick: Tick = TimeDefaults.noTick
@@ -50,7 +50,7 @@ private func beatTicksFor(_ ticksPerBeat: UInt32, _ denomPow2: UInt8) -> UInt32 
     return max(UInt32(1), UInt32(truncatingIfNeeded: (UInt64(ticksPerBeat) * 4) >> shift))
 }
 
-struct TimeAxis: Equatable {
+struct TimeAxis: Equatable, Sendable {
     let map: TimeMap
     init(map: TimeMap = TimeMap()) {     // default init = the fallback axis
         self.map = map

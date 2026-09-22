@@ -4,13 +4,13 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/drawerpresentation/voice.cpp
 Original SHA-256: 04bbd1e55a88644cc282ac56db873f1b027b9cbac8d7456456524e81184373f1
 Swift counterpart: src/checks/drawerpresentation/voice_projection.swift
-Swift SHA-256: 63088cc97982d4262cfb8e8d4649f8f2ad60d8b95c4905a171c94e72f1456a80
+Swift SHA-256: b6310047f752aad72cc0c7932bad47ccd18d3d4c5a10c284cdc3de1efc201c87
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
-Swift SHA-256: 460ab3d90da9857cb3da46d6e9ba7b1deb5c81f825bd7143c8d6e8e00da6c058
+Swift SHA-256: e9931b69059320a6c1a64e68adf8b8718322061485058fcfae04fc4a3760e6de
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
 Swift SHA-256: 60df6e0cab39e68765bdb2c4627549f518763bc671c6bf8f12aad62bb2969fb8
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
-Swift SHA-256: e7a97f7fab6e5d3ea60e5333f20719c19d3c995c1111b4cb9fa49f6802b43d63
+Swift SHA-256: 276d3c81c4a0d75d3649d5a5296ca3292086b9ec266a201deb6b2da07b5e836b
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -29,7 +29,8 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Passed: deno task verify --filter swiftcore --verbose (1.92s), recorded in
+/tmp/drawer-cpp-proxy-swift.log.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -1740,8 +1741,8 @@ Swift expression:
 
 S114 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice_picker.swift:93
 Swift expression:
-  report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
-                    message: "accepting the value the document already holds writes nothing")
+  report.expect(page.acceptPicker(), cppID: drawerVoiceInsertionID,
+                    message: "accepting the current value closes the valid picker")
 
 S115 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice_picker.swift:95
 Swift expression:

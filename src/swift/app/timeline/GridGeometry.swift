@@ -33,7 +33,7 @@ enum GridCameraPolicy {
     }
 }
 
-struct GridMetrics {
+struct GridMetrics: Sendable {
     var baseFontPx: Double = 13
     var dpr: Double = 1
     var timeAxis = TimeAxis()

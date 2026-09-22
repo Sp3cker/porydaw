@@ -428,6 +428,7 @@ enum VoiceChangesInteraction {
             }
 
         case let .pointerReleased(input):
+            guard next.attached else { break }
             switch (input.button, next.pointerMode) {
             case (.middle, .pan):
                 next.pointerMode = .idle
@@ -474,9 +475,12 @@ enum VoiceChangesInteraction {
             guard case var .picker(picker) = next.modalMode else { break }
             let filter = String(text.prefix(64))
             guard filter != picker.filter else { break }
-            stopAudition(&next, effects: &effects)
+            let programs = visiblePrograms(bank: next.bank, filter: filter)
+            if let sounding = next.auditionedProgram, !programs.contains(sounding) {
+                stopAudition(&next, effects: &effects)
+            }
             picker.filter = filter
-            picker.program = visiblePrograms(bank: next.bank, filter: filter).first ?? -1
+            picker.program = programs.first ?? -1
             next.modalMode = .picker(picker)
             publication = .modal
 
@@ -485,22 +489,15 @@ enum VoiceChangesInteraction {
             let programs = visiblePrograms(bank: next.bank, filter: picker.filter)
             let program = programs.indices.contains(index) ? programs[index] : -1
             guard picker.program != program else { break }
-            stopAudition(&next, effects: &effects)
             picker.program = program
             next.modalMode = .picker(picker)
             publication = .modal
 
         case let .pickerRowHeld(index):
             guard case var .picker(picker) = next.modalMode,
-                  targetIsCurrent(picker.target, lane: next.lane) else {
-                stopAudition(&next, effects: &effects)
-                break
-            }
+                  targetIsCurrent(picker.target, lane: next.lane) else { break }
             let programs = visiblePrograms(bank: next.bank, filter: picker.filter)
-            guard programs.indices.contains(index) else {
-                stopAudition(&next, effects: &effects)
-                break
-            }
+            guard programs.indices.contains(index) else { break }
             stopAudition(&next, effects: &effects)
             let program = programs[index]
             picker.program = program
@@ -526,7 +523,6 @@ enum VoiceChangesInteraction {
             }
             let program = programs[index]
             guard program != picker.program else { break }
-            stopAudition(&next, effects: &effects)
             picker.program = program
             next.modalMode = .picker(picker)
             publication = .modal

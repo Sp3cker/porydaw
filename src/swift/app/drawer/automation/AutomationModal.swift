@@ -1,9 +1,6 @@
 import Foundation
 import PorydawCore
 
-// Captured prompt/menu state and acceptance policy. All accepted mutations route
-// through AutomationCommit; modal state never owns document history.
-
 /// The published menu actions, under the production ids they name.
 public enum AutomationMenuAction: Int, Sendable {
     case setValue = 1
@@ -25,332 +22,405 @@ public enum AutomationMenuAction: Int, Sendable {
     case range127 = 17
 }
 
-/// What an open prompt is: the value form, or the CC-lane delete confirmation.
 public enum AutomationPromptKind: Int, Sendable {
     case value = 0
     case confirmLaneDelete = 1
 }
 
-/// One open menu: the frozen facts, the target it captured, its anchor and
-/// the rows it published. Nothing here re-reads live state.
-struct AutomationMenuState {
+/// A published menu row is a value; the publication boundary creates Qt handles.
+struct AutomationMenuRowValue: Equatable, Sendable {
+    var actionId: Int
+    var text: String
+    var enabled: Bool
+    var separator = false
+    var checkable = false
+    var checked = false
+    var hasSubmenu = false
+
+    init(_ action: AutomationMenuAction, _ text: String, enabled: Bool = true,
+         checkable: Bool = false, checked: Bool = false, hasSubmenu: Bool = false) {
+        actionId = action.rawValue
+        self.text = text
+        self.enabled = enabled
+        self.checkable = checkable
+        self.checked = checked
+        self.hasSubmenu = hasSubmenu
+    }
+
+    private init(separator: Bool) {
+        actionId = -1
+        text = ""
+        enabled = false
+        self.separator = separator
+    }
+
+    static let divider = Self(separator: true)
+}
+
+struct AutomationMenuState: Sendable {
     let facts: AutomationFrozenFacts
     let target: AutomationMenuTarget
     let anchorX: Double
     let anchorY: Double
-    var rows: [AutomationMenuRowHandle]
+    let rows: [AutomationMenuRowValue]
+    let childRows: [AutomationMenuRowValue]
 }
 
-enum AutomationMenuTarget: Equatable {
+enum AutomationMenuTarget: Equatable, Sendable {
     case point(tick: Tick, value: Int)
     case lane
     case range
 }
 
-/// The captured CC-lane delete confirmation: the parameter, its written
-/// event count and the revision the count was read at.
-struct AutomationLaneDeleteConfirmation {
+struct AutomationLaneDeleteConfirmation: Sendable {
     let facts: AutomationFrozenFacts
     let eventCount: Int
     let title: String
     let message: String
 }
 
+/// Exactly one modal surface can be open. Draft and validation belong to that
+/// surface, not to the Qt publication or a second page-side source of truth.
+struct AutomationModalState: Sendable {
+    var menu: AutomationMenuState?
+    var prompt: AutomationPromptTransaction?
+    var laneDelete: AutomationLaneDeleteConfirmation?
+    var draft = ""
+    var error = ""
 
+    static let none = Self()
+    var isOpen: Bool { menu != nil || prompt != nil || laneDelete != nil }
+    var facts: AutomationFrozenFacts? { prompt?.facts ?? laneDelete?.facts ?? menu?.facts }
 
-@MainActor
-extension AutomationPage {
-    /// The captured point's own value prompt, revalidated against the captured
-    /// revision: a stale capture opens nothing, exactly as the production
-    /// dispatch revalidates before it opens a form. The projected engine node has
-    /// no written occurrence, so its promotion goes through the same resolver the
-    /// press path uses.
-    func openCapturedPointPrompt(tick: Tick, value: Int,
-                                        facts: AutomationFrozenFacts) -> Bool {
-        guard let session, facts.revision == session.document.revision else { return false }
-        return openPrompt(tick: tick, value: value)
-    }
-
-    /// The confirmation's acceptance: every written occurrence of the captured
-    /// parameter goes as one plan, revalidated against the captured revision.
-    @discardableResult
-    func acceptLaneDeleteConfirmation() -> Bool {
-        guard let session, let confirmation = laneDelete else { return false }
-        laneDelete = nil
-        publishPrompt()
-        guard confirmation.facts.revision == session.document.revision,
-              confirmation.facts.parameter == activeParameter,
-              confirmation.facts.parameter.track == nil
-                || confirmation.facts.parameter.track == activeTrack() else {
-            publishInteractionState()
-            return false
+    var draftError: String? {
+        guard let prompt else { return nil }
+        let text = draft.trimmingCharacters(in: .whitespaces)
+        guard let value = Int(text),
+              value >= prompt.prompt.minimum, value <= prompt.prompt.maximum else {
+            return "Enter a whole number from \(prompt.prompt.minimum)"
+                + " to \(prompt.prompt.maximum)."
         }
-        let ticks = confirmation.facts.snapshot.sources.map(\.tick)
-        guard !ticks.isEmpty,
-              let plan = AutomationNodeResolver.deletions(
-                  revision: confirmation.facts.revision,
-                  [AutomationNodeResolver.LaneDeletes(parameter: confirmation.facts.parameter,
-                                                      snapshot: confirmation.facts.snapshot,
-                                                      ticks: ticks)]) else {
-            publishInteractionState()
-            return false
-        }
-        let committed = AutomationCommit.apply(plan, in: session.document)
-        if committed { refreshFromDocument() } else { publishInteractionState() }
-        return committed
+        return nil
     }
-
-    func openPointMenu(hit: AutomationProjectedPoint, facts: AutomationFrozenFacts,
-                               x: Double, y: Double) {
-        _ = openMenu(facts: facts, target: .point(tick: hit.tick, value: hit.value),
-                     x: x + plotOrigin, y: y)
-    }
-
-    func openRangeMenu(x: Double, y: Double) {
-        guard let selection, selection.isActive, let facts = frozenFacts(modifiers: .init()),
-              selection.covers(facts.parameter, usedTracks: usedTracks()) else { return }
-        _ = openMenu(facts: facts, target: .range, x: x + plotOrigin, y: y)
-    }
-
-    @discardableResult
-    func openMenu(facts: AutomationFrozenFacts, target: AutomationMenuTarget,
-                          x: Double, y: Double) -> Bool {
-        guard session != nil else { return false }
-        var state = AutomationMenuState(facts: facts, target: target,
-                                        anchorX: max(0, x), anchorY: max(0, y), rows: [])
-        state.rows = menuRows(for: target, facts: facts)
-        guard !state.rows.isEmpty else { return false }
-        menu = state
-        menuX = state.anchorX
-        menuY = state.anchorY
-        publishMenuRows()
-        publishInteractionState()
-        return true
-    }
-
-    /// The rows one captured target publishes. Availability is read from the
-    /// frozen facts and the accepted clipboard alone, so a row never claims an
-    /// action the capture cannot perform.
-    func menuRows(for target: AutomationMenuTarget,
-                          facts: AutomationFrozenFacts) -> [AutomationMenuRowHandle] {
-        switch target {
-        case let .point(tick, _):
-            // Delete only ever writes what the document holds: the projected
-            // engine-default node has no written event at its tick, so its row is
-            // disabled; Set Value stays enabled and promotes it.
-            let written = !facts.snapshot.occurrences(at: tick).isEmpty
-            return [
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.setValue.rawValue,
-                                        text: "Set Value", enabled: true),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.deleteNode.rawValue,
-                                        text: "Delete", enabled: written),
-            ]
-        case .lane:
-            var rows = [
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.copyLane.rawValue,
-                                        text: facts.parameter.isTempo ? "Copy" : "Copy CC lane",
-                                        enabled: facts.snapshot.eventCount > 0),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.pasteLane.rawValue,
-                                        text: facts.parameter.isTempo
-                                              ? "Paste" : "Paste CC lane (replace)",
-                                        enabled: laneClipPoints(facts.parameter) != nil),
-                AutomationMenuRowHandle(separator: true),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.clearLane.rawValue,
-                                        text: facts.parameter.isTempo ? "Clear Tempo"
-                                                                      : "Clear events",
-                                        enabled: facts.snapshot.eventCount > 0),
-            ]
-            if !facts.parameter.isTempo {
-                rows.append(AutomationMenuRowHandle(
-                    actionId: AutomationMenuAction.deleteLaneEvents.rawValue,
-                    text: "Delete automation events", enabled: facts.snapshot.eventCount > 0))
-            }
-            if facts.metadata.zoomable {
-                let row = AutomationMenuRowHandle(
-                    actionId: AutomationMenuAction.valueRange.rawValue,
-                    text: "Value range", enabled: true)
-                row.hasSubmenu = true
-                rows.append(row)
-            }
-            return rows
-        case .range:
-            let covered = resolvedSelectionScope() != nil
-            return [
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeCopy.rawValue,
-                                        text: "Copy", enabled: covered),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeCut.rawValue,
-                                        text: "Cut", enabled: covered),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangePaste.rawValue,
-                                        text: "Paste", enabled: selectionCommandAvailable(command: .paste)),
-                AutomationMenuRowHandle(separator: true),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeDelete.rawValue,
-                                        text: "Delete", enabled: covered),
-                AutomationMenuRowHandle(actionId: AutomationMenuAction.rangeClear.rawValue,
-                                        text: "Clear Selection", enabled: true),
-            ]
-        }
-    }
-
-    /// The lane menu's destructive command: the confirmation captures the
-    /// parameter, the written event count and the revision the count was read at.
-    func openLaneDeleteConfirmation(_ facts: AutomationFrozenFacts) {
-        let count = facts.snapshot.eventCount
-        guard count > 0 else { return }
-        let title = AutomationCatalog.title(facts.parameter)
-        laneDelete = AutomationLaneDeleteConfirmation(
-            facts: facts, eventCount: count, title: "Delete automation events",
-            message: "Delete the \(title) parameter's \(count) written events?"
-                + " The \(title) parameter remains.")
-        applyPrompt(nil)
-        promptDraft = ""
-        promptError = ""
-        publishPrompt()
-        publishInteractionState()
-    }
-
-    // MARK: Lane and range commands
-
-    /// The historical lane clipboard stores absolute tick/value pairs, separate
-    /// from the system's note/time-selection clipboard.
-    @discardableResult
-    func copyLanePoints(_ facts: AutomationFrozenFacts) -> Bool {
-        guard session != nil, facts.snapshot.eventCount > 0 else { return false }
-        laneClipboardPoints = facts.snapshot.sources.map {
-            AutomationLanePoint(tick: $0.tick, value: $0.value)
-        }
-        return true
-    }
-
-    /// `Paste CC lane (replace)` / `Paste`: one whole-lane replacement.
-    @discardableResult
-    func pasteLanePoints(_ facts: AutomationFrozenFacts) -> Bool {
-        guard let session, let points = laneClipPoints(facts.parameter) else { return false }
-        let committed = AutomationCommit.apply(
-            AutomationRangeEditor.replaceLane(facts, points: points), in: session.document)
-        if committed { refreshFromDocument() }
-        return committed
-    }
-
-    /// `Clear events` / `Clear Tempo`: the same whole-lane replacement with no
-    /// points, which leaves the parameter itself in place.
-    @discardableResult
-    func clearLanePoints(_ facts: AutomationFrozenFacts) -> Bool {
-        guard let session, facts.snapshot.eventCount > 0 else { return false }
-        let committed = AutomationCommit.apply(
-            AutomationRangeEditor.replaceLane(facts, points: []), in: session.document)
-        if committed { refreshFromDocument() }
-        return committed
-    }
-
-
-    /// A copied lane may be pasted into another parameter; clamp at destination.
-    func laneClipPoints(_ parameter: AutomationParameter) -> [AutomationLanePoint]? {
-        guard !laneClipboardPoints.isEmpty else { return nil }
-        let metadata = AutomationParameterMetadata(parameter: parameter)
-        return laneClipboardPoints.map {
-            AutomationLanePoint(tick: $0.tick,
-                                value: min(metadata.maximum, max(metadata.minimum, $0.value)))
-        }
-    }
-
 }
 
-@MainActor
-extension AutomationPage {
-    func openCapturedPrompt(tick: Tick, value: Int) -> Bool {
-        guard let facts = frozenFacts(modifiers: .init()) else { return false }
-        let occupants = facts.occupants(at: tick)
-        let nextPrompt = AutomationPromptTransaction(
-            facts: facts,
-            anchor: AutomationLanePoint(tick: tick, value: value),
-            source: occupants.last,
-            forExistingNode: !occupants.isEmpty,
-            metadata: facts.metadata)
-        applyPrompt(nextPrompt)
-        guard let nextPrompt else { return false }
-        frozen = facts
-        frozenCamera = liveCamera()
-        laneDelete = nil
-        promptDraft = String(nextPrompt.prompt.initialValue)
-        promptError = ""
-        publishPrompt()
-        publishInteractionState()
-        return true
+enum AutomationModalEvent: Sendable {
+    case openPrompt(facts: AutomationFrozenFacts, tick: Tick, value: Int)
+    case openLaneDeleteConfirmation(AutomationFrozenFacts)
+    case openMenu(facts: AutomationFrozenFacts, target: AutomationMenuTarget,
+                  x: Double, y: Double, selectionScopeAvailable: Bool,
+                  systemClipboardAvailable: Bool, laneClipboardAvailable: Bool)
+    case draftChanged(String)
+    case acceptDraft
+    case acceptValue(Int)
+    case cancelPrompt
+    case dismissMenu
+    case consumeMenuAction(Int)
+}
+
+/// Only boundary operations are effects. All captured-target policy, stale
+/// checks, collision resolution and menu availability remain in the reducer.
+enum AutomationModalEffect: Sendable {
+    case copyTimeSelection
+    case cutTimeSelection
+    case pasteTimeSelection
+    case deleteTimeSelection
+    case clearTimeSelection
+}
+
+enum AutomationModal {
+    static func reduce(_ state: inout AutomationState,
+                       event: AutomationModalEvent) -> AutomationTransition {
+        switch event {
+        case let .openPrompt(facts, tick, value):
+            guard valid(facts, in: state) else { return AutomationTransition() }
+            return openPrompt(&state, facts: facts, tick: tick, value: value)
+
+        case let .openLaneDeleteConfirmation(facts):
+            guard valid(facts, in: state), facts.snapshot.eventCount > 0 else {
+                return AutomationTransition()
+            }
+            openConfirmation(&state, facts: facts)
+            return AutomationTransition(publication: [.prompt, .menu, .interaction],
+                                        outcome: AutomationOutcome(consumed: true, accepted: true))
+
+        case let .openMenu(facts, target, x, y, scopeAvailable, systemClip, laneClip):
+            guard valid(facts, in: state) else { return AutomationTransition() }
+            let rows = menuRows(for: target, facts: facts,
+                                selectionScopeAvailable: scopeAvailable,
+                                systemClipboardAvailable: systemClip,
+                                laneClipboardAvailable: laneClip)
+            guard !rows.isEmpty else { return AutomationTransition() }
+            let children: [AutomationMenuRowValue]
+            if case .lane = target {
+                children = rangeMenuRows(facts: facts, selected: state.laneRanges[facts.parameter])
+            } else {
+                children = []
+            }
+            state.modal = AutomationModalState(menu: AutomationMenuState(
+                facts: facts, target: target, anchorX: max(0, x), anchorY: max(0, y),
+                rows: rows, childRows: children))
+            return AutomationTransition(publication: [.prompt, .menu, .interaction],
+                                        outcome: AutomationOutcome(consumed: true, accepted: true))
+
+        case let .draftChanged(text):
+            guard state.modal.prompt != nil || state.modal.laneDelete != nil else {
+                return AutomationTransition()
+            }
+            state.modal.draft = text
+            state.modal.error = state.modal.draftError ?? ""
+            return AutomationTransition(publication: .prompt,
+                                        outcome: AutomationOutcome(consumed: true, accepted: true))
+
+        case .acceptDraft:
+            if state.modal.laneDelete != nil { return acceptLaneDelete(&state) }
+            guard state.modal.prompt != nil else { return AutomationTransition() }
+            if let error = state.modal.draftError {
+                state.modal.error = error
+                return AutomationTransition(publication: .prompt)
+            }
+            guard let value = Int(state.modal.draft.trimmingCharacters(in: .whitespaces)) else {
+                return AutomationTransition()
+            }
+            return acceptValue(&state, displayed: value)
+
+        case let .acceptValue(value):
+            return acceptValue(&state, displayed: value)
+
+        case .cancelPrompt:
+            guard state.modal.prompt != nil || state.modal.laneDelete != nil else {
+                return AutomationTransition()
+            }
+            state.modal = .none
+            return AutomationTransition(publication: [.prompt, .interaction],
+                                        outcome: AutomationOutcome(consumed: true, accepted: true))
+
+        case .dismissMenu:
+            guard state.modal.menu != nil else { return AutomationTransition() }
+            state.modal = .none
+            return AutomationTransition(publication: [.menu, .interaction],
+                                        outcome: AutomationOutcome(consumed: true, accepted: true))
+
+        case let .consumeMenuAction(actionId):
+            return consumeMenuAction(&state, actionId: actionId)
+        }
     }
 
-    func acceptCapturedPrompt(displayedValue: Int) -> Bool {
-        guard let session, let prompt else { return false }
-        applyPrompt(nil)
-        frozen = nil
-        frozenCamera = nil
-        publishPrompt()
-        guard prompt.facts.revision == session.document.revision,
-              prompt.facts.parameter == activeParameter,
-              prompt.facts.parameter.track == nil || prompt.facts.parameter.track == activeTrack() else {
-            publishInteractionState()
-            return false
+    private static func valid(_ facts: AutomationFrozenFacts,
+                              in state: AutomationState) -> Bool {
+        state.document.attached && facts.revision == state.document.revision
+            && facts.parameter == state.activeParameter
+            && (facts.parameter.track == nil || facts.parameter.track == state.activeTrack)
+    }
+
+    private static func openPrompt(_ state: inout AutomationState,
+                                   facts: AutomationFrozenFacts, tick: Tick,
+                                   value: Int) -> AutomationTransition {
+        let occupants = facts.occupants(at: tick)
+        guard let prompt = AutomationPromptTransaction(
+            facts: facts, anchor: AutomationLanePoint(tick: tick, value: value),
+            source: occupants.last, forExistingNode: !occupants.isEmpty,
+            metadata: facts.metadata) else { return AutomationTransition() }
+        state.modal = AutomationModalState(prompt: prompt,
+                                           draft: String(prompt.prompt.initialValue))
+        return AutomationTransition(publication: [.prompt, .menu, .interaction],
+                                    outcome: AutomationOutcome(consumed: true, accepted: true))
+    }
+
+    private static func openConfirmation(_ state: inout AutomationState,
+                                         facts: AutomationFrozenFacts) {
+        let title = AutomationCatalog.title(facts.parameter)
+        let count = facts.snapshot.eventCount
+        state.modal = AutomationModalState(laneDelete: AutomationLaneDeleteConfirmation(
+            facts: facts, eventCount: count, title: "Delete automation events",
+            message: "Delete the \(title) parameter's \(count) written events?"
+                + " The \(title) parameter remains."))
+    }
+
+    private static func acceptValue(_ state: inout AutomationState,
+                                    displayed: Int) -> AutomationTransition {
+        guard let prompt = state.modal.prompt else { return AutomationTransition() }
+        state.modal = .none
+        guard valid(prompt.facts, in: state) else {
+            return AutomationTransition(publication: [.prompt, .context, .interaction])
         }
-        var committed = false
-        switch prompt.outcome(displayed: displayedValue) {
+        var effects: [AutomationEffect] = []
+        switch prompt.outcome(displayed: displayed) {
         case .none:
             break
         case let .move(move):
-            committed = commit(AutomationNodeResolver.moves([
-                AutomationNodeResolver.LaneMoves(prompt.facts, [move])
-            ]))
+            if let plan = AutomationNodeResolver.moves([
+                AutomationNodeResolver.LaneMoves(prompt.facts, [move])]) {
+                effects = [.commitDocument(plan, selectionDelta: nil)]
+            }
         case let .insert(edit):
-            committed = AutomationCommit.apply(edit, in: session.document)
+            effects = [.commitLane(edit)]
         }
-        if committed {
-            refreshFromDocument()
-        } else {
-            publishContext()
-            publishInteractionState()
-        }
-        return committed
+        return AutomationTransition(publication: [.prompt, .context, .interaction],
+                                    effects: effects,
+                                    outcome: AutomationOutcome(consumed: true,
+                                                               accepted: !effects.isEmpty,
+                                                               written: !effects.isEmpty))
     }
 
-    func updateCapturedPromptDraft(draft text: String) {
-        guard promptOpen else { return }
-        promptDraft = text
-        promptError = draftError ?? ""
+    private static func acceptLaneDelete(_ state: inout AutomationState) -> AutomationTransition {
+        guard let confirmation = state.modal.laneDelete else { return AutomationTransition() }
+        state.modal = .none
+        guard valid(confirmation.facts, in: state) else {
+            return AutomationTransition(publication: [.prompt, .interaction])
+        }
+        let facts = confirmation.facts
+        let ticks = facts.snapshot.sources.map(\.tick)
+        guard !ticks.isEmpty, let plan = AutomationNodeResolver.deletions(
+            revision: facts.revision,
+            [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
+                                                snapshot: facts.snapshot, ticks: ticks)]) else {
+            return AutomationTransition(publication: [.prompt, .interaction])
+        }
+        return AutomationTransition(publication: [.prompt, .interaction],
+                                    effects: [.commitDocument(plan, selectionDelta: nil)],
+                                    outcome: AutomationOutcome(consumed: true, accepted: true,
+                                                               written: true))
     }
 
-    func acceptCapturedPromptDraft() -> Bool {
-        if laneDelete != nil { return acceptLaneDeleteConfirmation() }
-        guard prompt != nil else { return false }
-        if let error = draftError {
-            promptError = error
-            return false
+    private static func consumeMenuAction(_ state: inout AutomationState,
+                                          actionId: Int) -> AutomationTransition {
+        guard let menu = state.modal.menu,
+              let row = (menu.rows + menu.childRows).first(where: { $0.actionId == actionId }),
+              row.enabled, !row.separator,
+              let action = AutomationMenuAction(rawValue: row.actionId) else {
+            return AutomationTransition()
         }
-        guard let value = Int(promptDraft.trimmingCharacters(in: .whitespaces)) else {
-            promptError = draftError ?? ""
-            return false
+        guard valid(menu.facts, in: state) else {
+            state.modal = .none
+            return AutomationTransition(publication: [.menu, .interaction])
         }
-        return acceptPrompt(displayedValue: value)
+        if action == .valueRange {
+            return AutomationTransition(outcome: AutomationOutcome(consumed: true, accepted: true))
+        }
+        state.modal = .none
+        var transition = AutomationTransition(publication: [.menu, .interaction],
+                                              outcome: AutomationOutcome(consumed: true,
+                                                                         accepted: true))
+        switch (action, menu.target) {
+        case (.rangeAuto, .lane), (.range16, .lane), (.range32, .lane),
+             (.range64, .lane), (.range127, .lane):
+            let ranges: [AutomationMenuAction: Int] = [
+                .rangeAuto: 0, .range16: 16, .range32: 32, .range64: 64, .range127: 127]
+            state.laneRanges[menu.facts.parameter] = ranges[action]
+            transition.publication.insert(.content)
+
+        case let (.setValue, .point(tick, value)):
+            transition.merge(openPrompt(&state, facts: menu.facts, tick: tick, value: value))
+
+        case let (.deleteNode, .point(tick, _)):
+            if let plan = AutomationNodeResolver.deletions(
+                revision: menu.facts.revision,
+                [AutomationNodeResolver.LaneDeletes(parameter: menu.facts.parameter,
+                                                    snapshot: menu.facts.snapshot, ticks: [tick])]) {
+                transition.effects = [.commitDocument(plan, selectionDelta: nil)]
+                transition.outcome.written = true
+            }
+
+        case (.copyLane, .lane):
+            state.laneClipboardPoints = menu.facts.snapshot.sources.map {
+                AutomationLanePoint(tick: $0.tick, value: $0.value)
+            }
+            transition.commandAvailabilityChanged = true
+        case (.pasteLane, .lane):
+            let metadata = AutomationParameterMetadata(parameter: menu.facts.parameter)
+            let points = state.laneClipboardPoints.map {
+                AutomationLanePoint(tick: $0.tick,
+                                    value: min(metadata.maximum, max(metadata.minimum, $0.value)))
+            }
+            transition.effects = [.commitLane(AutomationRangeEditor.replaceLane(
+                menu.facts, points: points))]
+            transition.outcome.written = true
+        case (.clearLane, .lane):
+            transition.effects = [.commitLane(AutomationRangeEditor.replaceLane(
+                menu.facts, points: []))]
+            transition.outcome.written = true
+        case (.deleteLaneEvents, .lane):
+            openConfirmation(&state, facts: menu.facts)
+            transition.publication.insert(.prompt)
+        case (.rangeCopy, .range):
+            transition.effects = [.modal(.copyTimeSelection)]
+        case (.rangeCut, .range):
+            transition.effects = [.modal(.cutTimeSelection)]
+        case (.rangePaste, .range):
+            transition.effects = [.modal(.pasteTimeSelection)]
+        case (.rangeDelete, .range):
+            transition.effects = [.modal(.deleteTimeSelection)]
+        case (.rangeClear, .range):
+            state.selection = nil
+            transition.publication.insert(.content)
+            transition.selectionBuild = true
+            transition.commandAvailabilityChanged = true
+        default:
+            // The action-target pairing is captured by the row's menu kind.
+            transition.outcome.accepted = false
+        }
+        return transition
     }
 
-    func cancelCapturedPrompt() {
-        applyPrompt(nil)
-        laneDelete = nil
-        if gesture == nil {
-            frozen = nil
-            frozenCamera = nil
+    static func menuRows(for target: AutomationMenuTarget, facts: AutomationFrozenFacts,
+                         selectionScopeAvailable: Bool, systemClipboardAvailable: Bool,
+                         laneClipboardAvailable: Bool) -> [AutomationMenuRowValue] {
+        switch target {
+        case let .point(tick, _):
+            return [
+                .init(.setValue, "Set Value"),
+                .init(.deleteNode, "Delete",
+                      enabled: !facts.snapshot.occurrences(at: tick).isEmpty),
+            ]
+        case .lane:
+            let written = facts.snapshot.eventCount > 0
+            var rows: [AutomationMenuRowValue] = [
+                .init(.copyLane, facts.parameter.isTempo ? "Copy" : "Copy CC lane",
+                      enabled: written),
+                .init(.pasteLane, facts.parameter.isTempo ? "Paste" : "Paste CC lane (replace)",
+                      enabled: laneClipboardAvailable),
+                .divider,
+                .init(.clearLane, facts.parameter.isTempo ? "Clear Tempo" : "Clear events",
+                      enabled: written),
+            ]
+            if !facts.parameter.isTempo {
+                rows.append(.init(.deleteLaneEvents, "Delete automation events", enabled: written))
+            }
+            if facts.metadata.zoomable {
+                rows.append(.init(.valueRange, "Value range", hasSubmenu: true))
+            }
+            return rows
+        case .range:
+            return [
+                .init(.rangeCopy, "Copy", enabled: selectionScopeAvailable),
+                .init(.rangeCut, "Cut", enabled: selectionScopeAvailable),
+                .init(.rangePaste, "Paste", enabled: systemClipboardAvailable),
+                .divider,
+                .init(.rangeDelete, "Delete", enabled: selectionScopeAvailable),
+                .init(.rangeClear, "Clear Selection"),
+            ]
         }
-        publishPrompt()
-        publishInteractionState()
     }
 
-    func deleteCapturedPoints(at ticks: [Tick]) -> Bool {
-        guard !ticks.isEmpty, let facts = frozenFacts(modifiers: .init()),
-              commit(AutomationNodeResolver.deletions(
-                  revision: facts.revision,
-                  [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
-                                                      snapshot: facts.snapshot, ticks: ticks)]))
-        else { return false }
-        refreshFromDocument()
-        return true
+    static func rangeMenuRows(facts: AutomationFrozenFacts,
+                              selected override: Int?) -> [AutomationMenuRowValue] {
+        guard facts.metadata.zoomable else { return [] }
+        let selected = override ?? Int(AutomationCatalog.defaultRange(facts.parameter.controller ?? 0))
+        return [
+            .init(.rangeAuto, "Auto (fit to data)", checkable: true, checked: selected == 0),
+            .init(.range16, "0–16", checkable: true, checked: selected == 16),
+            .init(.range32, "0–32", checkable: true, checked: selected == 32),
+            .init(.range64, "0–64", checkable: true, checked: selected == 64),
+            .init(.range127, "0–127 (full)", checkable: true, checked: selected == 127),
+        ]
     }
+}
+
+// Document and clipboard operations stay at the page boundary. They are called
+// only when interpreting an emitted effect, never by modal policy.
+@MainActor
+extension AutomationPage {
 
     func deleteCapturedSelection() -> Bool {
         guard let session, let selection, let scope = resolvedSelectionScope() else { return false }
@@ -377,104 +447,4 @@ extension AutomationPage {
     func pasteCapturedTimeSelection(at cursor: Tick) -> Tick? {
         pasteClipboard(at: cursor)
     }
-
-    func openCapturedParameterMenu(index: Int, x: Double, y: Double) -> Bool {
-        guard session != nil, index >= 0, index < AutomationCatalog.count else { return false }
-        if index != activeParameterIndex, !activateParameter(index: index) { return false }
-        guard let facts = frozenFacts(modifiers: .init()) else { return false }
-        return openMenu(facts: facts, target: .lane, x: x, y: y)
-    }
-
-    func dismissCapturedMenu() {
-        guard menu != nil else { return }
-        menu = nil
-        publishMenuRows()
-        publishInteractionState()
-    }
-
-    func consumeCapturedMenuAction(actionId: Int) -> Bool {
-        guard let session, let live = menu else { return false }
-        let childRows: [AutomationMenuRowHandle]
-        if case .lane = live.target { childRows = rangeMenuRows(facts: live.facts) }
-        else { childRows = [] }
-        guard let row = (live.rows + childRows).first(where: { $0.actionId == actionId }) else {
-            return false
-        }
-        guard row.enabled, !row.separator,
-              let action = AutomationMenuAction(rawValue: row.actionId) else { return false }
-        guard live.facts.revision == session.document.revision,
-              live.facts.parameter == activeParameter,
-              live.facts.parameter.track == nil || live.facts.parameter.track == activeTrack() else {
-            dismissMenu()
-            return false
-        }
-        if action == .valueRange { return true }
-        menu = nil
-        publishMenuRows()
-
-        switch (action, live.target) {
-        case (.rangeAuto, .lane), (.range16, .lane), (.range32, .lane),
-             (.range64, .lane), (.range127, .lane):
-            let ranges: [AutomationMenuAction: Int] = [
-                .rangeAuto: 0, .range16: 16, .range32: 32, .range64: 64, .range127: 127]
-            laneRanges[live.facts.parameter] = ranges[action]
-            rebuildContent()
-        case let (.setValue, .point(tick, value)):
-            // The form it opens is the action's own outcome: the returned row
-            // consumption below stays this method's contract, and a refused
-            // capture (a moved revision) opens nothing without changing it.
-            _ = openCapturedPointPrompt(tick: tick, value: value, facts: live.facts)
-        case let (.deleteNode, .point(tick, _)):
-            deletePoints(at: [tick])
-        case (.copyLane, _):
-            copyLanePoints(live.facts)
-        case (.pasteLane, _):
-            pasteLanePoints(live.facts)
-        case (.clearLane, _):
-            clearLanePoints(live.facts)
-        case (.deleteLaneEvents, _):
-            openLaneDeleteConfirmation(live.facts)
-        case (.rangeCopy, _):
-            copyTimeSelection()
-        case (.rangeCut, _):
-            cutTimeSelection()
-        case (.rangePaste, _):
-            consumeSelectionCommand(command: .paste)
-        case (.rangeDelete, _):
-            deleteSelectedNodes()
-        case (.rangeClear, _):
-            clearTimeSelection()
-        default:
-            break
-        }
-        publishInteractionState()
-        return true
-    }
-
-    func rangeMenuRows(facts: AutomationFrozenFacts) -> [AutomationMenuRowHandle] {
-        guard facts.metadata.zoomable else { return [] }
-        let selected = laneRanges[facts.parameter]
-            ?? Int(AutomationCatalog.defaultRange(facts.parameter.controller ?? 0))
-        let entries: [(AutomationMenuAction, Int, String)] = [
-            (.rangeAuto, 0, "Auto (fit to data)"), (.range16, 16, "0–16"),
-            (.range32, 32, "0–32"), (.range64, 64, "0–64"), (.range127, 127, "0–127 (full)")]
-        return entries.map { action, value, text in
-            let row = AutomationMenuRowHandle(actionId: action.rawValue, text: text, enabled: true)
-            row.checkable = true
-            row.checked = selected == value
-            return row
-        }
-    }
-
-    var capturedPromptDraftError: String? {
-        guard let prompt else { return nil }
-        let trimmed = promptDraft.trimmingCharacters(in: .whitespaces)
-        guard let value = Int(trimmed),
-              value >= prompt.prompt.minimum, value <= prompt.prompt.maximum else {
-            return "Enter a whole number from \(prompt.prompt.minimum)"
-                + " to \(prompt.prompt.maximum)."
-        }
-        return nil
-    }
-
 }

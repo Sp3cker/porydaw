@@ -144,7 +144,7 @@ public final class AutomationMenuRowHandle {
         checkable = value.checkable
         checked = value.checked
         hasSubmenu = value.hasSubmenu
-        shortcutText = value.shortcutText
-        primitiveName = value.primitiveName
+        shortcutText = ""
+        primitiveName = value.separator ? "automationMenuSeparator" : "automationMenuRow"
     }
 }

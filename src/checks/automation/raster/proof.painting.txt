@@ -1044,6 +1044,6 @@ S034 | drawerAutomationRowStackAndSelectionIndicators | src/checks/automation/pr
                          what: "unpinning drops the ghost label")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

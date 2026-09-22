@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationselection.cpp
 Original SHA-256: 589378ab1a0351dd4c2b1963fb45a91b9973abf2ea95ae2456cb8cb11d706ef8
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 8e64128082de42746ae5e7b3be47ee3304c9f4eadd341261939bef030ee367c4
+Swift SHA-256: b9de1437f629495909ec4df5863d540b4c7fe22aa9b2de86afc6b1cbb84afd67
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

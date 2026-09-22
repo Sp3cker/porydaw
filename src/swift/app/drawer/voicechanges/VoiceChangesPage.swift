@@ -317,7 +317,10 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public func movePickerSelection(delta: Int) { _ = send(.pickerSelectionMoved(delta)) }
 
     @discardableResult
-    public func acceptPicker() -> Bool { send(.pickerAccepted).committed }
+    public func acceptPicker() -> Bool {
+        let result = send(.pickerAccepted)
+        return result.accepted || result.committed
+    }
 
     public func cancelPicker() { _ = send(.pickerCancelled) }
 

@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/domain/gestures.cpp
 Original SHA-256: edb8678ec7f2c28b8ad7bac746f6b858670708add290c079be186657d069e380
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: ed769eeedca873b5a9d77d5b20399840f5f4357643468157e10c7520bd6c2f31
+Swift SHA-256: 432252987f3359a15fabd41050900bd4d5b6b6379fb6deeef2a76618e310b289
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

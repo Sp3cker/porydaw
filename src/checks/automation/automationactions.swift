@@ -9,25 +9,25 @@ import PorydawProjectService
 @MainActor
 func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSession,
                                service: ProjectService) {
-    report.expectEqual(AutomationModifiers(), AutomationQtModifier.automation(0), cppID: drawerAutomationModifierMappingID,
+    report.expectEqual(AutomationModifiers(), drawerAutomationDecodedModifiers(0), cppID: drawerAutomationModifierMappingID,
                        what: "no Qt bit arms no policy")
     report.expectEqual(AutomationModifiers(shift: true),
-                       AutomationQtModifier.automation(AutomationQtModifier.shift), cppID: drawerAutomationModifierMappingID,
+                       drawerAutomationDecodedModifiers(DrawerModifiers.shiftBit), cppID: drawerAutomationModifierMappingID,
                        what: "Qt's shift bit arms the ramp and axis-lock policy")
     report.expectEqual(AutomationModifiers(snapValue: true),
-                       AutomationQtModifier.automation(AutomationQtModifier.control),
+                       drawerAutomationDecodedModifiers(DrawerModifiers.controlBit),
                        cppID: drawerAutomationModifierMappingID,
                        what: "Qt's control bit arms the value snap")
     report.expectEqual(AutomationModifiers(fine: true),
-                       AutomationQtModifier.automation(AutomationQtModifier.alt), cppID: drawerAutomationModifierMappingID,
+                       drawerAutomationDecodedModifiers(DrawerModifiers.altBit), cppID: drawerAutomationModifierMappingID,
                        what: "Qt's alt bit arms the fine lattice")
     report.expectEqual(AutomationModifiers(),
-                       AutomationQtModifier.automation(AutomationQtModifier.meta), cppID: drawerAutomationModifierMappingID,
+                       drawerAutomationDecodedModifiers(DrawerModifiers.metaBit), cppID: drawerAutomationModifierMappingID,
                        what: "Qt's meta bit arms nothing")
     report.expectEqual(AutomationModifiers(fine: true, snapValue: true, shift: true),
-                       AutomationQtModifier.automation(AutomationQtModifier.shift
-                                                       | AutomationQtModifier.control
-                                                       | AutomationQtModifier.alt),
+                       drawerAutomationDecodedModifiers(DrawerModifiers.shiftBit
+                                                       | DrawerModifiers.controlBit
+                                                       | DrawerModifiers.altBit),
                        cppID: drawerAutomationModifierMappingID,
                        what: "the three policy bits compose through the same mapping")
     for policy in [AutomationModifiers(), AutomationModifiers(fine: true),
@@ -36,7 +36,7 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
                    AutomationModifiers(fine: true, shift: true),
                    AutomationModifiers(snapValue: true, shift: true),
                    AutomationModifiers(fine: true, snapValue: true, shift: true)] {
-        report.expectEqual(policy, AutomationQtModifier.automation(drawerAutomationQtModifiers(policy)),
+        report.expectEqual(policy, drawerAutomationDecodedModifiers(drawerAutomationQtModifiers(policy)),
                            cppID: drawerAutomationModifierMappingID,
                            what: "the Qt bits that policy composes to map back to it")
     }
@@ -62,7 +62,7 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
     let snapped = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 80)])
     snapped.activate(snapped.panLane)
     report.expect(snapped.drag(snapped.panLane, from: (24, 80), to: near,
-                               modifiers: AutomationQtModifier.control),
+                               modifiers: DrawerModifiers.controlBit),
                   cppID: drawerAutomationModifierMappingID,
                   message: "the pointer route took the drag carrying the Qt control bit")
     report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,

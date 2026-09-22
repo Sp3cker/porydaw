@@ -205,6 +205,50 @@ extension AutomationPage {
         guard let session, let track = session.selectedTrack, track >= 0 else { return nil }
         return track
     }
+    func documentFacts() -> AutomationDocumentFacts {
+        guard let session else { return AutomationDocumentFacts() }
+        let track = activeTrack()
+        let parameters = AutomationCatalog.parameters(track: track ?? 0)
+        var counts: [AutomationParameter: Int] = [:]
+        counts.reserveCapacity(parameters.count)
+        for parameter in parameters {
+            counts[parameter] = projectionFacts.snapshot(parameter, session: session).eventCount
+        }
+        return AutomationDocumentFacts(
+            attached: true, revision: session.document.revision,
+            selectedTrack: track, parameters: parameters, eventCounts: counts,
+            selectedNotesEmpty: session.selectedNotes.isEmpty,
+            hasRawChunks: !session.document.rawChunks.isEmpty,
+            editCursor: session.editCursor, usedTracks: usedTracks(),
+            ticksPerBeat: UInt32(session.document.ticksPerBeat))
+    }
+
+    func pointerContext(modifiers: DrawerModifiers, x: Double,
+                        includeSelectionLanes: Bool = false,
+                        includeMenuAvailability: Bool = false) -> AutomationPointerContext? {
+        guard let session else { return nil }
+        let facts = facts(parameter: state.activeParameter,
+                          modifiers: AutomationModifiers(modifiers),
+                          session: session)
+        let projection = makeProjection(facts: facts, camera: session.camera)
+        guard let lane = laneProjection(facts: facts, projection: projection) else { return nil }
+        let covered: [AutomationLaneCapture]
+        if includeSelectionLanes, let selection = state.selection, selection.isActive,
+           selection.range.contains(projection.tick(atX: x, fine: false)) {
+            covered = rows.compactMap { row in
+                guard row.coversNodes, row.selectionHasEvents else { return nil }
+                return AutomationLaneCapture(parameter: row.parameter,
+                    snapshot: projectionFacts.snapshot(row.parameter, session: session))
+            }
+        } else {
+            covered = []
+        }
+        return AutomationPointerContext(
+            facts: facts, projection: projection, lane: lane, coveredLanes: covered,
+            systemClipboardAvailable: includeMenuAvailability && hasClipboard,
+            selectionScopeAvailable: includeMenuAvailability
+                && resolvedSelectionScope() != nil)
+    }
 
     func row(_ parameter: AutomationParameter) -> AutomationRow? {
         rows.first { $0.parameter == parameter }
@@ -224,11 +268,10 @@ extension AutomationPage {
         let snapshot = projectionFacts.snapshot(parameter, session: session)
         return AutomationFrozenFacts(
             parameter: parameter, snapshot: snapshot, camera: session.camera.snapshot,
-            selection: selection, modifiers: modifiers,
+            selection: state.selection, modifiers: modifiers,
             songEndTick: session.timeline.lengthTicks)
     }
 
-    var gestureCamera: EditorCamera { frozenCamera ?? liveCamera() }
 
     func liveCamera() -> EditorCamera {
         guard let session else {
@@ -246,7 +289,7 @@ extension AutomationPage {
             return projectionFacts.projection(
                 snapshot: facts.snapshot, session: session, camera: camera,
                 bounds: bounds, geometry: geometry, font: baseFontPx,
-                range: laneRanges[facts.parameter])
+                range: state.laneRanges[facts.parameter])
         }
         return AutomationProjection(
             camera: camera, bounds: bounds, geometry: geometry,
@@ -255,13 +298,14 @@ extension AutomationPage {
                 timeAxis: TimeAxis(), clockTicks: 1),
             songEndTick: facts.songEndTick,
             displayMaximum: AutomationProjection.displayMaximum(
-                snapshot: facts.snapshot, range: laneRanges[facts.parameter]))
+                snapshot: facts.snapshot, range: state.laneRanges[facts.parameter]))
     }
 
     func laneProjection(facts: AutomationFrozenFacts,
                         projection: AutomationProjection) -> AutomationLaneProjection? {
         guard session != nil else { return nil }
-        return projection.project(facts.snapshot, selection: selection, usedTracks: usedTracks())
+        return projection.project(facts.snapshot, selection: state.selection,
+                                  usedTracks: state.document.usedTracks)
     }
 
     func usedTracks() -> Set<Int> {
@@ -329,37 +373,37 @@ extension AutomationPage {
         guard let session else {
             return .detached(palette: scenePalette, baseFontPx: baseFontPx, bounds: plotBounds)
         }
-        let track = activeTrack()
-        let index = min(max(activeParameterIndex, 0), AutomationCatalog.count - 1)
-        let parameter = AutomationCatalog.parameter(at: index, track: track ?? 0) ?? .tempo
+        let track = state.activeTrack
+        let index = state.activeParameterIndex
+        let parameter = state.activeParameter
         let trackAvailable = track != nil
         let message = track == nil && !parameter.isTempo
             ? AutomationPagePolicy.noTrackMessage : ""
         let catalog = AutomationCatalog.parameters(track: track ?? 0)
         let rows = projectionFacts.rows(
-            session: session, track: track, selection: selection,
+            session: session, track: track, selection: state.selection,
             ready: track != nil).visibleRows
         let bounds = plotBounds
-        let used = usedTracks()
+        let used = state.document.usedTracks
         func lane(_ parameter: AutomationParameter) -> AutomationLaneSceneInput {
             let snapshot = projectionFacts.snapshot(parameter, session: session)
             let projection = projectionFacts.projection(
                 snapshot: snapshot, session: session, camera: session.camera,
                 bounds: bounds, geometry: geometry, font: baseFontPx,
-                range: laneRanges[parameter])
+                range: state.laneRanges[parameter])
             return AutomationLaneSceneInput(
-                lane: projection.project(snapshot, selection: selection, usedTracks: used),
+                lane: projection.project(snapshot, selection: state.selection, usedTracks: used),
                 paint: AutomationPaintProjection(projection))
         }
         let activeLane = message.isEmpty ? lane(parameter) : nil
         let ghosts = activeLane == nil
-            ? [] : catalog.filter { ghostPins.contains($0) }.map(lane)
+            ? [] : catalog.filter { state.ghostPins.contains($0) }.map(lane)
         return AutomationContentSceneInput(
             active: AutomationActiveSceneValue(
                 parameterIndex: index, parameter: parameter, selectedTrack: track,
                 trackAvailable: trackAvailable, plotMessage: message),
-            catalog: catalog, rows: rows, ghostPins: ghostPins,
-            activeLane: activeLane, ghostLanes: ghosts, selection: selection,
+            catalog: catalog, rows: rows, ghostPins: state.ghostPins,
+            activeLane: activeLane, ghostLanes: ghosts, selection: state.selection,
             usedTracks: used,
             grid: activeLane == nil ? nil : gridSceneInput(session: session, bounds: bounds),
             bounds: bounds, baseFontPx: baseFontPx, hover: hover, palette: scenePalette)
@@ -373,42 +417,29 @@ extension AutomationPage {
     }
 
     private func promptSceneInput() -> AutomationPromptSceneInput {
-        if let prompt {
+        let modal = state.modal
+        if let prompt = modal.prompt {
             return AutomationPromptSceneInput(
                 kind: AutomationPromptKind.value.rawValue, title: prompt.prompt.title,
                 label: prompt.prompt.label, message: "", minimum: prompt.prompt.minimum,
-                maximum: prompt.prompt.maximum, draft: promptDraft,
-                error: promptError, open: true)
+                maximum: prompt.prompt.maximum, draft: modal.draft,
+                error: modal.error, open: true)
         }
-        if let laneDelete {
+        if let confirmation = modal.laneDelete {
             return AutomationPromptSceneInput(
                 kind: AutomationPromptKind.confirmLaneDelete.rawValue,
-                title: laneDelete.title, label: "", message: laneDelete.message,
-                minimum: 0, maximum: 0, draft: promptDraft,
-                error: promptError, open: true)
+                title: confirmation.title, label: "", message: confirmation.message,
+                minimum: 0, maximum: 0, draft: modal.draft,
+                error: modal.error, open: true)
         }
         return AutomationPromptSceneInput()
     }
 
     private func menuSceneInput() -> AutomationMenuSceneInput {
-        guard let menu else { return AutomationMenuSceneInput() }
-        let children: [AutomationMenuRowValue]
-        if case .lane = menu.target {
-            children = rangeMenuRows(facts: menu.facts).map(menuValue)
-        } else {
-            children = []
-        }
+        guard let menu = state.modal.menu else { return AutomationMenuSceneInput() }
         return AutomationMenuSceneInput(
-            x: menu.anchorX, y: menu.anchorY, rows: menu.rows.map(menuValue),
-            childRows: children, open: true)
-    }
-
-    private func menuValue(_ row: AutomationMenuRowHandle) -> AutomationMenuRowValue {
-        AutomationMenuRowValue(
-            actionId: row.actionId, text: row.text, enabled: row.enabled,
-            separator: row.separator, checkable: row.checkable, checked: row.checked,
-            hasSubmenu: row.hasSubmenu, shortcutText: row.shortcutText,
-            primitiveName: row.primitiveName)
+            x: menu.anchorX, y: menu.anchorY, rows: menu.rows,
+            childRows: menu.childRows, open: true)
     }
 
     // MARK: Single publication pass
@@ -444,9 +475,8 @@ extension AutomationPage {
 
         let rebuildBand = contentChanged || scope.contains(.band)
         if rebuildBand {
-            let paint = clearing ? nil : band.flatMap {
-                paintProjection(parameter: $0.parameter, camera: liveCamera())
-            }
+            let band = state.pointer.rangeBand
+            let paint = clearing ? nil : band.map { AutomationPaintProjection($0.projection) }
             next.overlay.band = clearing ? AutomationBandValue()
                 : AutomationScene.bandValue(band, paint: paint)
         }
@@ -468,7 +498,7 @@ extension AutomationPage {
             }
             next.overlay.hover = clearing ? AutomationHoverValue()
                 : AutomationScene.hoverValue(
-                    hover, pointerX: hoverX, isPencilMode: isPencilMode,
+                    hover, pointerX: state.hoverX, isPencilMode: state.isPencilMode,
                     activeParameter: next.content.active?.parameter ?? activeParameter,
                     paint: paint, metadata: metadata, baseFontPx: baseFontPx,
                     typography: measured)
@@ -476,17 +506,17 @@ extension AutomationPage {
 
         let rebuildPreview = contentChanged || scope.contains(.preview)
         if rebuildPreview {
-            let draft = AutomationPreviewDraft.resolve(gesture: gesture, frozen: frozen)
+            let draft = AutomationPreviewDraft.resolve(pointer: state.pointer)
             let measured = projectionFacts.typography(
                 baseFontPx: baseFontPx,
                 captionLabel: clearing || draft.text.isEmpty ? nil : draft.text,
                 titleLabel: nil)
-            let paint = clearing ? nil : frozen.map {
-                AutomationPaintProjection(makeProjection(facts: $0, camera: gestureCamera))
+            let paint = clearing ? nil : state.pointer.gestureProjection.map {
+                AutomationPaintProjection($0)
             }
             next.overlay.preview = clearing ? AutomationPreviewValue()
                 : AutomationScene.previewValue(
-                    draft: draft, frozen: frozen,
+                    draft: draft, frozen: state.pointer.gestureFacts,
                     activeParameter: next.content.active?.parameter ?? activeParameter,
                     paint: paint, baseFontPx: baseFontPx, palette: scenePalette,
                     typography: measured)
@@ -519,15 +549,14 @@ extension AutomationPage {
         }
         if clearing || scope.contains(.tapTempo) {
             next.tapTempo = clearing ? AutomationTapTempoValue() : AutomationTapTempoValue(
-                active: tapGuard != nil || tapSession.tapCount != 0,
-                tapCount: tapSession.tapCount, draftBpm: tapSession.draftBpm,
-                idleCommitMs: tapSession.idleCommitMs, ready: tapSession.readyToCommit)
+                active: state.tapTempo.isActive,
+                tapCount: state.tapTempo.session.tapCount,
+                draftBpm: state.tapTempo.session.draftBpm,
+                idleCommitMs: state.tapTempo.session.idleCommitMs,
+                ready: state.tapTempo.session.readyToCommit)
         }
         if clearing || scope.contains(.interaction) {
-            next.interaction.active = clearing ? false : AutomationInteractionActivity.resolve(
-                hasGesture: gesture != nil, hasPrompt: prompt != nil,
-                hasLaneDelete: laneDelete != nil, hasMenu: menu != nil,
-                hasBand: band != nil, isPanning: panActive, hasTapSession: tapGuard != nil)
+            next.interaction.active = clearing ? false : state.interactionActive
         }
         if clearing || scope.contains(.hoverHint) || scope.contains(.hover) {
             next.interaction.hoverHintProfile = clearing ? AutomationHintProfile.empty
@@ -561,57 +590,6 @@ extension AutomationPage {
         }
     }
 
-    // MARK: Scoped requests retained until the reducer migration
-
-    func rebuildContent(selectionOnly: Bool = false) {
-        publish(.content)
-        if session != nil { contentBuildCount &+= 1 }
-        if selectionOnly { selectionBuildCount &+= 1 }
-    }
-
-    func publishBand() { publish(.band) }
-    func publishHover() { publish([.hover, .hoverHint]) }
-    func publishPreview() { publish(.preview) }
-    func publishContext() { publish(.context) }
-    func publishPrompt() { publish(.prompt) }
-    func publishMenuRows() { publish([.menu, .interaction]) }
-    func publishTapTempo() { publish(.tapTempo) }
-    func publishTypography() { publish(.typography) }
-    func publishInteractionState() { publish(.interaction) }
-    func publishHoverHintProfile() { publish(.hoverHint) }
-
-    func applyPreviewDraft(_ draft: AutomationPreviewDraft) {
-        previewPoints = draft.parameter == activeParameter ? draft.points : []
-        previewText = draft.parameter == activeParameter ? draft.text : ""
-    }
-
-    @discardableResult
-    func applyHover(_ next: AutomationHover?, countingPublication: Bool) -> Bool {
-        guard next != hover else { return false }
-        hover = next
-        if countingPublication { hoverBuildCount &+= 1 }
-        return true
-    }
-
-    func hoverHintTargetAtPointer() -> AutomationHoverHintTarget? {
-        guard hover != nil, let projection else { return nil }
-        return AutomationHover.hintTarget(
-            x: hoverX, y: hoverY, lane: projection,
-            pointHitRadius: geometry.pointHitRadius)
-    }
-
-    func applyPrompt(_ next: AutomationPromptTransaction?) { prompt = next }
-
-    func shiftSelection(by delta: Int64) {
-        guard let moved = shiftedAutomationSelection(selection, by: delta) else { return }
-        selection = moved
-    }
-
-    func applyBodySceneConfiguration(_ configuration: AutomationBodySceneConfiguration) {
-        guard configuration.changed else { return }
-        publish([.body, .content], body: configuration)
-        if session != nil { contentBuildCount &+= 1 }
-    }
 
     // MARK: Qt reconciliation
 
@@ -623,10 +601,6 @@ extension AutomationPage {
         selectedParameters = content.selectedParameters
         projection = content.projection
         scaleLabels = content.scaleLabels
-        if let active = content.active {
-            activeParameterIndex = active.parameterIndex
-            activeParameter = active.parameter
-        }
     }
 
     private func publishContentValues(_ content: AutomationContentScene) {

@@ -172,17 +172,6 @@ struct AutomationRampValue: Equatable, Sendable {
     var primitiveName: String
 }
 
-struct AutomationMenuRowValue: Equatable, Sendable {
-    var actionId: Int
-    var text: String
-    var enabled: Bool
-    var separator: Bool
-    var checkable: Bool
-    var checked: Bool
-    var hasSubmenu: Bool
-    var shortcutText: String
-    var primitiveName: String
-}
 
 struct AutomationContentScene: Equatable, Sendable {
     var active: AutomationActiveSceneValue?
@@ -636,27 +625,28 @@ struct AutomationPreviewDraft: Equatable, Sendable {
 
     static let empty = Self(parameter: nil, points: [], labelPoint: nil, text: "")
 
-    static func resolve(gesture: AutomationGesture?, frozen: AutomationFrozenFacts?) -> Self {
+    static func resolve(pointer: AutomationPointerState) -> Self {
+        let facts = pointer.gestureFacts
         let points: [AutomationLanePoint]
-        switch gesture {
-        case let .sweep(transaction): points = transaction.preview
-        case let .pencil(transaction): points = transaction.preview.points
-        case let .node(transaction):
-            points = transaction.targets.filter { $0.parameter == frozen?.parameter }.map(\.current)
-        case let .phantom(transaction): points = [transaction.target.current]
-        case nil: points = []
+        switch pointer {
+        case let .sweep(transaction, _): points = transaction.preview
+        case let .pencil(transaction, _): points = transaction.preview.points
+        case let .node(transaction, _):
+            points = transaction.targets.filter { $0.parameter == facts?.parameter }.map(\.current)
+        case let .phantom(transaction, _): points = [transaction.target.current]
+        case .idle, .pendingBand, .band, .pan: points = []
         }
         let labelPoint: AutomationLanePoint?
-        if case let .node(transaction) = gesture {
+        if case let .node(transaction, _) = pointer {
             labelPoint = transaction.grabbed.flatMap {
-                $0.parameter == frozen?.parameter ? $0.current : nil
+                $0.parameter == facts?.parameter ? $0.current : nil
             }
         } else {
             labelPoint = points.last
         }
-        let text = labelPoint.map { frozen?.metadata.valueText($0.value) ?? "" } ?? ""
-        return Self(
-            parameter: frozen?.parameter, points: points, labelPoint: labelPoint, text: text)
+        let text = labelPoint.map { facts?.metadata.valueText($0.value) ?? "" } ?? ""
+        return Self(parameter: facts?.parameter, points: points,
+                    labelPoint: labelPoint, text: text)
     }
 }
 

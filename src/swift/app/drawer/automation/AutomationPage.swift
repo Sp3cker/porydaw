@@ -1,5 +1,6 @@
 import Foundation
 import PorydawCore
+import Dispatch
 import QtBridge
 
 // The Automation drawer page owner: document-bound parameter selection, the
@@ -74,10 +75,10 @@ public final class AutomationPage: EditorDrawerPage {
         baseFontPx: AutomationPagePolicy.seedBaseFontPx)
     /// The catalog's selector labels, Tempo last.
     @QtIgnored public internal(set) var parameterLabels: [String] = []
-    @QtIgnored public internal(set) var activeParameterIndex = 0
+    @QtIgnored public var activeParameterIndex: Int { state.activeParameterIndex }
     /// The active parameter: Tempo always, another catalog parameter only while a
     /// track is selected.
-    @QtIgnored public internal(set) var activeParameter: AutomationParameter = .tempo
+    @QtIgnored public var activeParameter: AutomationParameter { state.activeParameter }
     @QtIgnored public internal(set) var rows: [AutomationRow] = []
     @QtIgnored public internal(set) var projection: AutomationLaneProjection?
     @QtIgnored public internal(set) var scaleLabels: [AutomationScaleLabel] = []
@@ -90,17 +91,15 @@ public final class AutomationPage: EditorDrawerPage {
     /// The explicit ghost pins that still carry events.
     @QtIgnored public internal(set) var ghostParameters: [AutomationParameter] = []
     @QtIgnored public internal(set) var ghostLabels: [String] = []
-    @QtIgnored public internal(set) var selection: AutomationTimeSelection?
+    @QtIgnored public var selection: AutomationTimeSelection? { state.selection }
     @QtIgnored public var onCommandAvailabilityChanged: (() -> Void)?
-    @QtIgnored public var pointerGestureActive: Bool {
-        gesture != nil || band != nil || panActive
-    }
-    @QtIgnored public internal(set) var hover: AutomationHover?
+    @QtIgnored public var pointerGestureActive: Bool { state.pointerGestureActive }
+    @QtIgnored public var hover: AutomationHover? { state.hover }
     /// The live gesture draft: points only, never a document write.
     @QtIgnored public internal(set) var previewPoints: [AutomationLanePoint] = []
     @QtIgnored public internal(set) var previewText = ""
     /// The captured value prompt (`Set Value` / empty-lane insertion).
-    @QtIgnored public internal(set) var prompt: AutomationPromptTransaction?
+    @QtIgnored public var prompt: AutomationPromptTransaction? { state.modal.prompt }
     /// The effective editing context: the shared playhead while playing, the
     /// session's edit cursor while stopped.
     @QtIgnored public internal(set) var contextTick: Tick = 0
@@ -109,15 +108,16 @@ public final class AutomationPage: EditorDrawerPage {
     /// The shared pencil tool's state, owned by the window's edit commands.
     @QtTracked public var isPencilMode: Bool = false {
         didSet {
-            if oldValue != isPencilMode {
-                publishHoverHintProfile()
-            }
+            if oldValue != isPencilMode { _ = send(.pencilModeChanged(isPencilMode)) }
         }
     }
     /// The shared mouse-hint profile resolved for the plot's current hover.
     public var hoverHintProfile: Int = AutomationHintProfile.empty
-    public var plotFocused: Bool = false
-
+    public var plotFocused: Bool = false {
+        didSet {
+            if oldValue != plotFocused { _ = send(.plotFocusChanged(plotFocused)) }
+        }
+    }
     // MARK: Published primitives
 
     public var captionFont: [String: QVariantSettable] = [:]
@@ -211,21 +211,21 @@ public final class AutomationPage: EditorDrawerPage {
 
     // MARK: Check-facing state
 
-    @QtIgnored public var hasGesture: Bool { gesture != nil }
-    @QtIgnored public var hasPrompt: Bool { prompt != nil }
-    @QtIgnored public var hasMenu: Bool { menu != nil }
-    @QtIgnored public var hasBand: Bool { band != nil }
-    @QtIgnored public var isPanning: Bool { panActive }
-    @QtIgnored public var isDraggingNodes: Bool { if case .node = gesture { return true }; return false }
-    @QtIgnored public var isSweeping: Bool { if case .sweep = gesture { return true }; return false }
-    @QtIgnored public var isPainting: Bool { if case .pencil = gesture { return true }; return false }
+    @QtIgnored public var hasGesture: Bool { state.pointer.isGesture }
+    @QtIgnored public var hasPrompt: Bool { state.modal.prompt != nil }
+    @QtIgnored public var hasMenu: Bool { state.modal.menu != nil }
+    @QtIgnored public var hasBand: Bool { state.pointer.rangeBand != nil }
+    @QtIgnored public var isPanning: Bool { state.pointer.isPanning }
+    @QtIgnored public var isDraggingNodes: Bool { if case .node = state.pointer { return true }; return false }
+    @QtIgnored public var isSweeping: Bool { if case .sweep = state.pointer { return true }; return false }
+    @QtIgnored public var isPainting: Bool { if case .pencil = state.pointer { return true }; return false }
     @QtIgnored public var laneCount: Int { projection?.eventCount ?? 0 }
     @QtIgnored public var hasClipboard: Bool { clipboard.read() != nil }
-    @QtIgnored public var frozenRevision: UInt64? { frozen?.revision }
-    @QtIgnored public var menuRowActions: [Int] { menu?.rows.map(\.actionId) ?? [] }
-    @QtIgnored public var menuTargetIsPoint: Bool { if case .point = menu?.target { return true }; return false }
-    @QtIgnored public var promptForExistingNode: Bool { prompt?.forExistingNode ?? false }
-    @QtIgnored public var tapTempoSession: AutomationTapTempoSession { tapSession }
+    @QtIgnored public var frozenRevision: UInt64? { state.pointer.gestureFacts?.revision ?? state.modal.facts?.revision }
+    @QtIgnored public var menuRowActions: [Int] { state.modal.menu?.rows.map(\.actionId) ?? [] }
+    @QtIgnored public var menuTargetIsPoint: Bool { if case .point = state.modal.menu?.target { return true }; return false }
+    @QtIgnored public var promptForExistingNode: Bool { state.modal.prompt?.forExistingNode ?? false }
+    @QtIgnored public var tapTempoSession: AutomationTapTempoSession { state.tapTempo.session }
     @QtIgnored var publishedTabs: [AutomationTabValue] { tabSnapshots }
     @QtIgnored var publishedNodes: [AutomationNodeValue] { nodeSnapshots }
     @QtIgnored var publishedMenuRows: [AutomationMenuRowValue] { menuRowSnapshots }
@@ -303,36 +303,17 @@ public final class AutomationPage: EditorDrawerPage {
 
     /// Whether the accepted clipboard holds points for the active parameter, which
     /// is exactly the lane menu's Paste availability.
-    @QtIgnored public var laneClipAvailable: Bool { laneClipPoints(activeParameter) != nil }
+    @QtIgnored public var laneClipAvailable: Bool { !state.laneClipboardPoints.isEmpty }
 
     weak var session: DocumentSession?
-    var gesture: AutomationGesture?
-    var frozen: AutomationFrozenFacts?
-    /// The camera the live gesture froze with its facts. `EditorCamera` is a
-    /// value type, so this copy is the gesture's own projection for its whole
-    /// life: a camera publication while a stroke is live reprojects the drawn
-    /// content, never the gesture's mapping.
-    var frozenCamera: EditorCamera?
-    var ghostPins: Set<AutomationParameter> = []
-    var laneRanges: [AutomationParameter: Int] = [:]
+    @QtIgnored var state = AutomationState()
+    @QtIgnored private var dispatchDepth = 0
+    @QtIgnored private var pendingBodyConfiguration: AutomationBodySceneConfiguration?
+    @QtIgnored private var pendingPublication: AutomationPublicationScope = []
+    @QtIgnored private var pendingCommandAvailabilityChanged = false
     let clipboard = GridClipboard()
-    /// Lane-menu copy is deliberately separate from the system selection clipboard.
-    var laneClipboardPoints: [AutomationLanePoint] = []
     var publishedPointerGestureActive = false
-    var band: AutomationRangeBand?
-    var panActive = false
-    var previousX: Double = 0
-    var menu: AutomationMenuState?
-    var laneDelete: AutomationLaneDeleteConfirmation?
-    var tapSession = AutomationTapTempoSession()
-    /// The guard a tap session commits against: the revision and parameter the
-    /// first tap captured. A replaced document or parameter ends the session
-    /// instead of landing its draft somewhere else.
-    var tapGuard: (revision: UInt64, parameter: AutomationParameter)?
     let tapClock = AutomationMonotonicClock()
-    var hoverX: Double = 0
-    var hoverY: Double = 0
-    var lastPresentation: (tick: Tick, playing: Bool)?
 
     // Plain descriptors from the last publication. Qt rows are produced only
     // after these values differ.
@@ -361,7 +342,9 @@ public final class AutomationPage: EditorDrawerPage {
         self.baseFontPx = baseFontPx.isFinite && baseFontPx > 0
             ? baseFontPx : AutomationPagePolicy.seedBaseFontPx
         geometry = AutomationPlotGeometry(baseFontPx: self.baseFontPx)
-        publishTypography()
+        state.body.baseFontPx = self.baseFontPx
+        state.body.geometry = geometry
+        publish(.typography)
     }
 
     // Scene construction, adapter sampling and publication live in
@@ -374,65 +357,31 @@ public final class AutomationPage: EditorDrawerPage {
     public func attach(session: DocumentSession, palette: GridPalette) {
         self.session = session
         self.palette = palette
-        contextTick = session.editCursor
-        lastPresentation = nil
-        rebuildContent()
+        _ = send(.attached(documentFacts()))
     }
 
-    /// Drops the session and everything the page owns. Called after the host
-    /// acknowledged scene removal and before the document owners retire.
+    /// Drops the session after the host acknowledges scene removal.
     @QtIgnored
     public func detach() {
-        cancelSectionInteraction()
+        _ = send(.detached)
         session = nil
-        projection = nil
-        rows = []
-        selection = nil
-        selectedParameters = []
-        ghostPins = []
-        ghostParameters = []
-        ghostLabels = []
-        laneClipboardPoints = []
-        menu = nil
-        laneDelete = nil
-        band = nil
-        gesture = nil
-        frozen = nil
-        frozenCamera = nil
-        tapSession.reset()
-        tapGuard = nil
-        publish(.clear)
     }
 
     @QtIgnored var palette = GridPalette()
-    /// The body facts the last `configureBody` really applied, so a selector
-    /// origin or drag-distance change rebuilds exactly once.
     @QtIgnored var lastBodyOrigin: Double = 0
     @QtIgnored var lastBodyDragDistance: Double = AutomationPagePolicy.dragDistance
-    // Native typography and document projection caches belong to the adapter.
 
-    // MARK: Composition input
-
-    /// The page body's own facts, pushed by the production QML as it lays out:
-    /// the same plot size, plot origin, device pixel ratio, base font and drag
-    /// distance the roll and the sibling pages measure with.
     public func configureBody(width: Double, height: Double, gutter: Double,
                               devicePixelRatio: Double, baseFontPx: Double,
                               dragDistance: Double) {
         let configuration = AutomationBodySceneConfiguration.resolve(
-            width: width,
-            height: height,
-            gutter: gutter,
-            devicePixelRatio: devicePixelRatio,
-            baseFontPx: baseFontPx,
-            dragDistance: dragDistance,
-            currentWidth: plotWidth,
-            currentHeight: plotHeight,
-            currentDevicePixelRatio: self.devicePixelRatio,
-            currentOrigin: lastBodyOrigin,
-            currentDragDistance: lastBodyDragDistance,
+            width: width, height: height, gutter: gutter,
+            devicePixelRatio: devicePixelRatio, baseFontPx: baseFontPx,
+            dragDistance: dragDistance, currentWidth: plotWidth,
+            currentHeight: plotHeight, currentDevicePixelRatio: self.devicePixelRatio,
+            currentOrigin: lastBodyOrigin, currentDragDistance: lastBodyDragDistance,
             currentBaseFontPx: self.baseFontPx)
-        applyBodySceneConfiguration(configuration)
+        _ = send(.bodyConfigured(configuration))
     }
 
     // MARK: Refresh
@@ -441,56 +390,27 @@ public final class AutomationPage: EditorDrawerPage {
     /// modal whose captured revision, track or parameter identity no longer holds
     /// cancels, then content rebuilds. Nothing here re-points a captured target.
     public func refreshFromDocument() {
-        guard let session else { return }
-        let revision = session.document.revision
-        func stale(_ facts: AutomationFrozenFacts) -> Bool {
-            facts.revision != revision
-                || (facts.parameter.track != nil && facts.parameter.track != activeTrack())
-        }
-        if let frozen, stale(frozen) { cancelGesture() }
-        if let prompt, stale(prompt.facts) { cancelPrompt() }
-        if let laneDelete, stale(laneDelete.facts) { cancelPrompt() }
-        if let live = menu,
-           stale(live.facts) || live.facts.parameter != activeParameter {
-            menu = nil
-            publishMenuRows()
-        }
-        if let band, band.revision != revision { self.band = nil }
-        if let tapGuard, tapGuard.revision != revision || tapGuard.parameter != activeParameter {
-            resetTapTempo()
-        }
-        rebuildContent()
+        guard session != nil else { return }
+        _ = send(.documentChanged(documentFacts()))
     }
 
     /// Cursor-only publication: the stopped readout consumes the session's
     /// current edit cursor without rebuilding document-derived content.
     @QtIgnored
     public func refreshEditCursor() {
-        guard session != nil, !playing else { return }
-        publishContext()
+        guard let session else { return }
+        _ = send(.editCursorChanged(session.editCursor))
     }
 
     /// Camera-only publication: the same points at new plot positions. A live
     /// gesture keeps its own frozen projection, so only the drawn content moves.
-    public func refreshCamera() {
-        guard session != nil else { return }
-        rebuildContent()
-    }
+    public func refreshCamera() { _ = send(.cameraChanged) }
 
     /// One shared-playhead presentation, delivered by the shared owner's fan-out.
     /// Movement re-publishes the effective context and rebuilds nothing: neither
     /// the curve, the nodes nor an open modal depend on the playing tick.
     public func refreshPlayhead(tick: Double, playing: Bool) {
-        guard session != nil else { return }
-        let resolved = Tick(max(0, tick).rounded())
-        guard lastPresentation?.tick != resolved || lastPresentation?.playing != playing else {
-            return
-        }
-        lastPresentation = (resolved, playing)
-        playheadPresentationCount &+= 1
-        self.playing = playing
-        if playing { presentedTick = resolved }
-        publishContext()
+        _ = send(.playheadChanged(tick: Tick(max(0, tick).rounded()), playing: playing))
     }
 
     // MARK: Parameter and selection state
@@ -500,12 +420,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// ends synchronously first.
     @discardableResult
     public func activateParameter(index: Int) -> Bool {
-        guard session != nil, index != activeParameterIndex,
-              index >= 0, index < AutomationCatalog.count else { return false }
-        cancelSectionInteraction()
-        activeParameterIndex = index
-        rebuildContent()
-        return true
+        send(.activateParameter(index)).outcome.accepted
     }
 
     @discardableResult
@@ -520,30 +435,13 @@ public final class AutomationPage: EditorDrawerPage {
     /// one while it still carries events.
     @discardableResult
     public func toggleGhostParameter(index: Int) -> Bool {
-        guard session != nil, index >= 0, index < AutomationCatalog.count,
-              let parameter = AutomationCatalog.parameter(at: index, track: activeTrack() ?? 0)
-        else { return false }
-        if index == activeParameterIndex {
-            // The active parameter owns every pin: toggling it clears them all,
-            // and does nothing while nothing is pinned.
-            guard !ghostPins.isEmpty else { return false }
-            ghostPins = []
-        } else if parameter.isTempo || eventCount(of: parameter) != 0 {
-            if !ghostPins.insert(parameter).inserted { ghostPins.remove(parameter) }
-        } else {
-            return false
-        }
-        rebuildContent()
-        return true
+        send(.toggleGhostParameter(index)).outcome.accepted
     }
 
     /// The explicit time selection. Setting it clears nothing else, and a
     /// parameter switch never discards it.
     public func applyTimeSelection(_ selection: AutomationTimeSelection?) {
-        guard self.selection != selection else { return }
-        self.selection = selection
-        rebuildContent(selectionOnly: true)
-        onCommandAvailabilityChanged?()
+        _ = send(.setSelection(selection))
     }
 
     public func clearTimeSelection() { applyTimeSelection(nil) }
@@ -571,7 +469,12 @@ public final class AutomationPage: EditorDrawerPage {
     @discardableResult
     public func pointerPress(x: Double, y: Double, surface: Int, button: Int,
                              modifiers: Int = 0) -> Bool {
-        return dispatchPointerPress(x: x, y: y, surface: surface, button: button, modifiers: modifiers)
+        let input = DrawerPointerInput(x: x, y: y, qtButton: button,
+                                       qtModifiers: modifiers, phase: .press)
+        guard let surface = AutomationInputSurface(rawValue: surface) else { return false }
+        return send(.pointer(surface: surface, input: input,
+                             context: pointerContext(modifiers: input.modifiers, x: x,
+                                                     includeSelectionLanes: input.changedButton == .primary))).outcome.consumed
     }
 
     /// One move: a pan scrolls the shared camera, a live range band extends, a
@@ -579,7 +482,11 @@ public final class AutomationPage: EditorDrawerPage {
     /// hover. A held button never starts a hover.
     @discardableResult
     public func pointerMove(x: Double, y: Double, buttons: Int, modifiers: Int = 0) -> Bool {
-        return dispatchPointerMove(x: x, y: y, buttons: buttons, modifiers: modifiers)
+        let input = DrawerPointerInput(x: x, y: y, qtButtons: buttons,
+                                       qtModifiers: modifiers, phase: .move)
+        let context = state.pointer.isIdle && buttons == 0
+            ? pointerContext(modifiers: input.modifiers, x: x) : nil
+        return send(.pointer(surface: .plot, input: input, context: context)).outcome.consumed
     }
 
     /// One release: the frozen draft resolves into at most one commit, a right
@@ -587,36 +494,38 @@ public final class AutomationPage: EditorDrawerPage {
     /// press ends the pan.
     @discardableResult
     public func pointerRelease(x: Double, y: Double, button: Int, modifiers: Int = 0) -> Bool {
-        return dispatchPointerRelease(x: x, y: y, button: button, modifiers: modifiers)
+        let input = DrawerPointerInput(x: x, y: y, qtButton: button,
+                                       qtModifiers: modifiers, phase: .release)
+        let context = input.changedButton == .secondary
+            ? pointerContext(modifiers: input.modifiers, x: x, includeMenuAvailability: true) : nil
+        let transition = send(.pointer(surface: .plot, input: input, context: context))
+        return input.changedButton == .primary
+            ? transition.outcome.written : transition.outcome.consumed
     }
 
     /// Double-click inserts nothing, exactly as the production band: it ends any
     /// in-flight gesture and swallows the event so it never reaches an item below.
     @discardableResult
     public func pointerDoubleClick(x: Double, y: Double) -> Bool {
-        return dispatchPointerDoubleClick(x: x, y: y)
+        send(.pointerDoubleClicked).outcome.consumed
     }
 
     /// The pointer left the plot: the hover clears, a live interaction keeps its
     /// frozen state.
     public func pointerLeave() {
-        dispatchPointerLeave()
+        _ = send(.pointerLeft)
     }
 
     /// The page's local Escape: an open prompt or menu, a frozen gesture, a range
     /// band, a pan, a tap-tempo session or a hover claims it; everything else
     /// passes on to the window.
-    public func handleEscape() -> Bool {
-        return dispatchEscape()
-    }
+    public func handleEscape() -> Bool { send(.escape).outcome.consumed }
 
     /// Ends every interaction the page owns without committing anything. This is
     /// the one cancellation route: a hidden section, a pointer ungrab, a window
     /// deactivation, a document/track/parameter switch, a scene retirement and
     /// the page's own Escape all arrive here.
-    public func cancelSectionInteraction() {
-        cancelAllInteractions()
-    }
+    public func cancelSectionInteraction() { _ = send(.cancelInteraction) }
     // MARK: Prompt and commands
 
     /// `Set Value` on a node, or the empty-lane insertion prompt. Opening it
@@ -624,54 +533,60 @@ public final class AutomationPage: EditorDrawerPage {
     /// domain are published, and nothing re-reads live state afterwards.
     @discardableResult
     public func openPrompt(tick: Tick, value: Int) -> Bool {
-        return openCapturedPrompt(tick: tick, value: value)
+        guard let facts = frozenFacts(modifiers: .init()) else { return false }
+        return send(.modal(.openPrompt(facts: facts, tick: tick, value: value))).outcome.accepted
     }
 
     /// The prompt's acceptance: one commit, or nothing when it changes nothing.
     /// The captured revision is revalidated by the accept policy below.
     @discardableResult
     public func acceptPrompt(displayedValue: Int) -> Bool {
-        return acceptCapturedPrompt(displayedValue: displayedValue)
+        send(.modal(.acceptValue(displayedValue))).outcome.written
     }
 
     /// The form's own draft edit: the model owns the text, and a draft outside
     /// the captured domain publishes its error before any acceptance.
     public func updatePromptDraft(draft text: String) {
-        updateCapturedPromptDraft(draft: text)
+        _ = send(.modal(.draftChanged(text)))
     }
 
     /// The form's acceptance: an invalid draft stays open with its error and
     /// writes nothing; a valid one commits through the captured transaction.
     @discardableResult
     public func acceptPromptDraft() -> Bool {
-        return acceptCapturedPromptDraft()
+        send(.modal(.acceptDraft)).outcome.written
     }
 
     /// Cancels a captured prompt or confirmation. Nothing is written, and the
     /// frozen facts the prompt held go with it, so a cancelled prompt never
     /// leaves a frozen revision behind.
     public func cancelPrompt() {
-        cancelCapturedPrompt()
+        _ = send(.modal(.cancelPrompt))
     }
 
     /// The open prompt's validation error, or `nil` when the draft is acceptable.
-    @QtIgnored public var draftError: String? { capturedPromptDraftError }
+    @QtIgnored public var draftError: String? { state.modal.draftError }
 
     /// Delete every occurrence at the given ticks of the active parameter.
     @discardableResult
     public func deletePoints(at ticks: [Tick]) -> Bool {
-        return deleteCapturedPoints(at: ticks)
+        guard !ticks.isEmpty, let facts = frozenFacts(modifiers: .init()),
+              let plan = AutomationNodeResolver.deletions(
+                revision: facts.revision,
+                [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
+                                                    snapshot: facts.snapshot, ticks: ticks)]) else {
+            return false
+        }
+        return commitDocument(plan)
     }
 
     /// Pencil hover deletion is a semantic command, not a second key binding.
     /// Shared note/time selection deletion retains priority.
     @QtIgnored
     public func hoverDeleteAvailable() -> Bool {
-        guard plotFocused, isPencilMode, let session, hover != nil,
-              session.selectedNotes.isEmpty, selection?.isActive != true,
-              gesture == nil, band == nil, !panActive,
-              menu == nil, prompt == nil, laneDelete == nil else { return false }
-        return true
+        state.plotFocused && state.isPencilMode && session != nil && state.hover != nil
+            && state.document.selectedNotesEmpty && state.selection?.isActive != true
+            && state.pointer.isIdle && !state.modal.isOpen
     }
 
     @QtIgnored
@@ -704,13 +619,17 @@ public final class AutomationPage: EditorDrawerPage {
     }
 
     public func outsideMenuPress(x: Double, y: Double, button: Int) {
-        let retarget = menuTargetIsPoint && button == AutomationQtButton.right
+        let retarget = menuTargetIsPoint && DrawerPointerButton(qtButton: button) == .secondary
         dismissMenu()
         guard retarget, let facts = frozenFacts(modifiers: .init()) else { return }
         let projection = makeProjection(facts: facts, camera: liveCamera())
         guard let lane = laneProjection(facts: facts, projection: projection),
               let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius) else { return }
-        openPointMenu(hit: hit, facts: facts, x: x, y: y)
+        _ = send(.modal(.openMenu(facts: facts, target: .point(tick: hit.tick, value: hit.value),
+                                  x: x + plotOrigin, y: y,
+                                  selectionScopeAvailable: resolvedSelectionScope() != nil,
+                                  systemClipboardAvailable: hasClipboard,
+                                  laneClipboardAvailable: laneClipAvailable)))
     }
 
     // MARK: Menus
@@ -720,13 +639,19 @@ public final class AutomationPage: EditorDrawerPage {
     /// context request does. Rows and target are captured here.
     @discardableResult
     public func openParameterMenu(index: Int, x: Double, y: Double) -> Bool {
-        return openCapturedParameterMenu(index: index, x: x, y: y)
+        guard session != nil, state.document.parameters.indices.contains(index),
+              (index == activeParameterIndex || activateParameter(index: index)),
+              let facts = frozenFacts(modifiers: .init()) else { return false }
+        return send(.modal(.openMenu(facts: facts, target: .lane, x: x, y: y,
+                                     selectionScopeAvailable: resolvedSelectionScope() != nil,
+                                     systemClipboardAvailable: hasClipboard,
+                                     laneClipboardAvailable: laneClipAvailable))).outcome.consumed
     }
 
     /// Dismisses an open menu without an action, which is what an outside press,
     /// a replacement or a hidden section does.
     public func dismissMenu() {
-        dismissCapturedMenu()
+        _ = send(.modal(.dismissMenu))
     }
 
     /// One row activation through the captured target, named by the action the
@@ -742,7 +667,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// clipboard row, a selection it cleared).
     @discardableResult
     public func consumeMenuAction(actionId: Int) -> Bool {
-        return consumeCapturedMenuAction(actionId: actionId)
+        send(.modal(.consumeMenuAction(actionId))).outcome.consumed
     }
 
     // MARK: Tap tempo
@@ -751,7 +676,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// taken here, at that boundary, and measures the tapped interval alone: it is
     /// never a playback position and starts no second clock.
     public func tapTempoTap() {
-        registerTapTempoEvent()
+        tapTempoTap(atMilliseconds: tapClock.milliseconds)
     }
 
     /// The same route with a caller-supplied monotonic reading. Direct checks
@@ -759,7 +684,7 @@ public final class AutomationPage: EditorDrawerPage {
     /// production caller.
     @QtIgnored
     public func tapTempoTap(atMilliseconds nowMs: Int64) {
-        registerTapTempoEvent(atMilliseconds: nowMs)
+        _ = send(.tap(nowMilliseconds: nowMs))
     }
 
     /// The idle window elapsed for the current session: one tick-zero tempo edit
@@ -768,14 +693,132 @@ public final class AutomationPage: EditorDrawerPage {
     /// without a write.
     @discardableResult
     public func tapTempoIdleElapsed() -> Bool {
-        return commitTapTempoAfterIdle()
+        let existing = session?.document.state.tempo.first(where: { $0.tick == 0 })?
+            .microsecondsPerQuarterNote
+        return send(.tapIdleElapsed(nowMilliseconds: tapClock.milliseconds,
+                                    existingMicrosecondsPerQuarterNote: existing)).outcome.written
     }
 
     /// Cancels the tap session: nothing is written, exactly as a stray single
     /// tap's idle window, a cancellation, or a replaced document or parameter.
     public func resetTapTempo() {
-        clearTapTempoSession()
+        _ = send(.resetTapTempo)
+    }
+    @QtIgnored
+    public func consumeSelectionCommand(command: EditCommand) -> Bool {
+        guard let session else { return false }
+        let cursor = selectionSnapPolicy()?.snap(Double(session.editCursor), fine: false,
+                                                 camera: session.camera) ?? session.editCursor
+        return send(.selectionCommand(AutomationSelectionRequest(
+            command: command, clipboardAvailable: command == .paste && hasClipboard,
+            snappedPasteCursor: cursor))).outcome.consumed
     }
 
+    @discardableResult
+    @QtIgnored
+    func send(_ event: consuming AutomationEvent) -> AutomationTransition {
+        dispatchDepth += 1
+        var transition = AutomationReducer.reduce(&state, event: event)
+        pendingPublication.formUnion(transition.publication)
+        if let configuration = transition.bodyConfiguration {
+            pendingBodyConfiguration = configuration
+        }
+        if transition.selectionBuild { selectionBuildCount &+= 1 }
+        if transition.commandAvailabilityChanged { pendingCommandAvailabilityChanged = true }
+        if transition.hoverBuild { hoverBuildCount &+= 1 }
+        var written = false
+        for effect in transition.effects {
+            if execute(effect) { written = true }
+        }
+        if transition.outcome.written { transition.outcome.written = written }
+        dispatchDepth -= 1
+        if dispatchDepth == 0 { flushPublication() }
+        return transition
+    }
+
+    private func flushPublication() {
+        guard !pendingPublication.isEmpty || pendingCommandAvailabilityChanged else { return }
+        let scope = pendingPublication
+        pendingPublication = []
+        let notifyCommands = pendingCommandAvailabilityChanged
+        pendingCommandAvailabilityChanged = false
+        if cursorKind != state.cursor.rawValue { cursorKind = state.cursor.rawValue }
+        if playing != state.playing { playing = state.playing }
+        if presentedTick != state.presentedTick { presentedTick = state.presentedTick }
+        if playheadPresentationCount != UInt64(state.playheadPresentationCount) {
+            playheadPresentationCount = UInt64(state.playheadPresentationCount)
+        }
+        if scope.contains(.content), state.document.attached { contentBuildCount &+= 1 }
+        let configuration = pendingBodyConfiguration
+        pendingBodyConfiguration = nil
+        publish(scope, body: configuration)
+        if notifyCommands { onCommandAvailabilityChanged?() }
+    }
+
+    private func execute(_ effect: borrowing AutomationEffect) -> Bool {
+        switch effect {
+        case let .commitDocument(plan, delta):
+            guard let session, AutomationCommit.apply(plan, in: session.document) else { return false }
+            if let delta { _ = send(.shiftSelection(delta)) }
+            refreshFromDocument()
+            return true
+        case let .commitLane(edit):
+            guard let session else { return false }
+            let changed = AutomationCommit.apply(edit, in: session.document)
+            if changed { refreshFromDocument() }
+            return changed
+        case let .setEditCursor(tick):
+            session?.editCursor = tick
+            return false
+        case let .panCamera(delta):
+            session?.mutateCamera { $0.setHScroll($0.snapshot.scrollX - delta) }
+            return false
+        case let .selection(action):
+            executeSelectionEffect(action)
+            return false
+        case let .modal(action):
+            executeModalEffect(action)
+            return false
+        case let .commitTapTempo(revision, bpm):
+            guard let session, session.document.revision == revision else { return false }
+            let target = TimeDefaults.microsecondsPerQuarterNote(forBPM: bpm)
+            session.document.editTempo(TempoEdit(
+                remove: session.document.state.tempo.filter { $0.tick == 0 },
+                add: [TempoPoint(tick: 0, microsecondsPerQuarterNote: target)]))
+            refreshFromDocument()
+            return true
+        }
+    }
+
+    @discardableResult
+    private func commitDocument(_ plan: AutomationDocumentPlan) -> Bool {
+        guard let session else { return false }
+        let changed = AutomationCommit.apply(plan, in: session.document)
+        if changed { refreshFromDocument() }
+        return changed
+    }
+
+    private func executeModalEffect(_ effect: borrowing AutomationModalEffect) {
+        switch effect {
+        case .copyTimeSelection: _ = copyCapturedTimeSelection()
+        case .cutTimeSelection: _ = cutCapturedTimeSelection()
+        case .pasteTimeSelection:
+            guard let session else { return }
+            let cursor = selectionSnapPolicy()?.snap(Double(session.editCursor), fine: false,
+                                                     camera: session.camera) ?? session.editCursor
+            _ = pasteClipboard(at: cursor)
+        case .deleteTimeSelection: _ = deleteCapturedSelection()
+        case .clearTimeSelection: clearTimeSelection()
+        }
+    }
+
+}
+/// Only sampled by a tap event, never a playback clock.
+final class AutomationMonotonicClock {
+    private let origin = DispatchTime.now().uptimeNanoseconds
+
+    var milliseconds: Int64 {
+        Int64((DispatchTime.now().uptimeNanoseconds &- origin) / 1_000_000)
+    }
 }
 

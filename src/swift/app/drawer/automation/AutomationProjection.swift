@@ -69,7 +69,7 @@ public struct AutomationPlotBounds: Equatable, Sendable {
 
 /// The snapping lattice: the shared visible grid for a coarse pointer position,
 /// and the shared document clock lattice for a fine (Alt) one.
-public struct AutomationSnapPolicy {
+public struct AutomationSnapPolicy: Sendable {
     private let metrics: GridMetrics
     public let clockTicks: Tick
 
@@ -97,6 +97,7 @@ public struct AutomationSnapPolicy {
                       division: document.ticksPerBeat,
                       extendedClocks: document.state.config.extendedClocks))
     }
+
 
     public func snap(_ tick: Double, fine: Bool, camera: EditorCamera) -> Tick {
         fine ? TimelineSnapPolicy.fineSnap(tick, clockTicks: clockTicks)
@@ -128,7 +129,7 @@ public struct AutomationSnapPolicy {
 /// Per-event projection over the shared camera: tick to x, value to y, the
 /// snapping lattice, and cell traversal. Construct one per pointer event or
 /// build pass, exactly as production does.
-public struct AutomationProjection {
+public struct AutomationProjection: Sendable {
     public let camera: EditorCamera
     public let bounds: AutomationPlotBounds
     public let geometry: AutomationPlotGeometry
@@ -305,6 +306,17 @@ public struct AutomationProjection {
             points: points, sources: snapshot.sources, leadIn: leadIn, segments: segments,
             scaleLabels: scaleLabels(metadata: metadata), songEndTick: snapshot.songEndTick,
             selectionRange: range)
+    }
+
+    /// Live modifier mapping against the captured time/value projection.
+    func mappedPoint(x: Double, y: Double, facts: AutomationFrozenFacts,
+                     modifiers: AutomationModifiers, plotHeight: Double,
+                     neutralSnapRadius: Double) -> AutomationLanePoint {
+        AutomationLanePoint(
+            tick: tick(atX: x, fine: modifiers.fine),
+            value: facts.metadata.snappedValue(
+                value(atY: y, metadata: facts.metadata), snapValue: modifiers.snapValue,
+                plotHeight: plotHeight, neutralSnapRadius: neutralSnapRadius))
     }
 
     /// The highlighted scale labels: maximum, minimum, and — only when the

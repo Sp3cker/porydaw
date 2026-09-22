@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationclipboard.cpp
 Original SHA-256: 8de1d04cb8fc0bc30dfa4a8e4cd997e62cc9229a0dff29bef8e5538f20c1df64
 Swift counterpart: src/checks/automation/automationclipboard.swift
-Swift SHA-256: 59b0c1f0fb3a17e6f03ce242eea757129382e4028444a508b4d9bc563cc5371d
+Swift SHA-256: 6d86f78e1349b0519eb27bd49194538f0e762abca6f90ffffa0c72d6ad0f7b35
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

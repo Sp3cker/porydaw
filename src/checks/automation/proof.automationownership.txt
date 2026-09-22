@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationownership.cpp
 Original SHA-256: 986eb97c6899cb8d0af1564890076508b4ee2b4b075444c4c7ff2498c29bb870
 Swift counterpart: src/checks/automation/automationselection.swift
-Swift SHA-256: 8e64128082de42746ae5e7b3be47ee3304c9f4eadd341261939bef030ee367c4
+Swift SHA-256: b9de1437f629495909ec4df5863d540b4c7fe22aa9b2de86afc6b1cbb84afd67
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -1709,6 +1709,6 @@ S045 | drawerAutomationRestoredInteractionContracts | src/checks/automation/auto
                          what: "undo restores the original range contents")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

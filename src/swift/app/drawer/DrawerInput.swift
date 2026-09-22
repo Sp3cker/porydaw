@@ -82,6 +82,14 @@ struct DrawerModifiers: Equatable, Sendable {
     }
 }
 
+extension AutomationModifiers {
+    /// The single DrawerModifiers→AutomationModifiers mapping; every domain call
+    /// site and check helper decodes through this initializer.
+    init(_ modifiers: DrawerModifiers) {
+        self.init(fine: modifiers.alt, snapValue: modifiers.control, shift: modifiers.shift)
+    }
+}
+
 enum DrawerPointerPhase: Sendable {
     case press
     case move

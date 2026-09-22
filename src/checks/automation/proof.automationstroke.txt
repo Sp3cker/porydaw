@@ -5,7 +5,7 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationstroke.cpp
 Original SHA-256: 8b8caef7912b56d633bdf21e766e8e8beb414e2d64e5b7a8cb19d911b26a46f6
 Swift counterpart: src/checks/automation/domain/gestures.swift
-Swift SHA-256: ed769eeedca873b5a9d77d5b20399840f5f4357643468157e10c7520bd6c2f31
+Swift SHA-256: 432252987f3359a15fabd41050900bd4d5b6b6379fb6deeef2a76618e310b289
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -1864,6 +1864,6 @@ S151 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.s
                          what: "only a second undo removes the preceding Pan sweep")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

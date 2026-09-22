@@ -5,13 +5,13 @@ Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — dele
 Original: src/checks/automation/automationvoice.cpp
 Original SHA-256: e2351f563326c4e210c19c12286ac488dccf15aa4b58929ce646af10c18b8c7a
 Swift counterpart: src/checks/drawerpresentation/voice_projection.swift
-Swift SHA-256: 63088cc97982d4262cfb8e8d4649f8f2ad60d8b95c4905a171c94e72f1456a80
+Swift SHA-256: b6310047f752aad72cc0c7932bad47ccd18d3d4c5a10c284cdc3de1efc201c87
 Swift counterpart: src/checks/drawerpresentation/voice_picker.swift
-Swift SHA-256: 460ab3d90da9857cb3da46d6e9ba7b1deb5c81f825bd7143c8d6e8e00da6c058
+Swift SHA-256: e9931b69059320a6c1a64e68adf8b8718322061485058fcfae04fc4a3760e6de
 Swift counterpart: src/checks/drawerpresentation/voice_interaction.swift
-Swift SHA-256: 97cb8d8afce68b22bcf551446e61d50034d959648ccb427514cc5b3263cab618
+Swift SHA-256: 60df6e0cab39e68765bdb2c4627549f518763bc671c6bf8f12aad62bb2969fb8
 Swift counterpart: src/checks/drawerpresentation/voice_lifecycle.swift
-Swift SHA-256: e7a97f7fab6e5d3ea60e5333f20719c19d3c995c1111b4cb9fa49f6802b43d63
+Swift SHA-256: 276d3c81c4a0d75d3649d5a5296ca3292086b9ec266a201deb6b2da07b5e836b
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -1990,8 +1990,8 @@ S115 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice_picker.s
                     message: "redo republishes the restored marker")
 
 S116 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice_picker.swift:93
-  report.expect(!page.acceptPicker(), cppID: drawerVoiceInsertionID,
-                    message: "accepting the value the document already holds writes nothing")
+  report.expect(page.acceptPicker(), cppID: drawerVoiceInsertionID,
+                    message: "accepting the current value closes the valid picker")
 
 S117 | drawerVoicePickerInsertion | src/checks/drawerpresentation/voice_picker.swift:95
   report.expectEqual(settled, fixture.snapshot, cppID: drawerVoiceInsertionID,
@@ -2709,6 +2709,6 @@ S291 | hold | src/checks/drawerpresentation/voice_lifecycle.swift:210
                          what: "picker replacement and teardown write no musical state")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: b14209b8233fd762ac9d572e1ca1830c983dfa685c856c11f78e43c75780a431
+SHA-256: 72067a53bbe0b424a4ad49d25958969533e6960477ac37e1ac085b31479793a5
 src/checks/automation/AutomationPageChecks.swift:381
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

@@ -53,9 +53,13 @@ import PorydawProjectService
 /// The QML modifier flags a check's `AutomationModifiers` stand for, so every
 /// case drives the production input route instead of a Swift-only shorthand.
 func drawerAutomationQtModifiers(_ modifiers: AutomationModifiers) -> Int {
-    (modifiers.shift ? AutomationQtModifier.shift : 0)
-        | (modifiers.fine ? AutomationQtModifier.alt : 0)
-        | (modifiers.snapValue ? AutomationQtModifier.control : 0)
+    (modifiers.shift ? DrawerModifiers.shiftBit : 0)
+        | (modifiers.fine ? DrawerModifiers.altBit : 0)
+        | (modifiers.snapValue ? DrawerModifiers.controlBit : 0)
+}
+
+func drawerAutomationDecodedModifiers(_ qtModifiers: Int) -> AutomationModifiers {
+    AutomationModifiers(DrawerModifiers(qtModifiers: qtModifiers))
 }
 
 let drawerAutomationCatalogID = "swiftcore/AutomationPage::parameterCatalogAndMetadata"
@@ -277,7 +281,7 @@ struct drawerAutomationAutomationFixture {
     func drag(_ parameter: AutomationParameter, from: (tick: Tick, value: Int),
               to target: Int, armPixels: Double = 30, modifiers: Int) -> Bool {
         let surface = AutomationInputSurface.plot.rawValue
-        let button = AutomationQtButton.left
+        let button = 1
         let pressX = x(from.tick)
         let pressY = y(parameter, from.value)
         let targetY = y(parameter, target)
