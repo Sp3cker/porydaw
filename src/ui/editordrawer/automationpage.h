@@ -80,7 +80,7 @@ class AutomationPage final : public QObject
     DrawerPageVoiceContext voiceContext(Tick tick) const;
     void showTimeSelectionMenu(const DrawerPageTimeSelectionMenuRequest &request) const;
     void requestRefresh() const;
-    void requestQuickUpdate(songview::AutomationRefreshSet dirty) const;
+
     void commitEditCursor(Tick tick) const;
 
     QMetaObject::Connection m_inputWindowDeactivationConnection;

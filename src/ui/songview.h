@@ -251,8 +251,6 @@ class SongView : public QObject
     void clearTimelineQuickHover(songview::TimelineQuickHoverOwner owner);
     // Widget-owned migrated bands route retained-scene invalidation through this seam.
     void requestTimelineQuickUpdate(songview::TimelineQuickDirtySet dirty);
-    // Retained automation scenes repaint through the dedicated refresh channel.
-    void requestAutomationQuickUpdate(songview::AutomationRefreshSet refresh);
 
     const songview::TimeCamera &camera() const noexcept { return m_camera; }
     const songview::Grid &grid() const noexcept { return m_grid; }

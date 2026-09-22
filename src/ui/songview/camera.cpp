@@ -93,8 +93,7 @@ void SongView::syncHorizontalCamera(bool cameraChanged)
         m_quickView->notifyScrollbarsChanged();
     if (cameraChanged) {
         requestTimelineQuickUpdate(TimelineQuickDirty::HorizontalPan);
-        requestAutomationQuickUpdate(AutomationRefresh::HorizontalPan |
-                                     AutomationRefresh::Transient | AutomationRefresh::Hover);
+
         m_roll->requestQuickUpdate(cHorizontalCameraDirty);
         syncTimelineIndicators();
         refreshDrawerPages(DrawerScope::HorizontalScroll);

@@ -201,10 +201,6 @@ void AutomationPage::requestRefresh() const
 {
     m_owner.refreshAllDrawerPages(DrawerScope::Content);
 }
-void AutomationPage::requestQuickUpdate(songview::AutomationRefreshSet dirty) const
-{
-    m_owner.requestAutomationQuickUpdate(dirty);
-}
 
 void AutomationPage::commitEditCursor(Tick tick) const
 {

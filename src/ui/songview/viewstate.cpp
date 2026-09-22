@@ -264,7 +264,7 @@ void SongView::gridStateChanged(bool changed)
     m_roll->requestQuickUpdate(PianoRollQuickDirty::DrawPreviewFill);
     requestTimelineQuickUpdate(TimelineQuickDirty::Ruler | TimelineQuickDirty::OtherEvents |
                                TimelineQuickDirty::Velocity | TimelineQuickDirty::VoiceChanges);
-    requestAutomationQuickUpdate(songview::AutomationRefresh::All);
+
     m_roll->requestQuickUpdate(PianoRollQuickDirty::GridTime);
     refreshDrawerPages(DrawerScope::Content);
 }
