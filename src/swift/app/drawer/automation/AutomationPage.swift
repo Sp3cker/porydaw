@@ -35,14 +35,8 @@ public enum AutomationPagePolicy {
     public static let accessibleName = "Automation"
 }
 
-/// Mouse-hint profile IDs owned by the shared profile catalog.
-private enum AutomationHintProfile {
-    static let empty = 0
-    static let node = 15
-    static let originPhantom = 16
-    static let sweep = 17
-    static let pencil = 18
-}
+// Mouse-hint profile IDs moved to AutomationLifecycle.swift, which owns the
+// hover-hint publication that resolves them.
 
 @MainActor
 @QtBridgeable
@@ -76,41 +70,41 @@ public final class AutomationPage: EditorDrawerPage {
     public var plotHeight: Double = 0
     public var devicePixelRatio: Double = 1
     public var baseFontPx: Double = AutomationPagePolicy.seedBaseFontPx
-    @QtIgnored public private(set) var geometry = AutomationPlotGeometry(
+    @QtIgnored public internal(set) var geometry = AutomationPlotGeometry(
         baseFontPx: AutomationPagePolicy.seedBaseFontPx)
     /// The catalog's selector labels, Tempo last.
-    @QtIgnored public private(set) var parameterLabels: [String] = []
-    @QtIgnored public private(set) var activeParameterIndex = 0
+    @QtIgnored public internal(set) var parameterLabels: [String] = []
+    @QtIgnored public internal(set) var activeParameterIndex = 0
     /// The active parameter: Tempo always, another catalog parameter only while a
     /// track is selected.
-    @QtIgnored public private(set) var activeParameter: AutomationParameter = .tempo
-    @QtIgnored public private(set) var rows: [AutomationRow] = []
-    @QtIgnored public private(set) var projection: AutomationLaneProjection?
-    @QtIgnored public private(set) var scaleLabels: [AutomationScaleLabel] = []
+    @QtIgnored public internal(set) var activeParameter: AutomationParameter = .tempo
+    @QtIgnored public internal(set) var rows: [AutomationRow] = []
+    @QtIgnored public internal(set) var projection: AutomationLaneProjection?
+    @QtIgnored public internal(set) var scaleLabels: [AutomationScaleLabel] = []
     /// Empty while a parameter is presented; the missing-track message otherwise.
     public var plotMessage: String = AutomationPagePolicy.noTrackMessage
     /// `false` while no track is presented: the plot draws its own message then.
     public var trackAvailable: Bool = false
     /// Every catalog parameter whose explicit selection covers written events.
-    @QtIgnored public private(set) var selectedParameters: [AutomationParameter] = []
+    @QtIgnored public internal(set) var selectedParameters: [AutomationParameter] = []
     /// The explicit ghost pins that still carry events.
-    @QtIgnored public private(set) var ghostParameters: [AutomationParameter] = []
-    @QtIgnored public private(set) var ghostLabels: [String] = []
-    @QtIgnored public private(set) var selection: AutomationTimeSelection?
+    @QtIgnored public internal(set) var ghostParameters: [AutomationParameter] = []
+    @QtIgnored public internal(set) var ghostLabels: [String] = []
+    @QtIgnored public internal(set) var selection: AutomationTimeSelection?
     @QtIgnored public var onCommandAvailabilityChanged: (() -> Void)?
     @QtIgnored public var pointerGestureActive: Bool {
         gesture != nil || band != nil || panActive
     }
-    @QtIgnored public private(set) var hover: AutomationHover?
+    @QtIgnored public internal(set) var hover: AutomationHover?
     /// The live gesture draft: points only, never a document write.
-    @QtIgnored public private(set) var previewPoints: [AutomationLanePoint] = []
-    @QtIgnored public private(set) var previewText = ""
+    @QtIgnored public internal(set) var previewPoints: [AutomationLanePoint] = []
+    @QtIgnored public internal(set) var previewText = ""
     /// The captured value prompt (`Set Value` / empty-lane insertion).
-    @QtIgnored public private(set) var prompt: AutomationPromptTransaction?
+    @QtIgnored public internal(set) var prompt: AutomationPromptTransaction?
     /// The effective editing context: the shared playhead while playing, the
     /// session's edit cursor while stopped.
-    @QtIgnored public private(set) var contextTick: Tick = 0
-    @QtIgnored public private(set) var contextValue: Int?
+    @QtIgnored public internal(set) var contextTick: Tick = 0
+    @QtIgnored public internal(set) var contextValue: Int?
     @QtIgnored public private(set) var playing = false
     /// The shared pencil tool's state, owned by the window's edit commands.
     @QtTracked public var isPencilMode: Bool = false {
@@ -204,15 +198,15 @@ public final class AutomationPage: EditorDrawerPage {
     // MARK: Diagnostics
 
     /// Distinct static-content rebuilds: rows, active curve, labels.
-    @QtIgnored public private(set) var contentBuildCount: UInt64 = 0
+    @QtIgnored public internal(set) var contentBuildCount: UInt64 = 0
     /// Rebuilds a selection change alone caused.
-    @QtIgnored public private(set) var selectionBuildCount: UInt64 = 0
+    @QtIgnored public internal(set) var selectionBuildCount: UInt64 = 0
     /// Hover publications.
-    @QtIgnored public private(set) var hoverBuildCount: UInt64 = 0
+    @QtIgnored public internal(set) var hoverBuildCount: UInt64 = 0
     /// Shared-playhead presentations the page consumed.
     @QtIgnored public private(set) var playheadPresentationCount: UInt64 = 0
     /// Presentations that moved the effective context.
-    @QtIgnored public private(set) var contextChangeCount: UInt64 = 0
+    @QtIgnored public internal(set) var contextChangeCount: UInt64 = 0
     /// The playing tick the last presentation carried.
     @QtIgnored public private(set) var presentedTick: Tick = 0
 
@@ -361,62 +355,9 @@ public final class AutomationPage: EditorDrawerPage {
         publishTypography()
     }
 
-    /// Rebuilds and applies the document-derived scene values before publishing
-    /// primitives, preserving the page's lifecycle and publication order.
-    func rebuildContent(selectionOnly: Bool = false) {
-        let session = self.session
-        let snapshot = session.map {
-            AutomationSceneSnapshot.build(
-                session: $0, cache: projectionFacts,
-                selectedTrack: $0.selectedTrack,
-                camera: $0.camera,
-                activeParameterIndex: activeParameterIndex,
-                ghostPins: ghostPins,
-                selection: selection,
-                plotWidth: plotWidth,
-                plotHeight: plotHeight,
-                devicePixelRatio: devicePixelRatio,
-                baseFontPx: baseFontPx,
-                geometry: geometry, laneRanges: laneRanges)
-        } ?? .detached
-
-        guard let active = snapshot.active else {
-            parameterLabels = snapshot.parameterLabels
-            rows = snapshot.rows
-            ghostParameters = snapshot.ghostParameters
-            ghostLabels = snapshot.ghostLabels
-            selectedParameters = snapshot.selectedParameters
-            scaleLabels = snapshot.scaleLabels
-            projection = snapshot.projection
-            publishTabs(snapshot.catalog)
-            publishContent(nil)
-            publishOverlays()
-            publishReadoutGeometry()
-            publishPrompt()
-            publishMenuRows()
-            publishInteractionState()
-            return
-        }
-
-        activeParameterIndex = active.parameterIndex
-        activeParameter = active.parameter
-        trackAvailable = active.trackAvailable
-        plotMessage = active.plotMessage
-        parameterLabels = snapshot.parameterLabels
-        rows = snapshot.rows
-        ghostParameters = snapshot.ghostParameters
-        ghostLabels = snapshot.ghostLabels
-        selectedParameters = snapshot.selectedParameters
-        projection = snapshot.projection
-        scaleLabels = snapshot.scaleLabels
-        publishTabs(snapshot.catalog)
-        publishContent(session)
-        contentBuildCount &+= 1
-        if selectionOnly { selectionBuildCount &+= 1 }
-        publishOverlays()
-        publishReadoutGeometry()
-        publishContext()
-    }
+    // Content rebuilds and the owned-state application helpers moved to
+    // AutomationLifecycle.swift; this file keeps the bridge surface, stored
+    // state and entry points.
 
     /// Installs the document and palette owners. Called before the container
     /// attaches the page, so no publication precedes the session it reads.
@@ -466,120 +407,7 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored var captionMetrics: AutomationCaption?
     @QtIgnored var titleMetrics: AutomationCaption?
 
-    // MARK: Owned state application
-
-    func applyPreviewDraft(_ draft: AutomationPreviewDraft) {
-        previewPoints = draft.parameter == activeParameter ? draft.points : []
-        previewText = draft.parameter == activeParameter ? draft.text : ""
-    }
-
-    @discardableResult
-    func applyHover(_ next: AutomationHover?, countingPublication: Bool) -> Bool {
-        guard next != hover else { return false }
-        hover = next
-        publishHoverHintProfile()
-        if countingPublication { hoverBuildCount &+= 1 }
-        return true
-    }
-
-    func hoverHintTargetAtPointer() -> AutomationHoverHintTarget? {
-        guard hover != nil, let projection else { return nil }
-        return AutomationHover.hintTarget(
-            x: hoverX, y: hoverY, lane: projection,
-            pointHitRadius: geometry.pointHitRadius)
-    }
-
-    func publishHoverHintProfile(
-        targetOverride: AutomationHoverHintTarget? = nil,
-        pencilModeOverride: Bool? = nil
-    ) {
-        let pencilMode = pencilModeOverride ?? isPencilMode
-        let profile: Int
-        if let hover {
-            let target = targetOverride ?? hover.hintTarget
-            switch (!pencilMode || hover.nodeMarkersVisible, target) {
-            case (true, .originPhantom):
-                profile = AutomationHintProfile.originPhantom
-            case (true, .node):
-                profile = AutomationHintProfile.node
-            default:
-                profile = pencilMode ? AutomationHintProfile.pencil
-                    : AutomationHintProfile.sweep
-            }
-        } else {
-            profile = AutomationHintProfile.empty
-        }
-        if hoverHintProfile != profile { hoverHintProfile = profile }
-    }
-
-    func applyPrompt(_ next: AutomationPromptTransaction?) {
-        prompt = next
-    }
-
-    func shiftSelection(by delta: Int64) {
-        guard let moved = shiftedAutomationSelection(selection, by: delta) else { return }
-        selection = moved
-    }
-
-    /// Applies the plain context result in the same publication order as the
-    /// cursor/playhead path that produced it.
-    func publishContext() {
-        let presentation = AutomationContextPresentation.resolve(
-            editCursor: session?.editCursor,
-            playing: playing,
-            presentedTick: presentedTick,
-            projection: projection,
-            activeParameter: activeParameter,
-            previousTick: contextTick,
-            previousValue: contextValue)
-        contextTick = presentation.tick
-        contextValue = presentation.value
-        if readoutText != presentation.readoutText {
-            readoutText = presentation.readoutText
-        }
-        if readoutVisible != presentation.readoutVisible {
-            readoutVisible = presentation.readoutVisible
-        }
-        if accessibleDescription != presentation.accessibleDescription {
-            accessibleDescription = presentation.accessibleDescription
-        }
-        if presentation.contextChanged { contextChangeCount &+= 1 }
-    }
-
-    func publishInteractionState() {
-        let active = AutomationInteractionActivity.resolve(
-            hasGesture: gesture != nil,
-            hasPrompt: prompt != nil,
-            hasLaneDelete: laneDelete != nil,
-            hasMenu: menu != nil,
-            hasBand: band != nil,
-            isPanning: panActive,
-            hasTapSession: tapGuard != nil)
-        let eligibilityChanged = interactionActive != active
-            || publishedPointerGestureActive != pointerGestureActive
-        if interactionActive != active { interactionActive = active }
-        publishedPointerGestureActive = pointerGestureActive
-        if eligibilityChanged { onCommandAvailabilityChanged?() }
-    }
-
-    func applyBodySceneConfiguration(_ configuration: AutomationBodySceneConfiguration) {
-        plotWidth = configuration.plotWidth
-        plotHeight = configuration.plotHeight
-        devicePixelRatio = configuration.devicePixelRatio
-        plotOrigin = configuration.plotOrigin
-        dragDistance = configuration.dragDistance
-        lastBodyOrigin = configuration.plotOrigin
-        lastBodyDragDistance = configuration.dragDistance
-        if configuration.fontChanged {
-            baseFontPx = configuration.baseFontPx
-            if let nextGeometry = configuration.geometry {
-                geometry = nextGeometry
-            }
-            publishTypography()
-        }
-        if configuration.changed { rebuildContent() }
-    }
-
+    // Owned-state application moved to AutomationLifecycle.swift.
 
     // MARK: Composition input
 
