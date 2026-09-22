@@ -1,6 +1,5 @@
 #include "ui/songview/editactions.h"
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/keymap.h"
@@ -189,12 +188,9 @@ void EditActions::observeTarget(SongView &target)
     // cache seams — rebind(), QClipboard::dataChanged, documentChanged and
     // this destroyed handler — all call refreshPasteEligibility(); document,
     // gesture and timeline gates remain live in editCommandAvailable().
-    // EditorDrawer and AutomationCanvas are construction-fixed inside
-    // SongView and never replaced after bind: no replacement re-observation
-    // machinery exists or is wanted. The canvas parameter signals carry only
-    // view-local presentation quantities (active parameter, parameter
-    // selection, labels/appearance) that no availability or checked state
-    // reads; document and track rebuilds arrive through documentChanged.
+    // EditorDrawer is construction-fixed inside SongView and never replaced
+    // after bind: no replacement re-observation machinery exists or is
+    // wanted. Document and track rebuilds arrive through documentChanged.
     m_targetConnections.emplace_back(connect(&target, &QObject::destroyed, this, [this] {
         // ~QObject invalidates m_target before destroyed() is emitted. The
         // connection teardown and clip-presence refresh remain necessary when
@@ -318,13 +314,6 @@ void EditActions::refreshCheckedStates(SongView *target)
         if (scope != 0) {
             muteChecked = (target->muteMask() & scope) == scope;
             soloChecked = (target->soloMask() & scope) == scope;
-        }
-
-        if (EditorDrawer *const drawer = target->editorDrawer()) {
-            if (AutomationPage *const page = drawer->automationPage()) {
-                if (AutomationCanvas *const canvas = page->canvas())
-                    pencilChecked = canvas->pencilMode();
-            }
         }
     }
 

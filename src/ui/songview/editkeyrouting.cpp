@@ -13,7 +13,6 @@
 #include "core/songdocument.h"
 #include "ui/songview.h"
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/editordrawer.h"
 #include "ui/songview/editactions.h"
@@ -201,12 +200,9 @@ bool SongView::editCommandAvailable(EditCommand command, bool ignorePointerGestu
         return m_timeline != nullptr;
     case EditStandaloneOperation::InsertTime:
         return m_timeline != nullptr;
-    case EditStandaloneOperation::PencilToggle: {
-        const AutomationPage *const page =
-            m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
-        return m_timeline && drawerSectionVisible(EditorDrawerPage::Automations) && page &&
-               page->canvas();
-    }
+    case EditStandaloneOperation::PencilToggle:
+        // Pencil mode had no implementation beyond the removed automation canvas.
+        return false;
     case EditStandaloneOperation::MoveEventRow:
         return m_events && m_events->canMoveCurrentRow(policy.eventRowDelta);
     case EditStandaloneOperation::SetLoopStart:
@@ -355,13 +351,8 @@ void SongView::executeEditCommand(EditCommand command)
         // The selection half dispatched above; this is the prompt path.
         insertTime();
         break;
-    case EditStandaloneOperation::PencilToggle: {
-        AutomationPage *const page = m_editorDrawer ? m_editorDrawer->automationPage() : nullptr;
-        AutomationCanvas *const canvas = page ? page->canvas() : nullptr;
-        if (canvas)
-            canvas->setPencilMode(!canvas->pencilMode());
+    case EditStandaloneOperation::PencilToggle:
         break;
-    }
     case EditStandaloneOperation::MoveEventRow:
         if (m_events && m_events->canMoveCurrentRow(policy.eventRowDelta))
             m_events->moveCurrentRow(policy.eventRowDelta);

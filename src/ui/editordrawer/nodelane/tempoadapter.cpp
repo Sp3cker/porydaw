@@ -6,7 +6,7 @@
 
 QString TempoLane::title() const
 {
-    return QCoreApplication::translate("AutomationCanvas", "Tempo (BPM)");
+    return QCoreApplication::translate("TempoLane", "Tempo (BPM)");
 }
 
 std::vector<NodePoint> TempoLane::points() const

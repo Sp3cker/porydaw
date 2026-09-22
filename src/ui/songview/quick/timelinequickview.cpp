@@ -1,5 +1,4 @@
 #include "ui/songview/quick/timelinequickview.h"
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawerchrome.h"
 #include "ui/editordrawer/velocityarea/velocityarea.h"
@@ -156,8 +155,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
                                             drawerChrome.releaseIconProvider());
     m_quickView->rootContext()->setContextProperty(QStringLiteral("eventListController"),
                                                    m_eventList.data());
-    m_quickView->rootContext()->setContextProperty(QStringLiteral("automationCanvas"),
-                                                   automation.canvas());
     m_quickView->rootContext()->setContextProperty(QStringLiteral("mouseHints"),
                                                    &ui::MouseHints::instance());
     m_quickView->rootContext()->setContextProperty(QStringLiteral("quickPopupSession"),
@@ -173,12 +170,11 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
     QObject *root = rootObject();
     if (!root)
         qFatal("Qt Quick timeline QML has no root object");
-    // The event page's, the roll's, the track headers', and the automation
-    // canvas' typed menus share the same canvas overlay as forms.
+    // The event page's, the roll's, and the track headers' typed menus share
+    // the same canvas overlay as forms.
     m_eventList->setPopupSession(m_popupSession);
     m_roll->setPopupSession(m_popupSession);
     m_trackHeaders->setPopupSession(m_popupSession);
-    m_automation->canvas()->setPopupSession(m_popupSession);
     m_voiceChanges->setPopupSession(m_popupSession);
 
     static constexpr std::array layers = {
@@ -289,12 +285,6 @@ TimelineQuickView::TimelineQuickView(TimeRuler &ruler, PianoRoll &roll, OtherStr
               "timelineOtherEventsInput", TimelineInputSurface::Plot, true);
     bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::OtherEvents)],
               m_otherEvents.data(), "timelineOtherEventsGutterInput", TimelineInputSurface::Gutter,
-              false);
-
-    bindInput(m_inputItems[timelineBandIndex(TimelineBand::Automation)], m_automation->canvas(),
-              "timelineAutomationInput", TimelineInputSurface::Plot, true);
-    bindInput(m_gutterInputItems[timelineBandIndex(TimelineBand::Automation)],
-              m_automation->canvas(), "timelineAutomationGutterInput", TimelineInputSurface::Gutter,
               false);
 
     bindInput(m_inputItems[timelineBandIndex(TimelineBand::Velocity)], m_velocity.data(),

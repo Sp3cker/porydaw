@@ -139,13 +139,6 @@ class DrawerChrome final : public QObject
     Q_PROPERTY(QColor scrollbarHandle READ scrollbarHandle NOTIFY chromeChanged FINAL)
     Q_PROPERTY(QColor scrollbarHandleHover READ scrollbarHandleHover NOTIFY chromeChanged FINAL)
     Q_PROPERTY(int hoveredHandle READ hoveredHandle NOTIFY chromeChanged FINAL)
-    Q_PROPERTY(bool valuePromptVisible READ valuePromptVisible NOTIFY valuePromptChanged FINAL)
-    Q_PROPERTY(QString valuePromptTitle READ valuePromptTitle NOTIFY valuePromptChanged FINAL)
-    Q_PROPERTY(QString valuePromptLabel READ valuePromptLabel NOTIFY valuePromptChanged FINAL)
-    Q_PROPERTY(
-        int valuePromptInitialValue READ valuePromptInitialValue NOTIFY valuePromptChanged FINAL)
-    Q_PROPERTY(int valuePromptMinimum READ valuePromptMinimum NOTIFY valuePromptChanged FINAL)
-    Q_PROPERTY(int valuePromptMaximum READ valuePromptMaximum NOTIFY valuePromptChanged FINAL)
 
   public:
     DrawerChrome(AutomationPage &page, EditorDrawer *parent);
@@ -158,8 +151,6 @@ class DrawerChrome final : public QObject
     Q_INVOKABLE void activateToggle(int page);
     Q_INVOKABLE void setDetentChecked(bool checked);
     Q_INVOKABLE void adjustResizeHandle(int target, int direction);
-    Q_INVOKABLE void acceptNodeValuePrompt(int displayedValue);
-    Q_INVOKABLE void cancelNodeValuePrompt();
 
     QRectF voiceChangesHandleRect() const noexcept { return m_snapshot.voiceChangesHandleRect; }
     QRectF velocityHandleRect() const noexcept { return m_snapshot.velocityHandleRect; }
@@ -209,18 +200,9 @@ class DrawerChrome final : public QObject
     QColor scrollbarHandle() const { return m_snapshot.scrollbarHandle; }
     QColor scrollbarHandleHover() const { return m_snapshot.scrollbarHandleHover; }
     int hoveredHandle() const noexcept;
-    // Inline Tempo/CC value prompt state, published from the canvas-owned
-    // pending edit. Chrome never owns the document change.
-    bool valuePromptVisible() const;
-    QString valuePromptTitle() const;
-    QString valuePromptLabel() const;
-    int valuePromptInitialValue() const;
-    int valuePromptMinimum() const;
-    int valuePromptMaximum() const;
 
   signals:
     void chromeChanged();
-    void valuePromptChanged();
 
   private:
     friend class DrawerChromeInteraction;

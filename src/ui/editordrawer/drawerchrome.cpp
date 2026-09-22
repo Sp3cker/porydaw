@@ -10,7 +10,6 @@
 #include <cmath>
 #include <utility>
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/drawersections.h"
 #include "ui/editordrawer/editordrawer.h"
@@ -209,10 +208,7 @@ DrawerChrome::DrawerChrome(AutomationPage &page, EditorDrawer *parent)
                      DrawerChromeInteraction(*this, DrawerChromeTarget::Bar),
                      DrawerChromeInteraction(*this, DrawerChromeTarget::Detent)}
     , m_icons(new DrawerChromeIconProvider)
-{
-    connect(m_page.canvas(), &AutomationCanvas::valuePromptChanged, this,
-            &DrawerChrome::valuePromptChanged);
-}
+{}
 
 DrawerChromeInteraction &DrawerChrome::interaction(DrawerChromeTarget target) noexcept
 {
@@ -332,46 +328,6 @@ int DrawerChrome::scrollbarMinimumThumbHeight() const noexcept
 int DrawerChrome::hoveredHandle() const noexcept
 {
     return m_hoveredHandle ? static_cast<int>(*m_hoveredHandle) : -1;
-}
-
-bool DrawerChrome::valuePromptVisible() const
-{
-    return m_page.canvas()->valuePromptVisible();
-}
-
-QString DrawerChrome::valuePromptTitle() const
-{
-    return m_page.canvas()->pendingValuePrompt().title;
-}
-
-QString DrawerChrome::valuePromptLabel() const
-{
-    return m_page.canvas()->pendingValuePrompt().label;
-}
-
-int DrawerChrome::valuePromptInitialValue() const
-{
-    return m_page.canvas()->pendingValuePrompt().initialValue;
-}
-
-int DrawerChrome::valuePromptMinimum() const
-{
-    return m_page.canvas()->pendingValuePrompt().minimum;
-}
-
-int DrawerChrome::valuePromptMaximum() const
-{
-    return m_page.canvas()->pendingValuePrompt().maximum;
-}
-
-void DrawerChrome::acceptNodeValuePrompt(int displayedValue)
-{
-    m_page.canvas()->acceptNodeValuePrompt(displayedValue);
-}
-
-void DrawerChrome::cancelNodeValuePrompt()
-{
-    m_page.canvas()->cancelNodeValuePrompt();
 }
 
 bool DrawerChrome::handlePress(DrawerChromeTarget target,

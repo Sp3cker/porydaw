@@ -119,7 +119,7 @@ NodeValuePrompt CCLaneAdapter::valuePrompt(int storedValue) const
     const auto domain = CoreTimeDefaults::laneDomain(m_controller);
     NodeValuePrompt prompt;
     prompt.title = title();
-    prompt.label = QCoreApplication::translate("AutomationCanvas", "Value:");
+    prompt.label = QCoreApplication::translate("CCLaneAdapter", "Value:");
     prompt.storedOffset = domain.centered ? (domain.minimum + domain.maximum + 1) / 2 : 0;
     prompt.minimum = domain.minimum - prompt.storedOffset;
     prompt.maximum = domain.maximum - prompt.storedOffset;
@@ -127,8 +127,8 @@ NodeValuePrompt CCLaneAdapter::valuePrompt(int storedValue) const
     if (domain.centered) {
         prompt.label =
             prompt.storedOffset == 0
-                ? QCoreApplication::translate("AutomationCanvas", "Bend (0 = none):")
-                : QCoreApplication::translate("AutomationCanvas", "c_v value (0 = center):");
+                ? QCoreApplication::translate("CCLaneAdapter", "Bend (0 = none):")
+                : QCoreApplication::translate("CCLaneAdapter", "c_v value (0 = center):");
     }
     return prompt;
 }

@@ -11,7 +11,6 @@
 #include "ui/songview/quick/swiftgrid/swift_roll_band.h"
 #include "ui/songview/quick/timelinequickview.h"
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/editordrawer/automationpage.h"
 #include "ui/editordrawer/voicechangearea/voicechangearea.h"
 #include "ui/songview.h"
@@ -143,8 +142,6 @@ void TimelineQuickView::detachWindow()
         m_roll->setPopupSession(nullptr);
     if (m_trackHeaders)
         m_trackHeaders->setPopupSession(nullptr);
-    if (m_automation && m_automation->canvas())
-        m_automation->canvas()->setPopupSession(nullptr);
     if (m_voiceChanges)
         m_voiceChanges->setPopupSession(nullptr);
     delete m_popupSession;

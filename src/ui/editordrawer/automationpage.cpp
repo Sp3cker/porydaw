@@ -6,7 +6,6 @@
 #include <QWindow>
 
 #include "core/songdocument.h"
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/songview.h"
 #include "ui/songview/editactions.h"
 #include "ui/songview/quick/timelineinput.h"
@@ -22,7 +21,6 @@ void AutomationPage::synchronizeAutomationViewport(QSize viewportSize)
     if (m_viewportSize == viewportSize)
         return;
     m_viewportSize = viewportSize;
-    m_canvas->viewportResized();
 }
 
 AutomationPage::AutomationPage(SongView &owner, QObject *parent)
@@ -30,9 +28,7 @@ AutomationPage::AutomationPage(SongView &owner, QObject *parent)
     , m_owner(owner)
     , m_grid(owner.grid())
     , m_camera(owner.camera())
-{
-    m_canvas = new AutomationCanvas(*this);
-}
+{}
 
 QPointer<QAction> AutomationPage::pencilModeAction() const noexcept
 {
@@ -54,12 +50,12 @@ void AutomationPage::setInputWindow(QWindow *window) noexcept
     m_inputWindowDeactivationConnection =
         connect(window, &QWindow::activeChanged, this, [this, inputWindow] {
             if (!inputWindow || m_inputWindow.data() != inputWindow.data() ||
-                inputWindow->isActive() || !m_canvas || !m_canvas->valuePromptVisible()) {
+                inputWindow->isActive()) {
                 return;
             }
-            // Synthetic and native deactivation both terminate a pending draft.
-            // Do not request focus here: the foreground window now owns it.
-            m_canvas->cancelInteraction();
+            // Deactivation ends the page's live interaction. Do not request
+            // focus here: the foreground window now owns it.
+            cancelInteraction();
         });
 }
 
@@ -95,40 +91,12 @@ void AutomationPage::songChanged()
     rebuildModel();
 }
 
-void AutomationPage::refresh(DrawerScopes scopes)
+void AutomationPage::refresh(DrawerScopes)
 {
-    const EditorViewState viewState = m_owner.editorViewState();
-    const bool viewStateChanged = m_viewState != viewState;
-    m_viewState = viewState;
-    // Arms evaluate in fixed priority order: structural > geometry > transient.
-    if (scopes.testFlag(DrawerScope::Document) || scopes.testFlag(DrawerScope::Content) ||
-        scopes.testFlag(DrawerScope::Zoom) || viewStateChanged) {
-        if (m_canvas->isPanning() && m_canvas->panStartRevision() == document().revision() &&
-            m_canvas->panStartTrack() == m_owner.selectionModel().primaryTrack() &&
-            !viewStateChanged) {
-            m_canvas->requestFullQuickUpdate();
-        } else {
-            m_canvas->rebuildRows();
-        }
-        return;
-    }
-    if (scopes.testFlag(DrawerScope::Selection)) {
-        m_canvas->rebuildViewModel();
-        m_canvas->requestSelectionQuickUpdate();
-        return;
-    }
-    if (scopes.testFlag(DrawerScope::HorizontalScroll)) {
-        // The Quick HorizontalPan layer shifts presentation; no rebuild.
-        return;
-    }
-    // Playhead: the canvas presents no playhead overlay.
+    m_viewState = m_owner.editorViewState();
 }
 
-void AutomationPage::cancelInteraction()
-{
-    if (m_canvas)
-        m_canvas->cancelInteraction();
-}
+void AutomationPage::cancelInteraction() {}
 
 void AutomationPage::documentChanged()
 {
@@ -198,17 +166,12 @@ void AutomationPage::publishViewState()
     m_owner.setEditorViewState(m_viewState);
 }
 
-void AutomationPage::rebuildModel()
-{
-    if (m_canvas)
-        m_canvas->rebuildRows();
-}
+void AutomationPage::rebuildModel() {}
 
 void AutomationPage::setLaneRange(const EditorAutomationRowId &row, uint8_t range)
 {
     m_viewState.laneRanges[row] = range;
     publishViewState();
-    m_canvas->requestFullQuickUpdate();
 }
 
 void AutomationPage::publishTimeSelection(Tick startTick, Tick endTick,

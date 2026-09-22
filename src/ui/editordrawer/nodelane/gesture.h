@@ -186,7 +186,7 @@ struct BandGesture {
 
 using ActiveGesture = std::variant<NodeDragGesture, PhantomGesture, SweepGesture, PencilGesture>;
 
-// Shared helpers — moved from AutomationCanvas (Feature Envy).
+// Shared helpers — moved from the automation canvas (Feature Envy).
 AxisLock resolveAxisLock(AxisLock current, bool shiftHeld, const QPointF &origin,
                          const QPointF &position, int activationDistance) noexcept;
 void applyAxisLock(AxisLock lock, const NodePoint &original, NodePoint &current) noexcept;

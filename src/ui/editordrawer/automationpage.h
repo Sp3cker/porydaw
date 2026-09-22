@@ -12,7 +12,6 @@
 #include "ui/songviewmodel.h"
 
 class QAction;
-class AutomationCanvas;
 struct NodeLaneHoverState;
 class MidiTimeline;
 class SongDocument;
@@ -35,8 +34,6 @@ class AutomationPage final : public QObject
   public:
     explicit AutomationPage(SongView &owner, QObject *parent);
 
-    AutomationCanvas *canvas() noexcept { return m_canvas; }
-    const AutomationCanvas *canvas() const noexcept { return m_canvas; }
     // Borrow the canonical Pencil action while the owning view is bound.
     QPointer<QAction> pencilModeAction() const noexcept;
     QSize automationViewportSize() const noexcept;
@@ -54,7 +51,6 @@ class AutomationPage final : public QObject
     void setLaneRange(const EditorAutomationRowId &row, uint8_t range);
 
   private:
-    friend class AutomationCanvas;
     friend struct NodeLaneHoverState;
     friend class songview::TimelineQuickView;
     // Read-only access to the timeline mapping queries (tickAtContentX,
@@ -93,7 +89,6 @@ class AutomationPage final : public QObject
     const songview::Grid &m_grid;
     const songview::TimeCamera &m_camera;
     EditorViewState m_viewState;
-    AutomationCanvas *m_canvas = nullptr;
     QSize m_viewportSize;
     QPointer<QWindow> m_inputWindow;
 };

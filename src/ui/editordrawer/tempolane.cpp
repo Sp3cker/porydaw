@@ -10,7 +10,7 @@ namespace {
 
 QString translated(const char *text)
 {
-    return QCoreApplication::translate("AutomationCanvas", text);
+    return QCoreApplication::translate("TempoLane", text);
 }
 
 } // namespace

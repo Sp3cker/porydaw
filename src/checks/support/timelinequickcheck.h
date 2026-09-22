@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ui/editordrawer/automationcanvas.h"
 #include "ui/layout.h"
 #include "ui/songview/quick/timelineinputitem.h"
 #include "ui/songview/quick/timelinequickscene.h"
@@ -25,22 +24,6 @@
 #include <optional>
 
 namespace checks::support {
-// The automation parameter catalog has one published direction:
-// AutomationCanvas::parameterRow(index) forward-maps a catalog position to
-// its row id, so test lookups walk it instead of duplicating an inverse
-// mapping. Unknown rows return -1.
-inline int automationParameterIndex(const AutomationCanvas &canvas,
-                                    const EditorAutomationRowId &row)
-{
-    for (int index = 0;; ++index) {
-        const std::optional<EditorAutomationRowId> published = canvas.parameterRow(index);
-        if (!published)
-            return -1;
-        if (*published == row)
-            return index;
-    }
-}
-
 // QObject::findChild misses visually reparented Quick delegates, so shared
 // selector-label lookups walk the visual childItems tree instead of object
 // ownership. The root itself can match too.
