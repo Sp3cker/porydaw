@@ -50,8 +50,9 @@ add_library(PorydawApp STATIC
     drawer/voicechanges/VoiceChangesProjection.swift
     drawer/voicechanges/VoiceChangesTransactions.swift
     drawer/voicechanges/VoiceChangesScene.swift
-    drawer/voicechanges/VoiceChangesPage.swift
     drawer/voicechanges/VoiceChangesInteraction.swift
+    drawer/voicechanges/VoiceChangesPublication.swift
+    drawer/voicechanges/VoiceChangesPage.swift
     drawer/automation/AutomationProjection.swift
     drawer/automation/AutomationProjectionCache.swift
     drawer/automation/AutomationTransactions.swift
