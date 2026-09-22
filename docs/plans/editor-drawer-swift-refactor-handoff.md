@@ -137,6 +137,49 @@ Preserve these invariants:
 - `NATIVE` proof obligations stay native. A model or presenter assertion is not
   evidence for focus, pointer delivery, window routing, or raster output.
 
+## Structural reference: the retired C++ drawer
+
+The refactor should recover the old drawer's proven **module shape**, expressed
+idiomatically in Swift. The legacy implementation is more than a behavioral
+oracle: its ownership boundaries are the starting architecture unless the
+current Swift/QML boundary gives a concrete reason to differ.
+
+Use these legacy seams as the map:
+
+| Legacy owner | Responsibility to preserve in Swift |
+|---|---|
+| `EditorDrawer` | Thin composition and publication owner |
+| `DrawerSections` | Section availability, visibility, stacking, body geometry, resize and active-page policy |
+| `DrawerChrome` | Toggle/handle/detent presentation and chrome interaction |
+| `VelocityArea`, `velocityarea_interaction.cpp`, `VelocityAxis` | Velocity page coordination, gesture state and value-axis policy as separate concerns |
+| `VoiceChangeArea`, `voicechangemenu.cpp` | Voice projection/interaction separated from captured menu transactions |
+| `AutomationPage`, `AutomationViewModel`, `AutomationProjection` | Page coordination, document-derived lane state and coordinate projection |
+| `CCLanes`, `TempoLane`, `nodelane/*` | Lane policy plus small gesture, hover, pencil and batch-commit modules |
+
+The intended Swift correspondence is:
+
+- `EditorDrawerPresenter` remains the thin composition/publication owner.
+- `EditorDrawerLayout` owns the `DrawerSections` state machine; chrome input may
+  call it, but may not acquire a second copy of layout or preference policy.
+- Each page class remains the stable QML seam corresponding to its old area or
+  page owner.
+- `Scene` and `Projection` values replace painting/view-model calculations; they
+  should not absorb transactions or interaction lifetime.
+- `Interaction`, `Transactions`, modal/menu, and policy files correspond to the
+  old focused gesture and lane modules instead of being folded back into a giant
+  page class.
+
+Do not reproduce QObject/QWidget plumbing, paint-event structure, headers paired
+one-for-one with implementations, or the exact C++ class graph. QML now owns the
+declarative surface and `@QtBridgeable` imposes a Swift-specific class-body seam.
+The goal is the old drawer's separation of policy, projection, interaction,
+transactions and composition, not a transliteration of C++ syntax.
+
+Before each page slice, inspect its legacy owner and record a short old-to-new
+responsibility map in the working notes. A move is successful when an agent can
+change one responsibility by loading the page shell plus one focused module,
+without reading every drawer source file.
+
 ## Current size and concentration
 
 The largest production Swift files are:
