@@ -30,7 +30,7 @@ has one writer at a time: tasks 5 → 7 → 9 → 10 → 11 → 13 serialize on 
 |---|------|-------|-------------------|---------|---------------------------|
 | 1 | Scale keep-native reachability record (no deletion) | task-1-brief.md | `proof.tst_scale.txt` (Scope only) | — | `--filter scalecheck` (lane unaffected) |
 | 2 | Timerange: A154 RETIRED-REPRESENTATION + certificate + delete (proof-only) | task-2-brief.md | `proof.tst_songdocument_timerange.txt`, delete `tst_songdocument_timerange.cpp` | — | full swiftcore |
-| 3 | Metadata: wire 2 contracts, add 4 assertions | task-3-brief.md | `EventChecks.swift` (~10 lines total) | — | `--qt eventEdits` |
+| 3 | Metadata: wire 2 contracts, assert saved bytes/format-0 reload and nine history sites | task-3-brief.md | `EventChecks.swift` (existing contracts) | — | `--qt eventEdits` |
 | 4 | Metadata certificate + delete | task-4-brief.md | `proof.tst_songdocument_metadata.txt`, delete `tst_songdocument_metadata.cpp` | 3 | full swiftcore |
 | 5 | Track corpus complete: CMake source + driver + all 7 row families + 2 marker assertions | task-5-brief.md | new `TrackCorpusChecks.swift`, `EventChecks.swift` (1 call), `src/checks/CMakeLists.txt` (1 line) | 3 + C1 | `--qt eventEdits` (build covers CMake) |
 | 6 | Songtracks certificate + delete | task-6-brief.md | `proof.tst_songdocument_songtracks.txt`, delete `tst_songdocument_songtracks.cpp` | 5 | full swiftcore |

@@ -1,136 +1,125 @@
 Assertion correspondence: editcheck/tst_songdocument_metadata.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.61s; build 11.73s).
 
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_metadata.cpp
 Original SHA-256: 01ec83ca4bad203c93f1c9063c73fcce5fb4471770e7477ddeeee7d31d10431a
 Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
+Swift SHA-256: 09b38977b0770259b153ec0e7bff1549abd3ba4affb9b4bc93caf01315adf98c
+Additional Swift counterpart: src/checks/editcheck/NoteChecks.swift
+Swift SHA-256: db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac
+Additional Swift counterpart: src/checks/midi/MidiChecks.swift
+Swift SHA-256: 7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce
+Additional Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
+Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 
-Scope
-All 125 original assertion sites are listed below across 8 methods. The primary
-Swift counterpart owns runXcmdEditsSuite, trackNameRoles,
-rawTempoAndSignatureEditing, and laneEditing. Format-zero codec conversion is
-additionally pinned by the channel-prefix-routing case in
-src/checks/midi/MidiChecks.swift (SHA-256
-7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce), which asserts
-exact canonical bytes, chunk/event counts, placed names, and the wasFormatZero
-flag. Live-tempo absence shares the NoteChecks "typed tempo is removed from raw
-chunks" predicate (NoteChecks SHA-256
-db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac). The legacy
-C++ editcheck suite is not registered in the current checkcatalog, so no native
-run of these sites is claimed.
+Covered native implementation: src/core/songdocument.cpp, src/core/songdocument_xcmd.cpp, src/core/songdocument_timeeditor*.cpp :: SongDocument xcmd save snapshot, format-0 coercion, globals rescue, duplicate canonicalization.
+Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
-Fixture and sequence
-formatZeroFile is a single format-0 track (tempo, Song/Lead names, channel
-prefixes, 3 pitched notes on channels 1/4/7, loop markers). duplicateFile is a
-format-1 fixture with conductor tempo/text rows (including same-tick 48
-duplicates and exact 375001 microseconds at tick 96) plus a channel track with
-duplicate CC7 points. xcmdSaveSnapshot inserts a delayed selector, a payload
-pair, and a dangling selector at ticks 101-103, then captures a save snapshot.
-Lane tests use DOC_CC_VOICE and CC7 duplicates at ticks 0 and 48.
+Retirement: 125 original assertion sites, all terminal (108 MATCHED, 17 RETIRED-REPRESENTATION); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed.
 
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Fixture and execution: formatZeroTrackBytes encodes the original format-0 fixture (one track with tick-0 tempo, Song/Lead names and channel prefixes, three notes on channels 1/4/7, loop markers, and end tick 48). duplicateFixtureFile has conductor text and duplicate same-tick tempo events (including exact tick-96 375001 microseconds), plus duplicate CC7/voice points on the channel track. xcmdSaveSnapshotContract inserts selector/payload/dangling selector at ticks 101-103, captures save bytes, checks canonical payload and live-byte/dirty/history stability. Other seven metadata contracts assert converted channels/chunks/notes/names/globals, saved tempo ordering and independently redecoded full source bytes, marker/name precedence, loaded duplicate values, lane canonicalization, and lane/tempo no-op undo/redo. Each starts with its own freshly constructed in-memory fixture.
+History caveat: Swift observes history depth via coreEditHistoryCountAtTip public undo/redo traversal; capture and no-ops preserve at-tip count/cursor, canonicalizing move adds one entry, undo preserves that entry while cursor returns to zero and redo remains available. Redo then undo confirms original undone state, identity and cursor; no revision-as-depth proxy or test-only accessor.
+Registered run path: src/checks/editcheck/EventChecks.swift :: runEventEditsSuite -> xcmdSaveSnapshotContract, formatZeroCoercionContract, formatZeroGlobalsContract, formatZeroSaveRoundTripContract, markerVersusTrackNameContract, duplicateLaneAndTempoLoadContract, duplicateCanonicalizationContract, duplicateReplacementsAndNoOpsContract -> src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun suite 6 -> src/checks/support/corecheck/tst_swiftcore.cpp :: SwiftCoreTest::eventEdits. S001-S003 execute via MidiChecks.swift :: runMidiCodecSuite -> pdcSuiteRun suite 1; S004-S005 execute via NoteChecks.swift :: adoptionAndPairing -> pdcSuiteRun suite 4. S105's coreEditHistoryCountAtTip helper is invoked from the suite-6 contracts. Counterparts compile in src/checks/CMakeLists.txt :: swift_core_check. Legacy C++ original is uncompiled in every target and unregistered in checkcatalog.cpp (§7).
 
 Original assertion inventory
 
 A001 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:110
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S006, S011-S017 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: C++ makeDocument synthetic staging fixture is uncompiled/unregistered and has no Swift production ingress (§7); the Swift in-memory document's captured XCMD bytes are checked by S011-S017, not its retired staging mechanism.
 Original expression:
   QVERIFY(fixture);
 
 A002 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:113
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: No Swift predicate asserts the engine-to-SMF track lookup for this document.
+Disposition: RETIRED-REPRESENTATION
+Swift: S011-S017 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: C++ smfTrackFor lookup as an insertion-index prerequisite belongs to the uncompiled/unregistered C++ engine (§7); Swift inserts into a raw chunk and S011-S017 check the actual saved XCMD events, not that retired index lookup.
 Original expression:
   QVERIFY(smfTrack >= 0);
 
 A003 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:126
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: No Swift predicate asserts snapshot capture leaves live bytes untouched.
+Disposition: MATCHED
+Swift: S006 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S006 compares the live file's encoded bytes before and after capture under xcmdSaveSnapshot.
 Original expression:
   QCOMPARE(document.smf().write(), liveBytes);
 
 A004 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:127
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift has no undo-index observation across snapshot capture.
+Disposition: MATCHED
+Swift: S009, S010 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S009 observes undo cursor still at tip, and S010 measures identical public undo/redo traversal depths before and after snapshot; revision is only corroboration, not the history predicate.
 Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex);
 
 A005 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:128
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: No Swift predicate asserts snapshot capture leaves the dirty flag untouched.
+Disposition: MATCHED
+Swift: S008 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S008 compares document.isDirty before and after capture.
 Original expression:
   QCOMPARE(document.isDirty(), dirty);
 
 A006 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:142
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift XCMD projection predicates assert stray/delayed selector handling in the XCMD API; projection inside a captured save snapshot is unproved.
+Disposition: MATCHED
+Swift: S011 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S011 asserts the decoded saved events omit the tick-101 delayed selector.
 Original expression:
   QVERIFY(!delayedSelector);
 
 A007 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:143
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift XCMD projection predicates assert shared-selector pair service in the XCMD API; the saved payload pair count is unproved.
+Disposition: MATCHED
+Swift: S012 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S012 counts exactly two saved selector/payload events at tick 102.
 Original expression:
   QCOMPARE(payload.size(), size_t(2));
 
 A008 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:144
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift XCMD projection predicates cover selector completion shape in the XCMD API; the saved selector byte is unproved.
+Disposition: MATCHED
+Swift: S013 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S013 asserts the saved pair's first controller is the selector.
 Original expression:
   QCOMPARE(payload[0].data0, uint8_t(xcmd::kSelectorController));
 
 A009 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:145
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift XCMD projection predicates cover selector completion shape in the XCMD API; the saved selector value is unproved.
+Disposition: MATCHED
+Swift: S014 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S014 asserts the saved selector's 0x08 value.
 Original expression:
   QCOMPARE(payload[0].data1, uint8_t(0x08));
 
 A010 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:146
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift XCMD projection predicates cover payload completion shape in the XCMD API; the saved payload byte is unproved.
+Disposition: MATCHED
+Swift: S015 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S015 asserts the saved pair's second controller is the payload.
 Original expression:
   QCOMPARE(payload[1].data0, uint8_t(xcmd::kPayloadController));
 
 A011 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:147
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift XCMD projection predicates cover payload completion shape in the XCMD API; the saved payload value is unproved.
+Disposition: MATCHED
+Swift: S016 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S016 asserts saved payload value 34.
 Original expression:
   QCOMPARE(payload[1].data1, uint8_t(34));
 
 A012 | EditCheckTest::xcmdSaveSnapshot | src/checks/editcheck/tst_songdocument_metadata.cpp:148
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: runXcmdEditsSuite
-Mapping/reason: Swift asserts dangling known selectors project opaque in the XCMD API; exclusion from a captured save snapshot is unproved.
+Disposition: MATCHED
+Swift: S017 | src/checks/editcheck/EventChecks.swift :: xcmdSaveSnapshotContract
+Mapping/reason: S017 asserts the decoded saved events omit the tick-103 dangling selector.
 Original expression:
   QVERIFY(!danglingSelector);
 
 A013 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:154
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: Synthetic stage plumbing has no Swift equivalent; Swift decodes codec bytes directly.
+Disposition: RETIRED-REPRESENTATION
+Swift: S018-S038 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: C++ SyntheticDocument::stage file/project staging is uncompiled/unregistered and unused by Swift (§7); Swift decodes the same format-0 fixture and asserts conversion outputs, not synthetic staging.
 Original expression:
   QVERIFY2(fixture.stage(formatZeroFile(), QStringLiteral("format0-coercion")),
            qPrintable(fixture.error));
 
 A014 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:157
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case asserts exact canonical format-one bytes; the live document format field is unproved.
+Disposition: MATCHED
+Swift: S018 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S018 checks format-one header bytes on the decoded fixture after conversion.
 Original expression:
   QCOMPARE(document.smf().format, uint16_t(1));
 
@@ -149,164 +138,164 @@ Original expression:
   QCOMPARE(document.smf().tracks.size(), size_t(5));
 
 A017 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:160
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the three-track engine projection of this conversion.
+Disposition: MATCHED
+Swift: S019 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S019 asserts exactly three converted engine tracks.
 Original expression:
   QCOMPARE(document.engineTrackCount(), 3);
 
 A018 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:161
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts per-track channel routing of this conversion.
+Disposition: MATCHED
+Swift: S020 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S020 checks channel 1 for first converted track.
 Original expression:
   QCOMPARE(document.channelFor(0), uint8_t(1));
 
 A019 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:162
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts per-track channel routing of this conversion.
+Disposition: MATCHED
+Swift: S021 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S021 checks channel 4 for second converted track.
 Original expression:
   QCOMPARE(document.channelFor(1), uint8_t(4));
 
 A020 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:163
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts per-track channel routing of this conversion.
+Disposition: MATCHED
+Swift: S022 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S022 checks channel 7 for third converted track.
 Original expression:
   QCOMPARE(document.channelFor(2), uint8_t(7));
 
 A021 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:164
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the engine-to-SMF track lookup of this conversion.
+Disposition: MATCHED
+Swift: S023 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S023 asserts first engine track maps to SMF chunk 1.
 Original expression:
   QCOMPARE(document.smfTrackFor(0), 1);
 
 A022 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:165
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts projected note values of this conversion.
+Disposition: MATCHED
+Swift: S024 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S024 asserts first converted note's pitch 60.
 Original expression:
   QCOMPARE(document.notesForTrack(0).front().key, uint8_t(60));
 
 A023 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:166
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts projected note values of this conversion.
+Disposition: MATCHED
+Swift: S025 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S025 asserts first converted note's duration 24.
 Original expression:
   QCOMPARE(document.notesForTrack(0).front().duration, uint32_t(24));
 
 A024 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:167
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts projected note values of this conversion.
+Disposition: MATCHED
+Swift: S026 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S026 asserts second converted note's pitch 64.
 Original expression:
   QCOMPARE(document.notesForTrack(1).front().key, uint8_t(64));
 
 A025 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:168
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts projected note values of this conversion.
+Disposition: MATCHED
+Swift: S027 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S027 asserts third converted note's pitch 67.
 Original expression:
   QCOMPARE(document.notesForTrack(2).front().key, uint8_t(67));
 
 A026 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:169
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case asserts the Lead name lands in chunk 2; the document trackName query is unproved.
+Disposition: MATCHED
+Swift: S028 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S028 asserts second converted track's name Lead.
 Original expression:
   QCOMPARE(document.trackName(1), QStringLiteral("Lead"));
 
 A027 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:170
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: No Swift predicate asserts the empty-name outcome for this track.
+Disposition: MATCHED
+Swift: S029 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S029 asserts first converted track has empty name.
 Original expression:
   QVERIFY(document.trackName(0).isEmpty());
 
 A028 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:171
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: No Swift predicate asserts the empty-name outcome for this track.
+Disposition: MATCHED
+Swift: S030 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S030 asserts third converted track has empty name.
 Original expression:
   QVERIFY(document.trackName(2).isEmpty());
 
 A029 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:173
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case pins the full canonical byte layout; instrument-meta placement on the live document chunks is unproved.
+Disposition: MATCHED
+Swift: S031 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S031 locates Gtr instrument metadata in converted chunk 2.
 Original expression:
   QVERIFY(hasMeta(chunks[2], 0x04, QByteArrayLiteral("Gtr")));
 
 A030 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:174
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case pins the full canonical byte layout; marker placement on the live document chunks is unproved.
+Disposition: MATCHED
+Swift: S032 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S032 locates colon marker name metadata in conductor chunk 0.
 Original expression:
   QVERIFY(hasMeta(chunks[0], 0x03, QByteArrayLiteral(":")));
 
 A031 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:175
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case pins the full canonical byte layout; marker absence on the live document chunks is unproved.
+Disposition: MATCHED
+Swift: S033 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S033 excludes colon marker name metadata from chunk 3.
 Original expression:
   QVERIFY(!hasMeta(chunks[3], 0x03, QByteArrayLiteral(":")));
 
 A032 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:176
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case asserts the Ambient name in chunk 4; placement on the live document chunks is unproved.
+Disposition: MATCHED
+Swift: S034 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S034 locates Ambient name metadata in chunk 4.
 Original expression:
   QVERIFY(hasMeta(chunks[4], 0x03, QByteArrayLiteral("Ambient")));
 
 A033 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:184
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate asserts prefix-before-marker adjacency; the codec case checks placed events, not adjacency.
+Disposition: MATCHED
+Swift: S035 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S035 asserts channel-prefix meta immediately precedes colon marker meta in conductor chunk.
 Original expression:
   QVERIFY(prefixedMarker);
 
 A034 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:186
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate asserts per-chunk end ticks of this conversion.
+Disposition: MATCHED
+Swift: S037 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S037 checks every converted format-0 chunk closes at tick 48.
 Original expression:
   QCOMPARE(chunks[index].endTick, uint64_t(48));
 
 A035 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:188
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate asserts channel-prefix confinement for this conversion.
+Disposition: MATCHED
+Swift: S036 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S036 checks no non-conductor chunk contains channel-prefix metadata.
 Original expression:
   QVERIFY(index == 0 || !(event.isMeta() && event.metaType == 0x20));
 
 A036 | EditCheckTest::formatZeroCoercion | src/checks/editcheck/tst_songdocument_metadata.cpp:191
-Disposition: PARTIAL
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: The channel-prefix-routing case lists six conductor-chunk events with no channel event among them; the live chunk-0 instance is unproved.
+Disposition: MATCHED
+Swift: S038 | src/checks/editcheck/EventChecks.swift :: formatZeroCoercionContract
+Mapping/reason: S038 asserts conductor chunk has no channel event.
 Original expression:
   QVERIFY(!event.isChannel());
 
 A037 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:197
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S039-S044 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: C++ SyntheticDocument::stage is uncompiled/unregistered and has no Swift suite ingress (§7); Swift decodes the same format-0 fixture to verify loop and timeline outcomes, not file/project staging.
 Original expression:
   QVERIFY2(fixture.stage(formatZeroFile(), QStringLiteral("format0-globals")),
            qPrintable(fixture.error));
 
 A038 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:200
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Swift has no loop-tick predicates; loop marker projection is unproved.
+Disposition: MATCHED
+Swift: S039 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: S039 asserts loop start tick 12 on the converted format-0 document's public timeline.
 Original expression:
   QCOMPARE(document.loopTick(false), uint64_t(12));
 
 A039 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:201
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Swift has no loop-tick predicates; loop marker projection is unproved.
+Disposition: MATCHED
+Swift: S040 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: S040 asserts loop end tick 36 on the converted format-0 document's public timeline.
 Original expression:
   QCOMPARE(document.loopTick(true), uint64_t(36));
 
@@ -318,107 +307,107 @@ Original expression:
   QVERIFY((document.tempoPoints() == std::vector<TempoPoint>{songdocument_test::tempo(0, 120)}));
 
 A041 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:204
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Swift builds no C++ timeline; timeline construction is unproved.
+Disposition: RETIRED-REPRESENTATION
+Swift: S039-S044 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: Nullable C++ buildTimeline result is a no-ingress representation of the uncompiled/unregistered engine (§7); Swift PlaybackTimeline.build returns a non-optional value, whose loop, track, and sorting outputs S039-S044 are asserted instead.
 Original expression:
   QVERIFY(timeline);
 
 A042 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:205
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Swift has no timeline predicates; used-track count is unproved.
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: S041 asserts timeline usedTrackCount 3 from the converted fixture.
 Original expression:
   QCOMPARE(timeline->usedTrackCount, 3);
 
 A043 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:206
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Swift has no timeline predicates; the timeline track name is unproved.
+Disposition: MATCHED
+Swift: S042 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: S042 asserts timeline second-track name Lead from the converted fixture.
 Original expression:
   QCOMPARE(timeline->tracks[1].name, QStringLiteral("Lead"));
 
 A044 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:207
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Swift has no timeline predicates; the timeline loop start is unproved.
+Disposition: MATCHED
+Swift: S043 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: S043 directly asserts timeline loopStartTick 12 from the converted fixture.
 Original expression:
   QCOMPARE(timeline->loopStartTick, uint64_t(12));
 
 A045 | EditCheckTest::formatZeroGlobals | src/checks/editcheck/tst_songdocument_metadata.cpp:208
-Disposition: PARTIAL
-Swift: src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawMutationRow
-Mapping/reason: The adjacent-tick ordering helper executes on corpus documents in the raw-event rows; this conversion instance is unproved.
+Disposition: MATCHED
+Swift: S044 | src/checks/editcheck/EventChecks.swift :: formatZeroGlobalsContract
+Mapping/reason: S044 checks each converted chunk remains tick-sorted.
 Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()));
 
 A046 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:216
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: Synthetic stage plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S045-S053 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: C++ SyntheticDocument::stage into project/disk path is uncompiled/unregistered and unused by Swift (§7); Swift captures and decodes the same format-0 fixture in memory to assert saved outcomes, not staging.
 Original expression:
   QVERIFY2(fixture.stage(source, QStringLiteral("format0-save")), qPrintable(fixture.error));
 
 A047 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:221
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate reports file-save success; Swift captureSave guards return silently on failure.
+Disposition: RETIRED-REPRESENTATION
+Swift: S045-S050 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: C++ SongDocument::save disk-write plumbing has no active ingress in the uncompiled/unregistered C++ engine (§7); Swift captureSave failure reports under this cppID and S046-S050 inspect decoded saved bytes, without claiming filesystem write parity.
 Original expression:
   QVERIFY2(document.save(&error), qPrintable(error));
 
 A048 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:222
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate reads back a saved file; save-file round-trip I/O is unproved.
+Disposition: RETIRED-REPRESENTATION
+Swift: S046-S049 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: C++ SmfFile::readFile on fixture.song.midPath is retired fixture/disk-read plumbing in the uncompiled/unregistered C++ suite (§7); Swift decodes captureSave bytes and checks their tempo contents, not a disk round trip.
 Original expression:
   QVERIFY2(SmfFile::readFile(fixture.song.midPath, &saved, &error), qPrintable(error));
 
 A049 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:225
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: No Swift predicate asserts the single-tempo count on this save path.
+Disposition: MATCHED
+Swift: S045 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S045 asserts one typed tempo point survives format-0 conversion.
 Original expression:
   QCOMPARE(tempos.size(), size_t(1));
 
 A050 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:229
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts tempo reinsertion at the conductor head of saved bytes.
+Disposition: MATCHED
+Swift: S046-S049, S102 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S102 now directly compares redecoded original full encoded bytes to captured saved bytes; S046 independently checks saved-minus-tempo exact live bytes, with S047-S049 asserting conductor placement, order and typed tempo values.
 Original expression:
   QCOMPARE(saved.write(), expected.write());
 
 A051 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:234
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts saved-minus-tempo byte equality with live bytes.
+Disposition: MATCHED
+Swift: S046 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S046 compares encoded saved bytes after removing tempo metadata against the exact converted live-file encoded bytes, not just event counts.
 Original expression:
   QCOMPARE(nonTempoSaved.write(), convertedLive);
 
 A052 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:254
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate inspects saved tempo blob sizes; the loop-internal size check is unproved.
+Disposition: MATCHED
+Swift: S049, S102 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S049 decodes three-byte tempo blobs to compare saved points with typed state; S102 pins the FULL saved bytes to the independently decoded original format-0 fixture, ruling out any extra malformed tempo blob that S049's conditional extraction alone could miss.
 Original expression:
   QVERIFY(event.blob.size() == 3);
 
 A053 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:260
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts saved tempo confinement to the conductor chunk.
+Disposition: MATCHED
+Swift: S047 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S047 asserts no saved tempo metadata occurs outside conductor chunk zero.
 Original expression:
   QVERIFY(!tempoOutsideConductor);
 
 A054 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:261
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts saved tempo-first ordering per tick.
+Disposition: MATCHED
+Swift: S048 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S048 asserts saved tempo metadata precedes all non-tempo events at its tick.
 Original expression:
   QVERIFY(tempoFirst);
 
 A055 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:262
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts saved tempo points equal live tempo points.
+Disposition: MATCHED
+Swift: S049 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S049 compares decoded saved tempo points exactly to document.state.tempo.
 Original expression:
   QVERIFY(savedTempos == tempos);
 
@@ -430,156 +419,156 @@ Original expression:
   QVERIFY(!songdocument_test::hasLiveTempo(document));
 
 A057 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:265
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate re-reads the pre-conversion source bytes.
+Disposition: MATCHED
+Swift: S100 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: C++ SmfFile::read(original) decodes in-memory format-0 source bytes; S100 decodes that same fixture via throwing MidiFile.decode and reports failure under formatZeroSaveRoundTrip if decoding fails. This is a real decode predicate, not disk staging.
 Original expression:
   QVERIFY2(SmfFile::read(original, &reloaded, &error), qPrintable(error));
 
 A058 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:266
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate asserts the reloaded source preserves the format-0 flag.
+Disposition: MATCHED
+Swift: S101 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S101 directly asserts file.wasFormat0 after decoding the exact original format-0 fixture under formatZeroSaveRoundTrip.
 Original expression:
   QVERIFY(reloaded.wasFormat0);
 
 A059 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:267
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate asserts reloaded-source bytes equal saved bytes.
+Disposition: MATCHED
+Swift: S102 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S102 compares independently decoded original fixture canonical bytes (try? file.encoded()) to complete captured snapshot.bytes on the same document, not just saved-minus-tempo shape.
 Original expression:
   QCOMPARE(reloaded.write(), saved.write());
 
 A060 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:269
-Disposition: GAP
-Swift: src/checks/midi/MidiChecks.swift :: runMidiCodecSuite
-Mapping/reason: No Swift predicate asserts converted-source bytes equal saved bytes.
+Disposition: RETIRED-REPRESENTATION
+Swift: S102, S046-S049 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: C++ second convertToFormat1(&reloaded) on an already-coerced source is an uncompiled/unregistered C++-only mechanism (§7); Swift MidiFile.convertFormat0ToFormat1 is private (MidiFile.swift:459) and called only inside decode for format zero (337-339), with no public second-convert ingress. S102 independently proves source canonical bytes equal complete saved snapshot bytes.
 Original expression:
   QCOMPARE(reloaded.write(), saved.write());
 
 A061 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:271
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: Swift reorders tracks with survival predicates implying success; the boolean move result here is unasserted.
+Disposition: MATCHED
+Swift: S051 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S051 checks moveTrack(0,to:2) returns true on the format-0 saved document.
 Original expression:
   QVERIFY(document.moveTrack(0, 2));
 
 A062 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:272
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts a name following its track across a move.
+Disposition: MATCHED
+Swift: S052 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S052 checks Bass follows the moved track to slot 2.
 Original expression:
   QCOMPARE(document.trackName(2), QStringLiteral("Bass"));
 
 A063 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:275
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: Swift asserts byte/state restoration on undo for other paths ("one undo restores collision victim", "undo returns to sealed saved identity"); full-undo-to-baseline bytes here are unproved.
+Disposition: MATCHED
+Swift: S053 | src/checks/editcheck/EventChecks.swift :: formatZeroSaveRoundTripContract
+Mapping/reason: S053 compares exact converted live bytes after undo-all on the same document.
 Original expression:
   QCOMPARE(document.smf().write(), convertedLive);
 
 A064 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:292
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S054-S057 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: C++ makeDocument project/disk fixture staging is uncompiled/unregistered and has no Swift ingress (§7); S054-S057 test marker/name observables on the same in-memory event sequence, not staging success.
 Original expression:
   QVERIFY(fixture);
 
 A065 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:294
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Swift asserts bare-name selection ("document query ignores a channel-prefixed name") on a different fixture; the Real-after-marker selection here is unproved.
+Disposition: MATCHED
+Swift: S054 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: S054 asserts the bare Real name wins over the marker-shaped name.
 Original expression:
   QCOMPARE(document.trackName(0), QStringLiteral("Real"));
 
 A066 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:295
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Swift has no loop-tick predicates; marker-derived loop ticks are unproved.
+Disposition: MATCHED
+Swift: S055 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: S055 checks marker-derived loop start tick 0 on the public timeline.
 Original expression:
   QCOMPARE(document.loopTick(false), uint64_t(0));
 
 A067 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:297
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Swift builds no C++ timeline; timeline construction is unproved.
+Disposition: RETIRED-REPRESENTATION
+Swift: S055, S057 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: Nullable C++ timeline construction in uncompiled/unregistered src/core has no Swift ingress (§7); Swift returns a non-optional timeline, and S055/S057 assert its loop value before and after rename.
 Original expression:
   QVERIFY(timeline);
 
 A068 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:298
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Swift has no timeline predicates; the timeline loop start is unproved.
+Disposition: MATCHED
+Swift: S055 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: S055 directly asserts timeline loopStartTick 0 with marker-shaped name.
 Original expression:
   QCOMPARE(timeline->loopStartTick, uint64_t(0));
 
 A069 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:300
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Swift asserts rename rewrites only bare names and trims display names; this rename-then-query instance is unproved.
+Disposition: MATCHED
+Swift: S056 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: S056 asserts Renamed via document.trackName(0) after rename.
 Original expression:
   QCOMPARE(document.trackName(0), QStringLiteral("Renamed"));
 
 A070 | EditCheckTest::markerVersusTrackName | src/checks/editcheck/tst_songdocument_metadata.cpp:301
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackNameRoles
-Mapping/reason: Swift has no loop-tick predicates; loop stability across rename is unproved.
+Disposition: MATCHED
+Swift: S057 | src/checks/editcheck/EventChecks.swift :: markerVersusTrackNameContract
+Mapping/reason: S057 checks timeline loop start remains tick 0 after rename.
 Original expression:
   QCOMPARE(document.loopTick(false), uint64_t(0));
 
 A071 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:308
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S058-S066 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: C++ makeDocument synthetic project/disk staging is uncompiled/unregistered and unused by Swift (§7); Swift constructs the duplicate fixture and tests its loaded lane, tempo and saved results, not C++ staging.
 Original expression:
   QVERIFY(fixture);
 
 A072 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:314
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts the loaded voice-lane duplicate count.
+Disposition: MATCHED
+Swift: S058 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S058 counts two loaded voice lane points.
 Original expression:
   QCOMPARE(document.lanePoints(0, DOC_CC_VOICE).size(), size_t(2));
 
 A073 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:315
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts the loaded CC7 duplicate count at tick 0.
+Disposition: MATCHED
+Swift: S059 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S059 counts two loaded CC7 points at tick zero.
 Original expression:
   QCOMPARE(pointsAt(document, 7, 0).size(), size_t(2));
 
 A074 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:317
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate looks up this lane point; lane-point lookup plumbing is unproved.
+Disposition: MATCHED
+Swift: S060 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S060's optional last CC7 point must exist for its value to equal 80; unlike a C++ out-parameter check, nil cannot satisfy the assertion.
 Original expression:
   QVERIFY(document.findLanePoint(0, 7, 0, &point));
 
 A075 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:318
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts the loaded duplicate lane value.
+Disposition: MATCHED
+Swift: S060 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S060 asserts the last loaded CC7 duplicate at tick zero has value 80.
 Original expression:
   QCOMPARE(point.value, 80);
 
 A076 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:319
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate looks up this voice-lane point.
+Disposition: MATCHED
+Swift: S061 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S061's optional last voice point must exist for its value to equal 9; nil cannot satisfy the assertion.
 Original expression:
   QVERIFY(document.findLanePoint(0, DOC_CC_VOICE, 0, &point));
 
 A077 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:320
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts the loaded voice-lane duplicate value.
+Disposition: MATCHED
+Swift: S061 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S061 asserts the loaded voice duplicate's winning value 9.
 Original expression:
   QCOMPARE(point.value, 9);
 
 A078 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:321
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: The "tempo normalization keeps the last same-tick value" predicate asserts same-tick collapse; the full four-point sequence with the exact 375001-microsecond point is unproved.
+Disposition: MATCHED
+Swift: S062 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S062 asserts exact ordered typed tempo ticks 24/48/72/96 and values 3000000/400000/235294/375001 microseconds.
 Original expression:
   QVERIFY((document.tempoPoints() == std::vector<TempoPoint>{slow, normal, fast, exact}));
 
@@ -591,51 +580,51 @@ Original expression:
   QVERIFY(!songdocument_test::hasLiveTempo(document));
 
 A080 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:324
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift builds no C++ timeline; timeline construction is unproved.
+Disposition: RETIRED-REPRESENTATION
+Swift: S063, S064 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: Nullable C++ buildTimeline construction belongs to uncompiled/unregistered src/core and has no Swift failure path (§7); non-optional Swift PlaybackTimeline.build yields S063/S064 tested tempo projections.
 Original expression:
   QVERIFY(timeline);
 
 A081 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:325
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift has no timeline predicates; the tempo map size is unproved.
+Disposition: MATCHED
+Swift: S063 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S063 asserts five timeline tempo-map entries, including the default.
 Original expression:
   QCOMPARE(timeline->tempoMap.size(), size_t(5));
 
 A082 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:326
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift has no timeline predicates; the default-tempo front value is unproved.
+Disposition: MATCHED
+Swift: S064 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S064 asserts front-of-map BPM 120.
 Original expression:
   QCOMPARE(timeline->tempoMap.front().bpm, 120.0);
 
 A083 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:335
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate reports file-save success on this path.
+Disposition: RETIRED-REPRESENTATION
+Swift: S065, S066 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: C++ SongDocument::save disk-writing on a staged project has no Swift ingress in the uncompiled/unregistered C++ engine (§7); Swift captureSave failure is reported and S065 checks exact expected saved bytes, without claiming disk write parity.
 Original expression:
   QVERIFY2(document.save(&error), qPrintable(error));
 
 A084 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:337
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate reads back a saved file on this path.
+Disposition: RETIRED-REPRESENTATION
+Swift: S065, S066 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: C++ SmfFile::readFile(fixture->song.midPath) is fixture/disk-read plumbing with no active ingress (§7); Swift captures bytes in memory and S065 compares complete expected encoding without claiming a disk round trip.
 Original expression:
   QVERIFY2(SmfFile::readFile(fixture->song.midPath, &saved, &error), qPrintable(error));
 
 A085 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:338
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts duplicate-tempo reinsertion positions in saved bytes.
+Disposition: MATCHED
+Swift: S065 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S065 asserts snapshot.bytes == expected.encoded(), with expected independently assembled by inserting four typed tempo events into precisely specified conductor event indices 1 and 4, not merely checking their count or values.
 Original expression:
   QCOMPARE(saved.write(), expected.write());
 
 A086 | EditCheckTest::duplicateLaneAndTempoLoad | src/checks/editcheck/tst_songdocument_metadata.cpp:339
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: No Swift predicate asserts live bytes survive a save on this path.
+Disposition: MATCHED
+Swift: S066 | src/checks/editcheck/EventChecks.swift :: duplicateLaneAndTempoLoadContract
+Mapping/reason: S066 asserts encoded live bytes stay equal to their pre-capture baseline.
 Original expression:
   QCOMPARE(document.smf().write(), liveBytes);
 
@@ -647,191 +636,191 @@ Original expression:
   QVERIFY(!songdocument_test::hasLiveTempo(document));
 
 A088 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:347
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S067-S082 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: C++ makeDocument project/disk staging is uncompiled/unregistered and unused by Swift (§7); Swift's duplicate fixture checks canonicalization and public history behavior, not C++ staging.
 Original expression:
   QVERIFY(fixture);
 
 A089 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:354
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate looks up this lane point.
+Disposition: MATCHED
+Swift: S103 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S103 guards an actual CC7 point at tick zero and reports failure under duplicateCanonicalization if absent.
 Original expression:
   QVERIFY(document.findLanePoint(0, 7, 0, &point));
 
 A090 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:359
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift lane-move predicates assert relocation, never duplicate collapse; post-move canonical count is unproved.
+Disposition: MATCHED
+Swift: S067 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S067 asserts the no-op-valued lane move canonicalizes the two duplicates to one.
 Original expression:
   QCOMPARE(pointsAt(document, 7, 0).size(), size_t(1));
 
 A091 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:360
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift asserts no revision predicates for lane moves; the revision increment is unproved.
+Disposition: MATCHED
+Swift: S068 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S068 checks canonicalizing move increments revision exactly once; the separate S071 checks history depth.
 Original expression:
   QCOMPARE(document.revision(), revision + 1);
 
 A092 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:361
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no undo-count accessor; the entry count increment is unproved.
+Disposition: MATCHED
+Swift: S070, S071 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S071 traverses public undo/redo history at tip and asserts exactly one added entry; S070 verifies the cursor is at tip with undo available and redo unavailable.
 Original expression:
   QCOMPARE(document.undoStack()->count(), undoCount + 1);
 
 A093 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:362
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no undo-index observation for lane moves.
+Disposition: MATCHED
+Swift: S070, S071 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S070 checks applied cursor advanced to tip with canUndo and no canRedo, while S071 compares public traversal depth to before+1; revision is not substituted for index.
 Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex + 1);
 
 A094 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:363
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift never counts documentChanged emissions.
+Disposition: MATCHED
+Swift: S069 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S069 checks one document.onChange publication after canonicalization.
 Original expression:
   QCOMPARE(changedCount, 1);
 
 A095 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:368
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no lane undo predicates; the restored duplicate count is unproved.
+Disposition: MATCHED
+Swift: S072 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S072 asserts undo restores both duplicate CC7 points at tick zero.
 Original expression:
   QCOMPARE(restored.size(), size_t(2));
 
 A096 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:369
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no lane undo predicates; the restored first value is unproved.
+Disposition: MATCHED
+Swift: S073 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S073 asserts first restored duplicate value 100.
 Original expression:
   QCOMPARE(restored[0].value, 100);
 
 A097 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:370
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no lane undo predicates; the restored second value is unproved.
+Disposition: MATCHED
+Swift: S074 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S074 asserts second restored duplicate value 80.
 Original expression:
   QCOMPARE(restored[1].value, 80);
 
 A098 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:371
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no lane undo predicates; byte restoration is unproved.
+Disposition: MATCHED
+Swift: S075 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S075 checks encoded bytes exactly equal pre-edit baseline after undo.
 Original expression:
   QCOMPARE(document.smf().write(), baseline);
 
 A099 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:372
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift asserts no revision predicates for lane undo; the revision increment is unproved.
+Disposition: MATCHED
+Swift: S076 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S076 checks revision increments on undo separately from S078-S081 history assertions.
 Original expression:
   QCOMPARE(document.revision(), canonicalRevision + 1);
 
 A100 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:373
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no undo-count accessor; the entry count across lane undo is unproved.
+Disposition: MATCHED
+Swift: S070, S078-S081 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S070 establishes tip cursor and S078 observes post-undo zero cursor with redo; S079 checks redo restores canonical state AND identity; S080 measures retained count at tip after redo via public history traversal; S081 undoes again and verifies exact previously undone state, identity, zero cursor and redo availability. Together these prove count stays before+1 THROUGH undo, not a revision proxy or mere at-tip count.
 Original expression:
   QCOMPARE(document.undoStack()->count(), undoCount + 1);
 
 A101 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:374
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no undo-index observation for lane undo.
+Disposition: MATCHED
+Swift: S078, S081 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S078 directly checks !canUndo && canRedo after undo (cursor zero); S081 repeats that cursor check after redo then undo, with state and identity equality to the first undone state.
 Original expression:
   QCOMPARE(document.undoStack()->index(), undoIndex);
 
 A102 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:375
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift never counts documentChanged emissions.
+Disposition: MATCHED
+Swift: S077 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S077 checks one document.onChange publication on undo.
 Original expression:
   QCOMPARE(changedCount, 1);
 
 A103 | EditCheckTest::duplicateCanonicalization | src/checks/editcheck/tst_songdocument_metadata.cpp:377
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no add-lane-point collapse predicate; the post-add count is unproved.
+Disposition: MATCHED
+Swift: S082 | src/checks/editcheck/EventChecks.swift :: duplicateCanonicalizationContract
+Mapping/reason: S082 asserts lane write after undo collapses duplicates back to one.
 Original expression:
   QCOMPARE(pointsAt(document, 7, 0).size(), size_t(1));
 
 A104 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:384
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: S083-S099 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: C++ makeDocument synthetic disk/project staging is uncompiled/unregistered and not entered by Swift (§7); Swift's duplicate fixture tests lane/tempo no-ops and history observables, not C++ staging.
 Original expression:
   QVERIFY(fixture);
 
 A105 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:392
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate looks up this lane point.
+Disposition: MATCHED
+Swift: S104 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S104 guards a CC7 lane point at tick 48 and reports failure to this cppID if absent.
 Original expression:
   QVERIFY(document.findLanePoint(0, 7, 48, &point));
 
 A106 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:393
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts the post-add lane count at this tick.
+Disposition: MATCHED
+Swift: S083 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S083 asserts precisely one CC7 lane point after replacement at tick 48.
 Original expression:
   QCOMPARE(pointsAt(document, 7, 48).size(), size_t(1));
 
 A107 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:400
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts byte stability for a no-op lane move.
+Disposition: MATCHED
+Swift: S084 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S084 compares exact encoded live bytes before and after no-op lane move.
 Original expression:
   QCOMPARE(document.smf().write(), noOpBytes);
 
 A108 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:401
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift asserts no revision predicates for lane moves; no-op revision stability is unproved.
+Disposition: MATCHED
+Swift: S085 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S085 checks revision unchanged on no-op lane move, separately from S087/S088 public history observations.
 Original expression:
   QCOMPARE(document.revision(), noOpRevision);
 
 A109 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:402
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no undo-count accessor; no-op entry-count stability is unproved.
+Disposition: MATCHED
+Swift: S087, S088 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S088 measures identical at-tip public undo/redo traversal depth before and after lane no-op; S087 checks cursor stays at tip with undo available and no redo. Revision is only corroboration.
 Original expression:
   QCOMPARE(document.undoStack()->count(), noOpUndoCount);
 
 A110 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:403
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift has no undo-index observation for lane no-ops.
+Disposition: MATCHED
+Swift: S087, S088 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S087 checks applied cursor still at tip with canUndo and !canRedo, and S088 verifies public history depth unchanged, not merely revision.
 Original expression:
   QCOMPARE(document.undoStack()->index(), noOpUndoIndex);
 
 A111 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:404
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Swift never counts documentChanged emissions.
+Disposition: MATCHED
+Swift: S086 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S086 checks no document.onChange publication on no-op lane move.
 Original expression:
   QCOMPARE(changedCount, 0);
 
 A112 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:406
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts lane relocation to an occupied tick with collapse.
+Disposition: MATCHED
+Swift: S089 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S089 checks lane move to occupied tick zero collapses duplicates to one.
 Original expression:
   QCOMPARE(pointsAt(document, 7, 0).size(), size_t(1));
 
 A113 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:407
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: No Swift predicate asserts the vacated source tick is empty after a lane move.
+Disposition: MATCHED
+Swift: S090 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S090 checks all CC7 points have tick other than vacated source tick 48.
 Original expression:
   QVERIFY(pointsAt(document, 7, 48).empty());
 
 A114 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:410
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: No Swift predicate asserts containment of an applied no-op tempo point.
+Disposition: MATCHED
+Swift: S091 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S091 checks applied tempo point at tick 48 and 500000 microseconds is present.
 Original expression:
   QVERIFY(songdocument_test::containsTempo(document, noOpTempo));
 
@@ -843,44 +832,44 @@ Original expression:
   QVERIFY(!songdocument_test::hasLiveTempo(document));
 
 A116 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:419
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: No Swift predicate asserts byte stability for a duplicate tempo apply.
+Disposition: MATCHED
+Swift: S092 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S092 compares exact encoded live bytes before and after duplicate tempo application.
 Original expression:
   QCOMPARE(document.smf().write(), tempoBytes);
 
 A117 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:420
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: No Swift predicate asserts tempo-point stability for a duplicate tempo apply.
+Disposition: MATCHED
+Swift: S093 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S093 checks unchanged typed tempo sequence after duplicate tempo apply.
 Original expression:
   QVERIFY(document.tempoPoints() == tempoPoints);
 
 A118 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:421
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift asserts no revision predicates for tempo no-ops; revision stability is unproved.
+Disposition: MATCHED
+Swift: S094 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S094 checks no revision increment after duplicate tempo apply; S096/S097 independently check public history.
 Original expression:
   QCOMPARE(document.revision(), tempoRevision);
 
 A119 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:422
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift has no undo-count accessor; entry-count stability for a tempo no-op is unproved.
+Disposition: MATCHED
+Swift: S096, S097 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S097 traverses public history and asserts depth unchanged after duplicate tempo apply; S096 verifies cursor stays at tip with undo available and no redo. Revision is not used as a depth proxy.
 Original expression:
   QCOMPARE(document.undoStack()->count(), tempoUndoCount);
 
 A120 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:423
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift has no undo-index observation for tempo no-ops.
+Disposition: MATCHED
+Swift: S096, S097 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S096 verifies applied cursor remains at tip with canUndo and !canRedo after duplicate tempo apply; S097 independently confirms unchanged history depth by undo/redo traversal.
 Original expression:
   QCOMPARE(document.undoStack()->index(), tempoUndoIndex);
 
 A121 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:424
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Swift never counts documentChanged emissions.
+Disposition: MATCHED
+Swift: S095 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S095 checks no document.onChange publication after duplicate tempo application.
 Original expression:
   QCOMPARE(changedCount, 0);
 
@@ -892,9 +881,9 @@ Original expression:
   QVERIFY(!songdocument_test::hasLiveTempo(document));
 
 A123 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:427
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: No Swift predicate asserts tempo containment after undo of a duplicate apply.
+Disposition: MATCHED
+Swift: S098 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S098 checks undo restores the replaced tick-48 400000-microsecond tempo point (150 bpm).
 Original expression:
   QVERIFY(songdocument_test::containsTempo(document, songdocument_test::tempo(48, 150)));
 
@@ -906,9 +895,9 @@ Original expression:
   QVERIFY(!songdocument_test::hasLiveTempo(document));
 
 A125 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:432
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: Swift asserts byte/state restoration on undo for other paths ("one undo restores collision victim", "undo returns to sealed saved identity"); full-undo-to-baseline bytes here are unproved.
+Disposition: MATCHED
+Swift: S099 | src/checks/editcheck/EventChecks.swift :: duplicateReplacementsAndNoOpsContract
+Mapping/reason: S099 checks exact baseline encoded bytes after redo followed by undo-all, on this same fixture.
 Original expression:
   QCOMPARE(document.smf().write(), baseline);
 
@@ -939,3 +928,305 @@ S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
   report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
                 cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                 message: "typed tempo is removed from raw chunks")
+
+S006 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:824
+  report.expectEqual(liveBytes, try? document.state.file.encoded(),
+S007 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:827
+  report.expectEqual(revision, document.revision,
+S008 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:830
+  report.expectEqual(dirty, document.isDirty,
+S009 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:833
+  report.expect(document.history.canUndo && !document.history.canRedo,
+S010 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:836
+  report.expectEqual(historyDepth, try? coreEditHistoryCountAtTip(
+      document, report: report, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot"),
+      cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+      what: "capture leaves the undo depth unchanged")
+S011 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:846
+  report.expect(!events.contains {
+      $0.tick == base + 1 && channelFields($0)?.data0 == Xcmd.selectorController
+  }, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+  message: "delayed selector is not saved")
+S012 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:854
+  report.expectEqual(2, payload.count,
+S013 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:858
+  report.expectEqual(Xcmd.selectorController, channelFields(payload[0])?.data0,
+S014 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:861
+  report.expectEqual(UInt8(0x08), channelFields(payload[0])?.data1,
+S015 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:864
+  report.expectEqual(Xcmd.payloadController, channelFields(payload[1])?.data0,
+S016 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:867
+  report.expectEqual(UInt8(34), channelFields(payload[1])?.data1,
+S017 | xcmdSaveSnapshotContract | src/checks/editcheck/EventChecks.swift:870
+  report.expect(!events.contains {
+      $0.tick == base + 3 && channelFields($0)?.data0 == Xcmd.selectorController
+  }, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+  message: "dangling selector is not saved")
+S018 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:885
+  report.expectEqual([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1], encodedHeader,
+S019 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:888
+  report.expectEqual(3, document.engineTracks.usedTrackCount,
+S020 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:891
+  report.expectEqual(UInt8(1), document.engineTracks.tracks[0].channel,
+S021 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:894
+  report.expectEqual(UInt8(4), document.engineTracks.tracks[1].channel,
+S022 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:897
+  report.expectEqual(UInt8(7), document.engineTracks.tracks[2].channel,
+S023 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:900
+  report.expectEqual(1, document.engineTracks.tracks[0].midiChunk,
+S024 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:903
+  report.expectEqual(UInt8(60), document.notes(in: 0).first?.pitch,
+S025 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:906
+  report.expectEqual(Tick(24), document.notes(in: 0).first?.duration,
+S026 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:909
+  report.expectEqual(UInt8(64), document.notes(in: 1).first?.pitch,
+S027 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:912
+  report.expectEqual(UInt8(67), document.notes(in: 2).first?.pitch,
+S028 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:915
+  report.expectEqual("Lead", document.trackName(1),
+S029 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:918
+  report.expectEqual("", document.trackName(0),
+S030 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:921
+  report.expectEqual("", document.trackName(2),
+S031 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:925
+  report.expect(chunks[2].events.contains {
+      $0.metaType == 0x04 && $0.blob == Array("Gtr".utf8)
+  }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+  message: "instrument meta lands on the Lead chunk")
+S032 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:929
+  report.expect(chunks[0].events.contains {
+      $0.metaType == 0x03 && $0.blob == [0x3A]
+  }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+  message: "prefixed marker lands on the conductor chunk")
+S033 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:933
+  report.expect(!chunks[3].events.contains {
+      $0.metaType == 0x03 && $0.blob == [0x3A]
+  }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+  message: "marker stays out of the channel-7 chunk")
+S034 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:937
+  report.expect(chunks[4].events.contains {
+      $0.metaType == 0x03 && $0.blob == Array("Ambient".utf8)
+  }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+  message: "prefixed name lands on the Ambient chunk")
+S035 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:941
+  report.expect(chunks[0].events.enumerated().contains { index, event in
+      index > 0 && event.metaType == 0x03 && event.blob == [0x3A] &&
+          chunks[0].events[index - 1].metaType == 0x20
+  }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+  message: "channel prefix stays adjacent to its marker")
+S036 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:946
+  report.expect(chunks.enumerated().allSatisfy { index, chunk in
+      index == 0 || chunk.events.allSatisfy { $0.metaType != 0x20 }
+  }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+  message: "channel prefixes stay out of non-conductor chunks")
+S037 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:950
+  report.expect(document.state.file.chunks.allSatisfy { $0.endTick == 48 },
+S038 | formatZeroCoercionContract | src/checks/editcheck/EventChecks.swift:953
+  report.expect(chunks[0].events.allSatisfy { !$0.isChannel },
+S039 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:967
+  report.expectEqual(Tick(12), timeline.loopStartTick,
+S040 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:970
+  report.expectEqual(Tick(36), timeline.loopEndTick,
+S041 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:973
+  report.expectEqual(3, timeline.usedTrackCount,
+S042 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:976
+  report.expectEqual("Lead", timeline.tracks.count > 1 ? timeline.tracks[1].name : nil,
+S043 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:979
+  report.expectEqual(Tick(12), timeline.loopStartTick,
+S044 | formatZeroGlobalsContract | src/checks/editcheck/EventChecks.swift:982
+  report.expect(chunksSortedByTick(document.state.file),
+S045 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1009
+  report.expectEqual(1, tempos.count,
+S046 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1016
+  report.expectEqual(convertedLive, try? withoutTempos.encoded(),
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "saved bytes without tempo metadata match converted live bytes")
+S047 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1045
+  report.expect(!tempoOutsideConductor,
+S048 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1048
+  report.expect(tempoFirst,
+S049 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1051
+  report.expectEqual(tempos, savedTempos,
+S050 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1054
+  report.expectEqual(convertedLive, try? document.state.file.encoded(),
+S051 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1058
+  report.expect(document.moveTrack(0, to: 2),
+S052 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1061
+  report.expectEqual("Bass", document.trackName(2),
+S053 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1065
+  report.expectEqual(convertedLive, try? document.state.file.encoded(),
+S054 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1081
+  report.expectEqual("Real", document.trackName(0),
+S055 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1085
+  report.expectEqual(Tick(0), timeline.loopStartTick,
+S056 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1089
+  report.expectEqual("Renamed", document.trackName(0),
+S057 | markerVersusTrackNameContract | src/checks/editcheck/EventChecks.swift:1093
+  report.expectEqual(Tick(0), renamed.loopStartTick,
+S058 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1102
+  report.expectEqual(2, document.lanePoints(track: 0, lane: .voice).count,
+S059 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1105
+  report.expectEqual(2, document.lanePoints(track: 0, lane: .controller(7))
+      .filter { $0.tick == 0 }.count,
+S060 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1109
+  report.expectEqual(80, document.lanePoints(track: 0, lane: .controller(7))
+      .last { $0.tick == 0 }?.value,
+S061 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1113
+  report.expectEqual(9, document.lanePoints(track: 0, lane: .voice)
+      .last { $0.tick == 0 }?.value,
+S062 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1117
+  report.expectEqual([
+      TempoPoint(tick: 24, microsecondsPerQuarterNote: 3_000_000),
+      TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000),
+      TempoPoint(tick: 72, microsecondsPerQuarterNote: 235_294),
+      TempoPoint(tick: 96, microsecondsPerQuarterNote: 375_001),
+  ], document.state.tempo,
+  cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+  what: "clamped and exact tempo points load in order")
+S063 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1126
+  report.expectEqual(5, timeline.tempoMap.count,
+S064 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1129
+  report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute,
+S065 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1150
+  expected.chunks[0].events.insert(contentsOf: typedTempoEvents[0..<2], at: 1)
+  expected.chunks[0].events.insert(contentsOf: typedTempoEvents[2..<4], at: 4)
+  report.expectEqual(snapshot.bytes, try? expected.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                       what: "saved bytes match the live file with typed tempos inserted")
+S066 | duplicateLaneAndTempoLoadContract | src/checks/editcheck/EventChecks.swift:1153
+  report.expectEqual(liveBytes, try? document.state.file.encoded(),
+S067 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1180
+  report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+      .filter { $0.tick == 0 }.count,
+S068 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1184
+  report.expectEqual(revision + 1, document.revision,
+S069 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1187
+  report.expectEqual(1, changedCount,
+S070 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1190
+  report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                  message: "canonicalizing move advances the undo cursor to the tip")
+S071 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1193
+  report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
+      document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
+      cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+      what: "canonicalizing move adds one undo entry")
+S072 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1208
+  report.expectEqual(2, restored.count,
+S073 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1211
+  report.expectEqual(100, restored.first?.value,
+S074 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1214
+  report.expectEqual(80, restored.dropFirst().first?.value,
+S075 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1217
+  report.expectEqual(baseline, try? document.state.file.encoded(),
+S076 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1220
+  report.expectEqual(canonicalRevision + 1, document.revision,
+S077 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1223
+  report.expectEqual(1, changedCount,
+S078 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1228
+  report.expect(!document.history.canUndo && document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                  message: "undo returns the cursor to zero with redo available")
+S079 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1236
+  report.expect(document.state == canonicalState &&
+      document.history.currentIdentity == canonicalIdentity,
+      cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+      message: "redo restores the canonical state and identity")
+S080 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1240
+  report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
+      document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
+      cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+      what: "undo retains the canonicalizing entry")
+S081 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1249
+  report.expect(document.state == undoneState &&
+      document.history.currentIdentity == undoneIdentity &&
+      !document.history.canUndo && document.history.canRedo,
+      cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+      message: "redo/undo restores the exact undone state, identity and cursor")
+S082 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1256
+  report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+      .filter { $0.tick == 0 }.count,
+S083 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1276
+  report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+      .filter { $0.tick == 48 }.count,
+S084 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1292
+  report.expectEqual(noOpBytes, try? document.state.file.encoded(),
+S085 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1295
+  report.expectEqual(noOpRevision, document.revision,
+S086 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1298
+  report.expectEqual(0, changedCount,
+S087 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1301
+  report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                  message: "no-op lane move leaves the undo cursor at the tip")
+S088 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1304
+  report.expectEqual(noOpUndoCount, try? coreEditHistoryCountAtTip(
+      document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
+      cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+      what: "no-op lane move adds no history entry")
+S089 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1310
+  report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+      .filter { $0.tick == 0 }.count,
+S090 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1314
+  report.expect(document.lanePoints(track: 0, lane: .controller(7))
+      .allSatisfy { $0.tick != 48 },
+      cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+      message: "source tick is vacated by the move")
+S091 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1320
+  report.expect(document.state.tempo.contains(noOpTempo),
+S092 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1335
+  report.expectEqual(tempoBytes, try? document.state.file.encoded(),
+S093 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1338
+  report.expectEqual(tempoPoints, document.state.tempo,
+S094 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1341
+  report.expectEqual(tempoRevision, document.revision,
+S095 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1344
+  report.expectEqual(0, changedCount,
+S096 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1347
+  report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                  message: "duplicate tempo apply leaves the undo cursor at the tip")
+S097 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1350
+  report.expectEqual(tempoUndoCount, try? coreEditHistoryCountAtTip(
+      document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
+      cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+      what: "duplicate tempo apply adds no history entry")
+S098 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1355
+  report.expect(document.state.tempo.contains(
+      TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000)),
+      cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+      message: "undo restores the replaced tempo point")
+S099 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1361
+  report.expectEqual(baseline, try? document.state.file.encoded(),
+S100 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:989
+  guard let file = try? MidiFile.decode(formatZeroTrackBytes()) else {
+      report.fail("editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                  "format-0 fixture failed to decode")
+      return
+  }
+S101 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1002
+  report.expect(file.wasFormat0,
+                cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                message: "redecoded source retains format-0 provenance")
+S102 | formatZeroSaveRoundTripContract | src/checks/editcheck/EventChecks.swift:1005
+  report.expectEqual(try? file.encoded(), snapshot.bytes,
+                     cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                     what: "redecoded original encodes to the exact saved bytes")
+S103 | duplicateCanonicalizationContract | src/checks/editcheck/EventChecks.swift:1164
+  guard let point = document.lanePoints(track: 0, lane: .controller(7))
+      .first(where: { $0.tick == 0 }) else {
+      report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
+                  "no CC7 lane point at tick zero")
+      return
+  }
+S104 | duplicateReplacementsAndNoOpsContract | src/checks/editcheck/EventChecks.swift:1270
+  guard let point = document.lanePoints(track: 0, lane: .controller(7))
+      .first(where: { $0.tick == 48 }) else {
+      report.fail("editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                  "no CC7 lane point at tick 48")
+      return
+  }
+S105 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:83
+  report.expect(count == replayed && document.state == restoredState &&
+      document.history.currentIdentity == restoredIdentity, cppID: cppID,
+      message: "counting public undo entries restores the exact state and identity")

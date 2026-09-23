@@ -1,45 +1,33 @@
 Assertion correspondence: editcheck/tst_songdocument_runner.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.65s; build 10.46s).
 
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/editcheck/tst_songdocument_runner.cpp
 Original SHA-256: 83d29d89e7b0fe96edcd6821e86dd6d32eeb6ce32a034cc76f44a73c7b6bfd1f
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
 Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
+Covered native implementation: src/core/songdocument.cpp :: SongDocument::load; src/project/decompproject.cpp :: DecompProject::open remains in the production project service.
+Native engine status: Legacy src/core/songdocument*.cpp sources remain on disk but are not built by current app or check targets; the production Qt project service remains native and is not retired by this certificate. Active edit checks use Swift PorydawCore.
 
-Scope
-All 4 original assertion sites are listed below, all in EditCheckTest fixture
-and corpus staging (initTestCase). The legacy C++ editcheck suite is not
-registered in the current checkcatalog, so no native run of these sites is
-claimed. coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid
-file, rejects an empty corpus, and requires the checked-in midi.cfg flag
-shape. coreEditCorpusLoadCheck decodes each staged file and checks the
-constructed document loaded all decoded tracks; parse failures fail the suite.
+Retirement: 4 original assertion sites, 3 MATCHED and 1 RETIRED-REPRESENTATION; deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed.
 
-Fixture and sequence
-initTestCase opens the staged project root, loads every playable song into a
-SongDocument once, classifies eligibility (editable track, add-track, multi
-track), and requires at least one playable song. addSongRows/eligible/
-songForLabel contain no assertion sites; per-data-row load predicates live in
-the corpus-driven Swift rows and in proof.tst_songdocument_songraw.txt and
-proof.tst_songdocument_songranges.txt.
-
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Fixture and execution: C++ initTestCase opened a staged project, loaded playable songs into a document, cached track eligibility, and rejected an empty corpus. Swift coreEditCorpusSongs enumerates all staged sound/songs/midi/*.mid files, requires the checked-in midi.cfg flag shape, rejects an empty corpus, and coreEditCorpusLoadCheck decodes every MIDI file, checks the document's decoded chunk count, and fails on missing root or unreadable staging. Other edit suites independently run corpus-driven contract rows.
+History caveat: coreEditHistoryCountAtTip measures public Swift undo/redo traversal and checks restored state/identity for other edit certificates; none of this runner proof's staging sites claims history-depth parity.
+Registered run path: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusLoadCheck -> swiftcore suite 4 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck does not appear in current CMake targets or checkcatalog.
 
 Original assertion inventory
 
 A001 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:12
-Disposition: GAP
-Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
-Mapping/reason: CLI project-root argument plumbing has no Swift equivalent; the Swift entry discovers the staged corpus directory directly.
+Disposition: MATCHED
+Swift: S001 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
+Mapping/reason: Swift S001 explicitly fails the suite when its staged project root is absent or empty under the original initTestCase cppID; the root-required behavior survives although C++ CLI argument plumbing does not.
 Original expression:
   QVERIFY2(!m_projectRoot.isEmpty(), "editcheck requires its staged project root");
 
 A002 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:16
-Disposition: PARTIAL
-Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
-Mapping/reason: Unreadable staged sources fail the Swift suite through throwing decode plus the top-level catch; the DecompProject database open step itself has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs / coreEditCorpusLoadCheck
+Mapping/reason: DecompProject::open was C++ fixture-database staging, not a consumer-visible SongDocument edit. The uncompiled legacy check has no Swift suite ingress through this database step: Swift enumerates sound/songs/midi and midi.cfg directly. Missing root, bad flags and unreadable MIDI fail the registered suite through S001/S003/S004/S007; these do not claim the database open itself is matched. The production Qt project service remains native.
 Original expression:
   QVERIFY2(project.open(m_projectRoot, &error), qPrintable(error));
 

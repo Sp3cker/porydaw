@@ -1,4 +1,5 @@
 Assertion correspondence: editcheck/tst_songdocument_timerange.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.65s; build 10.46s).
 
 Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_timerange.cpp
@@ -7,31 +8,14 @@ Swift counterpart: src/checks/editcheck/TimeChecks.swift
 Swift SHA-256: 4b61ad28147aa39f77d093b5ccdd291bd51a534639e2cc8c0c4716ccbc74534e
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
 Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
+Covered native implementation: src/core/songdocument_timeeditor*.cpp, src/core/songdocument.cpp :: SongDocument::removeTimeRange, insertBlankTime, duplicateTimeRange, tempo/signature paths, buildTimeline.
+Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below in file order, including fixture and
-setup guards. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. S identifiers identify exact Swift predicates, listed after
-the inventory. MATCHED identifies an equivalent Swift predicate that would
-execute; execution must still be verified. PARTIAL identifies a related Swift
-predicate with an explicit unproved condition. NATIVE identifies retained
-native-window/rendering or native setup obligations; it does not establish
-coverage of any converted surface. GAP identifies an original predicate without
-an equivalent Swift assertion. Unsure PARTIAL-versus-GAP calls were resolved to
-GAP. None of these labels authorizes deletion or claims whole-case equivalence.
+Retirement: 193 original assertion sites, all terminal (192 MATCHED, 1 RETIRED-REPRESENTATION); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed.
 
-Fixture, sequence and row constraints
-All nine cases are synthetic over timeRangeFile() (format 1, division 24, empty plus C0/C1 program tracks, end tick 200). timeRangeRemoveRippleTrim loops earlierEnd over {100, 80, 70} for the trim-vs-ripple boundary, then loops duplicate false/true for byte-identical duplicate/insert undo/redo. timeRangeNoOps covers empty/invalid/sentinel-kNoTick rejections. timeRangeInsertScopeAndSplit covers note split with identity retention, lane-scoped insertion (selected vs untouched lanes and end ticks), and track-scoped insertion (shifted vs untouched tracks and end ticks). timeRangeUnterminated splits an unterminated note and scans raw note bytes. timeRangeDuplicateClippingAndOrder covers contained/crossing duplication with fresh identities plus raw end-before-on ordering at 720/820. timeRangeSignatureAndOrphans covers whole-song signature duplication and orphan byte ordering. timeRangeAutomationSeamsAndDefaults covers lane-seam duplication, a nine-lane default-value table loop, tempo duplication with timeline observation, voice duplication, and downstream duplication. timeRangeWholeSong duplicates meta/signature/tempo/note whole-song. timeRangeInsertBlankOverflow covers max-tick rejection.
-
-Execution and ownership
-runTimeEditsSuite (removalAndSeams, insertionAndBoundaries, duplicationAndGlobals), dispatched through pdcSuiteRun. Synthetic fixtures are built by timeDocument/MidiFile literals; the native timeRangeFile helper has no Swift counterpart file and is re-expressed inline.
-
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Legacy editcheck is not registered in the current check catalog; no native run
-or live C++/Swift differential parity is claimed.
+Fixture and execution: Nine synthetic cases use the format-1, division-24 time-range fixture with empty and C0/C1 program tracks (end tick 200), built by timeDocument/MidiFile literals. Removal covers trim/ripple boundaries {100, 80, 70} and duplicate/insert undo/redo; no-ops reject empty, invalid and sentinel ranges. Insertion covers note splitting and lane/track scopes; unterminated notes inspect raw bytes. Duplication covers clipping, ordering, signatures, orphan events, lane seams, nine lane defaults, tempo/timeline projection, voice/downstream lanes and whole-song meta/signature/tempo/note content. Max-tick blank insertion rejects overflow. Swift removalAndSeams, insertionAndBoundaries and duplicationAndGlobals run these contracts under the original cppIDs.
+History caveat: coreEditHistoryCountAtTip counts undo entries by public undo/redo traversal, verifies equal replay count and exact state/identity restoration; no test-only history accessor.
+Registered run path: src/checks/editcheck/TimeChecks.swift :: runTimeEditsSuite (removalAndSeams, insertionAndBoundaries, duplicationAndGlobals), swiftcore suite 9 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck source is absent from active CMake/checkcatalog.
 
 Original assertion inventory
 
@@ -1878,9 +1862,9 @@ Original expression:
           songdocument_test::containsTempo(defaultsDocument, songdocument_test::tempo(1530, 150)))
 
 A154 | EditCheckTest::timeRangeAutomationSeamsAndDefaults | src/checks/editcheck/tst_songdocument_timerange.cpp:468
-Disposition: NATIVE
+Disposition: RETIRED-REPRESENTATION
 Swift: src/checks/editcheck/TimeChecks.swift :: duplicationAndGlobals
-Mapping/reason: Native-only obligation: Swift PlaybackTimeline.build returns a non-optional value; construction success has no failure path to assert. S145/S146 cover the tempo-map contents.
+Mapping/reason: The C++ site checked a nullable heap return from buildTimeline(44100.0); Swift PlaybackTimeline.build returns a non-optional value, so construction has no failure branch. S145/S146 assert the consumer-visible usable timeline through non-empty tempoMap and front 120 BPM. The original C++ file is uncompiled in every target and unregistered in checkcatalog.cpp (spec §7).
 Source context since previous assertion:
   ;
       const auto timeline = defaultsDocument.buildTimeline(44100.0);

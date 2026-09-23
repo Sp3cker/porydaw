@@ -16,6 +16,13 @@ in src/checks/checkcatalog.cpp (`--scalecheck`, compiled from this exact file),
 so the originals still execute natively; no live C++/Swift differential parity
 is claimed.
 
+Reachability: `porydaw_scale` is compiled only by `porydaw_checks` beside
+this check. Its on-disk widget consumers are in zero CMake targets, and no
+Swift/QML counterpart exists. The native lane remains registered and
+executing; its 24 GAP dispositions reflect absent Swift parity, not pending
+porting work. Retiring the scale feature (check and implementation) requires
+an explicit user decision covering the dormant widget UI.
+
 Fixture and sequence
 table_data expands 28 rows (scale name to table index); table asserts count,
 display order, name, mask, and order position per row. rootsAndDefaults checks

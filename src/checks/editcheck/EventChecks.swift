@@ -18,11 +18,13 @@ func runEventEditsSuite(_ report: CheckReport) {
     songTimeSignatureContract(report)
     loopCfgUndoRedoContract(report)
     formatZeroCoercionContract(report)
+    formatZeroGlobalsContract(report)
     formatZeroSaveRoundTripContract(report)
     markerVersusTrackNameContract(report)
     duplicateLaneAndTempoLoadContract(report)
     duplicateCanonicalizationContract(report)
     duplicateReplacementsAndNoOpsContract(report)
+    xcmdSaveSnapshotContract(report)
 }
 
 @MainActor
@@ -805,6 +807,13 @@ private func xcmdSaveSnapshotContract(_ report: CheckReport) {
                                                     data0: Xcmd.payloadController, data1: 34))
     document.insertRawEvent(chunk: 0, event: .channel(tick: base + 3, status: 0xB0,
                                                     data0: Xcmd.selectorController, data1: 0x09))
+    guard let historyDepth = try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot"
+    ) else {
+        report.fail("editcheck/EditCheckTest::xcmdSaveSnapshot",
+                    "cannot count undo entries before capture")
+        return
+    }
     let liveBytes = try? document.state.file.encoded()
     let revision = document.revision
     let dirty = document.isDirty
@@ -821,6 +830,13 @@ private func xcmdSaveSnapshotContract(_ report: CheckReport) {
     report.expectEqual(dirty, document.isDirty,
                        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
                        what: "capture leaves the dirty flag untouched")
+    report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                  message: "capture leaves the undo cursor at the tip")
+    report.expectEqual(historyDepth, try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot"),
+        cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+        what: "capture leaves the undo depth unchanged")
     guard let saved = try? MidiFile.decode(snapshot.bytes) else {
         report.fail("editcheck/EditCheckTest::xcmdSaveSnapshot",
                     "snapshot bytes do not decode")
@@ -931,6 +947,9 @@ private func formatZeroCoercionContract(_ report: CheckReport) {
         index == 0 || chunk.events.allSatisfy { $0.metaType != 0x20 }
     }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
     message: "channel prefixes stay out of non-conductor chunks")
+    report.expect(document.state.file.chunks.allSatisfy { $0.endTick == 48 },
+                  cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                  message: "coerced format-0 chunks close at the encoded end tick")
     report.expect(chunks[0].events.allSatisfy { !$0.isChannel },
                   cppID: "editcheck/EditCheckTest::formatZeroCoercion",
                   message: "conductor chunk holds no channel events")
@@ -980,10 +999,23 @@ private func formatZeroSaveRoundTripContract(_ report: CheckReport) {
                     "capture or decode failed")
         return
     }
+    report.expect(file.wasFormat0,
+                  cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                  message: "redecoded source retains format-0 provenance")
+    report.expectEqual(try? file.encoded(), snapshot.bytes,
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "redecoded original encodes to the exact saved bytes")
     let tempos = document.state.tempo
     report.expectEqual(1, tempos.count,
                        cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
                        what: "one typed tempo point survives conversion")
+    var withoutTempos = saved
+    for index in withoutTempos.chunks.indices {
+        withoutTempos.chunks[index].events.removeAll { $0.metaType == 0x51 }
+    }
+    report.expectEqual(convertedLive, try? withoutTempos.encoded(),
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "saved bytes without tempo metadata match converted live bytes")
     var tempoOutsideConductor = false
     var tempoFirst = true
     var savedTempos: [TempoPoint] = []
@@ -1066,6 +1098,7 @@ private func markerVersusTrackNameContract(_ report: CheckReport) {
 @MainActor
 private func duplicateLaneAndTempoLoadContract(_ report: CheckReport) {
     let document = SongDocument(file: duplicateFixtureFile())
+    let liveBytes = try? document.state.file.encoded()
     report.expectEqual(2, document.lanePoints(track: 0, lane: .voice).count,
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "both voice lane points load")
@@ -1096,6 +1129,30 @@ private func duplicateLaneAndTempoLoadContract(_ report: CheckReport) {
     report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute,
                        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
                        what: "tempo map fronts the default tempo")
+    var expected = document.state.file
+    let typedTempoEvents: [MidiEvent] = document.state.tempo.map { point in
+        let value = point.microsecondsPerQuarterNote
+        return .meta(tick: point.tick, type: 0x51,
+                     data: [UInt8((value >> 16) & 0xFF),
+                            UInt8((value >> 8) & 0xFF), UInt8(value & 0xFF)])
+    }
+    guard typedTempoEvents.count == 4, expected.chunks.first?.events.count == 2 else {
+        report.fail("editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                    "cannot construct expected saved file")
+        return
+    }
+    expected.chunks[0].events.insert(contentsOf: typedTempoEvents[0..<2], at: 1)
+    expected.chunks[0].events.insert(contentsOf: typedTempoEvents[2..<4], at: 4)
+    guard let snapshot = try? document.captureSave() else {
+        report.fail("editcheck/EditCheckTest::duplicateLaneAndTempoLoad", "capture failed")
+        return
+    }
+    report.expectEqual(snapshot.bytes, try? expected.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                       what: "saved bytes match the live file with typed tempos inserted")
+    report.expectEqual(liveBytes, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                       what: "capture leaves live bytes untouched")
 }
 
 @MainActor
@@ -1108,6 +1165,13 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
         .first(where: { $0.tick == 0 }) else {
         report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
                     "no CC7 lane point at tick zero")
+        return
+    }
+    guard let undoCount = try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"
+    ) else {
+        report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
+                    "cannot count undo entries before canonicalization")
         return
     }
     let revision = document.revision
@@ -1123,9 +1187,22 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
     report.expectEqual(1, changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "canonicalizing move publishes one change")
+    report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                  message: "canonicalizing move advances the undo cursor to the tip")
+    report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
+        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+        what: "canonicalizing move adds one undo entry")
+    let canonicalState = document.state
+    let canonicalIdentity = document.history.currentIdentity
     let canonicalRevision = document.revision
     changedCount = 0
-    _ = document.history.undoDocument()
+    guard document.history.undoDocument() else {
+        report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
+                    "canonicalizing move cannot be undone")
+        return
+    }
     let restored = document.lanePoints(track: 0, lane: .controller(7))
         .filter { $0.tick == 0 }
     report.expectEqual(2, restored.count,
@@ -1146,6 +1223,34 @@ private func duplicateCanonicalizationContract(_ report: CheckReport) {
     report.expectEqual(1, changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
                        what: "undo publishes one change")
+    let undoneState = document.state
+    let undoneIdentity = document.history.currentIdentity
+    report.expect(!document.history.canUndo && document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                  message: "undo returns the cursor to zero with redo available")
+    guard document.history.redoDocument() else {
+        report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
+                    "canonicalizing move cannot be redone")
+        return
+    }
+    report.expect(document.state == canonicalState &&
+        document.history.currentIdentity == canonicalIdentity,
+        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+        message: "redo restores the canonical state and identity")
+    report.expectEqual(undoCount + 1, try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateCanonicalization"),
+        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+        what: "undo retains the canonicalizing entry")
+    guard document.history.undoDocument() else {
+        report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
+                    "cannot restore the undone cursor")
+        return
+    }
+    report.expect(document.state == undoneState &&
+        document.history.currentIdentity == undoneIdentity &&
+        !document.history.canUndo && document.history.canRedo,
+        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+        message: "redo/undo restores the exact undone state, identity and cursor")
     document.writeLane(track: 0, lane: .controller(7), from: 0, through: 0,
                        points: [LaneWrite(tick: 0, value: 70)])
     report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
@@ -1172,6 +1277,13 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
         .filter { $0.tick == 48 }.count,
         cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
         what: "lane write leaves one point at the tick")
+    guard let noOpUndoCount = try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"
+    ) else {
+        report.fail("editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                    "cannot count undo entries before the lane no-op")
+        return
+    }
     let noOpBytes = try? document.state.file.encoded()
     let noOpRevision = document.revision
     changedCount = 0
@@ -1186,6 +1298,13 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
     report.expectEqual(0, changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "no-op lane move publishes no change")
+    report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                  message: "no-op lane move leaves the undo cursor at the tip")
+    report.expectEqual(noOpUndoCount, try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
+        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+        what: "no-op lane move adds no history entry")
     document.moveLanePoints(track: 0, lane: .controller(7), moves: [
         LanePointMove(point: point, tick: 0, value: 55)])
     report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
@@ -1201,6 +1320,13 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
     report.expect(document.state.tempo.contains(noOpTempo),
                   cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                   message: "applied tempo point is present")
+    guard let tempoUndoCount = try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"
+    ) else {
+        report.fail("editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                    "cannot count undo entries before the tempo no-op")
+        return
+    }
     let tempoBytes = try? document.state.file.encoded()
     let tempoPoints = document.state.tempo
     let tempoRevision = document.revision
@@ -1218,6 +1344,13 @@ private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
     report.expectEqual(0, changedCount,
                        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
                        what: "duplicate tempo apply publishes no change")
+    report.expect(document.history.canUndo && !document.history.canRedo,
+                  cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                  message: "duplicate tempo apply leaves the undo cursor at the tip")
+    report.expectEqual(tempoUndoCount, try? coreEditHistoryCountAtTip(
+        document, report: report, cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps"),
+        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+        what: "duplicate tempo apply adds no history entry")
     _ = document.history.undoDocument()
     report.expect(document.state.tempo.contains(
         TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000)),

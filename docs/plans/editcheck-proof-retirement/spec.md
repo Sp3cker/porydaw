@@ -292,20 +292,24 @@ functions for all eight, and six are wired into `runEventEditsSuite`
 
 | Family | Sites | Audited verdicts |
 |---|---|---|
-| `xcmdSaveSnapshot` | A001-A012 | 8 MATCHED (contract written but **not called** — wire it), 4 RETIRED-REPRESENTATION (staging, QUndoStack→`coreEditHistoryCountAtTip`, chunk index) |
-| `formatZeroCoercion` | A013-A036 | 21 MATCHED (STALE), 2 MATCHED-NOW, 1 BEHAVIOR-GAP (A034 chunk `endTick == 48`), 1 RETIRED-REPRESENTATION (staging) |
-| `formatZeroGlobals` | A037-A045 | 7 MATCHED (contract written but **not called** — wire it), 1 MATCHED-NOW, 1 RETIRED-REPRESENTATION (staging) |
-| `formatZeroSaveRoundTrip` | A046-A063 | 12 MATCHED (STALE), 1 BEHAVIOR-GAP (A051 saved-minus-tempo bytes vs convertedLive), 4 RETIRED-REPRESENTATION (disk I/O), 1 staging |
-| `markerVersusTrackName` | A064-A070 | 6 MATCHED (STALE), 1 RETIRED-REPRESENTATION (staging) |
-| `duplicateLaneAndTempoLoad` | A071-A087 | 12 MATCHED (STALE), 2 MATCHED-NOW, 2 BEHAVIOR-GAP (A085/A086 saved bytes lead with tempo + live bytes survive save), 2 RETIRED-REPRESENTATION (disk), 1 staging |
-| `duplicateCanonicalization` | A088-A103 | 11 MATCHED (STALE), 4 MATCHED via `coreEditHistoryCountAtTip` deltas (A092/A093, A100/A101) |
-| `duplicateReplacementsAndNoOps` | A104-A125 | 15 MATCHED (STALE), 3 MATCHED-NOW, 4 MATCHED via `coreEditHistoryCountAtTip` stability (A109/A110, A119/A120), 1 staging |
+| `xcmdSaveSnapshot` | A001-A012 | Wired snapshot contract, direct saved-byte/purity and A004 history-depth checks; retire only staging/chunk-index mechanisms with §7 ingress proof |
+| `formatZeroCoercion` | A013-A036 | Existing format-0 conversion predicates plus A034 chunk end tick; retire only proven staging |
+| `formatZeroGlobals` | A037-A045 | Previously uncalled globals/loop contract now wired; retire only proven staging |
+| `formatZeroSaveRoundTrip` | A046-A063 | Existing save/tempo predicates plus A051 saved-minus-tempo, A058 redecoded format-0 provenance, and A059 redecoded-original-to-snapshot exact byte equality; retire only proven disk staging and inaccessible second explicit conversion A060 |
+| `markerVersusTrackName` | A064-A070 | Marker vs bare-name precedence and rename; retire only proven staging |
+| `duplicateLaneAndTempoLoad` | A071-A087 | Duplicate lane and exact typed-tempo values, A085 independently constructed full saved-file byte equality, A086 live-byte preservation; retire only proven staging/disk mechanisms |
+| `duplicateCanonicalization` | A088-A103 | Canonicalization, exact undo byte restoration, public history-depth and cursor checks for A092/A093/A100/A101; retire only proven staging mechanisms |
+| `duplicateReplacementsAndNoOps` | A104-A125 | Lane/tempo no-op behavior plus public history-depth/cursor stability for A109/A110/A119/A120; retire only proven staging mechanisms |
 
-Swift work: add two calls in `runEventEditsSuite`
-(`xcmdSaveSnapshotContract(report)` beside the other metadata contracts,
-`formatZeroGlobalsContract(report)` after `formatZeroCoercionContract`);
-add 4 one-line assertions (A034, A051, A085, A086). Then all 125 sites
-terminal (MATCHED via S-citations or RETIRED-REPRESENTATION with §7 proof).
+Swift work: wire the two previously uncalled metadata contracts, assert
+saved-file outcomes A034/A051/A058/A059/A085/A086, and add direct
+public-history observations for A004/A092/A093/A100/A101/
+A109/A110/A119/A120. At-tip history traversal must not be used while
+the document is undone: total depth and cursor position are distinct.
+A060's second explicit conversion is private Swift representation only;
+A059 still requires direct original-to-save equality. Each certificate
+site must cite a behavior-specific executing predicate or a justified
+representation-only retirement; source tally is not parity.
 
 ### 5.5 tst_songdocument_songtracks.cpp — 89 sites (33 MATCHED, 20 PARTIAL, 36 GAP)
 
@@ -480,19 +484,13 @@ reference them): `smf.cpp/.h`, `miditimeline.cpp/.h`, `xcmd.cpp/.h`,
 `timelineplayer.cpp/.h`, `midiimport.*`, `m4asemantics.*`,
 `mid2agbtables.*`, `velocitymodel.*`, `lanemoveplan.*`, `noteid.h`.
 
-## 9. Retirement order (ranked)
+## 9. Retirement order
 
-Ranked by whole-file payoff ÷ effort, execution-respecting dependencies:
-
-1. **timerange** (193 sites; proof-only: A154 terminal classification +
-   certificate) — nearest to done.
-2. **runner** (4 sites; proof-only).
-3. **metadata** (125 sites; wire 2 calls + 4 assertions + certificate).
-4. **songtracks** (89 sites; corpus driver + CMake source + 2 assertions +
-   certificate).
-5. **songtime** (56 sites; extend 4 existing corpus rows + certificate).
-6. **logic** (60 sites; 20 assertions in NoteChecks + certificate).
-7. **document** (250 sites; largest new-assertion surface, 5 Swift tasks +
-   certificate).
-8. **Final**: shared header/support deletion + §8 reachability gate.
-   Scale retirement is off this path entirely (§5.1).
+The task dependencies, source ownership, and checkpoints live in
+`plan.md`'s dispatch table. Timerange and runner are proof-only early
+retirements. Metadata predicates precede its certificate and the track
+corpus; the track corpus precedes the songtime extraction. Document
+history, edit, and track contracts precede the document certificate; note
+identity follows the shared `NoteChecks.swift` checkpoint. Shared support
+cleanup and the §8 implementation-deletion gate run last. Scale stays
+native throughout this plan.

@@ -42,14 +42,14 @@ dispositions, entries, hashes, and verification lines are unchanged.
 ## Implementation steps
 
 1. Edit only the `Scope` block of `proof.tst_scale.txt` (direct edit;
-   `deno task proof show tst_scale` must still parse and the tally must
+   `deno task proof show editcheck/tst_scale.cpp` must still parse and the tally must
    remain `GAP 24`).
 2. Nothing else. Do not delete files, do not touch `checkcatalog.cpp`,
    `CMakeLists.txt`, or `tst_songdocument.h`, do not reclassify any site.
 
 ## Acceptance predicate
 
-- `deno task proof show tst_scale` parses; `deno task proof list --area
+- `deno task proof show editcheck/tst_scale.cpp` parses; `deno task proof list --area
   editcheck` still reports scale `MATCHED 0, PARTIAL 0, GAP 24`.
 - Controller: `deno task verify --filter scalecheck --verbose` still PASS
   (lane untouched).
