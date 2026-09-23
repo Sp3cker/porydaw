@@ -10,6 +10,7 @@ func runNoteEditsSuite(_ report: CheckReport) {
     insertionAndCollision(report)
     movementAndResize(report)
     velocityEditing(report)
+    documentEditContracts(report)
     compatibilityRegressions(report)
     coreNoteTransactionChecks(report)
     coreNoteCorpusChecks(report)

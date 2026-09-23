@@ -42,10 +42,9 @@ calling:
   rejects → nil (corroborates A054/A056); no-op same-value commit:
   capture depth (`coreEditHistoryCountAtTip`), bytes, onChange count;
   `setVelocities([both → current], expectedRevision:)` → returns current
-  revision (A057, the C++ asserted the return), revision unchanged (A059
-  — the C++ asserted revision), bytes equal (A058), zero changes
-  (A060/A062), depth unchanged (A061 — helper re-called; never inferred
-  from revision).
+  revision (A057-A058), bytes equal (A059), revision unchanged (A060),
+  zero changes (A062), depth unchanged (A061 — helper re-called; never
+  inferred from revision).
 - `documentDuplicateIdentitiesContract`: `duplicateTrack(0)` on the
   two-note fixture; capture `notes(in: copy).map(\.id)`; undo → copy
   gone; redo → notes back with EXACTLY the captured IDs (A071/A072).

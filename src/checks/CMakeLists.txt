@@ -138,6 +138,7 @@ if(APPLE)
         playback/ResonanceSuppressionChecks.swift
         editcheck/NoteChecks.swift
         editcheck/DocumentHistoryChecks.swift
+        editcheck/DocumentEditChecks.swift
         editcheck/EventChecks.swift
         editcheck/TrackCorpusChecks.swift
         editcheck/TimeChecks.swift
