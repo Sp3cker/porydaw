@@ -316,15 +316,20 @@ representation-only retirement; source tally is not parity.
 Eight families; synthetic Swift contracts exist and are wired
 (`trackCreateDeleteContract` … `loopCfgUndoRedoContract`). Audited:
 33 MATCHED-NOW, 29 STALE (proof never reconciled with the contracts),
-12 REPRESENTATION (A003/A014 `canAddTrack` → public budget check;
-A013/A021/A052/A059 `firstEditableTrack` → corpus eligibility selection;
-A024/A026/A064/A065 `undoStack()->count()` → `coreEditHistoryCountAtTip`;
-A037/A062 non-optional construction → RETIRED-REPRESENTATION), 2 trivial
-BEHAVIOR-GAPs (A038 `usedTrackCount >= 2`, A039 `tracks[0].midiChunk == 0`
-in `trackMarkerNameContract`), and 13 corpus staging sites (7 of 8 families
-were corpus data-row driven in C++). The 13 staging sites + eligibility
-representation require a per-row corpus driver in the
-`NoteMoveCorpusChecks.swift` pattern (§2.3) — new file
+12 sites needing public corpus eligibility/history predicates or
+representation-only treatment (A003/A014 `canAddTrack` → public budget
+check; A013/A021/A052/A059 `firstEditableTrack` → per-family corpus
+eligibility; A024/A026/A064/A065 `undoStack()->count()` →
+`coreEditHistoryCountAtTip`; A037/A062 non-optional construction →
+RETIRED-REPRESENTATION), 2 synthetic BEHAVIOR-GAPs (A038
+`usedTrackCount >= 2`, A039 `tracks[0].midiChunk == 0` in
+`trackMarkerNameContract`), and 13 corpus staging sites (7 of 8 families
+were corpus data-row driven in C++). The corpus driver must select each
+family's original SongCapability independently: Playable for signature
+and loop/config, AddTrack for create, DuplicateTrack for duplicate,
+ReorderableTrack for move, EditableTrack for delete-rescue and rename.
+Do not skip Playable/AddTrack songs merely because they have no notes.
+Use the `NoteMoveCorpusChecks.swift` row/staging pattern (§2.3) — new file
 `src/checks/editcheck/TrackCorpusChecks.swift`, **added to the
 `swift_core_check` source list in `src/checks/CMakeLists.txt`**, called
 from `runEventEditsSuite`, one row function per family operating at
@@ -364,7 +369,7 @@ Twelve synthetic families; `NoteChecks.swift` is the primary counterpart
 
 | Family | Sites | Audited mix |
 |---|---|---|
-| `documentLoadPublication` | A001-A009 | RETIRED-REPRESENTATION (staging; construction publishes nothing by design — the zero-change observation is asserted), MATCHED via public state (revision==1, chunk/engine counts) |
+| `documentLoadPublication` | A001-A009 | C++ load emits `tracksRemapped` then `documentChanged` at revision 1 with one empty-map remap; Swift has no post-construction load operation or callback attachment before `SongDocument(file:)` completes. RETIRED-REPRESENTATION for staging and inaccessible load-time signal protocol A003-A007; MATCHED via public initial revision/chunk/engine state A002/A008/A009. Never call an empty callback counter a load-time observation. |
 | `documentTempoEmpty` | A010-A021 | 1 MATCHED, 1 RETIRED-REPRESENTATION (staging), BEHAVIOR-GAP (default 120 BPM timeline, add/remove tempo undo/redo, `captureSave` zero tempo metas) |
 | `documentVelocityAtomic` | A022-A052 | 4 MATCHED, STALE fixture IDs, MATCHED via `trackRemap == nil` change assertions and `coreEditHistoryCountAtTip`, RETIRED-REPRESENTATION (staging, `DocNote` handles), BEHAVIOR-GAP (batch undo/redo restore 100/90↔99/127, 0-clamps-to-1 commit) |
 | `documentVelocityRejects` | A053-A062 | 2 MATCHED, 1 STALE, MATCHED via `coreEditHistoryCountAtTip` stability (A061), BEHAVIOR-GAP (no-op same-value commit: bytes/onChange/depth unchanged) |

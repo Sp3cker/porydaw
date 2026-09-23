@@ -15,6 +15,7 @@ func runEventEditsSuite(_ report: CheckReport) {
     trackMarkerNameContract(report)
     trackDeleteRescueContract(report)
     trackRenameContract(report)
+    coreTrackCorpusChecks(report)
     songTimeSignatureContract(report)
     loopCfgUndoRedoContract(report)
     formatZeroCoercionContract(report)
@@ -353,12 +354,12 @@ private func channelFields(_ event: MidiEvent) -> (data0: UInt8, data1: UInt8)? 
     return (data0, data1)
 }
 
-private func bareTrackNameCount(_ chunk: MidiChunk) -> Int {
+internal func bareTrackNameCount(_ chunk: MidiChunk) -> Int {
     var insideChannelPrefixSpan = false
     var count = 0
     for event in chunk.events {
-        if case let .meta(type, data) = event.payload, type == 0x20 {
-            insideChannelPrefixSpan = !data.isEmpty
+        if case let .meta(type, data) = event.payload, type == 0x20, !data.isEmpty {
+            insideChannelPrefixSpan = true
             continue
         }
         if event.isChannel {
@@ -486,7 +487,7 @@ private func trackMoveContract(_ report: CheckReport) {
         TempoPoint(tick: 264, microsecondsPerQuarterNote: 413_793)),
         cppID: "editcheck/EditCheckTest::trackMove",
         message: "staged tempo point survives the move")
-    report.expect(document.timeSignatures.contains { $0.tick == 288 && $0.numerator == 5 },
+    report.expect(document.timeSignatures.contains { $0.tick == 288 && $0.numerator == 5 && $0.denominatorPower == 2 },
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "staged signature survives the move")
     let movedTimeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
@@ -524,6 +525,12 @@ private func trackMarkerNameContract(_ report: CheckReport) {
         ], endTick: 48),
         MidiChunk(events: [.channel(status: 0xC1, data0: 2)], endTick: 48),
     ]))
+    report.expect(document.engineTracks.usedTrackCount >= 2,
+                  cppID: "editcheck/EditCheckTest::trackMarkerName",
+                  message: "A038 marker-name fixture exposes two engine tracks")
+    report.expectEqual(0, document.engineTracks.tracks[0].midiChunk,
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "A039 first engine track belongs to SMF chunk zero")
     let bytesBefore = try? document.state.file.encoded()
     let nameBefore = document.trackName(0)
     let last = document.engineTracks.usedTrackCount - 1

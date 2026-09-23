@@ -1,44 +1,31 @@
 Assertion correspondence: editcheck/tst_songdocument_songtracks.cpp
+Verification: post-deletion `deno task verify --filter swiftcore` — PASS (1/24 selected, 23 skipped; all Swift core suites passed in 9.59s).
 
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_songtracks.cpp
 Original SHA-256: 647731356c3c0d4ef2a25f431070a88b1aed4194a5ddf421acf7a947ae69372d
 Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
-Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
+Swift SHA-256: 063b6304faa93b58e3ef082ce6b1a49e70c47792857f543062edd8766a14be36
+Swift counterpart: src/checks/editcheck/TrackCorpusChecks.swift
+Swift SHA-256: beae032ab5cf3cd1a5de05f11c3ce8a3e4ec8551bb56c24753e104ebb5e7e9c1
+Shared corpus loader: src/checks/editcheck/tst_songdocument_runner.swift
+Shared corpus SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below in file order, including fixture and
-setup guards. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. S identifiers identify exact Swift predicates, listed after
-the inventory. MATCHED identifies an equivalent Swift predicate that would
-execute; execution must still be verified. PARTIAL identifies a related Swift
-predicate with an explicit unproved condition. NATIVE identifies retained
-native-window/rendering or native setup obligations; it does not establish
-coverage of any converted surface. GAP identifies an original predicate without
-an equivalent Swift assertion. Unsure PARTIAL-versus-GAP calls were resolved to
-GAP. None of these labels authorizes deletion or claims whole-case equivalence.
+Covered native implementation: src/core/songdocument.cpp :: SongDocument::addTrack, deleteTrack, duplicateTrack, moveTrack, renameTrack, setTimeSig, moveTimeSig, deleteTimeSig, setLoopTick, setCfg, canAddTrack.
+Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
-Fixture, sequence and row constraints
-Corpus cases enumerate AddTrack, DuplicateTrack, ReorderableTrack, EditableTrack, or Playable rows with a fresh SongDocument per row at distantBase/step arithmetic. trackCreateDelete adds voice-7 track, checks the tick-0 voice seed, adds a note, deletes the track. trackDuplicate duplicates the first editable track and compares full note vectors. trackMove stages tempo plus a 5/2 signature, records loop markers, and moves track 0 to last and back with undo/redo. trackMarkerName is synthetic (markerNameFile): rename, two raw inserts ("[", "]["), and a move must revert together. trackDeleteRescue deletes the editable track and checks loop stability across undo. trackRename checks raw bare-name counts, timeline names, trim/reject/clear semantics, and undo/redo. songTimeSignature runs 3/3 then 7/2 set, move, delete. loopCfgUndoRedo edits loop ticks and masterVolume, then cycles full undo/redo comparing bytes, config, and the redone divergence.
+Retirement: 89 original assertion sites, all terminal (87 MATCHED, 2 RETIRED-REPRESENTATION); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed. Post-deletion full swiftcore verification passed as recorded above.
 
-Execution and ownership
-runEventEditsSuite (trackEditing, trackNameRoles, rawTempoAndSignatureEditing, trackDuplicateContract, trackMoveContract, trackMarkerNameContract, trackDeleteRescueContract, trackRenameContract), dispatched through pdcSuiteRun. Synthetic fixtures are MidiFile literals; corpus rows are replaced by synthetic fixtures as described in the Fixture section.
-
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Legacy editcheck is not registered in the current check catalog; no native run
-or live C++/Swift differential parity is claimed.
+Fixture and execution: Seven independent corpus row families reload each eligible staged sound/songs/midi/*.mid with a throwing MidiFile.decode; coreEditCorpusSongs rejects an empty corpus and each family requires at least one eligible row. AddTrack admits any within-budget song, DuplicateTrack requires editable notes and budget, ReorderableTrack requires editable notes and two engine tracks, EditableTrack requires notes for delete-rescue and rename, and Playable includes all songs for signature and loop/config. The 13 corpus staging assertions cover six path-presence guards and seven throwing reloads (the loop/config family has only a reload guard): the initial shared decode classifies songs, then each selected family's own decode succeeds or reports failure under its row cppID. Each row gets a fresh document, original coreEditDistantBase/clock-step arithmetic, and the original per-family edit sequence. Synthetic trackCreateDelete, trackDuplicate, trackMove, trackMarkerName, trackDeleteRescue, trackRename, songTimeSignature and loopCfgUndoRedo contracts also run with literal MIDI fixtures; marker-name verifies the "[" name, "][" marker, loop preservation and undo-all bytes.
+History caveat: Four native QUndoStack::count() sites (A024/A026/A064/A065) cite corpus predicates comparing public coreEditHistoryCountAtTip counts before/after no-ops and edits, never document.revision. The helper traverses public undo/redo and verifies exact restored SongState and DocumentIdentity; no test-only history accessor exists.
+Registered run path: src/checks/editcheck/EventChecks.swift :: runEventEditsSuite -> track* contracts + songTimeSignatureContract + loopCfgUndoRedoContract + src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks (seven row families), swiftcore suite 6 eventEdits via src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun; both counterparts compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck is absent from active CMake/checkcatalog.
 
 Original assertion inventory
 
 A001 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:36
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate stages the corpus or asserts song-row eligibility; synthetic fixtures replace corpus rows, so the midPath precondition has no covering predicate.
+Disposition: MATCHED
+Swift: S080, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: AddTrack-eligible corpus rows assert a nonempty staged MIDI path under trackCreateDelete[<song>]; the seven-family nonempty-row guard prevents vacuous coverage.
 Source context since previous assertion:
   #include "checks/editcheck/tst_songdocument.h"
 
@@ -81,9 +68,9 @@ Original expression:
                "trackCreateDelete: corpus staged no song eligible for this required contract")
 
 A002 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:41
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success; Swift constructs SongDocument directly from a synthetic MidiFile with no load-result predicate under this cppID.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: The AddTrack row reloads staged MIDI with throwing decode; a failed decode records report.fail under trackCreateDelete[<song>], so successful load is observed.
 Source context since previous assertion:
   ;
 
@@ -94,9 +81,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A003 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:42
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Related Swift S001 asserts addTrack succeeds (slot 2) under the same cppID; unproved: the canAddTrack() gate itself is never asserted.
+Disposition: MATCHED
+Swift: S073, S082 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract; src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: The corpus AddTrack row checks both document.canAddTrack and public budget before adding voice 7; synthetic S073 separately checks its budget.
 Source context since previous assertion:
   ;
 
@@ -118,9 +105,9 @@ Original expression:
   QVERIFY(added >= 0)
 
 A005 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:49
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Related Swift S002 asserts the new-track voice value (127) under cppID voiceLanePoint; unproved: voice-point non-emptiness for the trackCreateDelete voice-7 seed under its own cppID.
+Disposition: MATCHED
+Swift: S074 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract
+Mapping/reason: Synthetic contract asserts !voices.isEmpty after adding a voice-7 track under the original cppID; corpus row independently checks the same for every AddTrack song at TrackCorpusChecks.swift:122.
 Source context since previous assertion:
   ;
       const auto voices = document.lanePoints(added, DOC_CC_VOICE);
@@ -129,9 +116,9 @@ Original expression:
   QVERIFY(!voices.empty())
 
 A006 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:50
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Related Swift S002 asserts the seeded voice value under cppID voiceLanePoint; unproved: the seed tick-0 observation for trackCreateDelete.
+Disposition: MATCHED
+Swift: S075 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract
+Mapping/reason: Seeded voice lane has tick zero under trackCreateDelete; each AddTrack corpus row also checks voices.first?.tick == Tick(0) at TrackCorpusChecks.swift:123-124.
 Source context since previous assertion:
   ;
 
@@ -139,9 +126,9 @@ Original expression:
   QCOMPARE(voices.front().tick, uint64_t(0))
 
 A007 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:51
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Related Swift S002 asserts clamped voice 127 under cppID voiceLanePoint; unproved: the trackCreateDelete voice-7 value (different voice, different cppID).
+Disposition: MATCHED
+Swift: S076 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract
+Mapping/reason: Voice-7 creation checks voices.first?.value == 7 under trackCreateDelete, also checked on AddTrack corpus rows at TrackCorpusChecks.swift:125-126.
 Source context since previous assertion:
   ;
 
@@ -149,9 +136,9 @@ Original expression:
   QCOMPARE(voices.front().value, 7)
 
 A008 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:54
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate adds then finds a note; duplicate-content predicate S007 observes only the fixture literal, not an addNote/findNote round-trip.
+Disposition: MATCHED
+Swift: S077 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract
+Mapping/reason: After addNotes of pitch 72 on the new track, the predicate queries and finds it; the AddTrack corpus row verifies corpusNote(document, added, base, 72) at TrackCorpusChecks.swift:130-131.
 Source context since previous assertion:
   ;
       document.addNote(added, base, 72, step * 4, 100);
@@ -161,9 +148,9 @@ Original expression:
   QVERIFY(document.findNote(added, base, 72, &note))
 
 A009 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:56
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes notes after track deletion; post-delete predicates cover raw-chunk retention only.
+Disposition: MATCHED
+Swift: S078 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract
+Mapping/reason: After deleting the added track, notes(in: added) no longer contains the inserted note; the AddTrack corpus row checks absence by corpusNote at TrackCorpusChecks.swift:133-134.
 Source context since previous assertion:
   ;
       document.deleteTrack(added);
@@ -172,9 +159,9 @@ Original expression:
   QVERIFY(!document.findNote(added, base, 72, &note))
 
 A010 | EditCheckTest::trackCreateDelete | src/checks/editcheck/tst_songdocument_songtracks.cpp:57
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Ordered shapes and byte equality are asserted on related operations; raw chunk tick ordering is not asserted.
+Disposition: MATCHED
+Swift: S079 | src/checks/editcheck/EventChecks.swift :: trackCreateDeleteContract
+Mapping/reason: chunksSortedByTick tests raw MIDI chunks after deleting the added track under the original cppID; corpusTracksSorted repeats on each AddTrack row at TrackCorpusChecks.swift:135-136.
 Source context since previous assertion:
   ;
 
@@ -182,9 +169,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A011 | EditCheckTest::trackDuplicate | src/checks/editcheck/tst_songdocument_songtracks.cpp:69
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate stages the corpus or asserts song-row eligibility; synthetic fixtures replace corpus rows, so the midPath precondition has no covering predicate.
+Disposition: MATCHED
+Swift: S080, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: DuplicateTrack-eligible rows require notes and available budget, assert a nonempty staged MIDI path under trackDuplicate[<song>], and require a nonempty family.
 Source context since previous assertion:
   ;
   }
@@ -204,9 +191,9 @@ Original expression:
                "trackDuplicate: corpus staged no song eligible for this required contract")
 
 A012 | EditCheckTest::trackDuplicate | src/checks/editcheck/tst_songdocument_songtracks.cpp:74
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success; Swift constructs SongDocument directly from a synthetic MidiFile with no load-result predicate under this cppID.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Each eligible DuplicateTrack row reloads staged MIDI via throwing decode under trackDuplicate[<song>]; failure enters report.fail(id), never silently creates a synthetic fixture.
 Source context since previous assertion:
   ;
 
@@ -217,9 +204,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A013 | EditCheckTest::trackDuplicate | src/checks/editcheck/tst_songdocument_songtracks.cpp:76
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate calls firstEditableTrack; the synthetic fixture duplicates track 0 by construction.
+Disposition: MATCHED
+Swift: S083 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: The reloaded DuplicateTrack row asserts firstNoteTrack(document) != nil before duplicating that selected track, under trackDuplicate[<song>].
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -228,9 +215,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A014 | EditCheckTest::trackDuplicate | src/checks/editcheck/tst_songdocument_songtracks.cpp:77
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Related Swift S001 asserts addTrack success under cppID trackCreateDelete; unproved: the canAddTrack() gate before duplicateTrack under trackDuplicate.
+Disposition: MATCHED
+Swift: S084 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: The DuplicateTrack row checks both canAddTrack and usedTrackCount < trackBudget on the reloaded corpus song before duplicating, under trackDuplicate[<song>].
 Source context since previous assertion:
   ;
 
@@ -283,9 +270,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A019 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:98
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate stages the corpus or asserts song-row eligibility; synthetic fixtures replace corpus rows, so the midPath precondition has no covering predicate.
+Disposition: MATCHED
+Swift: S080, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: ReorderableTrack requires a note track and at least two engine tracks; eligible trackMove[<song>] rows assert nonempty staged path, with an eligible-row guard.
 Source context since previous assertion:
   ;
   }
@@ -305,9 +292,9 @@ Original expression:
                "trackMove: corpus staged no song eligible for this required contract")
 
 A020 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:103
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success; Swift constructs SongDocument directly from a synthetic MidiFile with no load-result predicate under this cppID.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Every eligible trackMove[<song>] row reloads staged MIDI via throwing decode and reports row failure if decoding fails, the same load-success observable.
 Source context since previous assertion:
   ;
 
@@ -318,9 +305,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A021 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:105
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate calls firstEditableTrack; the synthetic fixture moves track 0 by construction.
+Disposition: MATCHED
+Swift: S085 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: ReorderableTrack row asserts firstNoteTrack(document) != nil on the reloaded corpus song under trackMove[<song>], rather than relying on a synthetic track zero.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -329,9 +316,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A022 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:106
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts engineTrackCount >= 2; count observations stop at the S001 slot assertion under trackCreateDelete.
+Disposition: MATCHED
+Swift: S034, S086 | src/checks/editcheck/EventChecks.swift :: trackMoveContract; src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Synthetic fixture and each reloaded ReorderableTrack row assert usedTrackCount >= 2 under trackMove before moving.
 Source context since previous assertion:
   ;
 
@@ -360,9 +347,9 @@ Original expression:
   QVERIFY(!document.moveTrack(0, 0))
 
 A024 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:119
-Disposition: PARTIAL
-Swift: S036 | src/checks/editcheck/EventChecks.swift :: trackMoveContract
-Mapping/reason: Related Swift S036 asserts document.revision is unchanged by the no-op move under the same cppID; unproved: the native QUndoStack entry count itself — revision is the Swift history counterpart, not the Qt stack count.
+Disposition: MATCHED
+Swift: S089 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackMoveRow
+Mapping/reason: After same-slot move, corpus row asserts coreEditHistoryCountAtTip count equals count-at-tip before the move; public undo/redo traversal, not revision, measures depth under trackMove[<song>].
 Source context since previous assertion:
   ;
 
@@ -380,9 +367,9 @@ Original expression:
   QVERIFY(document.moveTrack(0, last))
 
 A026 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:121
-Disposition: PARTIAL
-Swift: S038 | src/checks/editcheck/EventChecks.swift :: trackMoveContract
-Mapping/reason: Related Swift S038 asserts document.revision grows by exactly one after the real move under the same cppID; unproved: the native QUndoStack entry count itself — revision is the Swift history counterpart, not the Qt stack count.
+Disposition: MATCHED
+Swift: S090 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackMoveRow
+Mapping/reason: Corpus row compares the public traversal count-at-tip after moving track zero to last against the before count + 1; revision is not treated as undo depth.
 Source context since previous assertion:
   ;
 
@@ -421,9 +408,9 @@ Original expression:
                                                songdocument_test::tempo(base + step * 110, 145)))
 
 A030 | EditCheckTest::trackMove | src/checks/editcheck/tst_songdocument_songtracks.cpp:127
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Related Swift S009 asserts the conductor signature at tick 2 survives reorder under the same cppID; unproved: the staged 5/2 signature at the distant base.
+Disposition: MATCHED
+Swift: S042, S091 | src/checks/editcheck/EventChecks.swift :: trackMoveContract; src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackMoveRow
+Mapping/reason: The synthetic track move asserts its staged signature survives at tick 288 as 5/2 (S042); after each corpus reorder the row independently asserts numerator 5 AND denominatorPower 2 at coreEditDistantBase + step * 112 (S091). Both cover the original full 5/2 datum.
 Source context since previous assertion:
   ;
       DocTimeSig signature;
@@ -494,9 +481,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A037 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:141
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes synthetic-fixture construction success; SongDocument is built directly with no optional-fixture predicate under this cppID.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift failure branch (non-optional SongDocument(file:))
+Mapping/reason: C++ makeDocument(markerNameFile()) optional fixture pointer has no Swift production ingress: SongDocument(file:) is non-optional; the original check is uncompiled in all CMake targets and unregistered in checkcatalog (spec §7). S092/S093 and S049-S058 check consumer-visible marker/move behavior, not construction success.
 Source context since previous assertion:
   ;
   }
@@ -509,9 +496,9 @@ Original expression:
   QVERIFY(fixture)
 
 A038 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:143
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts engineTrackCount >= 2 for the marker-name fixture.
+Disposition: MATCHED
+Swift: S092 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: The marker-name synthetic fixture asserts usedTrackCount >= 2 under the same cppID before moving its first track to last.
 Source context since previous assertion:
   ;
       SongDocument &document = fixture->document;
@@ -520,9 +507,9 @@ Original expression:
   QVERIFY(document.engineTrackCount() >= 2)
 
 A039 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:144
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes smfTrackFor; engine-to-SMF track mapping is never asserted.
+Disposition: MATCHED
+Swift: S093 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: Explicitly asserts the first engine track maps to MIDI chunk zero under trackMarkerName before editing its raw event and moving it.
 Source context since previous assertion:
   ;
 
@@ -562,9 +549,9 @@ Original expression:
   QCOMPARE(document.trackName(last), QStringLiteral("["))
 
 A042 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:159
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; reorder/delete predicates assert signatures, markers, and chunk retention only.
+Disposition: MATCHED
+Swift: S051 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: The marker-name contract compares PlaybackTimeline loopStartTick before/after the same rename-plus-two-inserts move under trackMarkerName.
 Source context since previous assertion:
   ;
 
@@ -572,9 +559,9 @@ Original expression:
   QCOMPARE(document.loopTick(false), loopStart)
 
 A043 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:160
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; reorder/delete predicates assert signatures, markers, and chunk retention only.
+Disposition: MATCHED
+Swift: S052 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: PlaybackTimeline loopEndTick before the rename-plus-two-inserts move equals afterMove.loopEndTick under trackMarkerName.
 Source context since previous assertion:
   ;
 
@@ -597,9 +584,9 @@ Original expression:
   QVERIFY(markerStayed)
 
 A045 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:172
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate compares serialized bytes after undoing the rename-plus-inserts-plus-move sequence under this cppID.
+Disposition: MATCHED
+Swift: S054 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: After undoing rename, both raw inserts and track move, compares reencoded MIDI bytes to pre-edit bytes under trackMarkerName.
 Source context since previous assertion:
   ;
 
@@ -612,9 +599,9 @@ Original expression:
   QCOMPARE(document.smf().write(), bytesBefore)
 
 A046 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:173
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Related rename-value predicates execute; rename/insert/move multi-entry undo restoring the prior name is not asserted.
+Disposition: MATCHED
+Swift: S055 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: After undoing rename, both raw inserts and move, checks trackName(0) equals its pre-edit name under trackMarkerName.
 Source context since previous assertion:
   ;
 
@@ -622,9 +609,9 @@ Original expression:
   QCOMPARE(document.trackName(0), nameBefore)
 
 A047 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:174
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; reorder/delete predicates assert signatures, markers, and chunk retention only.
+Disposition: MATCHED
+Swift: S056 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: After undo-all of the marker-name edit sequence, PlaybackTimeline.loopStartTick equals the recorded pre-move loop start under trackMarkerName.
 Source context since previous assertion:
   ;
 
@@ -632,9 +619,9 @@ Original expression:
   QCOMPARE(document.loopTick(false), loopStart)
 
 A048 | EditCheckTest::trackMarkerName | src/checks/editcheck/tst_songdocument_songtracks.cpp:175
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; reorder/delete predicates assert signatures, markers, and chunk retention only.
+Disposition: MATCHED
+Swift: S057 | src/checks/editcheck/EventChecks.swift :: trackMarkerNameContract
+Mapping/reason: After undo-all of marker-name rename/inserts/move, PlaybackTimeline.loopEndTick equals the recorded pre-move loop end under trackMarkerName.
 Source context since previous assertion:
   ;
 
@@ -652,9 +639,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A050 | EditCheckTest::trackDeleteRescue | src/checks/editcheck/tst_songdocument_songtracks.cpp:188
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate stages the corpus or asserts song-row eligibility; synthetic fixtures replace corpus rows, so the midPath precondition has no covering predicate.
+Disposition: MATCHED
+Swift: S080, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: EditableTrack-selected trackDeleteRescue[<song>] rows assert a nonempty staged MIDI path and the family requires a nonempty eligible set.
 Source context since previous assertion:
   ;
   }
@@ -674,9 +661,9 @@ Original expression:
                "trackDeleteRescue: corpus staged no song eligible for this required contract")
 
 A051 | EditCheckTest::trackDeleteRescue | src/checks/editcheck/tst_songdocument_songtracks.cpp:193
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success; Swift constructs SongDocument directly from a synthetic MidiFile with no load-result predicate under this cppID.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Each trackDeleteRescue[<song>] row reloads staged MIDI with throwing decode and reports row failure on decode error.
 Source context since previous assertion:
   ;
 
@@ -687,9 +674,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A052 | EditCheckTest::trackDeleteRescue | src/checks/editcheck/tst_songdocument_songtracks.cpp:195
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate calls firstEditableTrack; the synthetic fixture deletes track 0 by construction.
+Disposition: MATCHED
+Swift: S087 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Every selected EditableTrack row checks a first note-bearing track exists in the reloaded corpus document before calling coreTrackDeleteRescueRow with that track.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -743,9 +730,9 @@ Original expression:
   QCOMPARE(document.loopTick(true), loopEnd)
 
 A057 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:216
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate stages the corpus or asserts song-row eligibility; synthetic fixtures replace corpus rows, so the midPath precondition has no covering predicate.
+Disposition: MATCHED
+Swift: S080, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: EditableTrack-selected trackRename[<song>] rows assert nonempty staged MIDI paths, with a nonempty-family predicate for eligible song coverage.
 Source context since previous assertion:
   ;
   }
@@ -765,9 +752,9 @@ Original expression:
                "trackRename: corpus staged no song eligible for this required contract")
 
 A058 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:221
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success; Swift constructs SongDocument directly from a synthetic MidiFile with no load-result predicate under this cppID.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Each trackRename[<song>] row reloads the staged song through throwing MIDI decode; decode failure records report.fail under the row cppID.
 Source context since previous assertion:
   ;
 
@@ -778,9 +765,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A059 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:223
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate calls firstEditableTrack; the synthetic fixture renames track 0 by construction.
+Disposition: MATCHED
+Swift: S088 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: The reloaded EditableTrack row asserts firstNoteTrack(document) != nil under trackRename[<song>] before renaming the selected track.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -822,9 +809,9 @@ Original expression:
   QCOMPARE(rawNameCount(), 1)
 
 A062 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:240
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts timeline existence; PlaybackTimeline.build returns a non-optional value in Swift, so QVERIFY(timeline) has no covering predicate — S065 observes the timeline's track name, not its existence.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift failure branch (non-optional PlaybackTimeline.build)
+Mapping/reason: C++ buildTimeline nullable pointer has no Swift production ingress: PlaybackTimeline.build returns a non-optional value; legacy C++ source is uncompiled in all CMake targets and unregistered in checkcatalog (spec §7). S065 and the corpus row at TrackCorpusChecks.swift:237-239 assert the timeline name, not pointer existence.
 Source context since previous assertion:
   ;
       const auto timeline = document.buildTimeline(48000.0);
@@ -843,9 +830,9 @@ Original expression:
   QCOMPARE(timeline->tracks[size_t(track)].name, QStringLiteral("editcheck name"))
 
 A064 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:244
-Disposition: PARTIAL
-Swift: S066 | src/checks/editcheck/EventChecks.swift :: trackRenameContract
-Mapping/reason: Related Swift S066 asserts document.revision is unchanged by the trimmed same-name rename under the same cppID; unproved: the native QUndoStack entry count itself — revision is the Swift history counterpart, not the Qt stack count.
+Disposition: MATCHED
+Swift: S094 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackRenameRow
+Mapping/reason: Count-at-tip by public undo/redo traversal before and after trimmed same-name rename stays equal on each editable corpus song; revision is not substituted for history depth.
 Source context since previous assertion:
   ;
       const int before = document.undoStack()->count();
@@ -855,9 +842,9 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), before)
 
 A065 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:247
-Disposition: PARTIAL
-Swift: S067 | src/checks/editcheck/EventChecks.swift :: trackRenameContract
-Mapping/reason: Related Swift S067 asserts document.revision is unchanged by the rejected marker-shaped renames under the same cppID; unproved: the native QUndoStack entry count itself — revision is the Swift history counterpart, not the Qt stack count.
+Disposition: MATCHED
+Swift: S095 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackRenameRow
+Mapping/reason: Count-at-tip before and after both rejected marker-shaped renames stays equal on each editable corpus song; coreEditHistoryCountAtTip traverses undo/redo instead of inspecting revision.
 Source context since previous assertion:
   ;
       document.renameTrack(track, QStringLiteral("["));
@@ -888,9 +875,9 @@ Original expression:
   QVERIFY(document.trackName(track).isEmpty())
 
 A068 | EditCheckTest::trackRename | src/checks/editcheck/tst_songdocument_songtracks.cpp:251
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No predicate under cppID trackRename observes the raw bare-name count after clearing; S019 asserts bare-name arrays only under markerVersusTrackName.
+Disposition: MATCHED
+Swift: S070 | src/checks/editcheck/EventChecks.swift :: trackRenameContract
+Mapping/reason: Checks raw bare 0x03 track-name meta count is zero after clearing under trackRename; each EditableTrack row also asserts bareTrackNameCount == 0 at TrackCorpusChecks.swift:253-254.
 Source context since previous assertion:
   ;
 
@@ -920,9 +907,9 @@ Original expression:
   QVERIFY(document.trackName(track).isEmpty())
 
 A071 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:267
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate stages the corpus or asserts song-row eligibility; synthetic fixtures replace corpus rows, so the midPath precondition has no covering predicate.
+Disposition: MATCHED
+Swift: S080, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Playable includes every staged song without a note-track filter; songTimeSignature[<song>] rows assert nonempty path and the family nonempty-row predicate.
 Source context since previous assertion:
   ;
   }
@@ -942,9 +929,9 @@ Original expression:
                "songTimeSignature: corpus staged no song eligible for this required contract")
 
 A072 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:272
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success; Swift constructs SongDocument directly from a synthetic MidiFile with no load-result predicate under this cppID.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Each Playable songTimeSignature[<song>] row executes a throwing decode of staged MIDI and reports failure on decode error before editing signatures.
 Source context since previous assertion:
   ;
 
@@ -955,9 +942,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A073 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:279
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Related Swift S025 asserts same-tick signature replacement under the same cppID; unproved: findsTimeSig at the distant base after the first set.
+Disposition: MATCHED
+Swift: S097 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: After setting a 3/3 signature at coreEditDistantBase on each Playable corpus song, checks an entry exists at that exact tick.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -971,9 +958,9 @@ Original expression:
   QVERIFY(songdocument_test::findsTimeSig(document, base, &signature))
 
 A074 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:280
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Related Swift S026 asserts numerator 3 at the destination after the move under the same cppID; unproved: numerator 3 at the base before the move.
+Disposition: MATCHED
+Swift: S098 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: The first inserted distant-base signature has numerator exactly 3 before the same-tick replacement, for each Playable corpus row.
 Source context since previous assertion:
   ;
 
@@ -981,9 +968,9 @@ Original expression:
   QCOMPARE(signature.numerator, uint8_t(3))
 
 A075 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:281
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes denomPow2; signature predicates assert ticks, numerators, and presence only.
+Disposition: MATCHED
+Swift: S099 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: Explicitly checks first inserted distant-base signature denominatorPower == UInt8(3), matching the C++ denomPow2 3.
 Source context since previous assertion:
   ;
 
@@ -991,9 +978,9 @@ Original expression:
   QCOMPARE(signature.denomPow2, uint8_t(3))
 
 A076 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:283
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Related Swift S025 asserts same-tick replacement under the same cppID; unproved: findsTimeSig at the base after replacing with 7/2.
+Disposition: MATCHED
+Swift: S100 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: After replacing distant-base 3/3 with 7/2 on a Playable corpus row, checks the same tick still has a signature.
 Source context since previous assertion:
   ;
       document.setTimeSig(base, 7, 2);
@@ -1002,9 +989,9 @@ Original expression:
   QVERIFY(songdocument_test::findsTimeSig(document, base, &signature))
 
 A077 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:284
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts numerator 7; S026 asserts numerator 3 at the destination.
+Disposition: MATCHED
+Swift: S101 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: Replaced signature at distant base explicitly has numerator 7, on each Playable song under songTimeSignature[<song>].
 Source context since previous assertion:
   ;
 
@@ -1012,9 +999,9 @@ Original expression:
   QCOMPARE(signature.numerator, uint8_t(7))
 
 A078 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:285
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes denomPow2; signature predicates assert ticks, numerators, and presence only.
+Disposition: MATCHED
+Swift: S102 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: Explicitly checks replaced distant-base signature denominatorPower == UInt8(2), matching the original denomPow2 2.
 Source context since previous assertion:
   ;
 
@@ -1022,9 +1009,9 @@ Original expression:
   QCOMPARE(signature.denomPow2, uint8_t(2))
 
 A079 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:286
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Related Swift S025 asserts the per-tick replacement count under the same cppID; unproved: total timeSigs().size() growth by one.
+Disposition: MATCHED
+Swift: S103 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: Measures the whole timeSignatures.count before insertion and after replacement with 7/2, checks total grows exactly one.
 Source context since previous assertion:
   ;
 
@@ -1032,9 +1019,9 @@ Original expression:
   QCOMPARE(document.timeSigs().size(), before + 1)
 
 A080 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:288
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Related Swift S026 asserts destination presence after the move under the same cppID; unproved: absence at the source tick after the move.
+Disposition: MATCHED
+Swift: S104 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: After moving 7/2 from coreEditDistantBase to base + step * 4, checks no signature remains at the source tick on each Playable row.
 Source context since previous assertion:
   ;
       document.moveTimeSig(base, base + step * 4);
@@ -1053,9 +1040,9 @@ Original expression:
   QVERIFY(songdocument_test::findsTimeSig(document, base + step * 4, &signature))
 
 A082 | EditCheckTest::songTimeSignature | src/checks/editcheck/tst_songdocument_songtracks.cpp:290
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts numerator 7 at the destination; S026 asserts numerator 3 there.
+Disposition: MATCHED
+Swift: S105 | src/checks/editcheck/TrackCorpusChecks.swift :: coreSongTimeSignatureRow
+Mapping/reason: After moving the replaced 7/2 signature to distantBase + step * 4, checks its destination numerator remains UInt8(7) on every Playable song.
 Source context since previous assertion:
   ;
 
@@ -1074,9 +1061,9 @@ Original expression:
   QVERIFY(!songdocument_test::findsTimeSig(document, base + step * 4, &signature))
 
 A084 | EditCheckTest::loopCfgUndoRedo | src/checks/editcheck/tst_songdocument_songtracks.cpp:306
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts document.load success for the loop/cfg sequence; loop-tick and song-config edits have no Swift predicates at all.
+Disposition: MATCHED
+Swift: S081, S096 | src/checks/editcheck/TrackCorpusChecks.swift :: coreTrackCorpusChecks
+Mapping/reason: Playable loopCfgUndoRedo[<song>] rows load every staged MIDI with throwing decode and fail under the row cppID on errors; a nonempty eligible-row sentinel prevents vacuity, without requiring a path guard the C++ original did not have.
 Source context since previous assertion:
   ;
   }
@@ -1097,9 +1084,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A085 | EditCheckTest::loopCfgUndoRedo | src/checks/editcheck/tst_songdocument_songtracks.cpp:312
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Ordered shapes and byte equality are asserted on related operations; raw chunk tick ordering is not asserted.
+Disposition: MATCHED
+Swift: S106 | src/checks/editcheck/TrackCorpusChecks.swift :: coreLoopCfgUndoRedoRow
+Mapping/reason: On every Playable corpus row, checks raw MIDI chunks stay tick-sorted immediately after editing the original loop-start value by its clock step.
 Source context since previous assertion:
   ;
       const QByteArray baseline = document.smf().write();
@@ -1112,9 +1099,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A086 | EditCheckTest::loopCfgUndoRedo | src/checks/editcheck/tst_songdocument_songtracks.cpp:318
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Byte-restoration-after-undo executes for other operations; loop/cfg operations themselves are never executed in Swift.
+Disposition: MATCHED
+Swift: S107 | src/checks/editcheck/TrackCorpusChecks.swift :: coreLoopCfgUndoRedoRow
+Mapping/reason: After applying loop and master-volume edits to each Playable corpus song, undo-all restores the baseline encoded MIDI bytes exactly.
 Source context since previous assertion:
   ;
       SongCfg cfg = document.cfg();
@@ -1127,9 +1114,9 @@ Original expression:
   QCOMPARE(document.smf().write(), baseline)
 
 A087 | EditCheckTest::loopCfgUndoRedo | src/checks/editcheck/tst_songdocument_songtracks.cpp:319
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate in the paired suites edits or observes the song config; SessionChecks observes masterVolume only across project save/reopen, which does not execute loop/cfg undo/redo.
+Disposition: MATCHED
+Swift: S108 | src/checks/editcheck/TrackCorpusChecks.swift :: coreLoopCfgUndoRedoRow
+Mapping/reason: The corpus loop/config row changes masterVolume between 80 and 90, undoes all edits and checks the original staged song config masterVolume is restored.
 Source context since previous assertion:
   ;
 
@@ -1137,9 +1124,9 @@ Original expression:
   QCOMPARE(document.cfg().masterVolume, song.cfg.masterVolume)
 
 A088 | EditCheckTest::loopCfgUndoRedo | src/checks/editcheck/tst_songdocument_songtracks.cpp:323
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate redoes loop/cfg edits or compares the redone bytes.
+Disposition: MATCHED
+Swift: S109 | src/checks/editcheck/TrackCorpusChecks.swift :: coreLoopCfgUndoRedoRow
+Mapping/reason: After redo-all on each Playable row, compares reencoded MIDI to baseline; it must differ unless firstNoteTrack(document) is absent, the original C++ disjunction.
 Source context since previous assertion:
   ;
       while (document.undoStack()->canRedo())
@@ -1150,9 +1137,9 @@ Original expression:
   QVERIFY(redone != baseline || songdocument_test::firstEditableTrack(document) < 0)
 
 A089 | EditCheckTest::loopCfgUndoRedo | src/checks/editcheck/tst_songdocument_songtracks.cpp:326
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing / trackNameRoles
-Mapping/reason: Byte-restoration-after-undo executes for other operations; loop/cfg operations themselves are never executed in Swift.
+Disposition: MATCHED
+Swift: S110 | src/checks/editcheck/TrackCorpusChecks.swift :: coreLoopCfgUndoRedoRow
+Mapping/reason: Following redo-all, the second undo-all of loop and config changes restores the exact original encoded MIDI bytes on every Playable corpus song.
 Source context since previous assertion:
   ;
       while (document.undoStack()->canUndo())
@@ -1168,369 +1155,369 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
-S001 | trackEditing | src/checks/editcheck/EventChecks.swift:68
+S001 | trackEditing | src/checks/editcheck/EventChecks.swift:71
   report.expectEqual(2, added,
                          cppID: "editcheck/EditCheckTest::trackCreateDelete",
                          what: "new track occupies the next engine slot")
 
-S002 | trackEditing | src/checks/editcheck/EventChecks.swift:71
+S002 | trackEditing | src/checks/editcheck/EventChecks.swift:74
   report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
                          cppID: "editcheck/EditCheckTest::voiceLanePoint",
                          what: "new track voice is clamped and seeded")
 
-S003 | trackEditing | src/checks/editcheck/EventChecks.swift:74
+S003 | trackEditing | src/checks/editcheck/EventChecks.swift:77
   report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
                          cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                          what: "add publishes old engine-track identities")
 
-S004 | trackEditing | src/checks/editcheck/EventChecks.swift:78
+S004 | trackEditing | src/checks/editcheck/EventChecks.swift:81
   report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
                          cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                          what: "undo publishes the inverse track remap")
 
-S005 | trackEditing | src/checks/editcheck/EventChecks.swift:82
+S005 | trackEditing | src/checks/editcheck/EventChecks.swift:85
   report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
                          cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                          what: "redo republishes the forward track remap")
 
-S006 | trackEditing | src/checks/editcheck/EventChecks.swift:87
+S006 | trackEditing | src/checks/editcheck/EventChecks.swift:90
   report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
-S007 | trackEditing | src/checks/editcheck/EventChecks.swift:90
+S007 | trackEditing | src/checks/editcheck/EventChecks.swift:93
   report.expectEqual(["8:60:4"],
                          document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                          cppID: "editcheck/EditCheckTest::trackDuplicate",
                          what: "duplicate preserves the fixture's literal note")
 
-S008 | trackEditing | src/checks/editcheck/EventChecks.swift:94
+S008 | trackEditing | src/checks/editcheck/EventChecks.swift:97
   report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
                     cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                     message: "duplicate remints note identities")
 
-S009 | trackEditing | src/checks/editcheck/EventChecks.swift:99
+S009 | trackEditing | src/checks/editcheck/EventChecks.swift:102
   report.expect(document.timeSignatures.contains { $0.tick == 2 },
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "conductor time signature survives reorder")
 
-S010 | trackEditing | src/checks/editcheck/EventChecks.swift:102
+S010 | trackEditing | src/checks/editcheck/EventChecks.swift:105
   report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
                     cppID: "editcheck/EditCheckTest::trackMarkerName",
                     message: "conductor marker remains in chunk zero")
 
-S011 | trackEditing | src/checks/editcheck/EventChecks.swift:107
+S011 | trackEditing | src/checks/editcheck/EventChecks.swift:110
   report.expect(document.rawChunks[0].events.contains { event in
           event.metaType == 0x58 && event.tick == 2
       }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
       message: "global signature is rescued before chunk deletion")
 
-S012 | trackEditing | src/checks/editcheck/EventChecks.swift:111
+S012 | trackEditing | src/checks/editcheck/EventChecks.swift:114
   report.expect(document.rawChunks[0].events.contains { event in
           event.tick == 16 && MidiFile.metaIsMarker(event)
       }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
       message: "winning loop marker is rescued")
 
-S013 | trackEditing | src/checks/editcheck/EventChecks.swift:115
+S013 | trackEditing | src/checks/editcheck/EventChecks.swift:118
   report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
                          cppID: "editcheck/EditCheckTest::trackCreateDelete",
                          what: "deleting the chunk-zero track retains the conductor chunk")
 
-S014 | trackEditing | src/checks/editcheck/EventChecks.swift:121
+S014 | trackEditing | src/checks/editcheck/EventChecks.swift:124
   report.expectEqual("Bass", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "rename trims the stored display name")
 
-S015 | trackEditing | src/checks/editcheck/EventChecks.swift:125
+S015 | trackEditing | src/checks/editcheck/EventChecks.swift:128
   report.expectEqual(revision + 1, document.revision,
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "loop-marker-shaped name is rejected")
 
-S016 | trackEditing | src/checks/editcheck/EventChecks.swift:130
+S016 | trackEditing | src/checks/editcheck/EventChecks.swift:133
   report.expect(budgetLimited.addTrack(voice: 1) == nil,
                     cppID: "editcheck/EditCheckTest::trackCreateDelete",
                     message: "configured track budget rejects an added track")
 
-S017 | trackEditing | src/checks/editcheck/EventChecks.swift:137
+S017 | trackEditing | src/checks/editcheck/EventChecks.swift:140
   report.expect(ceiling.addTrack(voice: 1) == nil,
                     cppID: "editcheck/EditCheckTest::trackCreateDelete",
                     message: "hardware track ceiling rejects a seventeenth track")
 
-S018 | trackNameRoles | src/checks/editcheck/EventChecks.swift:156
+S018 | trackNameRoles | src/checks/editcheck/EventChecks.swift:159
   report.expectEqual("Bare", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                          what: "document query ignores a channel-prefixed name")
 
-S019 | trackNameRoles | src/checks/editcheck/EventChecks.swift:165
+S019 | trackNameRoles | src/checks/editcheck/EventChecks.swift:168
   report.expectEqual(["Scoped", "Lead", "ScopedAfterBare"], names,
                          cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                          what: "rename changes only bare names after empty-prefix or channel clearing")
 
-S020 | trackNameRoles | src/checks/editcheck/EventChecks.swift:170
+S020 | trackNameRoles | src/checks/editcheck/EventChecks.swift:173
   report.expectEqual("Bare", imported.tracks.first?.name,
                          cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
                          what: "import and document queries select the same bare name")
 
-S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:187
+S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:190
   report.expectEqual(beforeTempoRaw, document.revision,
                          cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                          what: "raw tempo meta is rejected")
 
-S022 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
+S022 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:198
   report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
                          document.state.tempo,
                          cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                          what: "tempo normalization keeps the last same-tick value")
 
-S023 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
+S023 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:206
   report.expectEqual(rawCount, document.rawChunks[0].events.count,
                          cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                          what: "mixed raw and tempo replacement is atomic")
 
-S024 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
+S024 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:210
   report.expectEqual(1, document.state.tempo.count,
                          cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                          what: "one undo restores both domains")
 
-S025 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:213
+S025 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:216
   report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
                          cppID: "editcheck/EditCheckTest::songTimeSignature",
                          what: "same-tick signature is replaced")
 
-S026 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:217
+S026 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:220
   report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
                     cppID: "editcheck/EditCheckTest::songTimeSignature",
                     message: "signature moves with its payload")
 
-S027 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
+S027 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:224
   report.expect(!document.timeSignatures.contains { $0.tick == 24 },
                     cppID: "editcheck/EditCheckTest::songTimeSignature",
                     message: "signature deletion removes destination")
 
-S028 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:234
+S028 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:237
   report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
           .map { Int($0.numerator) }.sorted(),
           cppID: "editcheck/EditCheckTest::songTimeSignature",
           what: "move preserves every cross-chunk source signature")
 
-S029 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:419
+S029 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:422
   report.expect(document.engineTracks.usedTrackCount < document.trackBudget,
                     cppID: "editcheck/EditCheckTest::trackDuplicate",
                     message: "track budget admits a duplicate")
 
-S030 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:424
+S030 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:427
   report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
-S031 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:427
+S031 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:430
   report.expect(copy != 0,
                     cppID: "editcheck/EditCheckTest::trackDuplicate",
                     message: "duplicate occupies a different engine slot")
 
-S032 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:430
+S032 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:433
   report.expectEqual(source, document.notes(in: copy)
           .map { "\($0.tick):\($0.pitch):\($0.duration)" },
           cppID: "editcheck/EditCheckTest::trackDuplicate",
           what: "duplicate carries the same notes")
 
-S033 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:435
+S033 | trackDuplicateContract | src/checks/editcheck/EventChecks.swift:438
   report.expect(chunksSortedByTick(document.state.file),
                     cppID: "editcheck/EditCheckTest::trackDuplicate",
                     message: "raw chunks stay tick-sorted after deleting the copy")
 
-S034 | trackMoveContract | src/checks/editcheck/EventChecks.swift:454
+S034 | trackMoveContract | src/checks/editcheck/EventChecks.swift:457
   report.expect(document.engineTracks.usedTrackCount >= 2,
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "fixture exposes two engine tracks")
 
-S035 | trackMoveContract | src/checks/editcheck/EventChecks.swift:464
+S035 | trackMoveContract | src/checks/editcheck/EventChecks.swift:467
   report.expect(!document.moveTrack(0, to: 0),
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "same-slot move is a no-op")
 
-S036 | trackMoveContract | src/checks/editcheck/EventChecks.swift:467
+S036 | trackMoveContract | src/checks/editcheck/EventChecks.swift:470
   report.expectEqual(before, document.revision,
                          cppID: "editcheck/EditCheckTest::trackMove",
                          what: "no-op move records no history entry")
 
-S037 | trackMoveContract | src/checks/editcheck/EventChecks.swift:470
+S037 | trackMoveContract | src/checks/editcheck/EventChecks.swift:473
   report.expect(document.moveTrack(0, to: last),
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "move to the last slot succeeds")
 
-S038 | trackMoveContract | src/checks/editcheck/EventChecks.swift:473
+S038 | trackMoveContract | src/checks/editcheck/EventChecks.swift:476
   report.expectEqual(before + 1, document.revision,
                          cppID: "editcheck/EditCheckTest::trackMove",
                          what: "real move records one history entry")
 
-S039 | trackMoveContract | src/checks/editcheck/EventChecks.swift:476
+S039 | trackMoveContract | src/checks/editcheck/EventChecks.swift:479
   report.expectEqual(source, document.notes(in: last)
           .map { "\($0.tick):\($0.pitch):\($0.duration)" },
           cppID: "editcheck/EditCheckTest::trackMove",
           what: "notes move with their track")
 
-S040 | trackMoveContract | src/checks/editcheck/EventChecks.swift:480
+S040 | trackMoveContract | src/checks/editcheck/EventChecks.swift:483
   report.expectEqual(sourceChannel, document.engineTracks.tracks[last].channel,
                          cppID: "editcheck/EditCheckTest::trackMove",
                          what: "channel assignment follows the moved track")
 
-S041 | trackMoveContract | src/checks/editcheck/EventChecks.swift:483
+S041 | trackMoveContract | src/checks/editcheck/EventChecks.swift:486
   report.expect(document.state.tempo.contains(
           TempoPoint(tick: 264, microsecondsPerQuarterNote: 413_793)),
           cppID: "editcheck/EditCheckTest::trackMove",
           message: "staged tempo point survives the move")
 
-S042 | trackMoveContract | src/checks/editcheck/EventChecks.swift:487
-  report.expect(document.timeSignatures.contains { $0.tick == 288 && $0.numerator == 5 },
+S042 | trackMoveContract | src/checks/editcheck/EventChecks.swift:490
+  report.expect(document.timeSignatures.contains { $0.tick == 288 && $0.numerator == 5 && $0.denominatorPower == 2 },
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "staged signature survives the move")
 
-S043 | trackMoveContract | src/checks/editcheck/EventChecks.swift:491
+S043 | trackMoveContract | src/checks/editcheck/EventChecks.swift:494
   report.expectEqual(Tick(4), movedTimeline.loopStartTick,
                          cppID: "editcheck/EditCheckTest::trackMove",
                          what: "loop start survives the move")
 
-S044 | trackMoveContract | src/checks/editcheck/EventChecks.swift:494
+S044 | trackMoveContract | src/checks/editcheck/EventChecks.swift:497
   report.expectEqual(Tick(16), movedTimeline.loopEndTick,
                          cppID: "editcheck/EditCheckTest::trackMove",
                          what: "loop end survives the move")
 
-S045 | trackMoveContract | src/checks/editcheck/EventChecks.swift:498
+S045 | trackMoveContract | src/checks/editcheck/EventChecks.swift:501
   report.expectEqual(source, document.notes(in: 0)
           .map { "\($0.tick):\($0.pitch):\($0.duration)" },
           cppID: "editcheck/EditCheckTest::trackMove",
           what: "undo restores the notes to track zero")
 
-S046 | trackMoveContract | src/checks/editcheck/EventChecks.swift:503
+S046 | trackMoveContract | src/checks/editcheck/EventChecks.swift:506
   report.expect(document.moveTrack(last, to: 0),
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "move back to the first slot succeeds")
 
-S047 | trackMoveContract | src/checks/editcheck/EventChecks.swift:506
+S047 | trackMoveContract | src/checks/editcheck/EventChecks.swift:509
   report.expectEqual(source, document.notes(in: 0)
           .map { "\($0.tick):\($0.pitch):\($0.duration)" },
           cppID: "editcheck/EditCheckTest::trackMove",
           what: "notes return with the track")
 
-S048 | trackMoveContract | src/checks/editcheck/EventChecks.swift:510
+S048 | trackMoveContract | src/checks/editcheck/EventChecks.swift:513
   report.expect(chunksSortedByTick(document.state.file),
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "raw chunks stay tick-sorted after the reorder")
 
-S049 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:533
+S049 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:542
   report.expect(document.moveTrack(0, to: last),
                     cppID: "editcheck/EditCheckTest::trackMarkerName",
                     message: "move succeeds for the renamed track")
 
-S050 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:536
+S050 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:545
   report.expectEqual("[", document.trackName(last),
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "marker-shaped track name moves with its track")
 
-S051 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:540
+S051 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:549
   report.expectEqual(loopStart, afterMove.loopStartTick,
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "loop start survives the move")
 
-S052 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:543
+S052 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:552
   report.expectEqual(loopEnd, afterMove.loopEndTick,
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "loop end survives the move")
 
-S053 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:546
+S053 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:555
   report.expect(document.rawChunks[0].events.contains {
           $0.metaType == 0x06 && $0.blob == [0x5D, 0x5B]
       }, cppID: "editcheck/EditCheckTest::trackMarkerName",
       message: "exact ][ marker blob stays in the front track")
 
-S054 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:551
+S054 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:560
   report.expectEqual(bytesBefore, try? document.state.file.encoded(),
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "undo restores the pre-edit bytes")
 
-S055 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:554
+S055 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:563
   report.expectEqual(nameBefore, document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "undo restores the prior track name")
 
-S056 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:558
+S056 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:567
   report.expectEqual(loopStart, restored.loopStartTick,
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "undo restores the loop start")
 
-S057 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:561
+S057 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:570
   report.expectEqual(loopEnd, restored.loopEndTick,
                          cppID: "editcheck/EditCheckTest::trackMarkerName",
                          what: "undo restores the loop end")
 
-S058 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:564
+S058 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:573
   report.expect(chunksSortedByTick(document.state.file),
                     cppID: "editcheck/EditCheckTest::trackMarkerName",
                     message: "raw chunks are tick-sorted after undo")
 
-S059 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:583
+S059 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:592
   report.expectEqual(Tick(4), timeline.loopStartTick,
                          cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                          what: "loop start survives the track delete")
 
-S060 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:586
+S060 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:595
   report.expectEqual(Tick(16), timeline.loopEndTick,
                          cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                          what: "loop end survives the track delete")
 
-S061 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:591
+S061 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:600
   report.expectEqual(Tick(4), timeline.loopStartTick,
                          cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                          what: "undo restores the loop start")
 
-S062 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:594
+S062 | trackDeleteRescueContract | src/checks/editcheck/EventChecks.swift:603
   report.expectEqual(Tick(16), timeline.loopEndTick,
                          cppID: "editcheck/EditCheckTest::trackDeleteRescue",
                          what: "undo restores the loop end")
 
-S063 | trackRenameContract | src/checks/editcheck/EventChecks.swift:609
+S063 | trackRenameContract | src/checks/editcheck/EventChecks.swift:618
   report.expectEqual("editcheck name", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "rename stores the exact name")
 
-S064 | trackRenameContract | src/checks/editcheck/EventChecks.swift:612
+S064 | trackRenameContract | src/checks/editcheck/EventChecks.swift:621
   report.expectEqual(1, document.state.file.chunks.first.map(bareTrackNameCount),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "exactly one bare name meta remains")
 
-S065 | trackRenameContract | src/checks/editcheck/EventChecks.swift:616
+S065 | trackRenameContract | src/checks/editcheck/EventChecks.swift:625
   report.expectEqual("editcheck name", timeline.tracks.first?.name,
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "timeline reports the renamed track")
 
-S066 | trackRenameContract | src/checks/editcheck/EventChecks.swift:621
+S066 | trackRenameContract | src/checks/editcheck/EventChecks.swift:630
   report.expectEqual(before, document.revision,
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "trimmed same-name rename records no entry")
 
-S067 | trackRenameContract | src/checks/editcheck/EventChecks.swift:626
+S067 | trackRenameContract | src/checks/editcheck/EventChecks.swift:635
   report.expectEqual(before, document.revision,
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "marker-shaped renames record no entry")
 
-S068 | trackRenameContract | src/checks/editcheck/EventChecks.swift:629
+S068 | trackRenameContract | src/checks/editcheck/EventChecks.swift:638
   report.expectEqual("editcheck name", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "name survives the rejected renames")
 
-S069 | trackRenameContract | src/checks/editcheck/EventChecks.swift:633
+S069 | trackRenameContract | src/checks/editcheck/EventChecks.swift:642
   report.expectEqual("", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "rename clears the stored name")
 
-S070 | trackRenameContract | src/checks/editcheck/EventChecks.swift:636
+S070 | trackRenameContract | src/checks/editcheck/EventChecks.swift:645
   report.expectEqual(0, document.state.file.chunks.first.map(bareTrackNameCount),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "no bare name meta remains")
 
-S071 | trackRenameContract | src/checks/editcheck/EventChecks.swift:640
+S071 | trackRenameContract | src/checks/editcheck/EventChecks.swift:649
   report.expectEqual("editcheck name", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "undo restores the stored name")
 
-S072 | trackRenameContract | src/checks/editcheck/EventChecks.swift:644
+S072 | trackRenameContract | src/checks/editcheck/EventChecks.swift:653
   report.expectEqual("", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "redo clears the name again")
@@ -1540,9 +1527,179 @@ Shared SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
 rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
 at the tip and asserts equal traversal counts with exact restored SongState and
-DocumentIdentity. The range/raw suites invoke these helpers (see their proofs);
-the suites paired here use synthetic fixtures and do not invoke them. Their one
+DocumentIdentity. The track corpus invokes both helpers under the original
+per-song cppID; synthetic fixtures provide complementary predicates. The helper's
 report predicate is:
   report.expect(count == replayed && document.state == restoredState &&
       document.history.currentIdentity == restoredIdentity, cppID: cppID,
       message: "counting public undo entries restores the exact state and identity")
+
+S073 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:381-383
+  report.expect(document.engineTracks.usedTrackCount < document.trackBudget,
+                cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                message: "track budget admits a new track")
+
+S074 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:390-392
+  report.expect(!voices.isEmpty, cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                message: "new track seeds a voice lane point")
+
+S075 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:393-395
+  report.expectEqual(Tick(0), voices.first?.tick,
+                     cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                     what: "seeded voice lane point sits at tick zero")
+
+S076 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:396-398
+  report.expectEqual(7, voices.first?.value,
+                     cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                     what: "seeded voice lane point carries the requested voice")
+
+S077 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:399-403
+  report.expect(document.notes(in: added).contains { $0.tick == 40 && $0.pitch == 72 },
+                cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                message: "added note is queryable on the new track")
+
+S078 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:404-407
+  report.expect(!document.notes(in: added).contains { $0.tick == 40 && $0.pitch == 72 },
+                cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                message: "deleted track no longer reports the note")
+
+S079 | trackCreateDeleteContract | src/checks/editcheck/EventChecks.swift:408-410
+  report.expect(chunksSortedByTick(document.state.file),
+                cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                message: "raw chunks stay tick-sorted after delete")
+
+S080 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:6-36
+  Each eligible AddTrack/DuplicateTrack/ReorderableTrack/EditableTrack/Playable row
+  has report.expect(!song.midiPath.isEmpty, cppID: id, message: "... row has a MIDI path")
+  at line 35; id is editcheck/EditCheckTest::<family>[<song.label>].
+
+S081 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:17-40,87-98
+  For each eligible row, SongDocument(file: try MidiFile.decode(song.midiBytes),
+  config: song.config, source: song.source) executes at lines 38-39,
+  report.pass(id, row: "... staged MIDI decoded and loaded") at line 40;
+  any thrown decode enters report.fail(id, "track corpus row failed: ...")
+  at lines 87-89. Initial corpus discovery/decode errors also fail at 96-98.
+
+S082 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:42-48
+  report.expect(document.engineTracks.usedTrackCount < document.trackBudget
+                && document.canAddTrack, cppID: id,
+                message: "A003 reloaded song can add a track within budget")
+
+S083 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:49-53
+  report.expect(firstNoteTrack(document) != nil, cppID: id,
+                message: "A013 reloaded song has a first editable track")
+
+S084 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:54-59
+  report.expect(document.engineTracks.usedTrackCount < document.trackBudget
+                && document.canAddTrack, cppID: id,
+                message: "A014 reloaded song can add a duplicate within budget")
+
+S085 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:60-64
+  report.expect(firstNoteTrack(document) != nil, cppID: id,
+                message: "A021 reloaded song has a first editable track")
+
+S086 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:65-69
+  report.expect(document.engineTracks.usedTrackCount >= 2, cppID: id,
+                message: "A022 reloaded song has at least two tracks to reorder")
+
+S087 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:70-75
+  report.expect(firstNoteTrack(document) != nil, cppID: id,
+                message: "A052 reloaded song has a first editable track")
+
+S088 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:76-81
+  report.expect(firstNoteTrack(document) != nil, cppID: id,
+                message: "A059 reloaded song has a first editable track")
+
+S089 | coreTrackMoveRow | src/checks/editcheck/TrackCorpusChecks.swift:168-172
+  report.expectEqual(before, try coreEditHistoryCountAtTip(document,
+    report: report, cppID: id), cppID: id,
+    what: "A024 no-op leaves complete history count unchanged")
+
+S090 | coreTrackMoveRow | src/checks/editcheck/TrackCorpusChecks.swift:173-177
+  report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document,
+    report: report, cppID: id), cppID: id,
+    what: "A026 real move adds one history entry")
+
+S091 | coreTrackMoveRow | src/checks/editcheck/TrackCorpusChecks.swift:163-186
+  report.expect(document.timeSignatures.contains {
+    $0.tick == base + step * 112 && $0.numerator == 5 && $0.denominatorPower == 2
+  }, cppID: id, message: "A030 staged 5/2 signature survives the move")
+
+S092 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:528-530
+  report.expect(document.engineTracks.usedTrackCount >= 2,
+                cppID: "editcheck/EditCheckTest::trackMarkerName",
+                message: "A038 marker-name fixture exposes two engine tracks")
+
+S093 | trackMarkerNameContract | src/checks/editcheck/EventChecks.swift:531-533
+  report.expectEqual(0, document.engineTracks.tracks[0].midiChunk,
+                     cppID: "editcheck/EditCheckTest::trackMarkerName",
+                     what: "A039 first engine track belongs to SMF chunk zero")
+
+S094 | coreTrackRenameRow | src/checks/editcheck/TrackCorpusChecks.swift:240-243
+  report.expectEqual(before, try coreEditHistoryCountAtTip(document,
+    report: report, cppID: id), cppID: id,
+    what: "A064 trimmed same-name rename adds no history entry")
+
+S095 | coreTrackRenameRow | src/checks/editcheck/TrackCorpusChecks.swift:244-247
+  report.expectEqual(before, try coreEditHistoryCountAtTip(document,
+    report: report, cppID: id), cppID: id,
+    what: "A065 marker-shaped renames add no history entry")
+
+S096 | coreTrackCorpusChecks | src/checks/editcheck/TrackCorpusChecks.swift:92-95
+  report.expect(rows[index] > 0, cppID: "editcheck/EditCheckTest::addSongRows",
+                message: "<family> corpus contains an eligible row")
+  for each of the seven families; no eligible row is silently omitted.
+
+S097 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:271-273
+  report.expect(inserted != nil, cppID: id, message: "A073 3/3 signature exists")
+
+S098 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:274-275
+  report.expectEqual(UInt8(3), inserted?.numerator, cppID: id,
+                     what: "A074 staged numerator is three")
+
+S099 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:276-277
+  report.expectEqual(UInt8(3), inserted?.denominatorPower, cppID: id,
+                     what: "A075 staged denominator power is three")
+
+S100 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:278-280
+  report.expect(replaced != nil, cppID: id, message: "A076 replacement exists")
+
+S101 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:281-282
+  report.expectEqual(UInt8(7), replaced?.numerator, cppID: id,
+                     what: "A077 replacement numerator is seven")
+
+S102 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:283-284
+  report.expectEqual(UInt8(2), replaced?.denominatorPower, cppID: id,
+                     what: "A078 replacement denominator power is two")
+
+S103 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:285-286
+  report.expectEqual(before + 1, document.timeSignatures.count, cppID: id,
+                     what: "A079 total time-signature entry count grows by one")
+
+S104 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:287-289
+  report.expect(!document.timeSignatures.contains { $0.tick == base },
+                cppID: id, message: "A080 source tick loses its signature")
+
+S105 | coreSongTimeSignatureRow | src/checks/editcheck/TrackCorpusChecks.swift:290-293
+  report.expectEqual(UInt8(7), moved?.numerator, cppID: id,
+                     what: "A082 moved signature keeps numerator seven")
+
+S106 | coreLoopCfgUndoRedoRow | src/checks/editcheck/TrackCorpusChecks.swift:305-309
+  report.expect(corpusTracksSorted(document), cppID: id,
+                message: "A085 loop edit keeps raw tracks tick-sorted")
+
+S107 | coreLoopCfgUndoRedoRow | src/checks/editcheck/TrackCorpusChecks.swift:313-315
+  report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
+                     what: "A086 undo-all restores baseline MIDI bytes")
+
+S108 | coreLoopCfgUndoRedoRow | src/checks/editcheck/TrackCorpusChecks.swift:316-317
+  report.expectEqual(originalVolume, document.state.config.masterVolume, cppID: id,
+                     what: "A087 undo-all restores master volume")
+
+S109 | coreLoopCfgUndoRedoRow | src/checks/editcheck/TrackCorpusChecks.swift:318-321
+  report.expect(redone != baseline || firstNoteTrack(document) == nil, cppID: id,
+                message: "A088 redo changes MIDI bytes when the song has an editable note track")
+
+S110 | coreLoopCfgUndoRedoRow | src/checks/editcheck/TrackCorpusChecks.swift:322-324
+  report.expectEqual(baseline, try document.state.file.encoded(), cppID: id,
+                     what: "A089 second undo-all restores baseline MIDI bytes")

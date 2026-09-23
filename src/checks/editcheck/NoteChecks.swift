@@ -23,6 +23,7 @@ func runDocumentHistorySuite(_ report: CheckReport) {
     saveIdentity(report)
     confirmedBankOrdering(report)
     historyMergeContracts(report)
+    documentHistoryContracts(report)
 }
 
 @MainActor

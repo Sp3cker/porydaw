@@ -8,12 +8,13 @@ data-row tests in C++ (capability-gated over the 14 staged songs, spec
 dimension must be preserved for retirement (the four accepted certificates
 all kept it). This task delivers it as ONE behavior change on ONE
 verification surface (`--qt eventEdits`), following the
-`NoteMoveCorpusChecks.swift:5-57` pattern (per-song path/load/track
-staging triple, `rows > 0` sentinel, distant-base offsets), plus the two
-trivial in-synthetic gaps (A038/A039) in `trackMarkerNameContract`.
-Audited site coverage: spec §5.5 (13 corpus staging sites; eligibility
-sites A003/A013/A021/A052/A059/A022/A014; undo-depth sites A024/A026/
-A064/A065 → `coreEditHistoryCountAtTip`).
+`NoteMoveCorpusChecks.swift:5-57` pattern (per-song path/load staging,
+`rows > 0` family sentinels, distant-base offsets), but with the **original
+family-specific `SongCapability` gates** from the deleted runner rather than
+a shared editable-track filter. Plus the two synthetic gaps A038/A039
+in `trackMarkerNameContract`. Audited site coverage: spec §5.5 (13
+corpus staging sites; eligibility sites A003/A013/A014/A021/A022/A052/A059;
+undo-depth sites A024/A026/A064/A065 → `coreEditHistoryCountAtTip`).
 
 File-ownership: all new code lives in the new `TrackCorpusChecks.swift`
 (150-400 lines; the two A038/A039 assertions land inside the existing
@@ -45,26 +46,29 @@ coreTrackDeleteRescueRow(...) throws
 coreTrackRenameRow(...) throws
 coreSongTimeSignatureRow(...) throws
 coreLoopCfgUndoRedoRow(...) throws
-// eligibility helper:
-firstNoteTrack(_ document: SongDocument) -> Int?   // mirrors NoteMoveCorpusChecks.firstNoteTrack
-```
+// eligibility helper already exists in NoteCorpusChecks.swift:
+firstNoteTrack(_ document: SongDocument) -> Int?
 
 CMake: append `editcheck/TrackCorpusChecks.swift` to the `swift_core_check`
 `add_library` source list in `src/checks/CMakeLists.txt`, beside the
 existing `editcheck/*.swift` entries (lines 118-141). Plain source append
 per qt-cmake-project conventions; no new targets, no property changes.
 
-Driver semantics (mirror `coreNoteMoveCorpusChecks`): per
-`coreEditCorpusSongs(report)` row, decode + construct `SongDocument`; skip
-songs with no note track (EditableTrack classification); count rows,
-assert `rows > 0` under `editcheck/EditCheckTest::addSongRows`. Per
-family, per song, id = `editcheck/EditCheckTest::<method>[<label>]` with
-the staging triple (path non-empty; fresh document via throwing
-`MidiFile.decode` in a do/catch that `report.fail`s; note-track exists).
-Eligibility gates reproduce `SongCapability`: create/duplicate families
-additionally assert `usedTrackCount < trackBudget` (A003/A014); move
-asserts `usedTrackCount >= 2` (A022). A family finding zero eligible songs
-across the corpus `report.fail`s (never vacuous).
+Driver semantics: for each song from `coreEditCorpusSongs(report)`,
+classify a decoded `SongDocument` once, then run **each eligible family**
+on a freshly decoded document (mirroring `coreNoteMoveCorpusChecks`).
+Do not skip a song wholesale because it has no note track. The original
+runner's `eligible` contract was: `Playable` = every staged song;
+`EditableTrack` = `firstNoteTrack != nil`; `AddTrack` =
+`usedTrackCount < trackBudget`; `DuplicateTrack` = both editable and
+addable; `ReorderableTrack` = editable and `usedTrackCount >= 2`.
+Create uses AddTrack; duplicate uses DuplicateTrack; move uses
+ReorderableTrack; delete-rescue and rename use EditableTrack; time
+signature and loop/config use Playable. For each selected family/song,
+id = `editcheck/EditCheckTest::<method>[<label>]`, assert nonempty path,
+throwing `MidiFile.decode` with `report.fail` on failure, and the relevant
+eligibility gate (including track index for editable families). Each
+family separately fails if zero eligible songs; no vacuous row family.
 
 Row behaviors (distant base `coreEditDistantBase(document)`, step =
 ticksPerBeat/clocksPerBeat; C++ refs tst_songdocument_songtracks.cpp:36-135,
@@ -73,28 +77,33 @@ ticksPerBeat/clocksPerBeat; C++ refs tst_songdocument_songtracks.cpp:36-135,
 - `coreTrackCreateDeleteRow` (36-57): `addTrack(voice: 7)` non-nil; lane
   points non-empty, front tick 0, value 7; `addNotes` one note found in
   `notes(in:)`; `deleteTrack`; note gone; `chunksSortedByTick`.
-- `coreTrackDuplicateRow` (69-86): budget assertion; source note shapes of
-  track 0; `duplicateTrack(0)` non-nil ≠ 0; copied shapes equal;
-  `deleteTrack(copy)`; sorted invariant.
+- `coreTrackDuplicateRow` (69-86): source note shapes on
+  `firstNoteTrack(document)`, not necessarily track 0; `duplicateTrack`
+  on that index non-nil and distinct; copied shapes equal; delete copy;
+  sorted invariant.
 - `coreTrackMoveRow` (98-135): no-op `moveTrack(0, to: 0)` false with
   `coreEditHistoryCountAtTip` unchanged (A024); real move true with count
   +1 (A026); notes/channel survive at `last`; single undo restores
   track-0 notes; redo + move back returns them.
 - `coreTrackDeleteRescueRow` (188-204): loop ticks via
-  `PlaybackTimeline.build(...).loopStartTick/loopEndTick`; `deleteTrack(0)`
-  leaves them; `undoDocument()` leaves them.
-- `coreTrackRenameRow` (216-255): rename to "editcheck name" (name set,
-  bare 0x03 count 1); trimmed rename and marker-shaped `"["`/`" ][ "`
-  leave `coreEditHistoryCountAtTip` unchanged and name intact
-  (A064/A065/A066); clear → empty name, count 0; undo restores; redo
-  clears.
-- `coreSongTimeSignatureRow` (267-292): 3/3 → exists; replace 7/2 →
-  exists with count +1 via `coreEditHistoryCountAtTip`; move → source
-  cleared, destination 7; delete → cleared.
-- `coreLoopCfgUndoRedoRow` (306-326): baseline bytes; `setLoop(end:
-  false, tick:)`; sorted invariant; flip `masterVolume` via `setConfig`;
-  drain-undo → baseline bytes + original volume; drain-redo → bytes ≠
-  baseline; drain-undo → baseline.
+  `PlaybackTimeline.build(...).loopStartTick/loopEndTick`; delete the
+  eligible first-note track (not necessarily track 0); loop ticks persist;
+  `undoDocument()` preserves them.
+- `coreTrackRenameRow` (216-255): rename eligible first-note track to
+  "editcheck name" (name set, bare 0x03 count 1); trimmed rename and
+  marker-shaped `"["`/`" ][ "` leave `coreEditHistoryCountAtTip`
+  unchanged and name intact (A064/A065/A066); clear → empty name,
+  count 0; undo restores; redo clears.
+- `coreSongTimeSignatureRow` (267-292): on every Playable song, 3/3
+  exists; replace 7/2 → exists with the **time-signature entry count**
+  equal to its starting value +1 (C++ `timeSigs().size()`, not history
+  depth); move → source cleared, destination 7; delete → cleared.
+- `coreLoopCfgUndoRedoRow` (306-326): on every Playable song, baseline
+  bytes; `setLoop(end: false, tick:)`; sorted invariant; flip
+  `masterVolume` via `setConfig`; drain-undo → baseline bytes + original
+  volume; drain-redo → bytes differ from baseline **or the song lacks
+  an editable note track** (the original C++ conditional); drain-undo →
+  baseline.
 
 Synthetic additions in `trackMarkerNameContract` (EventChecks.swift),
 under `editcheck/EditCheckTest::trackMarkerName`, after construction:
@@ -106,7 +115,7 @@ under `editcheck/EditCheckTest::trackMarkerName`, after construction:
 
 1. Read `NoteMoveCorpusChecks.swift` and
    `tst_songdocument_songtracks.cpp:36-326` fully; mirror idioms.
-2. Write `TrackCorpusChecks.swift` (driver + 7 rows + helper).
+2. Write `TrackCorpusChecks.swift` (driver + 7 rows; reuse the existing `firstNoteTrack` helper).
 3. Add `coreTrackCorpusChecks(report)` to `runEventEditsSuite` after
    `trackRenameContract(report)`; add the two marker assertions.
 4. Append the CMake source line.

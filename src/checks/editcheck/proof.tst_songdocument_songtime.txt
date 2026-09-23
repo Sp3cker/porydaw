@@ -1,46 +1,31 @@
 Assertion correspondence: editcheck/tst_songdocument_songtime.cpp
+Verification: post-deletion `deno task verify --filter swiftcore --verbose` PASS (1/24 selected, 23 skipped; 9.81s run, 10.37s build).
 
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_songtime.cpp
 Original SHA-256: eeb4076bfba5b54efe78e80dc9f87a4b087f83ad43f5f4c416fb6c2f7f0207c2
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: 4b61ad28147aa39f77d093b5ccdd291bd51a534639e2cc8c0c4716ccbc74534e
-Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
-Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
+Swift SHA-256: 50f430e4beb22a619b8b51c211655278aa113f98f8941c243294253c1ca00ab8
+Swift counterpart: src/checks/editcheck/TimeCorpusChecks.swift
+Swift SHA-256: abe78706ab068c9416940c74e28c735710367d06016c532dd2359c8ab8cd65f6
+Shared corpus loader: src/checks/editcheck/tst_songdocument_runner.swift
+Shared corpus SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
+Covered native implementation: src/core/songdocument_range.cpp, src/core/songdocument_timeeditor*.cpp, src/core/songdocument_xcmd.cpp, src/core/songdocument_tempo.cpp, src/core/songdocument.cpp :: SongDocument::removeTimeRange, addLanePoint, moveLanePoints, deleteLanePoints, applyTempoEdit, loopTick.
+Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below in file order, including fixture and
-setup guards. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. S identifiers identify exact Swift predicates, listed after
-the inventory. MATCHED identifies an equivalent Swift predicate that would
-execute; execution must still be verified. PARTIAL identifies a related Swift
-predicate with an explicit unproved condition. NATIVE identifies retained
-native-window/rendering or native setup obligations; it does not establish
-coverage of any converted surface. GAP identifies an original predicate without
-an equivalent Swift assertion. Unsure PARTIAL-versus-GAP calls were resolved to
-GAP. None of these labels authorizes deletion or claims whole-case equivalence.
+Retirement: 56 original assertion sites, all MATCHED (7 previously matched, 3 stale, 6 history-representation correspondences, 40 corpus-row closures); deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed.
 
-Fixture, sequence and row constraints
-All four cases enumerate staged EditableTrack rows with a fresh SongDocument per row at distantBase/step arithmetic. timeRangeRemove inserts three notes plus two lane-7 points and removes [base+51step, base+54step) on one track, then undoes/redoes. songWholeSongRemove stages a 3/2 signature, a 150-BPM tempo, and one note, then removes [base+61step, base+65step) whole-song and checks signature/tempo/note rescue, loop-marker stability, every chunk end closing exactly 4 steps, and undo/redo byte identity. voiceLanePoint runs the DOC_CC_VOICE add/move/delete/find lifecycle. automationLanePoints runs the CC7 plus pitch-bend plus tempo lifecycle with full undo-to-original and redo-to-edited byte and tempo-vector identity.
-
-Execution and ownership
-runTimeEditsSuite (removalAndSeams) and runEventEditsSuite (laneEditing, rawTempoAndSignatureEditing, trackEditing), dispatched through pdcSuiteRun. Synthetic fixtures are built by timeDocument/MidiFile literals plus writeLane/editTempo calls; no shared editcheck fixture file carries expects for these suites.
-
-Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Legacy editcheck is not registered in the current check catalog; no native run
-or live C++/Swift differential parity is claimed.
+Fixture and execution: coreTimeCorpusChecks loops every staged sound/songs/midi/*.mid row, fails on a missing/empty/unreadable corpus, decodes each EditableTrack song, then independently decodes and classifies fresh documents under all four original cppIDs. For each row, timeRangeRemove stages three notes and two CC7 points, removes [base+51step, base+54step) on one track and undoes/redoes; songWholeSongRemove stages 3/2 signature, 150-BPM tempo and one note, removes [base+61step, base+65step) whole-song, checks rescued globals, shifted note, loop ticks and song-end closure, then undoes/redoes; voiceLanePoint exercises voice-program add/value move/tick move/delete; automationLanePoints exercises CC7, pitch bend and tempo additions/moves/deletions, followed by counted undo/redo byte and tempo equality. The preserved removalAndSeams synthetic checks additionally assert every chunk end closes and restores, and scoped note shapes.
+History caveat: Swift replaces QUndoStack count with coreEditHistoryCountAtTip's public undo/redo traversal and +1 depth comparisons; original index checkpoints map to counted replay with original/edited byte and tempo equality, not to document.revision. The count helper checks equal undo/redo traversals and restored state and identity; no test-only history accessor.
+Registered run path: src/checks/editcheck/TimeChecks.swift :: runTimeEditsSuite -> src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks -> coreTimeRemoveRow/coreTimeWholeSongRow/coreTimeAutomationRow/coreTimeVoiceRow, swiftcore suite 9 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdcSuiteRun; counterparts compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck check is uncompiled and unregistered in checkcatalog.
 
 Original assertion inventory
+Each A site cites an executing S predicate under its original cppID; source contexts and expressions below preserve the original site order. Swift row predicates use distantBase/step per staged song.
 
 A001 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:18
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes corpus staging; removalAndSeams builds a synthetic timeDocument fixture and never asserts a staged song path. Missing: a predicate that a corpus song eligible for timeRangeRemove was staged.
+Disposition: MATCHED
+Swift: S039 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The timeRangeRemove row asserts its staged MIDI path is nonempty; corpus loader rejects missing/empty staged songs.
 Source context since previous assertion:
   #include "checks/editcheck/tst_songdocument.h"
 
@@ -65,9 +50,9 @@ Original expression:
                "timeRangeRemove: corpus staged no song eligible for this required contract")
 
 A002 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:23
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes document.load success; the synthetic SongDocument(file:) construction fails via an early guard return without a report assertion. Missing: load-success observation for this contract.
+Disposition: MATCHED
+Swift: S040 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: Fresh per-row MidiFile.decode throws into report.fail on read/decode failure before this cppID's load-success report.pass.
 Source context since previous assertion:
   ;
 
@@ -78,9 +63,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A003 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:25
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts firstEditableTrack >= 0; the synthetic fixture fixes track layout by construction. Missing: editable-track classification observation.
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The freshly decoded timeRangeRemove row asserts firstNoteTrack is present before any edit executes.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -89,9 +74,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A004 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:37
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S002 asserts the post-removal note shapes under the same cppID, proving the scoped removal took effect; the Bool commit return is never asserted under timeRangeRemove (only S001 asserts a commit return, under the timeRangeRemoveRippleTrim cppID). Missing: removeTimeRange return-value-true assertion.
+Disposition: MATCHED
+Swift: S042 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: The per-row scoped [base+51step, base+54step) removeTime return is asserted true under timeRangeRemove.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -111,8 +96,8 @@ Original expression:
 
 A005 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:40
 Disposition: MATCHED
-Swift: S002 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S002 asserts the surviving trimmed crossing note "0:60:80" under the same cppID, covering the findNote-true observation at the pre-removal tick/pitch under synthetic coordinates.
+Swift: S002, S043 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: Preserved S002 checks the scoped synthetic note shape; per-corpus S043 asserts the pitch-60 note at base+50step survives.
 Source context since previous assertion:
   ;
       DocNote note;
@@ -123,8 +108,8 @@ Original expression:
 
 A006 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:41
 Disposition: MATCHED
-Swift: S002 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S002 asserts exactly two post-removal note shapes under the same cppID, so the removed middle note is absent; covers the !findNote observation under synthetic coordinates.
+Swift: S002, S043 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: Preserved S002 checks the synthetic shapes; S043 asserts the in-range note identity is absent on every corpus row.
 Source context since previous assertion:
   ;
 
@@ -133,8 +118,8 @@ Original expression:
 
 A007 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:42
 Disposition: MATCHED
-Swift: S002 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S002 asserts the rippled later note "80:60:10" under the same cppID, covering the shifted-note findNote-true observation under synthetic coordinates.
+Swift: S002, S043 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: Preserved S002 checks synthetic ripple; S043 finds the original later note identity and pitch at base+53step per corpus row.
 Source context since previous assertion:
   ;
 
@@ -142,9 +127,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 53, 64, &note))
 
 A008 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:43
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S003 asserts the seam lane point "20:44" but under the timeRangeAutomationSeamsAndDefaults cppID; no seam-find predicate executes under timeRangeRemove. Missing: lane-point find at the corpus removal seam.
+Disposition: MATCHED
+Swift: S044 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: The CC7 lookup at the per-row closing seam must return the non-nil shape base+51step:40.
 Source context since previous assertion:
   ;
 
@@ -152,9 +137,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, 7, base + step * 51, &point))
 
 A009 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:44
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S003 asserts the synthetic seam value 44 under the timerange seam cppID; the corpus seam value 40 is never asserted. Missing: point.value == 40 at the removal seam.
+Disposition: MATCHED
+Swift: S044 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: The same per-row seam predicate asserts rescued CC7 value 40, not just point presence.
 Source context since previous assertion:
   ;
 
@@ -162,9 +147,9 @@ Original expression:
   QCOMPARE(point.value, 40)
 
 A010 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:45
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related undo/redo-restore predicates execute in removalAndSeams/insertionAndBoundaries/duplicationAndGlobals; the exact QUndoStack entry count/index is never asserted.
+Disposition: MATCHED
+Swift: S045 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: QUndoStack count is replaced by coreEditHistoryCountAtTip; its public undo/redo traversal checks equal replay and exact restored state/identity, and the row asserts depth increased by exactly one.
 Source context since previous assertion:
   ;
 
@@ -173,8 +158,8 @@ Original expression:
 
 A011 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:47
 Disposition: MATCHED
-Swift: S005 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S005 asserts single-undo byte equality under the same cppID, which entails restoration of the pre-removal note; covers the post-undo findNote-true observation.
+Swift: S005, S046 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: Preserved single-undo byte predicate S005 and per-row S046 assert the original bytes and removed note identity/tick/pitch return after one undo.
 Source context since previous assertion:
   ;
       document.undoStack()->undo();
@@ -183,9 +168,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 52, 62, &note))
 
 A012 | EditCheckTest::timeRangeRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:49
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: No redo predicate executes in removalAndSeams; related Swift S002 asserts the edited note shapes that redo should restore. Missing: redo-to-edited findNote observation.
+Disposition: MATCHED
+Swift: S047 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeRemoveRow
+Mapping/reason: One redo restores the edited bytes and finds the later note identity at base+53step, pitch 64.
 Source context since previous assertion:
   ;
       document.undoStack()->redo();
@@ -194,9 +179,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 53, 64, &note))
 
 A013 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:61
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes corpus staging; removalAndSeams builds a synthetic timeDocument fixture and never asserts a staged song path. Missing: a predicate that a corpus song eligible for songWholeSongRemove was staged.
+Disposition: MATCHED
+Swift: S039 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The songWholeSongRemove row asserts its staged MIDI path is nonempty.
 Source context since previous assertion:
   ;
   }
@@ -216,9 +201,9 @@ Original expression:
                "songWholeSongRemove: corpus staged no song eligible for this required contract")
 
 A014 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:66
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes document.load success; the synthetic SongDocument(file:) construction fails via an early guard return without a report assertion. Missing: load-success observation for this contract.
+Disposition: MATCHED
+Swift: S040 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: Fresh per-row MidiFile.decode throws into report.fail on read/decode failure before this cppID's load-success report.pass.
 Source context since previous assertion:
   ;
 
@@ -229,9 +214,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A015 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:68
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts firstEditableTrack >= 0; the synthetic fixture fixes track layout by construction. Missing: editable-track classification observation.
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The freshly decoded songWholeSongRemove row asserts firstNoteTrack is present before removal executes.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -241,8 +226,8 @@ Original expression:
 
 A016 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:93
 Disposition: MATCHED
-Swift: S006 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S006 asserts whole.removeTime over [61, 65) whole-song commits under the same cppID, covering the removeTimeRange return-true observation under synthetic coordinates.
+Swift: S006, S049 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Preserved S006 asserts the whole-song commit under the same cppID; the corpus row also asserts the same return true at [base+61step, base+65step).
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -274,9 +259,9 @@ Original expression:
   QVERIFY(document.removeTimeRange({Tick(base + step * 61), Tick(base + step * 65)}, scope))
 
 A017 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:94
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Ordered note shapes and byte equality are asserted on the same removals; raw chunk tick ordering is not asserted.
+Disposition: MATCHED
+Swift: S048 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: coreTimeTracksSorted asserts every adjacent pair of raw events is tick-ordered in each chunk after removal.
 Source context since previous assertion:
   ;
 
@@ -284,9 +269,9 @@ Original expression:
   QVERIFY(songdocument_test::tracksSorted(document.smf()))
 
 A018 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:97
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S007 asserts the rescued signature (tick 61, numerator 3) but under the timeRangeWholeSong cppID; no signature predicate executes under songWholeSongRemove. Missing: findsTimeSig at the corpus closing seam under this method.
+Disposition: MATCHED
+Swift: S050 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Rescued 3/2 signature is found at base+61step in the corpus row under songWholeSongRemove.
 Source context since previous assertion:
   ;
       DocTimeSig signature;
@@ -296,9 +281,9 @@ Original expression:
   QVERIFY(songdocument_test::findsTimeSig(document, base + step * 61, &signature))
 
 A019 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:98
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S007 asserts numerator == 3 at tick 61 under the timeRangeWholeSong cppID; never asserted under songWholeSongRemove. Missing: signature numerator value under this method.
+Disposition: MATCHED
+Swift: S050 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: The same rescued-signature predicate asserts numerator 3 (and denominator power 2) at the seam.
 Source context since previous assertion:
   ;
 
@@ -306,9 +291,9 @@ Original expression:
   QCOMPARE(signature.numerator, uint8_t(3))
 
 A020 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:99
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S007 asserts a tempo point at tick 61 under the timeRangeWholeSong cppID without checking its value; the 150-BPM value at the seam is never asserted. Missing: containsTempo with the 150-BPM value under songWholeSongRemove.
+Disposition: MATCHED
+Swift: S051 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: The row asserts the rescued tempo at base+61step has 400000 microseconds per quarter note (150 BPM).
 Source context since previous assertion:
   ;
 
@@ -317,9 +302,9 @@ Original expression:
                                                songdocument_test::tempo(base + step * 61, 150)))
 
 A021 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:101
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: No Swift predicate finds the shifted whole-song note; related Swift S006/S008 assert the whole-song commit and end-tick closure. Missing: findNote of the shifted note at seam + 1 step.
+Disposition: MATCHED
+Swift: S052 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: The original note identity and pitch 65 are found at base+62step after whole-song removal.
 Source context since previous assertion:
   ;
 
@@ -327,9 +312,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 62, 65, &shifted))
 
 A022 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:102
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; whole-song removal asserts globals, notes, and end ticks only.
+Disposition: MATCHED
+Swift: S053 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Public PlaybackTimeline.loopStartTick before/after removal must be equal.
 Source context since previous assertion:
   ;
 
@@ -337,9 +322,9 @@ Original expression:
   QCOMPARE(document.loopTick(false), loopStart)
 
 A023 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:103
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; whole-song removal asserts globals, notes, and end ticks only.
+Disposition: MATCHED
+Swift: S054 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Public PlaybackTimeline.loopEndTick before/after removal must be equal.
 Source context since previous assertion:
   ;
 
@@ -348,8 +333,8 @@ Original expression:
 
 A024 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:104
 Disposition: MATCHED
-Swift: S008 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S008 asserts whole-song removal closes every stored end tick under the same cppID, covering the maxEnd() == endBefore - step * 4 observation.
+Swift: S008, S055 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Preserved S008 asserts every stored chunk end closes; S055 checks each corpus row's maximum song end decreases exactly four clocks.
 Source context since previous assertion:
   ;
 
@@ -357,9 +342,9 @@ Original expression:
   QCOMPARE(maxEnd(), endBefore - step * 4)
 
 A025 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:105
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related undo/redo-restore predicates execute in removalAndSeams/insertionAndBoundaries/duplicationAndGlobals; the exact QUndoStack entry count/index is never asserted.
+Disposition: MATCHED
+Swift: S056 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: QUndoStack count is replaced by coreEditHistoryCountAtTip's equal public undo/redo traversal and exact state/identity replay; the whole-song row asserts depth +1.
 Source context since previous assertion:
   ;
 
@@ -367,9 +352,9 @@ Original expression:
   QCOMPARE(document.undoStack()->count(), before + 1)
 
 A026 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:109
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S010 asserts one-undo byte equality under the timeRangeWholeSong cppID while same-method S009 asserts end-tick restore only; full smf byte identity after undo is never asserted under songWholeSongRemove. Missing: smf().write() == bytesBefore under this method.
+Disposition: MATCHED
+Swift: S057 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Under songWholeSongRemove the corpus row asserts pre-removal serialized bytes after one undo.
 Source context since previous assertion:
   ;
 
@@ -380,9 +365,9 @@ Original expression:
   QCOMPARE(document.smf().write(), bytesBefore)
 
 A027 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:110
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S010 byte equality (timerange cppID) entails tempo restoration and same-method S009 restores end ticks, but no predicate asserts tempo-point restoration under songWholeSongRemove. Missing: containsTempo(originalTempo) after undo under this method.
+Disposition: MATCHED
+Swift: S058 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Under songWholeSongRemove the full tempo vector equals the pre-removal vector after undo, including the 150-BPM point.
 Source context since previous assertion:
   ;
 
@@ -390,9 +375,9 @@ Original expression:
   QVERIFY(songdocument_test::containsTempo(document, originalTempo))
 
 A028 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:111
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S009/S010 assert end-tick and byte restore (byte equality only under the timerange cppID); no predicate finds the restored note under songWholeSongRemove. Missing: findNote of the pre-removal note after undo under this method.
+Disposition: MATCHED
+Swift: S059 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: The original note identity/pitch is found again at base+66step after undo.
 Source context since previous assertion:
   ;
 
@@ -400,9 +385,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 66, 65, &restored))
 
 A029 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:112
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; whole-song removal asserts globals, notes, and end ticks only.
+Disposition: MATCHED
+Swift: S060 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Public loopStartTick equals its pre-removal value after undo.
 Source context since previous assertion:
   ;
 
@@ -411,8 +396,8 @@ Original expression:
 
 A030 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:113
 Disposition: MATCHED
-Swift: S009 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Swift S009 asserts one undo restores every stored end tick under the same cppID, covering the maxEnd() == endBefore observation.
+Swift: S009, S062 | src/checks/editcheck/TimeChecks.swift :: removalAndSeams; src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Preserved S009 asserts all stored end ticks restore after undo; S062 asserts the corpus row's maximum end returns to endBefore.
 Source context since previous assertion:
   ;
 
@@ -420,9 +405,9 @@ Original expression:
   QCOMPARE(maxEnd(), endBefore)
 
 A031 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:114
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes loop markers; whole-song removal asserts globals, notes, and end ticks only.
+Disposition: MATCHED
+Swift: S061 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: Public loopEndTick equals its pre-removal value after undo.
 Source context since previous assertion:
   ;
 
@@ -430,9 +415,9 @@ Original expression:
   QCOMPARE(document.loopTick(true), loopEnd)
 
 A032 | EditCheckTest::songWholeSongRemove | src/checks/editcheck/tst_songdocument_songtime.cpp:116
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: No redo predicate executes for whole-song removal; related Swift S006/S008 assert the edited commit and end-tick closure that redo should restore. Missing: redo-to-shifted findNote observation.
+Disposition: MATCHED
+Swift: S063 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeWholeSongRow
+Mapping/reason: One redo restores edited bytes and finds the shifted original note identity/pitch at base+62step.
 Source context since previous assertion:
   ;
       document.undoStack()->redo();
@@ -441,9 +426,9 @@ Original expression:
   QVERIFY(document.findNote(track, base + step * 62, 65, &shifted))
 
 A033 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:128
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes corpus staging; laneEditing builds a synthetic single-chunk fixture and never asserts a staged song path. Missing: a predicate that a corpus song eligible for voiceLanePoint was staged.
+Disposition: MATCHED
+Swift: S039 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The voiceLanePoint row asserts its staged MIDI path is nonempty.
 Source context since previous assertion:
   ;
   }
@@ -463,9 +448,9 @@ Original expression:
                "voiceLanePoint: corpus staged no song eligible for this required contract")
 
 A034 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:133
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes document.load success; the synthetic SongDocument(file:) construction fails via an early guard return without a report assertion. Missing: load-success observation for this contract.
+Disposition: MATCHED
+Swift: S040 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: Fresh per-row MidiFile.decode throws into report.fail on read/decode failure before this cppID's load-success report.pass.
 Source context since previous assertion:
   ;
 
@@ -476,9 +461,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A035 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:135
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts firstEditableTrack >= 0; the synthetic fixture fixes track layout by construction. Missing: editable-track classification observation.
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The freshly decoded voiceLanePoint row asserts firstNoteTrack is present before voice edits execute.
 Source context since previous assertion:
   ;
       const int track = songdocument_test::firstEditableTrack(document);
@@ -487,9 +472,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A036 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:141
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate adds, moves, deletes, or reads voice-lane points; the only voice-lane predicates seed a new track voice (trackEditing) and observe clipboard/duplicate lanes in other suites, which do not execute this lifecycle.
+Disposition: MATCHED
+Swift: S066 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeVoiceRow
+Mapping/reason: Following voice writeLane(value 5), a guarded lookup requires a voice point at base+step with value 5.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -502,9 +487,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, DOC_CC_VOICE, base + step, &point))
 
 A037 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:143
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate adds, moves, deletes, or reads voice-lane points; the only voice-lane predicates seed a new track voice (trackEditing) and observe clipboard/duplicate lanes in other suites, which do not execute this lifecycle.
+Disposition: MATCHED
+Swift: S067 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeVoiceRow
+Mapping/reason: Following in-place voice move, a guarded lookup requires value 9 at base+step.
 Source context since previous assertion:
   ;
       document.moveLanePoints({{track, DOC_CC_VOICE, point, point.tick, 9}});
@@ -513,9 +498,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, DOC_CC_VOICE, base + step, &point))
 
 A038 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:144
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate adds, moves, deletes, or reads voice-lane points; the only voice-lane predicates seed a new track voice (trackEditing) and observe clipboard/duplicate lanes in other suites, which do not execute this lifecycle.
+Disposition: MATCHED
+Swift: S067 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeVoiceRow
+Mapping/reason: The in-place voice-move guard simultaneously checks point presence and exact value 9.
 Source context since previous assertion:
   ;
 
@@ -523,9 +508,9 @@ Original expression:
   QCOMPARE(point.value, 9)
 
 A039 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:146
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate adds, moves, deletes, or reads voice-lane points; the only voice-lane predicates seed a new track voice (trackEditing) and observe clipboard/duplicate lanes in other suites, which do not execute this lifecycle.
+Disposition: MATCHED
+Swift: S068 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeVoiceRow
+Mapping/reason: Following voice tick move, a guarded lookup requires value 9 at base+6step.
 Source context since previous assertion:
   ;
       document.moveLanePoints({{track, DOC_CC_VOICE, point, Tick(base + step * 6), 9}});
@@ -534,9 +519,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, DOC_CC_VOICE, base + step * 6, &point))
 
 A040 | EditCheckTest::voiceLanePoint | src/checks/editcheck/tst_songdocument_songtime.cpp:148
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate adds, moves, deletes, or reads voice-lane points; the only voice-lane predicates seed a new track voice (trackEditing) and observe clipboard/duplicate lanes in other suites, which do not execute this lifecycle.
+Disposition: MATCHED
+Swift: S069 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeVoiceRow
+Mapping/reason: The relocated voice point must be absent after deleteLanePoints.
 Source context since previous assertion:
   ;
       document.deleteLanePoints(track, DOC_CC_VOICE, {point});
@@ -545,9 +530,9 @@ Original expression:
   QVERIFY(!document.findLanePoint(track, DOC_CC_VOICE, base + step * 6, &point))
 
 A041 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:160
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes corpus staging; laneEditing builds a synthetic single-chunk fixture and never asserts a staged song path. Missing: a predicate that a corpus song eligible for automationLanePoints was staged.
+Disposition: MATCHED
+Swift: S039 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The automationLanePoints row asserts its staged MIDI path is nonempty.
 Source context since previous assertion:
   ;
   }
@@ -567,9 +552,9 @@ Original expression:
                "automationLanePoints: corpus staged no song eligible for this required contract")
 
 A042 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:165
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate observes document.load success; the synthetic SongDocument(file:) construction fails via an early guard return without a report assertion. Missing: load-success observation for this contract.
+Disposition: MATCHED
+Swift: S040 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: Fresh per-row MidiFile.decode throws into report.fail on read/decode failure before this cppID's load-success report.pass.
 Source context since previous assertion:
   ;
 
@@ -580,9 +565,9 @@ Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A043 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:170
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate asserts firstEditableTrack >= 0; the synthetic fixture fixes track layout by construction. Missing: editable-track classification observation.
+Disposition: MATCHED
+Swift: S041 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeCorpusChecks
+Mapping/reason: The freshly decoded automationLanePoints row asserts firstNoteTrack is present before automation edits execute.
 Source context since previous assertion:
   ;
       const QByteArray originalBytes = document.smf().write();
@@ -594,9 +579,9 @@ Original expression:
   QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A044 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:180
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Related same-method Swift S011 asserts post-span-write clamped lane contents ([tick 6, value 127]); a bare addLanePoint-then-find lifecycle step is never asserted. Missing: findLanePoint after addLanePoint(7) without span write.
+Disposition: MATCHED
+Swift: S070 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: After CC7=100 write, guarded lookup requires its value and tick base+2step before moving it.
 Source context since previous assertion:
   ;
       const uint64_t base = songdocument_test::distantBase(document);
@@ -613,9 +598,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, 7, base + step * 2, &cc))
 
 A045 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:181
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: The same lane add/find/move/delete class executes on controller 7; pitch-bend-lane encoding of the same lifecycle is not asserted.
+Disposition: MATCHED
+Swift: S070 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: The same pre-move guard requires pitch bend -1024 at base+3step.
 Source context since previous assertion:
   ;
 
@@ -623,9 +608,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, DOC_CC_BEND, base + step * 3, &bend))
 
 A046 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:183
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Related Swift S012 asserts lane-move relocation (["9:40"]) but under the automation-domain/laneMoveDestinationCollision cppID; no move-find predicate executes under automationLanePoints. Missing: findLanePoint of the moved CC7 point at the destination under this method.
+Disposition: MATCHED
+Swift: S072 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: After move, lookup at base+5step must return the non-nil CC7 shape.
 Source context since previous assertion:
   ;
       document.moveLanePoints({{track, 7, cc, Tick(base + step * 5), 90}});
@@ -634,9 +619,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, 7, base + step * 5, &cc))
 
 A047 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:184
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Related Swift S012 asserts moved value 40 at tick 9 under automation-domain lineage; the moved value 90 is never asserted. Missing: cc.value == 90 at the move destination.
+Disposition: MATCHED
+Swift: S072 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: The moved CC7 shape at base+5step must have value 90.
 Source context since previous assertion:
   ;
 
@@ -644,9 +629,9 @@ Original expression:
   QCOMPARE(cc.value, 90)
 
 A048 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:185
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: The same lane add/find/move/delete class executes on controller 7; pitch-bend-lane encoding of the same lifecycle is not asserted.
+Disposition: MATCHED
+Swift: S073 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: After CC7 moves, the pitch bend must still exist at base+3step with value -1024.
 Source context since previous assertion:
   ;
 
@@ -654,9 +639,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, DOC_CC_BEND, base + step * 3, &bend))
 
 A049 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:187
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate deletes a lane point and observes its absence; laneEditing moves and span-writes controller lanes only.
+Disposition: MATCHED
+Swift: S074 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: Deleting the pitch bend removes the point at base+3step.
 Source context since previous assertion:
   ;
       document.deleteLanePoints(track, DOC_CC_BEND, {bend});
@@ -665,9 +650,9 @@ Original expression:
   QVERIFY(!document.findLanePoint(track, DOC_CC_BEND, base + step * 3, &bend))
 
 A050 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:189
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Tempo add/remove executes on a synthetic fixture in rawTempoAndSignatureEditing; the corpus tempo round-trip around lane edits is not asserted.
+Disposition: MATCHED
+Swift: S075 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: The corpus row asserts the staged 150-BPM tempo point disappears after tempo deletion.
 Source context since previous assertion:
   ;
       document.applyTempoEdit({{tempo}, {}});
@@ -676,9 +661,9 @@ Original expression:
   QVERIFY(!songdocument_test::containsTempo(document, tempo))
 
 A051 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:190
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Related Swift S011/S012 assert CC7 lane presence in span-write/move contexts; lane persistence across a tempo add/remove cycle is never asserted. Missing: findLanePoint(7) after the tempo add/remove cycle.
+Disposition: MATCHED
+Swift: S076 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: Guarded CC7 lookup after tempo deletion requires the moved point at base+5step, value 90.
 Source context since previous assertion:
   ;
 
@@ -686,9 +671,9 @@ Original expression:
   QVERIFY(document.findLanePoint(track, 7, base + step * 5, &cc))
 
 A052 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:192
-Disposition: GAP
-Swift: none identified
-Mapping/reason: No Swift predicate deletes a lane point and observes its absence; laneEditing moves and span-writes controller lanes only.
+Disposition: MATCHED
+Swift: S077 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: Deleting the moved CC7 point removes it at base+5step.
 Source context since previous assertion:
   ;
       document.deleteLanePoints(track, 7, {cc});
@@ -697,9 +682,9 @@ Original expression:
   QVERIFY(!document.findLanePoint(track, 7, base + step * 5, &cc))
 
 A053 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:198
-Disposition: PARTIAL
-Swift: src/checks/editcheck/TimeChecks.swift :: removalAndSeams
-Mapping/reason: Related Swift S005/S010 assert single-undo byte restore for time removals; lane-edit undo-to-original bytes are never asserted. Missing: smf().write() == originalBytes after undoing lane edits.
+Disposition: MATCHED
+Swift: S078 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: QUndoStack index checkpoints are replaced by public depth difference (editedDepth-originalDepth), exactly that many successful undos, and equality with original serialized bytes; history helper checks equal replay and exact state/identity.
 Source context since previous assertion:
   ;
       const QByteArray editedBytes = document.smf().write();
@@ -712,9 +697,9 @@ Original expression:
   QCOMPARE(document.smf().write(), originalBytes)
 
 A054 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:199
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Tempo counts and values are asserted post-undo; full tempo-vector equality across lane edits is not asserted.
+Disposition: MATCHED
+Swift: S079 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: Counted public undos return the full tempo vector to the original vector, not merely its count.
 Source context since previous assertion:
   ;
 
@@ -722,9 +707,9 @@ Original expression:
   QVERIFY(document.tempoPoints() == originalTempos)
 
 A055 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:202
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: laneEditing
-Mapping/reason: Related Swift S011 asserts the edited lane state but not serialized bytes, and no redo executes anywhere in the mapped suites. Missing: smf().write() == editedBytes after redo, and any redo execution.
+Disposition: MATCHED
+Swift: S080 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: QUndoStack index checkpoint is replaced by exactly applied successful public redos and edited-byte equality.
 Source context since previous assertion:
   ;
       while (document.undoStack()->index() < editedUndoIndex)
@@ -734,9 +719,9 @@ Original expression:
   QCOMPARE(document.smf().write(), editedBytes)
 
 A056 | EditCheckTest::automationLanePoints | src/checks/editcheck/tst_songdocument_songtime.cpp:203
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: rawTempoAndSignatureEditing
-Mapping/reason: Tempo counts and values are asserted post-undo; full tempo-vector equality across lane edits is not asserted.
+Disposition: MATCHED
+Swift: S081 | src/checks/editcheck/TimeCorpusChecks.swift :: coreTimeAutomationRow
+Mapping/reason: Counted public redos return the full tempo vector to its edited value.
 Source context since previous assertion:
   ;
 
@@ -748,28 +733,11 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-Every report.expect/expectEqual/fail call in the mapped Swift functions:
-
-S001 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:195
-  report.expect(document.removeTime(TimeRange(startTick: 20, endTick: 50),
-                                        scope: TimeScope(tracks: [0])),
-                    cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
-                    message: "scoped gap removal commits")
-
+Preserved S002/S005/S006/S008/S009 still execute under the original cppIDs; S039-S081 are the corpus-row predicates. Unused legacy S identifiers are omitted rather than carrying stale citations to unrelated checks.
 S002 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:199
   report.expectEqual(["0:60:80", "80:60:10"], document.notes(in: 0).map(noteShape),
                          cppID: "editcheck/EditCheckTest::timeRangeRemove",
                          what: "crossing note trims and later note ripples")
-
-S003 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:202
-  report.expectEqual("20:44", document.lanePoints(track: 0, lane: .controller(7)).first.map(coreTimePointShape),
-                         cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
-                         what: "last in-range value survives at the seam")
-
-S004 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:205
-  report.expectEqual(untouched?.tick, document.note(ids[2])?.tick,
-                         cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
-                         what: "unscoped track is unchanged")
 
 S005 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:209
   report.expectEqual(before, coreTimeBytes(document),
@@ -782,13 +750,6 @@ S006 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:220
                     cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                     message: "whole-song close commits")
 
-S007 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:224
-  report.expect(whole.timeSignatures.contains { $0.tick == 61 && $0.numerator == 3 } &&
-          whole.state.tempo.contains { $0.tick == 61 } &&
-          whole.rawChunks[0].events.contains { $0.metaType == 0x06 && $0.tick == 61 },
-          cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
-          message: "globals are rescued to the closing seam")
-
 S008 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:234
   report.expect(closedEnds,
           cppID: "editcheck/EditCheckTest::songWholeSongRemove",
@@ -799,164 +760,138 @@ S009 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:238
                          cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                          what: "one undo restores every stored end tick")
 
-S010 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:241
-  report.expectEqual(wholeBefore, coreTimeBytes(whole),
-                         cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
-                         what: "one undo restores globals, events, and end-of-track state")
+S039 | coreTimeCorpusChecks | src/checks/editcheck/TimeCorpusChecks.swift:24-32
+  The per-scenario cppID contains the staged row label; report.expect(!loaded.midiPath.isEmpty, cppID: id, message: "\(pathSite) editable row has a MIDI path").
 
-S011 | laneEditing | src/checks/editcheck/EventChecks.swift:249
-  report.expectEqual([LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
-                         document.lanePoints(track: 0, lane: .controller(7)),
-                         cppID: "editcheck/EditCheckTest::automationLanePoints",
-                         what: "span write replaces and clamps points")
+S040 | coreTimeCorpusChecks | src/checks/editcheck/TimeCorpusChecks.swift:33-36,54-55
+  let document = SongDocument(file: try MidiFile.decode(loaded.midiBytes), config: loaded.config, source: loaded.source); report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded"); catch { report.fail(id, "time corpus row failed: \(error)") }.
 
-S012 | laneEditing | src/checks/editcheck/EventChecks.swift:257
-  report.expectEqual(["9:40"], document.lanePoints(track: 0, lane: .controller(7))
-          .map { "\($0.tick):\($0.value)" },
-          cppID: "automation-domain/laneMoveDestinationCollision",
-          what: "lane move relocates the selected identity")
+S041 | coreTimeCorpusChecks | src/checks/editcheck/TimeCorpusChecks.swift:37-40
+  report.expect(track != nil, cppID: id, message: "\(trackSite) reloaded row has an editable track"); guard let track else { continue }.
 
-S013 | laneEditing | src/checks/editcheck/EventChecks.swift:270
-  report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
-                         cppID: "automation-domain/laneDeleteForeignChunk",
-                         what: "foreign-chunk XCMD point cannot delete a local event")
+S042 | coreTimeRemoveRow | src/checks/editcheck/TimeCorpusChecks.swift:84-87
+  report.expect(document.removeTime(TimeRange(startTick: base + 51 * step, endTick: base + 54 * step), scope: TimeScope(tracks: [track])), cppID: id, message: "scoped removal commits").
 
-S014 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:187
-  report.expectEqual(beforeTempoRaw, document.revision,
-                         cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                         what: "raw tempo meta is rejected")
+S043 | coreTimeRemoveRow | src/checks/editcheck/TimeCorpusChecks.swift:88-95
+  report.expect(document.notes(in: track).contains { $0.tick == base + 50 * step && $0.pitch == 60 }, cppID: id, message: "pre-range note survives"); report.expect(document.notes(in: track).contains { $0.id == inserted[2] && $0.tick == base + 53 * step && $0.pitch == 64 }, cppID: id, message: "post-range note ripples left"); report.expect(!document.notes(in: track).contains { $0.id == inserted[1] }, cppID: id, message: "in-range note is removed").
 
-S015 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
-  report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
-                         document.state.tempo,
-                         cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                         what: "tempo normalization keeps the last same-tick value")
+S044 | coreTimeRemoveRow | src/checks/editcheck/TimeCorpusChecks.swift:96-99
+  report.expectEqual("\(base + 51 * step):40", document.lanePoints(track: track, lane: .controller(7)).first(where: { $0.tick == base + 51 * step }).map(coreTimePointShape), cppID: id, what: "last in-range CC7 value is rescued to the seam").
 
-S016 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
-  report.expectEqual(rawCount, document.rawChunks[0].events.count,
-                         cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                         what: "mixed raw and tempo replacement is atomic")
+S045 | coreTimeRemoveRow | src/checks/editcheck/TimeCorpusChecks.swift:100-103
+  report.expectEqual(position + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id), cppID: id, what: "removal adds one history entry").
 
-S017 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
-  report.expectEqual(1, document.state.tempo.count,
-                         cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
-                         what: "one undo restores both domains")
+S046 | coreTimeRemoveRow | src/checks/editcheck/TimeCorpusChecks.swift:105-110
+  _ = document.history.undoDocument(); report.expectEqual(before, coreTimeBytes(document), cppID: id, what: "one undo restores the removal"); report.expect(document.notes(in: track).contains { $0.id == inserted[1] && $0.tick == base + 52 * step && $0.pitch == 62 }, cppID: id, message: "undo restores the removed note").
 
-S018 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:213
-  report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
-                         cppID: "editcheck/EditCheckTest::songTimeSignature",
-                         what: "same-tick signature is replaced")
+S047 | coreTimeRemoveRow | src/checks/editcheck/TimeCorpusChecks.swift:111-116
+  _ = document.history.redoDocument(); report.expectEqual(after, coreTimeBytes(document), cppID: id, what: "one redo restores the removal"); report.expect(document.notes(in: track).contains { $0.id == inserted[2] && $0.tick == base + 53 * step && $0.pitch == 64 }, cppID: id, message: "redo restores the rippled note").
 
-S019 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:217
-  report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
-                    cppID: "editcheck/EditCheckTest::songTimeSignature",
-                    message: "signature moves with its payload")
+S048 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:8-12,140-141
+  report.expect(coreTimeTracksSorted(document), cppID: id, message: "all chunk events stay tick-sorted after the removal"); coreTimeTracksSorted checks zip(chunk.events, chunk.events.dropFirst()).allSatisfy { $0.tick <= $1.tick } in every chunk.
 
-S020 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
-  report.expect(!document.timeSignatures.contains { $0.tick == 24 },
-                    cppID: "editcheck/EditCheckTest::songTimeSignature",
-                    message: "signature deletion removes destination")
+S049 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:136-139
+  report.expect(document.removeTime(TimeRange(startTick: base + 61 * step, endTick: base + 65 * step), scope: TimeScope(wholeSong: true)), cppID: id, message: "whole-song removal commits").
 
-S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:234
-  report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
-          .map { Int($0.numerator) }.sorted(),
-          cppID: "editcheck/EditCheckTest::songTimeSignature",
-          what: "move preserves every cross-chunk source signature")
+S050 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:142-144
+  report.expect(document.timeSignatures.contains { $0.tick == base + 61 * step && $0.numerator == 3 && $0.denominatorPower == 2 }, cppID: id, message: "3/2 signature is rescued to the closing seam").
 
-S022 | trackEditing | src/checks/editcheck/EventChecks.swift:68
-  report.expectEqual(2, added,
-                         cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                         what: "new track occupies the next engine slot")
+S051 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:145-147
+  report.expect(document.state.tempo.contains { $0.tick == base + 61 * step && $0.microsecondsPerQuarterNote == 400_000 }, cppID: id, message: "150 BPM tempo is rescued to the closing seam").
 
-S023 | trackEditing | src/checks/editcheck/EventChecks.swift:71
-  report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
-                         cppID: "editcheck/EditCheckTest::voiceLanePoint",
-                         what: "new track voice is clamped and seeded")
+S052 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:148-150
+  report.expect(document.notes(in: track).contains { $0.id == shiftedID && $0.tick == base + 62 * step && $0.pitch == 65 }, cppID: id, message: "later note shifts by the removed span").
 
-S024 | trackEditing | src/checks/editcheck/EventChecks.swift:74
-  report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
-                         cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                         what: "add publishes old engine-track identities")
+S053 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:152-153
+  report.expectEqual(loopBefore.loopStartTick, loopAfter.loopStartTick, cppID: id, what: "loop start stays put across removal").
 
-S025 | trackEditing | src/checks/editcheck/EventChecks.swift:78
-  report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
-                         cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                         what: "undo publishes the inverse track remap")
+S054 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:154-155
+  report.expectEqual(loopBefore.loopEndTick, loopAfter.loopEndTick, cppID: id, what: "loop end stays put across removal").
 
-S026 | trackEditing | src/checks/editcheck/EventChecks.swift:82
-  report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
-                         cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
-                         what: "redo republishes the forward track remap")
+S055 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:156-157
+  report.expectEqual(endBefore - 4 * step, document.rawChunks.map(\.endTick).max() ?? 0, cppID: id, what: "song end closes by exactly four clocks").
 
-S027 | trackEditing | src/checks/editcheck/EventChecks.swift:87
-  report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
+S056 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:158-161
+  report.expectEqual(position + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id), cppID: id, what: "whole-song removal adds one history entry").
 
-S028 | trackEditing | src/checks/editcheck/EventChecks.swift:90
-  report.expectEqual(["8:60:4"],
-                         document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
-                         cppID: "editcheck/EditCheckTest::trackDuplicate",
-                         what: "duplicate preserves the fixture's literal note")
+S057 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:163-165
+  _ = document.history.undoDocument(); report.expectEqual(before, coreTimeBytes(document), cppID: id, what: "one undo restores the whole-song removal").
 
-S029 | trackEditing | src/checks/editcheck/EventChecks.swift:94
-  report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
-                    cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                    message: "duplicate remints note identities")
+S058 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:166-167
+  report.expectEqual(originalTempo, document.state.tempo, cppID: id, what: "undo restores the tempo points").
 
-S030 | trackEditing | src/checks/editcheck/EventChecks.swift:99
-  report.expect(document.timeSignatures.contains { $0.tick == 2 },
-                    cppID: "editcheck/EditCheckTest::trackMove",
-                    message: "conductor time signature survives reorder")
+S059 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:168-170
+  report.expect(document.notes(in: track).contains { $0.id == shiftedID && $0.tick == base + 66 * step && $0.pitch == 65 }, cppID: id, message: "undo restores the shifted note").
 
-S031 | trackEditing | src/checks/editcheck/EventChecks.swift:102
-  report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
-                    cppID: "editcheck/EditCheckTest::trackMarkerName",
-                    message: "conductor marker remains in chunk zero")
+S060 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:172-173
+  report.expectEqual(loopBefore.loopStartTick, loopUndone.loopStartTick, cppID: id, what: "loop start stays put across undo").
 
-S032 | trackEditing | src/checks/editcheck/EventChecks.swift:107
-  report.expect(document.rawChunks[0].events.contains { event in
-          event.metaType == 0x58 && event.tick == 2
-      }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
-      message: "global signature is rescued before chunk deletion")
+S061 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:174-175
+  report.expectEqual(loopBefore.loopEndTick, loopUndone.loopEndTick, cppID: id, what: "loop end stays put across undo").
 
-S033 | trackEditing | src/checks/editcheck/EventChecks.swift:111
-  report.expect(document.rawChunks[0].events.contains { event in
-          event.tick == 16 && MidiFile.metaIsMarker(event)
-      }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
-      message: "winning loop marker is rescued")
+S062 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:176-177
+  report.expectEqual(endBefore, document.rawChunks.map(\.endTick).max() ?? 0, cppID: id, what: "undo restores the song end").
 
-S034 | trackEditing | src/checks/editcheck/EventChecks.swift:115
-  report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
-                         cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                         what: "deleting the chunk-zero track retains the conductor chunk")
+S063 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:178-183
+  _ = document.history.redoDocument(); report.expectEqual(after, coreTimeBytes(document), cppID: id, what: "one redo restores the whole-song removal"); report.expect(document.notes(in: track).contains { $0.id == shiftedID && $0.tick == base + 62 * step && $0.pitch == 65 }, cppID: id, message: "redo restores the shifted note").
 
-S035 | trackEditing | src/checks/editcheck/EventChecks.swift:121
-  report.expectEqual("Bass", document.trackName(0),
-                         cppID: "editcheck/EditCheckTest::trackRename",
-                         what: "rename trims the stored display name")
+S064 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:185-186
+  report.expectEqual(loopBefore.loopStartTick, loopRedone.loopStartTick, cppID: id, what: "loop start stays put across redo").
 
-S036 | trackEditing | src/checks/editcheck/EventChecks.swift:125
-  report.expectEqual(revision + 1, document.revision,
-                         cppID: "editcheck/EditCheckTest::trackRename",
-                         what: "loop-marker-shaped name is rejected")
+S065 | coreTimeWholeSongRow | src/checks/editcheck/TimeCorpusChecks.swift:187-188
+  report.expectEqual(loopBefore.loopEndTick, loopRedone.loopEndTick, cppID: id, what: "loop end stays put across redo").
 
-S037 | trackEditing | src/checks/editcheck/EventChecks.swift:130
-  report.expect(budgetLimited.addTrack(voice: 1) == nil,
-                    cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                    message: "configured track budget rejects an added track")
+S066 | coreTimeVoiceRow | src/checks/editcheck/TimeCorpusChecks.swift:341-347
+  document.writeLane(track: track, lane: .voice, from: base + step, through: base + step, points: [LaneWrite(tick: base + step, value: 5)]); guard let voice = document.lanePoints(track: track, lane: .voice).first(where: { $0.tick == base + step && $0.value == 5 }) else { report.fail(id, "voice program 5 must be readable at clock one"); return }.
 
-S038 | trackEditing | src/checks/editcheck/EventChecks.swift:137
-  report.expect(ceiling.addTrack(voice: 1) == nil,
-                    cppID: "editcheck/EditCheckTest::trackCreateDelete",
-                    message: "hardware track ceiling rejects a seventeenth track")
+S067 | coreTimeVoiceRow | src/checks/editcheck/TimeCorpusChecks.swift:349-355
+  document.moveLanePoints(track: track, lane: .voice, moves: [LanePointMove(point: voice, tick: base + step, value: 9)]); guard let updated = document.lanePoints(track: track, lane: .voice).first(where: { $0.tick == base + step && $0.value == 9 }) else { report.fail(id, "in-place move must set voice program 9"); return }.
 
-Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
+S068 | coreTimeVoiceRow | src/checks/editcheck/TimeCorpusChecks.swift:356-362
+  document.moveLanePoints(track: track, lane: .voice, moves: [LanePointMove(point: updated, tick: base + 6 * step, value: 9)]); guard let relocated = document.lanePoints(track: track, lane: .voice).first(where: { $0.tick == base + 6 * step && $0.value == 9 }) else { report.fail(id, "voice program 9 must relocate to clock six"); return }.
+
+S069 | coreTimeVoiceRow | src/checks/editcheck/TimeCorpusChecks.swift:363-366
+  document.deleteLanePoints(track: track, lane: .voice, points: [relocated]); report.expect(!document.lanePoints(track: track, lane: .voice).contains { $0.tick == base + 6 * step }, cppID: id, message: "deleting the relocated voice removes it").
+
+S070 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:231-245
+  After writeLane CC7=100 at base+2step and pitch bend=-1024 at base+3step, guard let cc = document.lanePoints(track: track, lane: .controller(7)).first(where: { $0.tick == base + 2 * step && $0.value == 100 }), document.lanePoints(track: track, lane: .pitchBend).contains(where: { $0.tick == base + 3 * step && $0.value == -1024 }) else { report.fail(id, "CC7=100 and pitch bend=-1024 must be readable before moving"); return }.
+
+S071 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:246-247
+  report.expect(document.state.tempo.contains(tempo), cppID: id, message: "150 BPM tempo is inserted at clock four").
+
+S072 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:248-253
+  After moveLanePoints CC7 to base+5step value 90, report.expectEqual("\(base + 5 * step):90", document.lanePoints(track: track, lane: .controller(7)).first(where: { $0.tick == base + 5 * step }).map(coreTimePointShape), cppID: id, what: "CC7 moves to clock five with value 90").
+
+S073 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:254-256
+  report.expect(document.lanePoints(track: track, lane: .pitchBend).contains { $0.tick == base + 3 * step && $0.value == -1024 }, cppID: id, message: "moving CC7 preserves the pitch bend").
+
+S074 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:262-265
+  document.deleteLanePoints(track: track, lane: .pitchBend, points: [bend]); report.expect(!document.lanePoints(track: track, lane: .pitchBend).contains { $0.tick == base + 3 * step }, cppID: id, message: "deleting the pitch bend removes it").
+
+S075 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:266-268
+  document.editTempo(TempoEdit(remove: [tempo])); report.expect(!document.state.tempo.contains(tempo), cppID: id, message: "deleting the tempo removes it").
+
+S076 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:269-273
+  guard let movedCC = document.lanePoints(track: track, lane: .controller(7)).first(where: { $0.tick == base + 5 * step && $0.value == 90 }) else { report.fail(id, "deleting the tempo must preserve the moved CC7"); return }.
+
+S077 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:274-277
+  document.deleteLanePoints(track: track, lane: .controller(7), points: [movedCC]); report.expect(!document.lanePoints(track: track, lane: .controller(7)).contains { $0.tick == base + 5 * step }, cppID: id, message: "deleting CC7 removes its moved point").
+
+S078 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:280-291
+  let applied = editedDepth - originalDepth; guard applied > 0 else { report.fail(id, "the lifecycle must add history entries without unwinding prior history"); return }; for _ in 0..<applied { report.expect(document.history.undoDocument(), cppID: id, message: "each applied edit can be undone") }; report.expectEqual(originalBytes, coreTimeBytes(document), cppID: id, what: "counted undo restores the original song bytes").
+
+S079 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:292-293
+  report.expectEqual(originalTempos, document.state.tempo, cppID: id, what: "counted undo restores the original tempos").
+
+S080 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:294-299
+  for _ in 0..<applied { report.expect(document.history.redoDocument(), cppID: id, message: "each applied edit can be redone") }; report.expectEqual(editedBytes, coreTimeBytes(document), cppID: id, what: "counted redo restores the edited song bytes").
+
+S081 | coreTimeAutomationRow | src/checks/editcheck/TimeCorpusChecks.swift:300-301
+  report.expectEqual(editedTempos, document.state.tempo, cppID: id, what: "counted redo restores the edited tempos").
+
+Shared helper: src/checks/editcheck/tst_songdocument_runner.swift:14-50,75-86
 Shared SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
-coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
-rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
-at the tip and asserts equal traversal counts with exact restored SongState and
-DocumentIdentity. The range/raw suites invoke these helpers (see their proofs);
-the suites paired here use synthetic fixtures and do not invoke them. Their one
-report predicate is:
+coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid and rejects an empty corpus. coreEditHistoryCountAtTip traverses public undo/redo to count entries at the tip and asserts equal replay with restored SongState and DocumentIdentity:
   report.expect(count == replayed && document.state == restoredState &&
       document.history.currentIdentity == restoredIdentity, cppID: cppID,
       message: "counting public undo entries restores the exact state and identity")

@@ -137,8 +137,11 @@ if(APPLE)
         audio/AudioAuditionChecks.swift
         playback/ResonanceSuppressionChecks.swift
         editcheck/NoteChecks.swift
+        editcheck/DocumentHistoryChecks.swift
         editcheck/EventChecks.swift
+        editcheck/TrackCorpusChecks.swift
         editcheck/TimeChecks.swift
+        editcheck/TimeCorpusChecks.swift
         rollcheck/static/camera.swift
         nativegraphics/tst_playhead_quick.swift
         trackheaders/headerfixture.swift

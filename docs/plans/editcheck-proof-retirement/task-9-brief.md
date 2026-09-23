@@ -4,9 +4,12 @@
 
 Five of the twelve `tst_songdocument_document.cpp` families (spec §5.7)
 share one verification surface (`--qt documentHistory`, suite 5) and one
-concept (document publication/history observables). Production already
-implements everything needed: construction publishes nothing; `isDirty` =
-identity ≠ saved; `SongHistory` coalesces `HistoryGroup` moves and drops
+concept (document publication/history observables). Swift construction
+finishes before an `onChange` callback can be attached; unlike C++'s
+explicit `adoptSmf`/`load`, there is no public load operation that emits
+the original load-time signal sequence. The constructed state/revision
+remain observable. `isDirty` = identity ≠ saved; `SongHistory` coalesces
+`HistoryGroup` moves and drops
 origin entries. `NoteChecks.swift` is 526 lines and this adds ~150-200 —
 so the five contracts land in ONE new `DocumentHistoryChecks.swift`
 (~300 lines), wired from `runDocumentHistorySuite` (1-2 call lines).
@@ -41,10 +44,13 @@ one entry:
 - `documentHistoryContracts(_ report:)` calling, in order:
 - `documentLoadPublicationContract`: construct; assert `revision == 1`
   (A002), `state.file.chunks.count == 3` and
-  `engineTracks.usedTrackCount == 2` (A008/A009); install
-  `document.onChange` before any edit and assert zero callbacks at
-  construction (the surviving observable for the retired load-spy
-  sequence A003-A007 — final classification is Task 12's).
+  `engineTracks.usedTrackCount == 2` (A008/A009). The C++ original
+  emits `tracksRemapped` then `documentChanged` at revision 1 during
+  `fixture.stage`, with one empty-map remap (A003-A007). Swift cannot
+  install `onChange` before `SongDocument(file:)` finishes, and has no
+  post-construction load ingress; Task 12 records that signal protocol
+  as RETIRED-REPRESENTATION. Do **not** test a freshly installed empty
+  callback counter; that would assert only the test setup, not loading.
 - `documentSavedIdentityContract`: `didSave(captureSave())` → clean
   (A102); edit → dirty (A103); snapshot differs from saved (A104); undo
   → clean (A105); redo → dirty (A106); re-save; undo away → dirty

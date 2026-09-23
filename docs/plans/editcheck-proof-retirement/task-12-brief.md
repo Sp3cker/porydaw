@@ -45,8 +45,14 @@ the Task 9-11 site lists. In summary:
   dynamic conductor promotion A091-A097 (`EventEditing.swift ::
   insertRawEvent` never remaps; explicit track ops only);
   raw-event NoteID tracking A117-A118 (NoteID only on projected Notes);
-  load-publication spy sequence A003-A007 (Swift publishes nothing at
-  construction by design — cite Task 9's zero-change predicate).
+  load-publication spy sequence A003-A007: C++ `fixture.stage`
+  explicitly emits `tracksRemapped` then `documentChanged` at
+  revision 1 with one empty-map remap. Swift's non-throwing
+  `SongDocument(file:)` finishes before consumers may attach `onChange`,
+  and offers no public post-construction load operation, so this
+  observer protocol has no Swift ingress. Cite the constructor/state
+  representation difference, not an unobserved zero-change predicate;
+  A002/A008/A009 still require direct initial-state predicates.
 - BEHAVIOR-GAP closures: cite the Task 9-11 predicates.
 
 ## Implementation steps
