@@ -9,6 +9,7 @@ This task terminalizes all 250 sites and deletes the largest original.
 ## Exact write set
 
 - `src/checks/editcheck/proof.tst_songdocument_document.txt` (rewrite)
+- `src/checks/editcheck/DocumentTrackChecks.swift` (A098-A100 same-slot move predicates, discovered at certification)
 - Delete: `src/checks/editcheck/tst_songdocument_document.cpp`
 
 ## Prerequisites
@@ -23,8 +24,12 @@ the Task 9-11 site lists. In summary:
 - Existing 16 MATCHED unchanged.
 - STALE reclassifications: globalMetadata already done (Task 11);
   velocityAtomic A023-A026; velocityRejects A055;
-  duplicateIdentities A064-A069; remapsAndRaw A098-A100;
-  savedIdentity A103-A104; crossingIdentities A162-A163.
+  duplicateIdentities A064-A069; savedIdentity A103-A104;
+  crossingIdentities A162-A163. RemapsAndRaw A098-A100 are
+  BEHAVIOR-GAP, not STALE: the existing `trackMoveContract` uses a
+  different `cppID`. Add three direct predicates under
+  `trackRemapPublicationContract` for rejected same-slot move, unchanged
+  revision, and no `onChange` publication after clearing prior changes.
 - REPRESENTATION→MATCHED, each citing the exact predicate class:
   history-DEPTH sites (velocityAtomic A030/A049; velocityRejects A061;
   mergedOverlap A211/A218/A225; netZero depth deltas) cite

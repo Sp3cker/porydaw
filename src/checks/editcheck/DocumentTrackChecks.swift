@@ -49,8 +49,8 @@ private func documentDuplicationOwnershipContract(_ report: CheckReport) {
         copied.first?.pitch == sourceNote.pitch &&
         copied.first?.duration == sourceNote.duration &&
         copied.first?.velocity == sourceNote.velocity &&
-        copied.first?.id != sourceNote.id,
-        cppID: id, message: "A124-A128 duplicate preserves the note but mints its identity")
+        copied.first?.id != sourceNote.id && sourceNote.id.isAssigned,
+        cppID: id, message: "A116/A124-A128 duplicate preserves the owned assigned note and mints its identity")
     report.expectEqual(1, changes.count, cppID: id, what: "A129 duplication publishes once")
     report.expectEqual(TrackRemap(chunkMap: Array(0..<16).map(Optional.some),
                                   engineTrackMap: Array(0..<15).map(Optional.some),
@@ -141,6 +141,14 @@ private func trackRemapPublicationContract(_ report: CheckReport) {
                                                     data: Array("metadata".utf8)))
     report.expect(changes.count == 1 && changes[0].trackRemap == nil,
                   cppID: id, message: "A089-A090 meta insertion publishes one change without remap")
+    changes.removeAll()
+    let beforeNoOp = document.revision
+    report.expect(!document.moveTrack(0, to: 0), cppID: id,
+                  message: "A098 same-slot track move rejects")
+    report.expectEqual(beforeNoOp, document.revision, cppID: id,
+                       what: "A099 same-slot move leaves revision unchanged")
+    report.expect(changes.isEmpty, cppID: id,
+                  message: "A100 same-slot move publishes no change")
 }
 
 @MainActor
