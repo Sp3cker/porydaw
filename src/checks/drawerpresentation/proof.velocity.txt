@@ -1486,53 +1486,53 @@ Swift expression:
   report.expect(fixture.handle(note)?.value == oldValue, cppID: drawerVelocityProjectionID,
                     message: "undo invalidates cached note values again")
 
-S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:352
+S075 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:395
 Swift expression:
   report.expectEqual(Tick(16), page.presentedContextTick, cppID: drawerVelocityDiagnosticsID,
                          what: "the presented context tick is the rounded playhead tick")
 
-S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:354
+S076 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:397
 Swift expression:
   report.expectEqual(0, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                          what: "the presented context slot is the bank slot at that tick")
 
-S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:356
+S077 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:399
 Swift expression:
   report.expectEqual(handleCount, fixture.handles.count, cppID: drawerVelocityDiagnosticsID,
                          what: "playhead movement preserves the displayed note count")
 
-S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:361
+S078 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:404
 Swift expression:
   report.expectEqual(2, page.presentedContextSlot, cppID: drawerVelocityDiagnosticsID,
                          what: "the new section resolves the slot of its own tick")
 
-S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:375
+S079 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:418
 Swift expression:
   report.expectEqual(2, page.context.slot, cppID: drawerVelocityDiagnosticsID,
                          what: "the stopped velocity context consumes the published edit cursor")
 
-S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:377
+S080 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:420
 Swift expression:
   report.expectEqual(cursorDocument, drawerVelocityDocumentSnapshot(fixture.document), cppID: drawerVelocityDiagnosticsID,
                          what: "cursor-only publication changes no document or history state")
 
-S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:382
+S081 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:425
 Swift expression:
   report.expectEqual(1, page.selectedCount, cppID: drawerVelocityProjectionID,
                          what: "the selected handle publishes its own count")
 
-S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:387
+S082 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:430
 Swift expression:
   report.expectEqual(fixture.handle(fixture.notes[0])?.label ?? "", page.readoutText,
                          cppID: drawerVelocityProjectionID,
                          what: "the hovered handle publishes its displayed value as the readout")
 
-S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:390
+S083 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:433
 Swift expression:
   report.expectEqual("\(fixture.notes[0].id.rawValue)", page.hoveredNoteText, cppID: drawerVelocityProjectionID,
                          what: "the hovered handle publishes its own identity")
 
-S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:393
+S084 | drawerVelocityPlayheadDiagnostics | src/checks/drawerpresentation/velocity.swift:436
 Swift expression:
   report.expect(!page.readoutVisible, cppID: drawerVelocityProjectionID,
                     message: "hover leaving every handle hides the readout")

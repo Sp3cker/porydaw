@@ -387,7 +387,10 @@ public final class SongDocument {
             let event = MidiEvent.meta(tick: point.tick, type: 0x51,
                                        data: [UInt8((value >> 16) & 0xFF),
                                               UInt8((value >> 8) & 0xFF), UInt8(value & 0xFF)])
-            export.chunks[0].insert(event)
+            let offset = export.chunks[0].events.firstIndex { $0.tick >= point.tick }
+                ?? export.chunks[0].events.count
+            export.chunks[0].events.insert(event, at: offset)
+            export.chunks[0].endTick = max(export.chunks[0].endTick, point.tick)
         }
         return SaveSnapshot(bytes: try export.encoded(), config: state.config,
                             flagsNeeded: state.config != savedConfig || !source.hasConfig,

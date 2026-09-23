@@ -4,11 +4,11 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_songtime.cpp
 Original SHA-256: eeb4076bfba5b54efe78e80dc9f87a4b087f83ad43f5f4c416fb6c2f7f0207c2
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
-Swift SHA-256: aae33a81a5cc0c8cca6dbfac33b94a6c699a1d10356fe397017f07cc1812508d
+Swift SHA-256: 4b61ad28147aa39f77d093b5ccdd291bd51a534639e2cc8c0c4716ccbc74534e
 Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -750,207 +750,207 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 Every report.expect/expectEqual/fail call in the mapped Swift functions:
 
-S001 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:194
+S001 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:195
   report.expect(document.removeTime(TimeRange(startTick: 20, endTick: 50),
                                         scope: TimeScope(tracks: [0])),
                     cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
                     message: "scoped gap removal commits")
 
-S002 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:198
+S002 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:199
   report.expectEqual(["0:60:80", "80:60:10"], document.notes(in: 0).map(noteShape),
                          cppID: "editcheck/EditCheckTest::timeRangeRemove",
                          what: "crossing note trims and later note ripples")
 
-S003 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:201
+S003 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:202
   report.expectEqual("20:44", document.lanePoints(track: 0, lane: .controller(7)).first.map(coreTimePointShape),
                          cppID: "editcheck/EditCheckTest::timeRangeAutomationSeamsAndDefaults",
                          what: "last in-range value survives at the seam")
 
-S004 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:204
+S004 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:205
   report.expectEqual(untouched?.tick, document.note(ids[2])?.tick,
                          cppID: "editcheck/EditCheckTest::timeRangeRemoveRippleTrim",
                          what: "unscoped track is unchanged")
 
-S005 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:208
+S005 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:209
   report.expectEqual(before, coreTimeBytes(document),
                          cppID: "editcheck/EditCheckTest::timeRangeRemove",
                          what: "single undo restores scoped removal")
 
-S006 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:219
+S006 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:220
   report.expect(whole.removeTime(TimeRange(startTick: 61, endTick: 65),
                                     scope: TimeScope(wholeSong: true)),
                     cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                     message: "whole-song close commits")
 
-S007 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:223
+S007 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:224
   report.expect(whole.timeSignatures.contains { $0.tick == 61 && $0.numerator == 3 } &&
           whole.state.tempo.contains { $0.tick == 61 } &&
           whole.rawChunks[0].events.contains { $0.metaType == 0x06 && $0.tick == 61 },
           cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
           message: "globals are rescued to the closing seam")
 
-S008 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:233
+S008 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:234
   report.expect(closedEnds,
           cppID: "editcheck/EditCheckTest::songWholeSongRemove",
           message: "whole-song removal closes every stored end tick")
 
-S009 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:237
+S009 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:238
   report.expectEqual(oldEnd, whole.rawChunks.map(\.endTick),
                          cppID: "editcheck/EditCheckTest::songWholeSongRemove",
                          what: "one undo restores every stored end tick")
 
-S010 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:240
+S010 | removalAndSeams | src/checks/editcheck/TimeChecks.swift:241
   report.expectEqual(wholeBefore, coreTimeBytes(whole),
                          cppID: "editcheck/EditCheckTest::timeRangeWholeSong",
                          what: "one undo restores globals, events, and end-of-track state")
 
-S011 | laneEditing | src/checks/editcheck/EventChecks.swift:235
+S011 | laneEditing | src/checks/editcheck/EventChecks.swift:249
   report.expectEqual([LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
                          document.lanePoints(track: 0, lane: .controller(7)),
                          cppID: "editcheck/EditCheckTest::automationLanePoints",
                          what: "span write replaces and clamps points")
 
-S012 | laneEditing | src/checks/editcheck/EventChecks.swift:243
+S012 | laneEditing | src/checks/editcheck/EventChecks.swift:257
   report.expectEqual(["9:40"], document.lanePoints(track: 0, lane: .controller(7))
           .map { "\($0.tick):\($0.value)" },
           cppID: "automation-domain/laneMoveDestinationCollision",
           what: "lane move relocates the selected identity")
 
-S013 | laneEditing | src/checks/editcheck/EventChecks.swift:256
+S013 | laneEditing | src/checks/editcheck/EventChecks.swift:270
   report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
                          cppID: "automation-domain/laneDeleteForeignChunk",
                          what: "foreign-chunk XCMD point cannot delete a local event")
 
-S014 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:173
+S014 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:187
   report.expectEqual(beforeTempoRaw, document.revision,
                          cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                          what: "raw tempo meta is rejected")
 
-S015 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:181
+S015 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
   report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
                          document.state.tempo,
                          cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                          what: "tempo normalization keeps the last same-tick value")
 
-S016 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:189
+S016 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
   report.expectEqual(rawCount, document.rawChunks[0].events.count,
                          cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                          what: "mixed raw and tempo replacement is atomic")
 
-S017 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:193
+S017 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
   report.expectEqual(1, document.state.tempo.count,
                          cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                          what: "one undo restores both domains")
 
-S018 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:199
+S018 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:213
   report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
                          cppID: "editcheck/EditCheckTest::songTimeSignature",
                          what: "same-tick signature is replaced")
 
-S019 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
+S019 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:217
   report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
                     cppID: "editcheck/EditCheckTest::songTimeSignature",
                     message: "signature moves with its payload")
 
-S020 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
+S020 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
   report.expect(!document.timeSignatures.contains { $0.tick == 24 },
                     cppID: "editcheck/EditCheckTest::songTimeSignature",
                     message: "signature deletion removes destination")
 
-S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:220
+S021 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:234
   report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
           .map { Int($0.numerator) }.sorted(),
           cppID: "editcheck/EditCheckTest::songTimeSignature",
           what: "move preserves every cross-chunk source signature")
 
-S022 | trackEditing | src/checks/editcheck/EventChecks.swift:54
+S022 | trackEditing | src/checks/editcheck/EventChecks.swift:68
   report.expectEqual(2, added,
                          cppID: "editcheck/EditCheckTest::trackCreateDelete",
                          what: "new track occupies the next engine slot")
 
-S023 | trackEditing | src/checks/editcheck/EventChecks.swift:57
+S023 | trackEditing | src/checks/editcheck/EventChecks.swift:71
   report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
                          cppID: "editcheck/EditCheckTest::voiceLanePoint",
                          what: "new track voice is clamped and seeded")
 
-S024 | trackEditing | src/checks/editcheck/EventChecks.swift:60
+S024 | trackEditing | src/checks/editcheck/EventChecks.swift:74
   report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
                          cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                          what: "add publishes old engine-track identities")
 
-S025 | trackEditing | src/checks/editcheck/EventChecks.swift:64
+S025 | trackEditing | src/checks/editcheck/EventChecks.swift:78
   report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
                          cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                          what: "undo publishes the inverse track remap")
 
-S026 | trackEditing | src/checks/editcheck/EventChecks.swift:68
+S026 | trackEditing | src/checks/editcheck/EventChecks.swift:82
   report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
                          cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                          what: "redo republishes the forward track remap")
 
-S027 | trackEditing | src/checks/editcheck/EventChecks.swift:73
+S027 | trackEditing | src/checks/editcheck/EventChecks.swift:87
   report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
-S028 | trackEditing | src/checks/editcheck/EventChecks.swift:76
+S028 | trackEditing | src/checks/editcheck/EventChecks.swift:90
   report.expectEqual(["8:60:4"],
                          document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                          cppID: "editcheck/EditCheckTest::trackDuplicate",
                          what: "duplicate preserves the fixture's literal note")
 
-S029 | trackEditing | src/checks/editcheck/EventChecks.swift:80
+S029 | trackEditing | src/checks/editcheck/EventChecks.swift:94
   report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
                     cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                     message: "duplicate remints note identities")
 
-S030 | trackEditing | src/checks/editcheck/EventChecks.swift:85
+S030 | trackEditing | src/checks/editcheck/EventChecks.swift:99
   report.expect(document.timeSignatures.contains { $0.tick == 2 },
                     cppID: "editcheck/EditCheckTest::trackMove",
                     message: "conductor time signature survives reorder")
 
-S031 | trackEditing | src/checks/editcheck/EventChecks.swift:88
+S031 | trackEditing | src/checks/editcheck/EventChecks.swift:102
   report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
                     cppID: "editcheck/EditCheckTest::trackMarkerName",
                     message: "conductor marker remains in chunk zero")
 
-S032 | trackEditing | src/checks/editcheck/EventChecks.swift:93
+S032 | trackEditing | src/checks/editcheck/EventChecks.swift:107
   report.expect(document.rawChunks[0].events.contains { event in
           event.metaType == 0x58 && event.tick == 2
       }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
       message: "global signature is rescued before chunk deletion")
 
-S033 | trackEditing | src/checks/editcheck/EventChecks.swift:97
+S033 | trackEditing | src/checks/editcheck/EventChecks.swift:111
   report.expect(document.rawChunks[0].events.contains { event in
           event.tick == 16 && MidiFile.metaIsMarker(event)
       }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
       message: "winning loop marker is rescued")
 
-S034 | trackEditing | src/checks/editcheck/EventChecks.swift:101
+S034 | trackEditing | src/checks/editcheck/EventChecks.swift:115
   report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
                          cppID: "editcheck/EditCheckTest::trackCreateDelete",
                          what: "deleting the chunk-zero track retains the conductor chunk")
 
-S035 | trackEditing | src/checks/editcheck/EventChecks.swift:107
+S035 | trackEditing | src/checks/editcheck/EventChecks.swift:121
   report.expectEqual("Bass", document.trackName(0),
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "rename trims the stored display name")
 
-S036 | trackEditing | src/checks/editcheck/EventChecks.swift:111
+S036 | trackEditing | src/checks/editcheck/EventChecks.swift:125
   report.expectEqual(revision + 1, document.revision,
                          cppID: "editcheck/EditCheckTest::trackRename",
                          what: "loop-marker-shaped name is rejected")
 
-S037 | trackEditing | src/checks/editcheck/EventChecks.swift:116
+S037 | trackEditing | src/checks/editcheck/EventChecks.swift:130
   report.expect(budgetLimited.addTrack(voice: 1) == nil,
                     cppID: "editcheck/EditCheckTest::trackCreateDelete",
                     message: "configured track budget rejects an added track")
 
-S038 | trackEditing | src/checks/editcheck/EventChecks.swift:123
+S038 | trackEditing | src/checks/editcheck/EventChecks.swift:137
   report.expect(ceiling.addTrack(voice: 1) == nil,
                     cppID: "editcheck/EditCheckTest::trackCreateDelete",
                     message: "hardware track ceiling rejects a seventeenth track")
 
 Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
-Shared SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+Shared SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
 rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
 at the tip and asserts equal traversal counts with exact restored SongState and

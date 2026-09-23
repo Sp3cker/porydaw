@@ -118,8 +118,8 @@ Original expression:
   QVERIFY(sourceRow)
 
 A002 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:82
-Disposition: MATCHED-QML
-Mapping/reason: headerMeterPixels verifies positive observed image scale and nonempty width/height; its first capture follows explicit zero playing levels. This is a Qt composition image, not physical desktop screenshot evidence. [S059, S060]
+Disposition: PARTIAL
+Mapping/reason: headerMeterPixels verifies positive observed image scale and nonempty width/height; its first capture follows explicit zero playing levels. This is a Qt composition image, not physical desktop screenshot evidence. [S059, S060] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
 
@@ -175,8 +175,8 @@ Original expression:
   QCOMPARE(changes.front().roles, expectedRoles)
 
 A007 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:103
-Disposition: MATCHED-QML
-Mapping/reason: test_trackActivityRenderedMeterParity explicitly presents left255/right0 and compares row.activityRightHeight == 0. [S038]
+Disposition: PARTIAL
+Mapping/reason: test_trackActivityRenderedMeterParity explicitly presents left255/right0 and compares row.activityRightHeight == 0. [S038] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
       const qreal leftHeight =
@@ -187,16 +187,16 @@ Original expression:
           0.0)
 
 A008 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:106
-Disposition: MATCHED-QML
-Mapping/reason: test_trackActivityRenderedMeterParity verifies row.activityLeftHeight > 0 after left255/right0. [S039]
+Disposition: PARTIAL
+Mapping/reason: test_trackActivityRenderedMeterParity verifies row.activityLeftHeight > 0 after left255/right0. [S039] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(leftHeight > 0.0)
 
 A009 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:109
-Disposition: MATCHED-QML
-Mapping/reason: headerMeterPixels captures the actual original TrackHeaderBand composition after left255/right0 and verifies nonempty dimensions, positive observed scale and opaque pixels. [S059, S060]
+Disposition: PARTIAL
+Mapping/reason: headerMeterPixels captures the actual original TrackHeaderBand composition after left255/right0 and verifies nonempty dimensions, positive observed scale and opaque pixels. [S059, S060] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -205,8 +205,8 @@ Original expression:
   QVERIFY2(!after.isNull(), qPrintable(error))
 
 A010 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:114
-Disposition: MATCHED-QML
-Mapping/reason: test_trackActivityRenderedMeterParity scans changed pixels bottom-up against the zero-level capture and verifies observedSpan >= max(1, round(row.activityLeftHeight * leftOnly.dpr) - 2). [S040]
+Disposition: PARTIAL
+Mapping/reason: test_trackActivityRenderedMeterParity scans changed pixels bottom-up against the zero-level capture and verifies observedSpan >= max(1, round(row.activityLeftHeight * leftOnly.dpr) - 2). [S040] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
       const QRect leftMeter{0, *sourceRow * fx.rowHeight(), std::max(1, headers.activityWidth() / 2),
@@ -217,8 +217,8 @@ Original expression:
   QVERIFY(observedLeft >= std::max(1, expectedLeft - kHeightTolerance))
 
 A011 | TrackHeadersTest::activityRasterMatchesRolesAndIsSilentWhenUnchanged | src/checks/trackheaders/trackheaderraster.cpp:115
-Disposition: MATCHED-QML
-Mapping/reason: The same measured changed-pixel span is <= round(row.activityLeftHeight * leftOnly.dpr) + 2. [S041]
+Disposition: PARTIAL
+Mapping/reason: The same measured changed-pixel span is <= round(row.activityLeftHeight * leftOnly.dpr) + 2. [S041] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -236,8 +236,8 @@ Original expression:
   QVERIFY(changes.empty())
 
 A013 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:130
-Disposition: PARTIAL
-Mapping/reason: TrackHeadersFixture provides two concrete rows and voiceSubtitleFollowsProgramPosition addresses real track1 through nonoptional h.rows[1] access, but no exact row-existence predicate exists for the voice-track row. Nearest predicate: converted-window rows && input && rows.count > 1 [S062]. The specific row guard remains unproved.
+Disposition: MATCHED
+Mapping/reason: voiceSubtitleFollowsProgramPosition reads h.rows[1].subtitle nonoptionally in S002, S004, and S008; the voice-track row exists. [S002, S008]
 Source context since previous assertion:
   ;
       QObject::disconnect(observed);
@@ -303,8 +303,8 @@ Original expression:
   QCOMPARE(view.currentProgram(fx.voiceTrack()), atStart)
 
 A018 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:166
-Disposition: MATCHED-QML
-Mapping/reason: test_headerVoiceChangeAltersRetainedRaster grabs the existing composition before the real picker completion; regionOf maps the concrete row into the full image. [S062]
+Disposition: PARTIAL
+Mapping/reason: test_headerVoiceChangeAltersRetainedRaster grabs the existing composition before the real picker completion; regionOf maps the concrete row into the full image. [S062] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
 
@@ -325,8 +325,8 @@ Original expression:
   QVERIFY2(!beforeProgram.isNull(), qPrintable(error))
 
 A019 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:172
-Disposition: MATCHED-QML
-Mapping/reason: The same test grabs after real program127 completion, compares dimensions to the before image, and reads the actual row pixels. [S066, S067]
+Disposition: PARTIAL
+Mapping/reason: The same test grabs after real program127 completion, compares dimensions to the before image, and reads the actual row pixels. [S066, S067] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
       view.setEditCursorTick(vcTick);
@@ -351,16 +351,16 @@ Original expression:
                "program change did not publish a bounded header subtitle role")
 
 A021 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:179
-Disposition: MATCHED-QML
-Mapping/reason: test_headerVoiceChangeAltersRetainedRaster tryVerify(row.subtitle !== beforeSubtitle) after actual voice completion; Swift voiceSubtitleFollowsProgramPosition also asserts changed != initial. [S065, S004]
+Disposition: PARTIAL
+Mapping/reason: test_headerVoiceChangeAltersRetainedRaster tryVerify(row.subtitle !== beforeSubtitle) after actual voice completion; Swift voiceSubtitleFollowsProgramPosition also asserts changed != initial. [S065, S004] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(beforeSubtitle != afterSubtitle, "program change did not alter the header subtitle")
 
 A022 | TrackHeadersTest::voiceSubtitleFollowsProgramPosition | src/checks/trackheaders/trackheaderraster.cpp:180
-Disposition: MATCHED-QML
-Mapping/reason: test_headerVoiceChangeAltersRetainedRaster compares image width/height and verifies differences > 0 over the same row region. Selection occurs before capture; paused activity polling prevents unrelated meter animation. [S066, S067, S068]
+Disposition: PARTIAL
+Mapping/reason: test_headerVoiceChangeAltersRetainedRaster compares image width/height and verifies differences > 0 over the same row region. Selection occurs before capture; paused activity polling prevents unrelated meter animation. [S066, S067, S068] The paired Swift predicate does not establish the original native QML window/raster observation.
 Source context since previous assertion:
   ;
 Original expression:

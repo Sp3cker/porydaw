@@ -14,10 +14,10 @@ context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
 Direct hover routing plus per-adapter topology cases (Tempo, CC) pin insertion-tick
 placement, node rings and labels, insertion line and label, held ghosts,
-no-repeat churn, and leave-cleared pixels on the retired Quick surface. Seven
-sites are partial toward converted hover-model predicates and twenty-three
-require the retired native window, pixels, focus, grabs, cursor, or fixture.
-Disposition tally: 30 sites: 23 NATIVE, 7 PARTIAL.
+no-repeat churn, and leave-cleared pixels on the retired Quick surface. Five sites
+have no Swift assertion, two are partial, and twenty-three require the retired
+native window, pixels, focus, grabs, cursor, or fixture.
+Disposition tally: 30 sites: 5 GAP, 23 NATIVE, 2 PARTIAL.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -409,8 +409,8 @@ Original expression:
                                    "description"));
 
 A004 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:343
-Disposition: PARTIAL
-Mapping/reason: Direct-route snapshot guard; S010 covers hover teardown at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: GAP
+Mapping/reason: A hover-route document/history non-mutation snapshot has no corresponding Swift predicate; S010 tests hover teardown after leave, not document state.
 Source context since previous assertion:
 
       const auto before = snapshot(rig.document());
@@ -566,8 +566,8 @@ Original expression:
                                    "grab"));
 
 A016 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:431
-Disposition: PARTIAL
-Mapping/reason: Cancel-clear outcome; S010 covers hover teardown at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: GAP
+Mapping/reason: Clearing hover after strong window-deactivation cancellation has no corresponding Swift predicate; S010 covers pointer leave only, a different cancellation cause.
 Source context since previous assertion:
       QDeadlineTimer cancelTimeout{1000};
       HoverObservation cancelled = observeHover(rig);
@@ -601,8 +601,8 @@ Original expression:
                     QStringLiteral("cancellation latched passive hover off"));
 
 A018 | checkDirectHoverRoute | src/checks/automationgesturecheck/hover.cpp:454
-Disposition: PARTIAL
-Mapping/reason: Cancellation snapshot guard; S010 covers hover teardown at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: GAP
+Mapping/reason: Strong window-deactivation cancellation preserving document/history and returning idle has no corresponding Swift predicate; S010 tests hover teardown after leave.
 Source context since previous assertion:
 
       // The remaining strong reasons cancel cleanly while idle.
@@ -633,8 +633,8 @@ Original expression:
           probe.require(false, QStringLiteral("lane body is missing from the canvas stack"));
 
 A020 | runCase | src/checks/automationgesturecheck/hover.cpp:470
-Disposition: PARTIAL
-Mapping/reason: Insertion-tick outcome; S004 covers background tick publication at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: GAP
+Mapping/reason: The inserted background hover tick being distinct from both neighboring node ticks has no corresponding Swift predicate; S004 only distinguishes a background hover from a node hover.
 Source context since previous assertion:
           return topology;
       }
@@ -643,8 +643,8 @@ Original expression:
                     QStringLiteral("inter-node insertion landed on an existing node"));
 
 A021 | runCase | src/checks/automationgesturecheck/hover.cpp:476
-Disposition: PARTIAL
-Mapping/reason: Topology-case snapshot guard; S010 covers hover teardown at model level; Related hover predicates are indexed below (node readout S001..S003, background readout S004..S007, tool profiles S008..S009, leave S010); unproved: native Quick-window hover route, framebuffer pixels, and the retired rig fixture.
+Disposition: GAP
+Mapping/reason: Each topology case preserving document/history has no corresponding Swift predicate; S010 tests hover teardown after leave.
 Source context since previous assertion:
       leaveCanvas(rig);
       const HoverObservation idle = observeHover(rig);

@@ -15,9 +15,9 @@ S identifiers identify exact counterpart predicates, listed after the inventory.
 Eleven gesture-parity cases (hover-insertion, click-delete, node-drag,
 origin-phantom, selection, sweep-ramp, pencil, band-select, escape,
 rebuild-cancel, semantic-no-op) pin NodeLane gesture outcomes against the
-document. Sixteen sites are partial toward converted model predicates, three
-stay open, and two require the retired native cursor and layer.
-Disposition tally: 21 sites: 3 GAP, 2 NATIVE, 16 PARTIAL.
+document. Eight sites are partial toward converted model predicates, eleven have no
+Swift assertion, and two require the retired native cursor and layer.
+Disposition tally: 21 sites: 11 GAP, 2 NATIVE, 8 PARTIAL.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -258,8 +258,8 @@ Original expression:
           QStringLiteral("%1 mutated SMF, revision, or undo").arg(QLatin1String(label)));
 
 A003 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:233
-Disposition: PARTIAL
-Mapping/reason: Node-drag outcome; Related node-drag predicates are indexed below (no-op S001, stationary delete S002, slop move S003); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Horizontal Shift-drag value locking has no corresponding Swift gesture predicate; S001..S003 cover generic no-op, delete, and move release classifications, not axis locking.
 Source context since previous assertion:
   }
 
@@ -305,8 +305,8 @@ Original expression:
                         QStringLiteral("horizontal Shift drag did not lock value"));
 
 A004 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:244
-Disposition: PARTIAL
-Mapping/reason: Node-drag restore outcome; Related node-drag predicates are indexed below (no-op S001, stationary delete S002, slop move S003); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Vertical Shift-drag time locking has no corresponding Swift gesture predicate; S001..S003 cover generic no-op, delete, and move release classifications, not axis locking.
 Source context since previous assertion:
       seed(ctx, kFixture);
       const auto axisStart = at(ctx, kFixtureTick, 100).position;
@@ -336,8 +336,8 @@ Original expression:
                             QStringLiteral("fractional Tempo drag did not commit one edit"));
 
 A006 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:255
-Disposition: PARTIAL
-Mapping/reason: Node-drag move outcome; Related node-drag predicates are indexed below (no-op S001, stationary delete S002, slop move S003); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Preserving the exact fractional Tempo microseconds on a same-value move has no corresponding Swift predicate; S003 only classifies a generic released stroke as a move.
 Source context since previous assertion:
           const auto moved = ctx.rig.document().tempoPoints();
 Original expression:
@@ -346,8 +346,8 @@ Original expression:
                             QStringLiteral("unchanged-value Tempo drag discarded microseconds"));
 
 A007 | runNodeDrag | src/checks/automationgesturecheck/parity.cpp:274
-Disposition: PARTIAL
-Mapping/reason: Node-drag outcome; Related node-drag predicates are indexed below (no-op S001, stationary delete S002, slop move S003); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Grouped same-tick CC events retaining order across a drag has no corresponding Swift predicate; S003 only classifies a generic released stroke as a move.
 Source context since previous assertion:
           return;
       }
@@ -462,8 +462,8 @@ Original expression:
                         QStringLiteral("Pencil stroke did not commit one edit"));
 
 A012 | runBandSelect | src/checks/automationgesturecheck/parity.cpp:366
-Disposition: PARTIAL
-Mapping/reason: Band-select outcome; S008..S009 cover band and selection at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Publishing the complete lane-scoped time-selection range has no corresponding Swift predicate; S008 tests band activation and S009 tests clearing an existing selection.
 Source context since previous assertion:
       ctx.rig.setPersistentPencil(false);
   }
@@ -572,8 +572,8 @@ Original expression:
                         QStringLiteral("input did not recover after stack-rebuild cancellation"));
 
 A017 | runSemanticNoOp | src/checks/automationgesturecheck/parity.cpp:438
-Disposition: PARTIAL
-Mapping/reason: Semantic no-op outcome; S001 covers no-op release at model level; unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: A sub-threshold pointer jitter leaving document and node points unchanged has no corresponding Swift predicate; S001 tests a gesture with no target, not a jittered drag.
 Source context since previous assertion:
   }
 
@@ -655,16 +655,16 @@ Original expression:
                                        "held-value curve"));
 
 A020 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:489
-Disposition: PARTIAL
-Mapping/reason: Origin-phantom unchanged guard; Related history predicates are indexed below (pencil revision S006, one-undo S007, cancel snapshot S011); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: An origin-phantom preview leaving document state unchanged has no corresponding Swift predicate; S006..S007 cover pencil edit history, not this preview.
 Source context since previous assertion:
 Original expression:
       ctx.check.require(isUnchanged(before, snapshot(ctx.rig.document())),
                         QStringLiteral("origin phantom preview mutated the document before release"));
 
 A021 | runOriginPhantom | src/checks/automationgesturecheck/parity.cpp:494
-Disposition: PARTIAL
-Mapping/reason: Origin-phantom one-edit outcome; Related history predicates are indexed below (pencil revision S006, one-undo S007, cancel snapshot S011); unproved: native NodeLane pointer delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Committing an origin-phantom drag to the expected node result has no corresponding Swift predicate; S006..S007 cover pencil editing and undo.
 Source context since previous assertion:
       ctx.rig.mouseRelease(end);
       ctx.rig.pump();

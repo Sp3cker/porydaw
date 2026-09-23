@@ -1,4 +1,5 @@
 Assertion correspondence: playback/projection.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.61s; build 12.39s).
 
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/playback/projection.cpp
@@ -6,84 +7,63 @@ Original SHA-256: dc0fefef3ae76a0525a7ec0972bcb2b1472d5e444c9974aaffc7f11a5600c5
 Swift counterpart: src/checks/playback/projection.swift
 Swift SHA-256: f0cb8f444881053b2402a05cebdfeb87a13c7dfd8058ae01b48fac19734e6ed0
 
-Purpose and status
-Each entry is one original assertion/failure site. MATCHED records an exact
-source-level predicate, fixture and action sequence; execution is tracked below.
-No assertion is accepted by cppID name alone. Short-circuit ordering is retained.
-No original has data-driven QTest rows or assertion-bearing shared helper calls.
-All functions use their original literal event index/tick/stream/controller/value/
-channel inputs, write/remove/relocation inputs, and action ordering. Missing
-original scenario predicates were added before advancing to the next file.
-Additional pre-existing Swift fixture variants remain executable and are not
-substitutes for the original cases enumerated here.
+Covered native implementation: src/core/xcmd.cpp:558 xcmd::projectEvents
+(through tst_xcmd.cpp:22-25 project adapter), including its parseEvents and
+toProjection internals. The legacy C++ implementation is retained and
+referenced by dormant SongDocument sources (src/core/songdocument.cpp:1021,
+src/core/songdocument_xcmd.cpp:137); it is not compiled into the current app.
 
-Execution and ownership
-runXcmdEditsSuite executes the paired scenarios. The same-stem file contains
-the actual Swift assertions; playback/tst_xcmd.swift constructs event values
-with the original ev helper argument order, including default channel zero.
-The production Xcmd projection/rewrite/reconciliation/export APIs are exercised.
+Retirement certificate
+Six original QTest methods, six QVERIFY2 sites, no data rows, local helper
+assertions, fixture files, error branches, or externally used definitions. Every
+method constructs literal events, calls project, and checks one conjunction.
+C++ ev/makeEvents/project (tst_xcmd.h/.cpp) construct values with default channel
+zero and call projectEvents; Swift xcmdPairEvent (tst_xcmd.swift:3-7) preserves
+index/tick/stream/controller/value and default channel zero and calls Xcmd.project.
+Each counterpart repeats the complete fixture and original predicate; count and
+isEmpty translate size() and empty(). The extra xcmdPairedProjection predicates
+are not relied on for any A site. The original bytes are pinned above.
 
-Verification evidence
-Command: deno task verify --filter swiftcore --filter clickcheck --verbose
-Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
-This records the completed checkpoint before the subsequent shared corpus-loader
-extraction/range additions; updated combined verification is pending.
-The current build does not register the old xcmdcheck native harness; no native
-execution or live differential parity is claimed.
-
-Original assertion inventory
+Execution: swiftcore case 7 (src/checks/support/corecheck/CoreCheckSupport.swift:122-126,
+SHA-256 5e70b54876d85d2ac9fc1d2abc8be490910bd2d2c964ecb41e5f404af3044180)
+invokes runXcmdEditsSuite (src/checks/editcheck/EventChecks.swift:28-39,
+SHA-256 ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092),
+which invokes runXcmdProjectionOriginalChecks (projection.swift:91-98), calling
+all six methods below. src/checks/CMakeLists.txt:104-128 compiles these Swift
+sources into swift_core_check (SHA-256 e4bb047346ec548a679cbe4631c635fbcfa7c04fd5eccd49e08d1b0ffd82d278).
+Historical checkpoint recorded before this retirement: deno task verify --filter
+swiftcore --filter clickcheck --verbose: PASS 2/2 selected (24 total), swiftcore
+1.83s. Post-deletion Swift execution is recorded above;
+no current native xcmdcheck execution or differential parity is claimed.
 
 A001 | XcmdTest::sharedSelectorServesTwoCompletions | src/checks/playback/projection.cpp:16
 Disposition: MATCHED
-Swift: src/checks/playback/projection.swift:26 :: xcmdPairSharedSelectorServesTwoCompletions; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(result.points.size() == 2 && result.points[0].lane == xcmd::kEchoVolumeLane &&
-                   result.points[0].value == 34 && result.points[0].tick == 2 &&
-                   result.points[0].index == 1 && result.points[1].value == 35 &&
-                   result.points[1].tick == 3 && result.points[1].index == 2 &&
-                   result.consumed == std::vector<uint64_t>({0, 1, 2}),
-               "shared-selector projection did not expose both points and consumed indices")
+Mapping/reason: S001, projection.swift:31-37, xcmdPairSharedSelectorServesTwoCompletions: same selector and two payloads; checks point count, first lane/value/tick/index, second value/tick/index and all three consumed identities.
 
 A002 | XcmdTest::unknownSelectorEpochStaysOpaque | src/checks/playback/projection.cpp:32
 Disposition: MATCHED
-Swift: src/checks/playback/projection.swift:40 :: xcmdPairUnknownSelectorEpochStaysOpaque; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(result.points.empty() && result.consumed == std::vector<uint64_t>({0, 1, 2}),
-               "unknown-selector epoch did not stay opaque with consumed bytes")
+Mapping/reason: S002, projection.swift:45-47, xcmdPairUnknownSelectorEpochStaysOpaque: same unknown 0x01 selector and two payloads; zero points and consumed [0,1,2].
 
 A003 | XcmdTest::danglingKnownSelectorProjectsOpaque | src/checks/playback/projection.cpp:42
 Disposition: MATCHED
-Swift: src/checks/playback/projection.swift:50 :: xcmdPairDanglingKnownSelectorProjectsOpaque; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(result.points.empty() && result.consumed == std::vector<uint64_t>({0}),
-               "payload-less selector epoch did not project as opaque")
+Mapping/reason: S003, projection.swift:53-55, xcmdPairDanglingKnownSelectorProjectsOpaque: same lone 0x08 selector; zero points and consumed [0].
 
 A004 | XcmdTest::leadingStrayPayloadsStayOpaque | src/checks/playback/projection.cpp:54
 Disposition: MATCHED
-Swift: src/checks/playback/projection.swift:58 :: xcmdPairLeadingStrayPayloadsStayOpaque; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(result.points.size() == 1 && result.points[0].value == 17 &&
-                   result.consumed == std::vector<uint64_t>({0, 1, 2}),
-               "leading stray payload run was not kept opaque")
+Mapping/reason: S004, projection.swift:63-66, xcmdPairLeadingStrayPayloadsStayOpaque: same stray payload followed by known 0x09 epoch; one point value 17 and consumed [0,1,2].
 
 A005 | XcmdTest::streamsProjectIndependently | src/checks/playback/projection.cpp:67
 Disposition: MATCHED
-Swift: src/checks/playback/projection.swift:69 :: xcmdPairStreamsProjectIndependently; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(result.points.size() == 2 && result.points[0].stream == 0 &&
-                   result.points[0].lane == xcmd::kEchoVolumeLane && result.points[1].stream == 1 &&
-                   result.points[1].lane == xcmd::kEchoLengthLane && result.points[1].value == 17,
-               "streams did not project independently")
+Mapping/reason: S005, projection.swift:74-78, xcmdPairStreamsProjectIndependently: same interleaved two-stream fixture; two points, stream 0 volume lane and stream 1 length lane/value 17.
 
 A006 | XcmdTest::consumedIsSortedDedupIndexSet | src/checks/playback/projection.cpp:81
 Disposition: MATCHED
-Swift: src/checks/playback/projection.swift:81 :: xcmdPairConsumedIsSortedDedupIndexSet; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(result.consumed == std::vector<uint64_t>({2, 7, 9}),
-               "protocol consumption was not a sorted raw-index set")
+Mapping/reason: S006, projection.swift:85-88, xcmdPairConsumedIsSortedDedupIndexSet: same out-of-order indices and alternate payload controller; consumed [2,7,9].
+
+Swift predicates
+S001 | xcmdPairSharedSelectorServesTwoCompletions | src/checks/playback/projection.swift:31
+S002 | xcmdPairUnknownSelectorEpochStaysOpaque | src/checks/playback/projection.swift:45
+S003 | xcmdPairDanglingKnownSelectorProjectsOpaque | src/checks/playback/projection.swift:53
+S004 | xcmdPairLeadingStrayPayloadsStayOpaque | src/checks/playback/projection.swift:63
+S005 | xcmdPairStreamsProjectIndependently | src/checks/playback/projection.swift:74
+S006 | xcmdPairConsumedIsSortedDedupIndexSet | src/checks/playback/projection.swift:86

@@ -43,20 +43,28 @@ func selectionAndVoiceRouteThroughHeaders(
     report.expectEqual([42, 17], revealedPrograms, cppID: id,
                        what: "voice-line request resolves the clicked track's current program")
 
+    // The title line of the voice track behaves the same way.
+    fx.click(report, .title, row: 0, cppID: id)
+    report.expectEqual([1, 0, 0], revealed, cppID: id,
+                       what: "voice-row title click reveals its own track")
+    report.expectEqual(0, fx.session.selectedTrack, cppID: id,
+                       what: "voice-row title click retains its selection")
+
     _ = h.beginPointer(x: voice.x, y: voice.y, button: 1, modifiers: 0)
     _ = h.updatePointer(x: voice.x, y: 0, modifiers: 0)
     report.expect(h.reorderIndicatorVisible, cppID: id,
                   message: "voice-line drag becomes a reorder gesture")
-    _ = h.endPointer(x: voice.x, y: 0, button: 2, modifiers: 0)
+    report.expect(h.endPointer(x: voice.x, y: 0, button: 2, modifiers: 0),
+                  cppID: id, message: "wrong-button release consumes the armed drag")
     report.expect(!h.endPointer(x: voice.x, y: 0, button: 1, modifiers: 0),
-                  cppID: id, message: "wrong-button cancellation consumes the armed drag")
+                  cppID: id, message: "cancelled drag leaves no pending release")
     report.expect(!h.reorderIndicatorVisible, cppID: id, message: "cancel removes reorder marker")
-    report.expectEqual([1, 0], revealed, cppID: id, what: "drag release never reveals a voice")
+    report.expectEqual([1, 0, 0], revealed, cppID: id, what: "drag release never reveals a voice")
     let scoped = fx.point(.title, row: 1)
     let beforeScope = fx.session.selectedTracks
     _ = h.beginPointer(x: scoped.x, y: scoped.y, button: 1, modifiers: 0x0400_0000)
     _ = h.endPointer(x: scoped.x, y: scoped.y, button: 1, modifiers: 0x0400_0000)
-    report.expectEqual([1, 0], revealed, cppID: id, what: "modified selection never reveals a voice")
+    report.expectEqual([1, 0, 0], revealed, cppID: id, what: "modified selection never reveals a voice")
     report.expectEqual(beforeScope.symmetricDifference([1]), fx.session.selectedTracks,
                        cppID: id, what: "Ctrl-click toggles exactly the clicked track in scope")
     report.expectEqual(0, fx.session.selectedTrack, cppID: id,
@@ -121,18 +129,22 @@ func muteAndSoloHonorCancellationAndButtons(
     report.expect(h.rows[0].muteHovered, cppID: id, message: "mute hover is visible")
     h.clearHover()
     report.expect(!h.rows[0].muteHovered, cppID: id, message: "pointer leave clears mute hover")
-    _ = h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0)
+    report.expect(h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
+                  cppID: id, message: "mute accepts press")
     report.expect(h.rows[0].mutePressed, cppID: id, message: "left press depresses mute")
-    _ = h.beginPointer(x: title.x, y: title.y, button: 2, modifiers: 0)
+    report.expect(h.beginPointer(x: title.x, y: title.y, button: 2, modifiers: 0),
+                  cppID: id, message: "right press during held mute is handled")
     report.expect(h.rows[0].mutePressed && !h.menuOpen, cppID: id,
                   message: "additional right press does not replace held mute")
-    _ = h.endPointer(x: title.x, y: title.y, button: 2, modifiers: 0)
+    report.expect(h.endPointer(x: title.x, y: title.y, button: 2, modifiers: 0),
+                  cppID: id, message: "right release during held mute is handled")
     report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked, cppID: id,
                   message: "wrong-button release cancels mute without toggling")
 
     // GridCancelReason raw values: FocusLost, PointerUngrabbed, Hidden, WindowDeactivated.
     for reason in 0...3 {
-        _ = h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0)
+        report.expect(h.beginPointer(x: mute.x, y: mute.y, button: 1, modifiers: 0),
+                      cppID: id, message: "cancel reason \(reason) accepts a fresh press")
         h.inputCancelled(reason: reason)
         report.expect(!h.rows[0].mutePressed && !h.rows[0].muteChecked,
                       cppID: id, message: "cancel reason \(reason) releases mute without toggling")
@@ -150,9 +162,11 @@ func muteAndSoloHonorCancellationAndButtons(
     report.expect(h.rows[0].soloHovered, cppID: id, message: "solo hover is visible")
     h.clearHover()
     report.expect(!h.rows[0].soloHovered, cppID: id, message: "pointer leave clears solo hover")
-    _ = h.beginPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0)
+    report.expect(h.beginPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0),
+                  cppID: id, message: "solo accepts press")
     report.expect(h.rows[0].soloPressed, cppID: id, message: "solo press is visible")
-    _ = h.endPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0)
+    report.expect(h.endPointer(x: solo.x, y: solo.y, button: 1, modifiers: 0),
+                  cppID: id, message: "solo accepts release")
     report.expect(fx.session.soloedTracks.contains(0) && h.rows[0].soloChecked,
                   cppID: id, message: "solo click changes session mask and visible checked state")
     h.activateSolo(track: 0)

@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/trackheaders/trackheadermenu.cpp
 Original SHA-256: 86a016fc4acd1e2ec381c579b815d9883d6e6a6167fd97079564a71f68077c0b
 Swift counterpart: src/checks/trackheaders/trackheadermenu.swift
-Swift SHA-256: 5a6a5d6f0bc04b93f05256d5408f84b882e22b76d87575156fb32a6bc4846569
+Swift SHA-256: 903a0e21c0585cc53b8fe921a9a07cf23421a062382a85654dfbff78f3dd3057
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -34,8 +34,8 @@ Their helper expectations execute on every call and are inventoried below.
 Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:109
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: GAP
+Mapping/reason: No Swift predicate resolves the original optional rowForTrack(sourceTrack) lookup. S001 checks selectedTrack after openMenu clicks fixed row 0; it does not establish the identity-based source-row lookup. Retain the original row-resolution assertion as GAP.
 Source context since previous assertion:
   // Track-header context menu over the shared Quick canvas session. These
   // checks drive the real header right-press, click typed rows addressed by
@@ -149,8 +149,8 @@ Original expression:
   QVERIFY(row)
 
 A002 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:113
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): primary differs from the voice track before the press. [S001]
 Source context since previous assertion:
   ;
       // Prove right-press selection changes the primary track, not merely
@@ -173,8 +173,8 @@ Original expression:
   QVERIFY2(fx.focusInput(focusError), qPrintable(focusError))
 
 A004 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:122
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], menuItems action ids): the menu session opens with all five actions. [S002]
 Source context since previous assertion:
   ;
 
@@ -183,8 +183,8 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A005 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:125
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): right press selects the source track. [S001]
 Source context since previous assertion:
   ;
       // The right-press selects its header before the menu opens and the
@@ -193,8 +193,8 @@ Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
 
 A006 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:133
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], ...): five menu actions exist. [S002]
 Source context since previous assertion:
   ;
 
@@ -208,16 +208,16 @@ Original expression:
   static_assert(std::size(kMenuActions) == 5)
 
 A007 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:134
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], (0..<h.menuItems.count).map actionId): menu row count is five. [S002]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(opened.model->rowCount(), 5)
 
 A008 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:137
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: menuItems[$0] enumeration: every action row exists. [S002]
 Source context since previous assertion:
   ;
       for (int i = 0; i < opened.model->rowCount(); ++i) {
@@ -226,24 +226,24 @@ Original expression:
   QVERIFY(item)
 
 A009 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:138
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([1, 2, 3, 4, 5], actionIds): each item id matches its action. [S002]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(item->id, static_cast<int>(kMenuActions[i]))
 
 A010 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:139
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: actionId ordering in the enumerated menu items equals the row order. [S002]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(opened.model->rowForId(item->id), i)
 
 A011 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:142
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(allSatisfy enabled) below capacity and report.expectEqual([4], disabled ids) at capacity. [S003, S009]
 Source context since previous assertion:
   ;
           const bool expectedEnabled =
@@ -252,8 +252,8 @@ Original expression:
   QCOMPARE(item->enabled, expectedEnabled)
 
 A012 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:147
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): dismiss closes the menu; the Escape key route itself remains a native obligation. [S004]
 Source context since previous assertion:
   ;
       }
@@ -265,7 +265,7 @@ Original expression:
 
 A013 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:148
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermenu.swift; menu dismissal is proven but native Quick focus restoration has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -273,32 +273,32 @@ Original expression:
                    "Escape did not restore the pre-menu header band focus")
 
 A014 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:150
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): menu open/dismiss writes nothing. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A015 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:151
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A016 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:152
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): dismiss retains the selection. [S005]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
 
 A017 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:157
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.fail guard plus report.expectEqual(16, usedTrackCount): the capacity fixture fills all track slots. [S006, S007]
 Source context since previous assertion:
   ;
 
@@ -309,8 +309,8 @@ Original expression:
   QVERIFY2(doc.duplicateTrack(0) >= 0, "the capacity fixture could not fill the track slots")
 
 A018 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:160
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(16, h.rows.count): capacity removes the add row. [S008]
 Source context since previous assertion:
   ;
       }
@@ -319,8 +319,8 @@ Original expression:
   QTRY_COMPARE(fx.headers().rowCount(), doc.engineTrackCount())
 
 A019 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:162
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([4], disabled action ids): the capacity menu session opens. [S009]
 Source context since previous assertion:
   ;
       const HeaderMenu capacity = openHeaderMenu(fx, *row);
@@ -328,8 +328,8 @@ Original expression:
   QVERIFY2(capacity.session, qUtf8Printable(capacity.diagnostic))
 
 A020 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:166
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([4], (0..<h.menuItems.count).filter { !enabled }): only Duplicate is disabled at capacity. [S009]
 Source context since previous assertion:
   ;
       const int duplicateRow = headerMenuRow(*capacity.model, HeaderMenuAction::DuplicateTrack);
@@ -351,8 +351,8 @@ Original expression:
                "the disabled Duplicate row did not receive a real click")
 
 A022 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:173
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.menuOpen): disabled duplicate neither dispatches nor dismisses. [S010]
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -361,24 +361,24 @@ Original expression:
                "a click on the disabled Duplicate row dismissed the menu")
 
 A023 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:175
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): disabled action writes no history. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), capacityUndo)
 
 A024 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:176
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): disabled action writes nothing. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), capacityBytes)
 
 A025 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:179
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): dismiss closes the capacity menu; the Escape key route itself remains a native obligation. [S011]
 Source context since previous assertion:
   ;
       QTest::keyClick(capacity.session->window(), Qt::Key_Escape);
@@ -387,8 +387,8 @@ Original expression:
   QVERIFY2(!capacity.session->isOpen(), "Escape did not dismiss the header menu at capacity")
 
 A026 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:187
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): the voice row exists and right press selects it. [S013]
 Source context since previous assertion:
   ;
   }
@@ -415,8 +415,8 @@ Original expression:
   QVERIFY2(fx.focusInput(focusError), qPrintable(focusError))
 
 A028 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:196
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
 
@@ -425,8 +425,8 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A029 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:197
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): right press selects the voice track. [S013]
 Source context since previous assertion:
   ;
 Original expression:
@@ -455,8 +455,8 @@ Original expression:
                "the Change voice pick left the header menu panel open")
 
 A032 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:206
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): opening the picker writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
@@ -464,7 +464,7 @@ Original expression:
 
 A033 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:210
 Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift; the onChangeTrackVoiceRequested callback is proven but the native voice-picker window has no presenter counterpart.
 Source context since previous assertion:
   ;
 
@@ -475,7 +475,7 @@ Original expression:
 
 A034 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:212
 Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(fx.view());
@@ -494,8 +494,8 @@ Original expression:
                   checks::voicepicker::row(picker, 127)->isVisible())
 
 A036 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:217
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): picker cancellation writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
@@ -503,7 +503,7 @@ Original expression:
 
 A037 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:218
 Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift; completeVoiceRequest(-1) covers cancellation but native outside-press picker dismissal has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -518,8 +518,8 @@ Original expression:
   QTRY_VERIFY(!quick_popup::popupSession(fx.view())->isOpen())
 
 A039 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:221
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): cancelled picker writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -527,24 +527,24 @@ Original expression:
   QCOMPARE(doc.revision(), revision)
 
 A040 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:222
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): cancelled picker leaves history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A041 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:223
-Disposition: PARTIAL
-Mapping/reason: Related predicates S011, S012, S013, S014, S015 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(1, fx.session.selectedTrack): cancelled picker retains the voice track selection. [S015]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.voiceTrack())
 
 A042 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:231
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == 0): the source row exists and rename replaces the closed menu. [S019]
 Source context since previous assertion:
   ;
   }
@@ -572,8 +572,8 @@ Original expression:
   QVERIFY2(fx.focusInput(focusError), qPrintable(focusError))
 
 A044 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:241
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
 
@@ -592,8 +592,8 @@ Original expression:
                "the Rename track row did not receive a real click")
 
 A046 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:248
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == 0): rename editor replaces closed menu synchronously. [S019]
 Source context since previous assertion:
   ;
       // Rename begins synchronously once the menu closed, adopting the existing
@@ -603,8 +603,8 @@ Original expression:
   QVERIFY2(!opened.session->isOpen(), "the Rename track pick left the header menu open")
 
 A047 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:249
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == 0): renamingTrack targets the source track. [S019]
 Source context since previous assertion:
   ;
 Original expression:
@@ -627,16 +627,16 @@ Original expression:
   QTRY_VERIFY(fx.rename().hasActiveFocus())
 
 A050 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:252
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): opening the editor writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.revision(), revision)
 
 A051 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:256
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(-1, h.renamingTrack): cancelled editor cannot reopen or commit. [S021]
 Source context since previous assertion:
   ;
 
@@ -646,8 +646,8 @@ Original expression:
   QCOMPARE(fx.headers().renamingTrack(), -1)
 
 A052 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:257
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): cancelled rename keeps the original name. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
@@ -662,24 +662,24 @@ Original expression:
   QVERIFY(!fx.rename().isVisible())
 
 A054 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:259
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): cancelled rename writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.revision(), revision)
 
 A055 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:260
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): cancelled rename leaves history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A056 | TrackHeadersTest::headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.cpp:262
-Disposition: PARTIAL
-Mapping/reason: Related predicates S016, S017, S018 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(-1, h.renamingTrack): the cancelled editor stays closed. [S021]
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -695,8 +695,8 @@ Original expression:
   QVERIFY(!fx.rename().isVisible())
 
 A058 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:271
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(3, fx.trackRows.count): duplicate succeeds, proving canAddTrack held. [S027]
 Source context since previous assertion:
   ;
   }
@@ -710,8 +710,8 @@ Original expression:
   QVERIFY(doc.canAddTrack())
 
 A059 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:275
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([1], reveals): the voice row exists and reveal addresses it. [S023]
 Source context since previous assertion:
   ;
 
@@ -721,8 +721,8 @@ Original expression:
   QVERIFY(voiceRow)
 
 A060 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:277
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
       const HeaderMenu voiceMenu = openHeaderMenu(fx, *voiceRow);
@@ -744,8 +744,8 @@ Original expression:
                "the Show voice row did not receive a real click")
 
 A062 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:286
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h?.menuOpen == false) inside the reveal callback: menu closes before reveal. [S022]
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -753,32 +753,32 @@ Original expression:
   QVERIFY2(!voiceMenu.session->isOpen(), "the Show voice pick left the header menu open")
 
 A063 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:287
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([1], reveals): reveal fires exactly once for the requested track. [S023]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(reveal.count(), 1)
 
 A064 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:288
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([42], revealedPrograms): track-addressed request resolves the current voice program. [S024]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(reveal.at(0).at(0).toInt(), fx.view().currentProgram(fx.voiceTrack()))
 
 A065 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:289
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): menu reveal writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.revision(), beforeReveal)
 
 A066 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:290
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): reveal leaves history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
@@ -786,7 +786,7 @@ Original expression:
 
 A067 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:291
 Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift; the reveal dispatch is proven but native header band focus has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -794,8 +794,8 @@ Original expression:
                    "the reveal dispatch did not retain header band focus")
 
 A068 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:297
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, fx.document.notes(in: 2)...): the source row exists and its content is copied. [S028]
 Source context since previous assertion:
   ;
 
@@ -806,8 +806,8 @@ Original expression:
   QVERIFY(sourceRow)
 
 A069 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:299
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
       const HeaderMenu duplicateMenu = openHeaderMenu(fx, *sourceRow);
@@ -815,8 +815,8 @@ Original expression:
   QVERIFY2(duplicateMenu.session, qUtf8Printable(duplicateMenu.diagnostic))
 
 A070 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:304
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!notes.isEmpty): the duplicate fixture track carries content to copy. [S025]
 Source context since previous assertion:
   ;
       const QByteArray beforeDuplicate = doc.smf().write();
@@ -838,8 +838,8 @@ Original expression:
                "the Duplicate track row did not receive a real click")
 
 A072 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:310
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): duplicate closes the menu. [S026]
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -848,7 +848,7 @@ Original expression:
 
 A073 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:311
 Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift; the duplicate dispatch is proven but native header band focus has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -856,24 +856,24 @@ Original expression:
                    "the duplicate dispatch did not retain header band focus")
 
 A074 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:313
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.revision + 1, fx.document.revision): duplicate is one edit. [S029]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_COMPARE(doc.undoStack()->index(), undoBeforeDuplicate + 1)
 
 A075 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:314
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(3, fx.trackRows.count): duplicate adds one track. [S027]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.engineTrackCount(), tracksBefore + 1)
 
 A076 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:317
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, fx.document.notes(in: 2)...): copied note count matches. [S028]
 Source context since previous assertion:
   ;
       // The copy carries the targeted track's content, not a fresh empty slot.
@@ -882,8 +882,8 @@ Original expression:
   QCOMPARE(copiedNotes.size(), sourceNotes.size())
 
 A077 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:319
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, ...): copied tick matches. [S028]
 Source context since previous assertion:
   ;
       for (size_t i = 0; i < copiedNotes.size(); ++i) {
@@ -891,32 +891,32 @@ Original expression:
   QCOMPARE(copiedNotes[i].tick, sourceNotes[i].tick)
 
 A078 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:320
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, ...): copied key matches. [S028]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(copiedNotes[i].key, sourceNotes[i].key)
 
 A079 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:321
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, ...): copied duration matches. [S028]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(copiedNotes[i].duration, sourceNotes[i].duration)
 
 A080 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:322
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, ...): copied velocity matches. [S028]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(copiedNotes[i].velocity, sourceNotes[i].velocity)
 
 A081 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:324
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.revision + 1, fx.document.revision): duplicate changes the document. [S029]
 Source context since previous assertion:
   ;
       }
@@ -924,8 +924,8 @@ Original expression:
   QVERIFY(doc.smf().write() != beforeDuplicate)
 
 A082 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:326
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): one undo removes the duplicate. [S031]
 Source context since previous assertion:
   ;
       doc.undoStack()->undo();
@@ -933,24 +933,24 @@ Original expression:
   QTRY_COMPARE(doc.smf().write(), beforeDuplicate)
 
 A083 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:327
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): undo restores the original track count. [S031]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.engineTrackCount(), tracksBefore)
 
 A084 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:328
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): the source track row is restored. [S031]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(fx.rowForTrack(fx.sourceTrack()).has_value())
 
 A085 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:332
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): the selection row exists and delete closes the menu. [S032]
 Source context since previous assertion:
   ;
 
@@ -960,8 +960,8 @@ Original expression:
   QVERIFY(selectionRow)
 
 A086 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:334
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
       const HeaderMenu deleteMenu = openHeaderMenu(fx, *selectionRow);
@@ -982,8 +982,8 @@ Original expression:
           "the Delete track row did not receive a real click")
 
 A088 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:342
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): delete closes the menu. [S032]
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -992,7 +992,7 @@ Original expression:
 
 A089 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:343
 Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift; the delete dispatch is proven but native header band focus has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1000,32 +1000,32 @@ Original expression:
                    "the delete dispatch did not retain header band focus")
 
 A090 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:345
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(beforeDelete + 1, fx.document.revision): delete is one edit. [S033]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_COMPARE(doc.undoStack()->index(), undoBeforeDelete + 1)
 
 A091 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:346
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: fx.expectRows names ["Lead"]: deletion removes exactly one track. [S032, headerfixture.swift:73-81]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.engineTrackCount(), tracksBefore - 1)
 
 A092 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:347
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: fx.expectRows names ["Lead"]: the deleted track's row is gone. [S032, headerfixture.swift:73]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(!fx.rowForTrack(fx.selectionTrack()).has_value())
 
 A093 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:349
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): undo restores deleted music. [S035]
 Source context since previous assertion:
   ;
       doc.undoStack()->undo();
@@ -1033,24 +1033,24 @@ Original expression:
   QTRY_COMPARE(doc.smf().write(), beforeDelete)
 
 A094 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:350
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): undo restores the track count. [S035]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.engineTrackCount(), tracksBefore)
 
 A095 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:351
-Disposition: PARTIAL
-Mapping/reason: Related predicates S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: fx.expectRows names ["Lead", "Bass"]: the deleted track's row returns. [S035, headerfixture.swift:73]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(fx.rowForTrack(fx.selectionTrack()).has_value())
 
 A096 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:359
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): the voice row exists and remaps. [S036]
 Source context since previous assertion:
   ;
   }
@@ -1076,8 +1076,8 @@ Original expression:
   QVERIFY2(fx.focusInput(focusError), qPrintable(focusError))
 
 A098 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:370
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
 
@@ -1089,8 +1089,8 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A099 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:372
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): open menu target remaps. [S036]
 Source context since previous assertion:
   ;
       const int undo = doc.undoStack()->index();
@@ -1098,8 +1098,8 @@ Original expression:
   QVERIFY(doc.moveTrack(0, 1))
 
 A100 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:373
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): structural remap cancels the menu. [S037]
 Source context since previous assertion:
   ;
 Original expression:
@@ -1108,7 +1108,7 @@ Original expression:
 
 A101 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:377
 Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift; menu cancellation is proven but native active-focus-item inspection has no presenter counterpart.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1118,7 +1118,7 @@ Original expression:
 
 A102 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:379
 Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift; menu cancellation is proven but native focus-item identity has no presenter counterpart.
 Source context since previous assertion:
   ;
       const QString focusName = focus->objectName();
@@ -1128,32 +1128,32 @@ Original expression:
                "the remap cancellation left focus on the dismissed menu content")
 
 A103 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:382
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): remap cancels without starting the editor. [S037]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.headers().renamingTrack(), -1)
 
 A104 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:383
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, pickers): late stale action cannot open the picker. [S038]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!static_cast<bool>(checks::voicepicker::active(fx.view())))
 
 A105 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:384
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)) plus remapped baseline history: exactly the move's write. [S036, headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undo + 1)
 
 A106 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:394
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): the stale row existed and its menu was cancelled. [S037]
 Source context since previous assertion:
   ;
 
@@ -1169,8 +1169,8 @@ Original expression:
   QVERIFY(staleRow)
 
 A107 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:401
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): the fixture has a second track for the remap. [S036]
 Source context since previous assertion:
   ;
       // Remap real fixture-derived indices: the voice track is the queued
@@ -1184,8 +1184,8 @@ Original expression:
                "the fixture needs a second track for the remap")
 
 A108 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:404
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the stale menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
       const HeaderMenu stale = openHeaderMenu(fx, *staleRow);
@@ -1193,8 +1193,8 @@ Original expression:
   QVERIFY2(stale.session, qUtf8Printable(stale.diagnostic))
 
 A109 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:410
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)): the remap lands before the stale action. [S036]
 Source context since previous assertion:
   ;
       QByteArray afterRemap;
@@ -1219,16 +1219,16 @@ Original expression:
                "the stale Change voice row did not receive a real click")
 
 A111 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:417
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped HeaderDocumentBaseline captures post-move state; expectUnchanged proves the stale action added nothing. [S036, headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!afterRemap.isEmpty())
 
 A112 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:419
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, pickers): the stale Change voice action cannot open the picker. [S038]
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1236,32 +1236,32 @@ Original expression:
   QVERIFY(!static_cast<bool>(checks::voicepicker::active(fx.view())))
 
 A113 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:420
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline history identity: only the move's write is recorded. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), staleUndo + 1)
 
 A114 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:421
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), afterRemap)
 
 A115 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:422
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && h.renamingTrack == -1): no editor survives the remap. [S037]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.headers().renamingTrack(), -1)
 
 A116 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:426
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(5, h.menuItems.count): the fresh row exists and renders the menu. [S039]
 Source context since previous assertion:
   ;
 
@@ -1271,8 +1271,8 @@ Original expression:
   QVERIFY(freshRow)
 
 A117 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:428
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the fresh menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
       const HeaderMenu fresh = openHeaderMenu(fx, *freshRow);
@@ -1280,16 +1280,16 @@ Original expression:
   QVERIFY2(fresh.session, qUtf8Printable(fresh.diagnostic))
 
 A118 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:429
-Disposition: PARTIAL
-Mapping/reason: Related predicates S032, S033, S034, S035 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(5, h.menuItems.count): fresh menu remains usable after remap. [S039]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fresh.model->rowCount(), 5)
 
 A119 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:437
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): the voice row exists and remaps. [S040]
 Source context since previous assertion:
   ;
   }
@@ -1303,8 +1303,8 @@ Original expression:
   QVERIFY(voiceRow)
 
 A120 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:447
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): the fixture has a second track for the remap. [S040]
 Source context since previous assertion:
   ;
       const quick_popup::PromptGuard guard(fx.view());
@@ -1321,8 +1321,8 @@ Original expression:
                "the fixture needs a second track for the remap")
 
 A121 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:456
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the delete menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
 
@@ -1336,8 +1336,8 @@ Original expression:
   QVERIFY2(deleteMenu.session, qUtf8Printable(deleteMenu.diagnostic))
 
 A122 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:462
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): remap precedes delayed activation. [S040]
 Source context since previous assertion:
   ;
       QByteArray afterRemap;
@@ -1363,16 +1363,16 @@ Original expression:
           "the stale Delete track row did not receive a real click")
 
 A124 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:470
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped HeaderDocumentBaseline captures post-move state before the delayed action. [S040, headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!afterRemap.isEmpty())
 
 A125 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:472
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): the stale menu stays closed. [S041]
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1380,40 +1380,40 @@ Original expression:
   QVERIFY(!deleteMenu.session->isOpen())
 
 A126 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:473
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the delayed delete cannot change the track count. [S040, headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.engineTrackCount(), tracks)
 
 A127 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:474
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline history identity: only the move's write is recorded. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), deleteUndo + 1)
 
 A128 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:475
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), afterRemap)
 
 A129 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:476
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the destination track keeps the voice name. [S040, headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.trackName(destination), voiceName)
 
 A130 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:481
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): the duplicate row exists after remap. [S040]
 Source context since previous assertion:
   ;
 
@@ -1424,8 +1424,8 @@ Original expression:
   QVERIFY(duplicateRow)
 
 A131 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:483
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the duplicate menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
       const HeaderMenu duplicateMenu = openHeaderMenu(fx, *duplicateRow);
@@ -1433,8 +1433,8 @@ Original expression:
   QVERIFY2(duplicateMenu.session, qUtf8Printable(duplicateMenu.diagnostic))
 
 A132 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:489
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(1, to: 0)): remap precedes the delayed duplicate. [S040]
 Source context since previous assertion:
   ;
       QByteArray duplicateAfterRemap;
@@ -1460,16 +1460,16 @@ Original expression:
                "the stale Duplicate track row did not receive a real click")
 
 A134 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:497
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped HeaderDocumentBaseline captures post-move state before the delayed action. [S040, headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!duplicateAfterRemap.isEmpty())
 
 A135 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:499
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): the stale menu stays closed. [S041]
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1477,32 +1477,32 @@ Original expression:
   QVERIFY(!duplicateMenu.session->isOpen())
 
 A136 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:500
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the delayed duplicate cannot change the track count. [S040, headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.engineTrackCount(), tracks)
 
 A137 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:501
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline history identity: only the move's write is recorded. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.undoStack()->index(), duplicateUndo + 1)
 
 A138 | TrackHeadersTest::headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.cpp:502
-Disposition: PARTIAL
-Mapping/reason: Related predicates S036, S037 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), duplicateAfterRemap)
 
 A139 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:510
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): the source row exists and outside press dismisses. [S042]
 Source context since previous assertion:
   ;
   }
@@ -1529,8 +1529,8 @@ Original expression:
   QVERIFY2(fx.focusInput(focusError), qPrintable(focusError))
 
 A141 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:519
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
 
@@ -1540,7 +1540,7 @@ Original expression:
 
 A142 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:521
 Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift; outside dismissal is proven but the native menu frame item has no presenter counterpart.
 Source context since previous assertion:
   ;
       QQuickItem *const frame = quick_popup::menuFrame(*opened.session);
@@ -1549,7 +1549,7 @@ Original expression:
 
 A143 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:524
 Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift; outside dismissal is proven but native menu frame scene geometry has no presenter counterpart.
 Source context since previous assertion:
   ;
       const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
@@ -1558,8 +1558,8 @@ Original expression:
   QVERIFY2(outside, "no header point outside the menu frame stayed inside the live input")
 
 A144 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:531
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): outside button dismisses without reopening. [S042]
 Source context since previous assertion:
   ;
       const QPoint outsideScene = fx.input().mapToScene(*outside).toPoint();
@@ -1582,24 +1582,24 @@ Original expression:
                "the outside dismissal opened a new menu")
 
 A146 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:535
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): outside press never clicks through to selection. [S043]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
 
 A147 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:536
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): outside dismissal writes nothing. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A148 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:537
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
@@ -1607,7 +1607,7 @@ Original expression:
 
 A149 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:538
 Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift; outside dismissal is proven but native header band focus restoration has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1615,8 +1615,8 @@ Original expression:
                    "the outside dismissal did not restore the header band focus")
 
 A150 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:544
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.menuOpen) inside fx.openMenu: the reopened menu session opens. [headerinputfixture.swift:38]
 Source context since previous assertion:
   ;
 
@@ -1627,8 +1627,8 @@ Original expression:
   QVERIFY2(reopened.session, qUtf8Printable(reopened.diagnostic))
 
 A151 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:547
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): outside right press dismisses without reopening. [S042]
 Source context since previous assertion:
   ;
       QTest::mousePress(reopened.session->window(), Qt::RightButton, Qt::NoModifier, outsideScene);
@@ -1649,24 +1649,24 @@ Original expression:
                "the swallowed release opened a new menu")
 
 A153 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:553
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): outside right press never clicks through. [S043]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), fx.sourceTrack())
 
 A154 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:554
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): outside dismissal writes nothing. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(doc.smf().write(), before)
 
 A155 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:555
-Disposition: PARTIAL
-Mapping/reason: Related predicates S038, S039, S040 in src/checks/trackheaders/trackheadermenu.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
@@ -1713,105 +1713,120 @@ S009 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackhe
 S010 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:38
   report.expect(h.menuOpen, cppID: id, message: "disabled duplicate neither dispatches nor dismisses")
 
-S011 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:53
+S011 | headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:41
+  report.expect(!h.menuOpen, cppID: id, message: "dismiss closes the capacity menu")
+
+S012 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:54
   report.expect(h?.menuOpen == false, cppID: id, message: "menu closes before picker request")
 
-S012 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:58
+S013 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:58
+  report.expectEqual(1, fx.session.selectedTrack, cppID: id,
+                         what: "right press selects the voice track")
+
+S014 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:61
   report.expectEqual([1], requests, cppID: id, what: "change voice requests selected track picker")
 
-S013 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:65
+S015 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:65
+  report.expectEqual(1, fx.session.selectedTrack, cppID: id,
+                         what: "cancelled picker retains the voice track selection")
+
+S016 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:70
   report.expectEqual([127], fx.document.lanePoints(track: 1, lane: .voice).map(\.value),
                          cppID: id, what: "accepted picker edits captured track program")
 
-S014 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:67
+S017 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:72
   report.expectEqual([0], fx.document.lanePoints(track: 0, lane: .voice).map(\.value),
                          cppID: id, what: "voice edit leaves other track untouched")
 
-S015 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:69
+S018 | headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.swift:74
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "voice acceptance creates one edit")
 
-S016 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:83
+S019 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:88
   report.expect(!h.menuOpen && h.renamingTrack == 0, cppID: id,
                     message: "rename editor replaces closed menu synchronously")
 
-S017 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:85
+S020 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:90
   report.expectEqual("Lead", h.renameDraft, cppID: id, what: "editor starts with editable track name")
 
-S018 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:89
+S021 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:94
   report.expectEqual(-1, h.renamingTrack, cppID: id, what: "cancelled editor cannot reopen or commit")
 
-S019 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:106
+S022 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:111
   report.expect(h?.menuOpen == false, cppID: id, message: "menu closes before reveal")
 
-S020 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:114
+S023 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:119
   report.expectEqual([1], reveals, cppID: id, what: "reveal addresses requested track")
 
-S021 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:115
+S024 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:120
   report.expectEqual([42], revealedPrograms, cppID: id,
                          what: "track-addressed menu request resolves to current voice program")
 
-S022 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:121
+S025 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:124
+  report.expect(!notes.isEmpty, cppID: id,
+                    message: "the duplicate fixture track carries content to copy")
+
+S026 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:128
   report.expect(!h.menuOpen, cppID: id, message: "duplicate closes menu")
 
-S023 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:122
+S027 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:129
   report.expectEqual(3, fx.trackRows.count, cppID: id, what: "duplicate adds one track")
 
-S024 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:123
+S028 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:130
   report.expectEqual(notes, fx.document.notes(in: 2).map {
           "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)"
       }, cppID: id, what: "duplicate copies content rather than creating an empty slot")
 
-S025 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:126
+S029 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:133
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "duplicate is one edit")
 
-S026 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:128
+S030 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:135
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "duplicate undo succeeds")
 
-S027 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:129
+S031 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:136
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo removes duplicate")
 
-S028 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:133
+S032 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:140
   report.expect(!h.menuOpen, cppID: id, message: "delete closes menu")
 
-S029 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:135
+S033 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:142
   report.expectEqual(beforeDelete + 1, fx.document.revision, cppID: id, what: "delete is one edit")
 
-S030 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:136
+S034 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:143
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "delete undo succeeds")
 
-S031 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:137
+S035 | headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.swift:144
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "undo restores deleted music")
 
-S032 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:151
+S036 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:158
   report.expect(fx.document.moveTrack(0, to: 1), cppID: id, message: "open menu target remaps")
 
-S033 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:153
+S037 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:160
   report.expect(!h.menuOpen && h.renamingTrack == -1, cppID: id,
                     message: "structural remap cancels menu without starting editor")
 
-S034 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:157
+S038 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:164
   report.expectEqual(0, pickers, cppID: id, what: "late stale action cannot open picker")
 
-S035 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:160
+S039 | headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.swift:167
   report.expectEqual(5, h.menuItems.count, cppID: id, what: "fresh menu remains usable after remap")
 
-S036 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:174
+S040 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:181
   report.expect(fx.document.moveTrack(1, to: 0), cppID: id,
                         message: "action \(action): remap precedes delayed activation")
 
-S037 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:179
+S041 | headerMenuQueuedDestructiveMutationsDropAfterRemap | src/checks/trackheaders/trackheadermenu.swift:186
   report.expect(!h.menuOpen, cppID: id, message: "action \(action): stale menu stays closed")
 
-S038 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:199
+S042 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:206
   report.expect(!h.menuOpen, cppID: id, message: "outside button \(button) dismisses without reopening")
 
-S039 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:200
+S043 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:207
   report.expectEqual(0, fx.session.selectedTrack, cppID: id,
                              what: "outside button \(button) never clicks through to selection")
 
-S040 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:202
+S044 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:209
   report.expectEqual(0, reveals, cppID: id, what: "outside button \(button) never reveals a voice")
 
 Shared helper: src/checks/trackheaders/headerfixture.swift

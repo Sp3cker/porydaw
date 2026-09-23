@@ -4,16 +4,16 @@ Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/editcheck/tst_songdocument_runner.cpp
 Original SHA-256: 83d29d89e7b0fe96edcd6821e86dd6d32eeb6ce32a034cc76f44a73c7b6bfd1f
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 
 Scope
 All 4 original assertion sites are listed below, all in EditCheckTest fixture
 and corpus staging (initTestCase). The legacy C++ editcheck suite is not
 registered in the current checkcatalog, so no native run of these sites is
-claimed. coreEditCorpusSongs in the Swift counterpart enumerates every staged
-sound/songs/midi/*.mid file, rejects an empty corpus, decodes each file
-directly (throwing on failure, reported by the top-level catch so no loaded row
-silently disappears), and requires the exact checked-in midi.cfg flag shape.
+claimed. coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid
+file, rejects an empty corpus, and requires the checked-in midi.cfg flag
+shape. coreEditCorpusLoadCheck decodes each staged file and checks the
+constructed document loaded all decoded tracks; parse failures fail the suite.
 
 Fixture and sequence
 initTestCase opens the staged project root, loads every playable song into a
@@ -44,9 +44,9 @@ Original expression:
   QVERIFY2(project.open(m_projectRoot, &error), qPrintable(error));
 
 A003 | EditCheckTest::initTestCase | src/checks/editcheck/tst_songdocument_runner.cpp:24
-Disposition: PARTIAL
-Swift: src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusSongs
-Mapping/reason: Related coverage only: coreEditCorpusSongs reads every staged .mid file's raw bytes with a throwing Data load, so an unreadable file fails the suite through the top-level catch. Unproved condition: no report.expect/expectEqual/fail predicate in this file asserts per-song MIDI parse plus SongDocument construction success under cppID editcheck/EditCheckTest::initTestCase; MidiFile.decode and SongDocument construction happen downstream in the songraw/songranges suites (see their proofs), so this proof alone does not cover document.load success.
+Disposition: MATCHED
+Swift: S006 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditCorpusLoadCheck
+Mapping/reason: For every staged corpus song, Swift decodes its MIDI bytes, constructs SongDocument with that song's config and source, and S006 checks that the document loaded every decoded track. A decode error or construction failure fails the suite, rather than merely reading the source file.
 Original expression:
   QVERIFY2(document.load(song, &error), qPrintable(error));
 
@@ -73,7 +73,15 @@ S003 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift:
 S004 | coreEditCorpusSongs | src/checks/editcheck/tst_songdocument_runner.swift:38
   report.fail("editcheck/EditCheckTest::initTestCase", "fixture flags changed for \(filename): \(flags)")
 
-S005 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:68
+S005 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:83
   report.expect(count == replayed && document.state == restoredState &&
           document.history.currentIdentity == restoredIdentity, cppID: cppID,
           message: "counting public undo entries restores the exact state and identity")
+
+S006 | coreEditCorpusLoadCheck | src/checks/editcheck/tst_songdocument_runner.swift:57
+  report.expect(document.rawChunks.count == file.chunks.count,
+                cppID: "editcheck/EditCheckTest::initTestCase",
+                message: "staged MIDI parses and loads every track into the document")
+
+S007 | coreEditCorpusLoadCheck | src/checks/editcheck/tst_songdocument_runner.swift:62
+  report.fail("editcheck/EditCheckTest::initTestCase", "staged MIDI cannot load: \(error)")

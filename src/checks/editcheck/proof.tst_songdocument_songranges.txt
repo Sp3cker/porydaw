@@ -1,615 +1,344 @@
 Assertion correspondence: editcheck/tst_songdocument_songranges.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.61s; build 12.39s).
 
 Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_songranges.cpp
 Original SHA-256: 2c29ee7335263f22e9080dd541dce0be83c7919325fba143414e1f3f5423ff6b
 Swift counterpart: src/checks/editcheck/tst_songdocument_songranges.swift
 Swift SHA-256: b5e6d6e2404d710db924f74452a4a3d32114b4463a4436727be2e09bac619624
+Shared corpus loader: src/checks/editcheck/tst_songdocument_runner.swift
+Shared corpus SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
+Covered native implementation: src/core/songdocument_range.cpp :: SongDocument::applyRangeEdit, moveRange; src/core/songdocument_xcmd.cpp :: SongDocument::moveLanePoints; src/core/songdocument.cpp :: SongDocument::resolveNoteOverlaps (native note collision helper).
+Native engine status: C++ implementation remains on disk, but current CMake targets do not build these legacy src/core/songdocument*.cpp sources; no active native bridge is claimed. Active checks use Swift PorydawCore.
 
-Scope
-All 79 original assertion sites are listed below. MATCHED denotes an executable
-predicate, not permission to delete the original. No original C++ source changed.
+Retirement: 79 original assertion sites, all MATCHED; deleted C++ check recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed; post-retirement Swift verification is recorded above. Historical collision failure ([20,30) by -30 committing zero duration) led to a Swift production guard at src/swift/core/TimeEditing.swift :: planCollisionActions; the fresh Swift check result is recorded above.
 
-Fixture and sequence
-Collision case runs both nonempty and empty files. Nonempty fixture has division24,
-conductor text contract fixture/end48, program0/end200. Setup retains the original
-redo tail. Colliding two added notes, lane insertion and tempo addition must leave
-bytes/state/revision/save identity/history count+cursor/clean+redo/track count/notes
-unchanged. The second original negative move and clipped [-10,20) to [0,20) move
-retain their exact input notes, values, tempo, undo/redo byte comparisons.
-coreRangeNotePairsConsistent translates every predicate of native support.cpp:
-on/end indexes in bounds, nonzero duration, terminated, pitch, chronological
-nonoverlap, on/end kind/key/channel, end timing, unique endpoint indexes, and
-coverage of every channel-matching on/end raw event.
+Fixture and execution: collision runs empty and nonempty division-24 encoded/decoded files; nonempty conductor text 'contract fixture'/end48, program0/end200, a redo tail, notes/lane/tempo; rejects colliding addNotes on track1 and negative move of first note with full lane and tempo without changing bytes, state, revision, save identity, clean/redo, history count/cursor, tracks or notes. Clipped [-10,20) becomes [0,20), leaving stationary [20,30); check three durations, undo/redo exact bytes, and native-equivalent notePairsConsistent (endpoint bounds, nonzero duration, termination, pitch, nonoverlap, matching on/end kind/key/channel/timing, uniqueness, full raw-event coverage).
+Corpus: all staged playable MIDI are decoded using exact unique midi.cfg flags -E -R50 -G<voicegroup> -V100; only first editable engine track with notes participates, with nonempty editable-row requirement. Each of four scenarios receives a fresh document. base=max chunk end+100*ticksPerClock; step=ticksPerClock (at least 1). Mixed range edit replaces notes at clocks30/32, lane at30 and tempo at31 with note/lane at40 and tempo at41, then undo/redo. Range move relocates notes at80/82, lane at80 and tempo at81 by three clocks, rejects zero delta, then undo/redo. Bulk lane move relocates points90/91 to93/94 leaving92 stationary, then undo/redo. Converging lane move maps points90/91 to97 with later value72 and unique destination, then undo. Optional equality asserts both existence and exact value; compound predicates preserve each listed conjunct.
+History caveat: at-tip count traverses public undo/redo and restores state/identity; collision cursor observation restores redo-tail cursor. Revision captured after first observer and checked before second observer. Registered run path: src/checks/editcheck/TimeChecks.swift :: runTimeEditsSuite -> coreRangeCorpusChecks, swiftcore suite 9 via src/checks/support/corecheck/CoreCheckSupport.swift :: pdc_suite_run; counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. Legacy editcheck source absent from active CMake/checkcatalog.
 
-Corpus rows enumerate every staged playable MIDI and require at least one with an
-editable track; first editable track is selected exactly as native addSongRows.
-Each case creates a fresh decoded SongDocument. Shared runner requires exact
-checked-in config flag shape, and all parsing/loading errors fail the suite.
-base=max chunk end +100*ticksPerClock; step=ticksPerClock. Original clock offsets,
-notes, velocities, lane values, integer BPM division and undo/redo sequence are
-literal in each row. Optional equality requires BOTH existence and exact value.
-Compound report predicates preserve every original conjunct listed separately.
-The lane convergence loop checks every destination value72 and destination count1.
-
-History observation
-At-tip counts traverse public undo/redo and assert restored state+identity. Collision
-cursor observations additionally restore the original redo tail position. Revision
-is captured AFTER the first observation and checked BEFORE the second; this avoids
-confusing intentional observer replays with rejected-edit mutations. No test-only
-production history accessor was added.
-
-Verification
-Previous expanded run: eventEdits/timeEdits passed all four corpus cases; unrelated
-audio/drawer cases failed and are being corrected by their owners.
-Failure-first collision run: rangeEditCollisionRejects failed because moving
-[20,30) by -30 committed a zero-length [0,0) note, modified MIDI/history, and
-corrupted the subsequent clipped-move endpoint checks. Native resolveNoteOverlaps
-rejects endTick <= tick; Swift planCollisionActions lacked that admission rule.
-The responsible production fix and follow-up verification are pending.
-No legacy native editcheck run or live differential comparison is claimed.
+Checked-in MIDI rows (14): mus_dummy, mus_littleroot_test, mus_route101, mus_route102, mus_gsc_route38, mus_caught, mus_petalburg, mus_oldale, mus_gym, mus_surf, mus_victory_wild, se_use_item, se_pc_login, se_fanfare_1trk (.mid each). Loader discovers all future staged .mid files rather than pinning this list.
 
 Original assertion inventory
+Index notes: A002/A004 cite four predicates covering rejected edit state/bytes/history; A001/A003/A017/A032/A050/A068 cite the throwing fixture/decode catch. A018/A033/A051/A069 cite both row classification and nonempty eligible corpus. A007-A012 cite one loop predicate on all three tick/duration pairs. Optional lane/note assertions check both existence and value; compound assertions cover every native conjunct. S042 checks at-tip traversal restores state/identity. Each A citation resolves to the S function/line and predicate below.
 
 A001 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:15
 Disposition: MATCHED
 Swift: S004 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Throwing MIDI encode/decode and SongDocument construction establish the same synthetic fixture; Swift S004 fails the suite if that setup throws.
-Original expression:
-  QVERIFY(fixture)
 
 A002 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:32
 Disposition: MATCHED
 Swift: S005, S006, S007, S008 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeExpectRejected
-Mapping/reason: Swift S005 asserts each history observation restores cursor, state and identity; Swift S006 asserts the rejected range preserves state, revision, save identity, clean flag, redo, tracks and notes; Swift S007 asserts identical MIDI bytes; Swift S008 asserts identical history count and cursor, all under the same cppID. The staged colliding range edit (minimumEngineTrackCount 2 with track-1 notes/lane/tempo) matches the original.
-Original expression:
-  QVERIFY2(docStateMismatch(doc, saved).isEmpty(), qPrintable(docStateMismatch(doc, saved)))
 
 A003 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:37
 Disposition: MATCHED
 Swift: S004 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Throwing MIDI encode/decode and SongDocument construction establish the same second synthetic fixture; Swift S004 fails the suite if that setup throws.
-Original expression:
-  QVERIFY(fixture)
 
 A004 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:45
 Disposition: MATCHED
 Swift: S005, S006, S007, S008 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeExpectRejected
-Mapping/reason: Swift S005 asserts each history observation restores cursor, state and identity; Swift S006 asserts the rejected range preserves state, revision, save identity, clean flag, redo, tracks and notes; Swift S007 asserts identical MIDI bytes; Swift S008 asserts identical history count and cursor, all under the same cppID. The staged negative move (first note with full lane set by -30 and full tempo) matches the original.
-Original expression:
-  QVERIFY2(docStateMismatch(doc, before).isEmpty(), qPrintable(docStateMismatch(doc, before)))
 
 A005 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:49
 Disposition: MATCHED
 Swift: S009 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S009 fails the suite unless the tick-30 pitch-60 moving note exists, asserting the same existence observation under the same cppID.
-Original expression:
-  QVERIFY(doc.findNote(0, 30, 60, &moving))
 
 A006 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:52
 Disposition: MATCHED
 Swift: S010 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S010 asserts coreRangeNotePairsConsistent holds after the clipped move under the same cppID, preserving every native endpoint/ordering/channel/coverage predicate.
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
 
 A007 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:54
 Disposition: MATCHED
 Swift: S011 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S011 asserts the tick-60 pitch-60 note exists with duration 20 (the (60,20) instance of the tick/duration loop) under the same cppID.
-Original expression:
-  QVERIFY(doc.findNote(0, 60, 60, &tail))
 
 A008 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:55
 Disposition: MATCHED
 Swift: S011 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S011 asserts the tick-60 pitch-60 note exists with duration 20 (the (60,20) instance of the tick/duration loop) under the same cppID.
-Original expression:
-  QCOMPARE(tail.duration, uint32_t(20))
 
 A009 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:56
 Disposition: MATCHED
 Swift: S011 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S011 asserts the tick-20 pitch-60 note exists with duration 10 (the (20,10) instance of the tick/duration loop) under the same cppID.
-Original expression:
-  QVERIFY(doc.findNote(0, 20, 60, &tail))
 
 A010 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:57
 Disposition: MATCHED
 Swift: S011 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S011 asserts the tick-20 pitch-60 note exists with duration 10 (the (20,10) instance of the tick/duration loop) under the same cppID.
-Original expression:
-  QCOMPARE(tail.duration, uint32_t(10))
 
 A011 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:58
 Disposition: MATCHED
 Swift: S011 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S011 asserts the tick-0 pitch-60 note exists with duration 20 (the (0,20) instance of the tick/duration loop) under the same cppID.
-Original expression:
-  QVERIFY(doc.findNote(0, 0, 60, &moving))
 
 A012 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:59
 Disposition: MATCHED
 Swift: S011 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S011 asserts the tick-0 pitch-60 note exists with duration 20 (the (0,20) instance of the tick/duration loop) under the same cppID.
-Original expression:
-  QCOMPARE(moving.duration, uint32_t(20))
 
 A013 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:62
 Disposition: MATCHED
 Swift: S012 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S012 asserts clipped-move undo restores the exact pre-move MIDI bytes under the same cppID.
-Original expression:
-  QCOMPARE(doc.smf().write(), partialBefore)
 
 A014 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:64
 Disposition: MATCHED
 Swift: S013 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S013 asserts clipped-move redo restores the exact post-move MIDI bytes under the same cppID.
-Original expression:
-  QCOMPARE(doc.smf().write(), after)
 
 A015 | EditCheckTest::rangeEditCollisionRejects | src/checks/editcheck/tst_songdocument_songranges.cpp:65
 Disposition: MATCHED
 Swift: S014 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCollisionChecks
-Mapping/reason: Swift S014 asserts consistent on/off pairs after redo under the same cppID.
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
 
 A016 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:77
 Disposition: MATCHED
 Swift: S001 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S001 asserts the scenario row has a nonempty MIDI path under the per-row scenario cppID.
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for range editing")
 
 A017 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:81
 Disposition: MATCHED
 Swift: S004 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Throwing MidiFile.decode and SongDocument construction load the staged MIDI for the row; Swift S004 fails the suite if that read/decode throws.
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A018 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:83
 Disposition: MATCHED
 Swift: S002, S003 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S002 asserts the reloaded document still has notes on the first-nonempty track under the per-row scenario cppID, repeating the first-editable-track classification; Swift S003 guarantees at least one such editable row executed.
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A019 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:108
 Disposition: MATCHED
 Swift: S015 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S015 asserts old notes are removed and the replacement is present under the same cppID; this entry is the clock-30 pitch-60 absent conjunct.
-Original expression:
-  QVERIFY(!document.findNote(track, base + step * 30, 60, &note))
 
 A020 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:109
 Disposition: MATCHED
 Swift: S015 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S015 asserts old notes are removed and the replacement is present under the same cppID; this entry is the clock-32 pitch-62 absent conjunct.
-Original expression:
-  QVERIFY(!document.findNote(track, base + step * 32, 62, &note))
 
 A021 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:110
 Disposition: MATCHED
 Swift: S015 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S015 asserts old notes are removed and the replacement is present under the same cppID; this entry is the clock-40 pitch-65 present conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 40, 65, &note))
 
 A022 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:111
 Disposition: MATCHED
 Swift: S016 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S016 asserts the clock-40 lane point exists with value 70 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 40, &point))
 
 A023 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:112
 Disposition: MATCHED
 Swift: S016 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S016 asserts the clock-40 lane point exists with value 70 under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 70)
 
 A024 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:113
 Disposition: MATCHED
 Swift: S017 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S017 asserts the tempo map contains the tick-41 BPM-155 replacement tempo under the same cppID.
-Original expression:
-  QVERIFY(songdocument_test::containsTempo(document,
-                                               songdocument_test::tempo(base + step * 41, 155)))
 
 A025 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:115
 Disposition: MATCHED
 Swift: S018 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow; S042 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditHistoryCountAtTip
-Mapping/reason: Swift S018 asserts the mixed edit adds exactly one history entry under the same cppID; the count is observed through S042, which re-asserts state/identity restoration.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1)
 
 A026 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:117
 Disposition: MATCHED
 Swift: S019 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S019 asserts undo restores originals and removes replacement note and tempo under the same cppID; this entry is the clock-30 pitch-60 restored conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 30, 60, &note))
 
 A027 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:118
 Disposition: MATCHED
 Swift: S019 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S019 asserts undo restores originals and removes replacement note and tempo under the same cppID; this entry is the clock-32 pitch-62 restored conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 32, 62, &note))
 
 A028 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:119
 Disposition: MATCHED
 Swift: S019 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S019 asserts undo restores originals and removes replacement note and tempo under the same cppID; this entry is the clock-40 pitch-65 absent conjunct.
-Original expression:
-  QVERIFY(!document.findNote(track, base + step * 40, 65, &note))
 
 A029 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:120
 Disposition: MATCHED
 Swift: S019 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S019 asserts undo restores originals and removes replacement note and tempo under the same cppID; this entry is the replacement-tempo absent conjunct.
-Original expression:
-  QVERIFY(!songdocument_test::containsTempo(document,
-                                                songdocument_test::tempo(base + step * 41, 155)))
 
 A030 | EditCheckTest::rangeEdit | src/checks/editcheck/tst_songdocument_songranges.cpp:123
 Disposition: MATCHED
 Swift: S020 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeEditRow
-Mapping/reason: Swift S020 asserts the clock-40 pitch-65 replacement note is present after redo under the same cppID.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 40, 65, &note))
 
 A031 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:135
 Disposition: MATCHED
 Swift: S001 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S001 asserts the scenario row has a nonempty MIDI path under the per-row scenario cppID.
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for range moving")
 
 A032 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:139
 Disposition: MATCHED
 Swift: S004 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Throwing MidiFile.decode and SongDocument construction load the staged MIDI for the row; Swift S004 fails the suite if that read/decode throws.
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A033 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:141
 Disposition: MATCHED
 Swift: S002, S003 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S002 asserts the reloaded document still has notes on the first-nonempty track under the per-row scenario cppID, repeating the first-editable-track classification; Swift S003 guarantees at least one such editable row executed.
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A034 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:152
 Disposition: MATCHED
 Swift: S021 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S021 fails the suite unless both source notes and the lane point exist under the same cppID; this entry is the clock-80 pitch-60 source-note conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 80, 60, &first))
 
 A035 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:153
 Disposition: MATCHED
 Swift: S021 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S021 fails the suite unless both source notes and the lane point exist under the same cppID; this entry is the clock-82 pitch-64 source-note conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 82, 64, &second))
 
 A036 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:154
 Disposition: MATCHED
 Swift: S021 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S021 fails the suite unless both source notes and the lane point exist under the same cppID; this entry is the clock-80 lane-point conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 80, &point))
 
 A037 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:158
 Disposition: MATCHED
 Swift: S022 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S022 asserts the first moved note at clock 83 exists with duration step*2 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 83, 60, &first))
 
 A038 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:159
 Disposition: MATCHED
 Swift: S022 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S022 asserts the first moved note at clock 83 exists with duration step*2 under the same cppID; this entry is the duration conjunct.
-Original expression:
-  QCOMPARE(first.duration, step * 2)
 
 A039 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:160
 Disposition: MATCHED
 Swift: S023 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S023 asserts the second moved note at clock 85 exists with duration step*2 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 85, 64, &second))
 
 A040 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:161
 Disposition: MATCHED
 Swift: S023 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S023 asserts the second moved note at clock 85 exists with duration step*2 under the same cppID; this entry is the duration conjunct.
-Original expression:
-  QCOMPARE(second.duration, step * 2)
 
 A041 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:162
 Disposition: MATCHED
 Swift: S024 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S024 asserts the moved lane point at clock 83 exists with value 45 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 83, &point))
 
 A042 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:163
 Disposition: MATCHED
 Swift: S024 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S024 asserts the moved lane point at clock 83 exists with value 45 under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 45)
 
 A043 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:164
 Disposition: MATCHED
 Swift: S025 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S025 asserts the tempo map contains the moved tick-84 BPM-140 tempo under the same cppID.
-Original expression:
-  QVERIFY(songdocument_test::containsTempo(document,
-                                               songdocument_test::tempo(base + step * 84, 140)))
 
 A044 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:166
 Disposition: MATCHED
 Swift: S026 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow; S042 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditHistoryCountAtTip
-Mapping/reason: Swift S026 asserts the range move adds exactly one history entry under the same cppID; the count is observed through S042, which re-asserts state/identity restoration.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1)
 
 A045 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:168
 Disposition: MATCHED
 Swift: S027, S028 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow; S042 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditHistoryCountAtTip
-Mapping/reason: Swift S027 fails the suite unless the moved first note and lane exist, then Swift S028 asserts the zero-delta move adds no history entry (count still before+1) under the same cppID; the count is observed through S042, which re-asserts state/identity restoration.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1)
 
 A046 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:170
 Disposition: MATCHED
 Swift: S029 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S029 asserts undo restores both source notes under the same cppID; this entry is the clock-80 pitch-60 conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 80, 60, &first))
 
 A047 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:171
 Disposition: MATCHED
 Swift: S029 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S029 asserts undo restores both source notes under the same cppID; this entry is the clock-82 pitch-64 conjunct.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 82, 64, &second))
 
 A048 | EditCheckTest::rangeMove | src/checks/editcheck/tst_songdocument_songranges.cpp:173
 Disposition: MATCHED
 Swift: S030 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeMoveRow
-Mapping/reason: Swift S030 asserts redo restores the first destination note at clock 83 under the same cppID.
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 83, 60, &first))
 
 A049 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:185
 Disposition: MATCHED
 Swift: S001 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S001 asserts the scenario row has a nonempty MIDI path under the per-row scenario cppID.
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for bulk lane moves")
 
 A050 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:189
 Disposition: MATCHED
 Swift: S004 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Throwing MidiFile.decode and SongDocument construction load the staged MIDI for the row; Swift S004 fails the suite if that read/decode throws.
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A051 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:191
 Disposition: MATCHED
 Swift: S002, S003 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S002 asserts the reloaded document still has notes on the first-nonempty track under the per-row scenario cppID, repeating the first-editable-track classification; Swift S003 guarantees at least one such editable row executed.
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A052 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:200
 Disposition: MATCHED
 Swift: S031 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S031 fails the suite unless both lane source points exist under the same cppID; this entry is the clock-90 first-source conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 90, &first))
 
 A053 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:201
 Disposition: MATCHED
 Swift: S031 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S031 fails the suite unless both lane source points exist under the same cppID; this entry is the clock-91 second-source conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 91, &second))
 
 A054 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:206
 Disposition: MATCHED
 Swift: S034 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S034 asserts the first moved lane at clock 93 exists with value 25 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 93, &point))
 
 A055 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:207
 Disposition: MATCHED
 Swift: S034 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S034 asserts the first moved lane at clock 93 exists with value 25 under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 25)
 
 A056 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:208
 Disposition: MATCHED
 Swift: S035 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S035 asserts the second moved lane at clock 94 exists with value 45 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 94, &point))
 
 A057 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:209
 Disposition: MATCHED
 Swift: S035 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S035 asserts the second moved lane at clock 94 exists with value 45 under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 45)
 
 A058 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:210
 Disposition: MATCHED
 Swift: S036 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S036 asserts the stationary clock-92 lane exists with value 60 under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 92, &point))
 
 A059 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:211
 Disposition: MATCHED
 Swift: S036 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S036 asserts the stationary clock-92 lane exists with value 60 under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 60)
 
 A060 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:212
 Disposition: MATCHED
 Swift: S037 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow; S042 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditHistoryCountAtTip
-Mapping/reason: Swift S037 asserts the bulk lane move adds exactly one history entry under the same cppID; the count is observed through S042, which re-asserts state/identity restoration.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1)
 
 A061 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:214
 Disposition: MATCHED
 Swift: S038 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S038 asserts undo restores the first source with its original value (20 for bulk) under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 90, &point))
 
 A062 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:215
 Disposition: MATCHED
 Swift: S038 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S038 asserts undo restores the first source with its original value (20 for bulk) under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 20)
 
 A063 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:216
 Disposition: MATCHED
 Swift: S039 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S039 asserts undo restores the second source with its original value (40 for bulk) under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 91, &point))
 
 A064 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:217
 Disposition: MATCHED
 Swift: S039 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S039 asserts undo restores the second source with its original value (40 for bulk) under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 40)
 
 A065 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:218
 Disposition: MATCHED
 Swift: S040 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S040 asserts undo removes the destination under the same cppID; with converge=false this is the clock-93 destination absent observation.
-Original expression:
-  QVERIFY(!document.findLanePoint(track, 7, base + step * 93, &point))
 
 A066 | EditCheckTest::rangeLaneBulk | src/checks/editcheck/tst_songdocument_songranges.cpp:220
 Disposition: MATCHED
 Swift: S041 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S041 asserts redo restores the first destination at clock 93 under the same cppID (the !converge branch executes for bulk).
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 93, &point))
 
 A067 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:232
 Disposition: MATCHED
 Swift: S001 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S001 asserts the scenario row has a nonempty MIDI path under the per-row scenario cppID.
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for converging lane moves")
 
 A068 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:236
 Disposition: MATCHED
 Swift: S004 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Throwing MidiFile.decode and SongDocument construction load the staged MIDI for the row; Swift S004 fails the suite if that read/decode throws.
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
 
 A069 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:238
 Disposition: MATCHED
 Swift: S002, S003 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeCorpusChecks
-Mapping/reason: Swift S002 asserts the reloaded document still has notes on the first-nonempty track under the per-row scenario cppID, repeating the first-editable-track classification; Swift S003 guarantees at least one such editable row executed.
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
 
 A070 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:246
 Disposition: MATCHED
 Swift: S031 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S031 fails the suite unless both lane source points exist under the same cppID; this entry is the clock-90 first-source conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 90, &first))
 
 A071 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:247
 Disposition: MATCHED
 Swift: S031 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S031 fails the suite unless both lane source points exist under the same cppID; this entry is the clock-91 second-source conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 91, &second))
 
 A072 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:256
 Disposition: MATCHED
 Swift: S032 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S032 asserts every converged clock-97 destination has the later value 72 under the same cppID.
-Original expression:
-  QCOMPARE(point.value, 72)
 
 A073 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:259
 Disposition: MATCHED
 Swift: S033 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S033 asserts there is exactly one converged destination under the same cppID.
-Original expression:
-  QCOMPARE(destinationCount, 1)
 
 A074 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:260
 Disposition: MATCHED
 Swift: S037 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow; S042 | src/checks/editcheck/tst_songdocument_runner.swift :: coreEditHistoryCountAtTip
-Mapping/reason: Swift S037 asserts the converging lane move adds exactly one history entry under the same cppID (shared bulk/converge predicate); the count is observed through S042, which re-asserts state/identity restoration.
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1)
 
 A075 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:263
 Disposition: MATCHED
 Swift: S038 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S038 asserts undo restores the first source with its original value (25 for converge) under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 90, &point))
 
 A076 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:264
 Disposition: MATCHED
 Swift: S038 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S038 asserts undo restores the first source with its original value (25 for converge) under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 25)
 
 A077 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:265
 Disposition: MATCHED
 Swift: S039 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S039 asserts undo restores the second source with its original value (45 for converge) under the same cppID; this entry is the existence conjunct.
-Original expression:
-  QVERIFY(document.findLanePoint(track, 7, base + step * 91, &point))
 
 A078 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:266
 Disposition: MATCHED
 Swift: S039 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S039 asserts undo restores the second source with its original value (45 for converge) under the same cppID; this entry is the value conjunct.
-Original expression:
-  QCOMPARE(point.value, 45)
 
 A079 | EditCheckTest::rangeLaneConverge | src/checks/editcheck/tst_songdocument_songranges.cpp:267
 Disposition: MATCHED
 Swift: S040 | src/checks/editcheck/tst_songdocument_songranges.swift :: coreRangeLaneRow
-Mapping/reason: Swift S040 asserts undo removes the destination under the same cppID; with converge=true this is the clock-97 destination absent observation.
-Original expression:
-  QVERIFY(!document.findLanePoint(track, 7, base + step * 97, &point))
 
 Swift assertion predicates
-Every report.expect/expectEqual/fail call in the mapped Swift functions:
-
 S001 | coreRangeCorpusChecks | src/checks/editcheck/tst_songdocument_songranges.swift:17
   report.expect(!loaded.midiPath.isEmpty, cppID: id, message: "editable row has a MIDI path")
 
@@ -755,7 +484,7 @@ S040 | coreRangeLaneRow | src/checks/editcheck/tst_songdocument_songranges.swift
 S041 | coreRangeLaneRow | src/checks/editcheck/tst_songdocument_songranges.swift:297
   report.expect(point(93) != nil, cppID: id, message: "redo restores first destination")
 
-S042 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:68
+S042 | coreEditHistoryCountAtTip | src/checks/editcheck/tst_songdocument_runner.swift:83
   report.expect(count == replayed && document.state == restoredState &&
         document.history.currentIdentity == restoredIdentity, cppID: cppID,
         message: "counting public undo entries restores the exact state and identity")

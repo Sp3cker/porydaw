@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/resize.cpp
 Reference revision: 5f768e3401d74d5df185a6de5692595351156a9d
 Original: src/checks/rollcheck/resize.cpp
 Original SHA-256: 37b983c01f4d66212216d87b519d6de8da76b8fdeed6344195d40b59e246a7af
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -21,7 +21,7 @@ GAP identifies an original predicate without a replacement assertion.
 Off-grid edge resize with custom DPI cursors, Ctrl+edge multi-note selection resize, overshot minimum resize with narrow-zoom raster checks, and abutting boundary resize are exercised through native pointer gestures on the legacy roll surface. The gated counterpart drags note edges to minimum snap on the Swift grid surface; exact snap targets, selection resize, cursor images and raster observations remain open.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
+Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
@@ -135,7 +135,7 @@ QVERIFY2(roll.cursor().shape() == Qt::BitmapCursor &&
 
 A005 | PianoRollTest::resizeOffGrid | src/checks/rollcheck/resize.cpp:78
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags a note edge to minimum snap on the Swift grid surface; unproved: off-grid right-edge snap to exactly 2*dur, native camera/displayX geometry.
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags a note edge to minimum snap on the Swift grid surface; edgeResize (S016..S022) proves off-grid right-edge snap to the lattice, overshoot clamp at one snap cell, and leading-edge snap preserving the end tick on the Swift surface; unproved: the exact 2*dur delta magnitude and native camera/displayX geometry.
 Source context since previous assertion:
 ;
     const QPointF pull(view.camera().displayX(double(d.tick) + 1.9 * double(d.dur), 0.0, dpr),
@@ -269,7 +269,7 @@ QCOMPARE(doc.undoStack()->count(), count)
 
 A014 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:142
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags a note edge to minimum snap on the Swift grid surface; unproved: Ctrl+edge multi-note selection resize and the exact 3*dur/+dur deltas.
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags a note edge to minimum snap on the Swift grid surface; edgeResize (S016..S022) proves Ctrl+edge join-without-resize and multi-note selection resize on the Swift surface; unproved: the exact 3*dur/+dur delta magnitudes and native key-modifier event delivery.
 Source context since previous assertion:
 ;
     const qreal cellPx = view.camera().displayX(double(d.tick + 3 * d.dur), 0.0, dpr) -
@@ -290,7 +290,7 @@ QVERIFY2(doc.findNote(track, d.tick, uint8_t(d.key), &dAfter) && dAfter.duration
 
 A015 | PianoRollTest::resizeSelection | src/checks/rollcheck/resize.cpp:144
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags a note edge to minimum snap on the Swift grid surface; unproved: Ctrl+edge multi-note selection resize and the exact 3*dur/+dur deltas.
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags a note edge to minimum snap on the Swift grid surface; edgeResize (S016..S022) proves Ctrl+edge join-without-resize and multi-note selection resize on the Swift surface; unproved: the exact 3*dur/+dur delta magnitudes and native key-modifier event delivery.
 Source context since previous assertion:
 ;
 
@@ -337,7 +337,7 @@ QVERIFY2(d.key >= 0, "no free grid cell for the minimum resize")
 
 A019 | PianoRollTest::resizeMinimum | src/checks/rollcheck/resize.cpp:180
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to exactly one snap cell on the Swift grid surface; unproved: overshoot-drag path and native camera rows.
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to exactly one snap cell on the Swift grid surface; edgeResize (S016..S022) proves the overshoot-drag clamp at one snap cell on the Swift surface; unproved: native camera rows.
 Source context since previous assertion:
 ;
     SongDocument &doc = check.document();
@@ -507,7 +507,7 @@ QCOMPARE(roll.cursor().pixmap().toImage(), leftGrip.toImage())
 
 A029 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:259
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; unproved: boundary grip disambiguation, exact snap deltas, abutting left/right pairing.
+Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; edgeResize (S016..S022) proves boundary grip disambiguation for the abutting left/right pair on the Swift surface; unproved: exact snap deltas and native camera rows.
 Source context since previous assertion:
 ;
     const QPointF pullLeft(view.camera().displayX(double(g.tick + g.dur - snap), 0.0, dpr),
@@ -528,7 +528,7 @@ QVERIFY2(doc.findNote(track, g.tick, uint8_t(g.key), &leftNote) &&
 
 A030 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:262
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; unproved: boundary grip disambiguation, exact snap deltas, abutting left/right pairing.
+Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; edgeResize (S016..S022) proves boundary grip disambiguation for the abutting left/right pair on the Swift surface; unproved: exact snap deltas and native camera rows.
 Source context since previous assertion:
 ;
 
@@ -539,7 +539,7 @@ QVERIFY2(doc.findNote(track, g.tick + g.dur, uint8_t(g.key), &rightNote) &&
 
 A031 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:275
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; unproved: boundary grip disambiguation, exact snap deltas, abutting left/right pairing.
+Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; edgeResize (S016..S022) proves boundary grip disambiguation for the abutting left/right pair on the Swift surface; unproved: exact snap deltas and native camera rows.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -560,7 +560,7 @@ QVERIFY2(doc.findNote(track, g.tick + g.dur + snap, uint8_t(g.key), &rightNote) 
 
 A032 | PianoRollTest::resizeAbutting | src/checks/rollcheck/resize.cpp:278
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; unproved: boundary grip disambiguation, exact snap deltas, abutting left/right pairing.
+Mapping/reason: resizeEdgesRespectMinimumDuration plus pointerDrawMoveAndNeighborTrim (neighbor trim) exercise edge drags and neighbor trimming on the Swift grid surface; edgeResize (S016..S022) proves boundary grip disambiguation for the abutting left/right pair on the Swift surface; unproved: exact snap deltas and native camera rows.
 Source context since previous assertion:
 ;
 
@@ -585,7 +585,7 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S015 are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid. S016..S022 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::edgeResize, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:349
 Counterpart expression:
@@ -670,3 +670,59 @@ QVERIFY(QTest::qWaitFor(
                    restored->duration == added->duration && fixture.noteItem(added->id) != nullptr;
         },
         kSettleTimeoutMs))
+
+S016 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:794
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.duration) == 2 * snap } == true,
+    cppID: id, message: "off-grid right-edge drag snaps the end to the ruler grid")
+
+S017 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:809
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.duration) == snap } == true,
+    cppID: id, message: "overshot right-edge drag stops at one snap cell")
+
+S018 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:821
+Counterpart expression:
+report.expect(
+    session.document.note(a).map {
+        Int($0.tick) == 24 - snap && Int($0.duration) == 2 * snap
+    } == true,
+    cppID: id, message: "leading-edge drag snaps the start back one cell and keeps the end")
+
+S019 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:837
+Counterpart expression:
+report.expect(
+    session.selectedNotes == Set([a, b])
+        && session.document.note(b).map { Int($0.duration) == 12 } == true,
+    cppID: id, message: "stationary Ctrl+edge click joins the note without resizing")
+
+S020 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:846
+Counterpart expression:
+report.expect(
+    session.document.note(b).map { Int($0.duration) == 12 + snap } == true
+        && session.document.note(a).map {
+            Int($0.tick) + Int($0.duration) == 24 + 2 * snap
+        } == true,
+    cppID: id, message: "Ctrl+edge drag resizes the grabbed note and the joined selection")
+
+S021 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:885
+Counterpart expression:
+report.expect(
+    session.document.note(cPair[0]).map { Int($0.duration) == 12 - snap } == true
+        && session.document.note(cPair[1]).map {
+            Int($0.tick) == 252 && Int($0.duration) == 12
+        } == true,
+    cppID: id, message: "boundary-left drag resizes the left note's end only")
+
+S022 | swiftcore/EditorGridCamera::edgeResize | src/checks/rollcheck/EditorGridCameraChecks.swift:898
+Counterpart expression:
+report.expect(
+    session.document.note(cPair[1]).map {
+        Int($0.tick) == 252 + snap && Int($0.duration) == 12 - snap
+    } == true
+        && session.document.note(cPair[0]).map {
+            Int($0.tick) == 240 && Int($0.duration) == 12 - snap
+        } == true,
+    cppID: id, message: "boundary-right drag resizes the right note's start only")

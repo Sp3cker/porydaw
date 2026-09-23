@@ -38,6 +38,7 @@ func headerMenuOpensWithTypedRowsAndDismissesWithoutWrite(
     report.expect(h.menuOpen, cppID: id, message: "disabled duplicate neither dispatches nor dismisses")
     full.expectUnchanged(report, fx.document, cppID: id, phase: "disabled duplicate")
     h.dismissHeaderMenu()
+    report.expect(!h.menuOpen, cppID: id, message: "dismiss closes the capacity menu")
 }
 
 @MainActor
@@ -54,11 +55,15 @@ func headerMenuChangeVoiceOpensPickerAfterMenuCloses(
         requests.append(track)
     }
     fx.openMenu(report, track: 1, cppID: id)
+    report.expectEqual(1, fx.session.selectedTrack, cppID: id,
+                       what: "right press selects the voice track")
     h.activateHeaderMenuAction(actionId: 1)
     report.expectEqual([1], requests, cppID: id, what: "change voice requests selected track picker")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "change voice requested")
     h.completeVoiceRequest(program: -1)
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "change voice cancelled")
+    report.expectEqual(1, fx.session.selectedTrack, cppID: id,
+                       what: "cancelled picker retains the voice track selection")
     fx.openMenu(report, track: 1, cppID: id)
     h.activateHeaderMenuAction(actionId: 1)
     h.completeVoiceRequest(program: 127)
@@ -116,6 +121,8 @@ func headerMenuRowsDispatchRevealDuplicateDelete(
                        what: "track-addressed menu request resolves to current voice program")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "menu reveal")
     let notes = fx.document.notes(in: 0).map { "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)" }
+    report.expect(!notes.isEmpty, cppID: id,
+                  message: "the duplicate fixture track carries content to copy")
     fx.openMenu(report, cppID: id)
     h.activateHeaderMenuAction(actionId: 4)
     report.expect(!h.menuOpen, cppID: id, message: "duplicate closes menu")

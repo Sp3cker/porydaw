@@ -15,9 +15,9 @@ S identifiers identify exact counterpart predicates, listed after the inventory.
 Seven cross-lane scenarios (band-isolation, tempo-pan-lfo, stale-batch, pan-lfo
 range edit, xcmd-remove-only, xcmd-range-moves, xcmd-expansion-paste) exercise
 mixed Tempo/pan/LFO selections, stale-batch commits, and XCMD byte traffic.
-Twenty sites are partial toward converted model predicates, nine stay open,
-and two require the retired native lane bodies.
-Disposition tally: 31 sites: 9 GAP, 2 NATIVE, 20 PARTIAL.
+Seventeen sites have no Swift assertion, twelve are partial toward converted model
+predicates, and two require the retired native lane bodies.
+Disposition tally: 31 sites: 17 GAP, 2 NATIVE, 12 PARTIAL.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -245,8 +245,8 @@ Original expression:
           ctx.check.require(false, QStringLiteral("Tempo, pan, or LFO lane body is missing"));
 
 A004 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:194
-Disposition: PARTIAL
-Mapping/reason: Band-isolation outcome; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Tempo-only band selection coverage and explicit exclusion of both CC rows have no corresponding Swift predicate; indexed S004..S005 test band activation and selection clearing, not lane coverage.
 Source context since previous assertion:
           return;
       }
@@ -275,8 +275,8 @@ Original expression:
           QStringLiteral("Tempo band selection leaked into CC rows"));
 
 A005 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:210
-Disposition: PARTIAL
-Mapping/reason: Band-isolation outcome; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Dragging a Tempo band selection without moving either CC row has no corresponding Swift predicate; indexed predicates do not test this cross-lane isolation.
 Source context since previous assertion:
 
       const auto beforeTempoDrag = snapshot(rig.document());
@@ -295,8 +295,8 @@ Original expression:
           QStringLiteral("dragging a Tempo band selection moved a CC row"));
 
 A006 | runBandIsolation | src/checks/automationgesturecheck/crosslane.cpp:230
-Disposition: PARTIAL
-Mapping/reason: Band-isolation outcome; Related selection predicates are indexed below (revision and undo S001..S002, tempo values S003, band and selection S004..S005); unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: CC-only band selection coverage and explicit Tempo exclusion have no corresponding Swift predicate; indexed S004..S005 test band activation and selection clearing, not lane coverage.
 Source context since previous assertion:
 
       rig.document().undoStack()->undo();
@@ -339,8 +339,7 @@ Original expression:
 
 A008 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:249
 Disposition: PARTIAL
-Mapping/reason: Committed-edit outcome; S009..S010 cover move and held-span outcomes at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
-Source context since previous assertion:
+Mapping/reason: Committed-edit outcome; S002 tests undo of a heterogeneous selected edit; unproved: exact cross-lane SMF snapshot restoration and the retired cross-lane fixture.
       document.undoStack()->undo();
       const auto undone = snapshot(document);
 Original expression:
@@ -349,8 +348,8 @@ Original expression:
           QStringLiteral("%1 undo did not restore SMF and undo index").arg(QLatin1String(label)));
 
 A009 | expectOneCommittedEdit | src/checks/automationgesturecheck/crosslane.cpp:254
-Disposition: PARTIAL
-Mapping/reason: Committed-edit undo guard; S002 covers one-undo restore at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Redo restoring committed cross-lane SMF has no corresponding Swift predicate; current selection predicates assert undo restoration only.
 Source context since previous assertion:
       document.undoStack()->redo();
       const auto redone = snapshot(document);
@@ -546,8 +545,8 @@ Original expression:
           QStringLiteral("stale rebuild release moved a mixed-selection lane"));
 
 A021 | runStaleBatch | src/checks/automationgesturecheck/crosslane.cpp:377
-Disposition: PARTIAL
-Mapping/reason: Stale-release selection and idle outcome; S004..S005 cover band and selection at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Preserving mixed-selection range and idle state after stale release has no corresponding Swift predicate; S004..S005 exercise unrelated band activation and clearing.
 Source context since previous assertion:
 Original expression:
       ctx.check.require(
@@ -557,8 +556,8 @@ Original expression:
           QStringLiteral("stale rebuild release moved the mixed selection or left a live gesture"));
 
 A022 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:402
-Disposition: PARTIAL
-Mapping/reason: Pan/LFO range-edit outcome; S008 covers expansion range edits at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Pan/LFO range edit preserving Tempo's effective and raw fractional value has no corresponding Swift predicate; indexed S008 tests XCMD expansion instead.
 Source context since previous assertion:
       restoreLfo(rig, initialLfo);
   }
@@ -588,8 +587,8 @@ Original expression:
           QStringLiteral("pan+LFO RangeEdit moved Tempo"));
 
 A023 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:408
-Disposition: PARTIAL
-Mapping/reason: Pan/LFO range-edit outcome; S008 covers expansion range edits at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Applying the shared tick delta to the LFO row has no corresponding Swift predicate; indexed S008 tests XCMD expansion instead.
 Source context since previous assertion:
       expectMovedPanGroup(ctx);
 Original expression:
@@ -599,8 +598,8 @@ Original expression:
           QStringLiteral("LFO did not follow the pan+LFO shared tick delta"));
 
 A024 | runPanLfoRangeEdit | src/checks/automationgesturecheck/crosslane.cpp:412
-Disposition: PARTIAL
-Mapping/reason: Pan/LFO range-edit outcome; S008 covers expansion range edits at model level; unproved: native cross-lane batch commit path, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Preserving the unrelated volume lane and translated selection after Pan/LFO range edit has no corresponding Swift predicate; indexed S008 tests XCMD expansion instead.
 Source context since previous assertion:
 Original expression:
       ctx.check.require(

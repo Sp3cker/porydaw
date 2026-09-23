@@ -46,7 +46,7 @@ src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
 src/checks/playback/PlaybackChecks.swift: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
-src/checks/playback/ResonanceSuppressionChecks.swift: a20761efc254f055672862b355aa7467985de554458814847905d2926dfeebb1
+src/checks/playback/ResonanceSuppressionChecks.swift: 2be2bee46bd865a0c085647d0109afb4b01984e9e54f80747d0b4ea2a5b98f32
 
 Inherited native fixture assertions (not Swift parity credit)
 Source: src/checks/playback/tst_transport.cpp

@@ -1,4 +1,5 @@
 Assertion correspondence: playback/opaque.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.61s; build 12.39s).
 
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/playback/opaque.cpp
@@ -6,86 +7,68 @@ Original SHA-256: 0fffacba83e90f3d49f83b0c74df0151740a7cf99b0ebdcd8b61526aaf5dd9
 Swift counterpart: src/checks/playback/opaque.swift
 Swift SHA-256: 37feb59a0e333b5fd449bac8d594a8f59946b1ee24648207f08519af2152be11
 
-Purpose and status
-Each entry is one original assertion/failure site. MATCHED records an exact
-source-level predicate, fixture and action sequence; execution is tracked below.
-No assertion is accepted by cppID name alone. Short-circuit ordering is retained.
-No original has data-driven QTest rows or assertion-bearing shared helper calls.
-All functions use their original literal event index/tick/stream/controller/value/
-channel inputs, write/remove/relocation inputs, and action ordering. Missing
-original scenario predicates were added before advancing to the next file.
-Additional pre-existing Swift fixture variants remain executable and are not
-substitutes for the original cases enumerated here.
+Covered native implementation: src/core/xcmd.cpp:602-604
+xcmd::rewritePoints, including its protocol parsing and patch construction.
+The legacy C++ implementation is retained and referenced by dormant
+SongDocument edits (src/core/songdocument_xcmd.cpp:147,200); it is not
+compiled into the current app or native checks.
 
-Execution and ownership
-runXcmdEditsSuite executes the paired scenarios. The same-stem file contains
-the actual Swift assertions; playback/tst_xcmd.swift constructs event values
-with the original ev helper argument order, including default channel zero.
-The production Xcmd projection/rewrite/reconciliation/export APIs are exercised.
+Retirement certificate
+Four original QTest methods, seven QVERIFY2 sites, no data rows, helper
+assertions, fixture files, or externally used definitions. Each method builds
+literal events/writes/removals and calls rewritePoints. The second assertion
+in writeInsideOpaqueEpochRejected mutates the write tick to 1; all three
+unknown-identity removals are independent failure branches. Swift repeats the
+same fixture, action ordering, and full predicates, mapping nullable patch to
+nil and vector empty/size to isEmpty/count. C++ ev/makeEvents uses default
+channel zero, as does xcmdPairEvent (playback/tst_xcmd.swift:3-7); extra
+xcmdPairedStrayWrite is not substituted for A004. The original is pinned above.
 
-Verification evidence
-Command: deno task verify --filter swiftcore --filter clickcheck --verbose
-Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
-This records the completed checkpoint before the subsequent shared corpus-loader
-extraction/range additions; updated combined verification is pending.
-The current build does not register the old xcmdcheck native harness; no native
-execution or live differential parity is claimed.
-
-Original assertion inventory
+Execution: swiftcore case 7 (src/checks/support/corecheck/CoreCheckSupport.swift:122-126,
+SHA-256 5e70b54876d85d2ac9fc1d2abc8be490910bd2d2c964ecb41e5f404af3044180)
+invokes runXcmdEditsSuite (src/checks/editcheck/EventChecks.swift:28-39,
+SHA-256 ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092),
+which invokes runXcmdOpaqueOriginalChecks (opaque.swift:67-72), calling all
+four methods. src/checks/CMakeLists.txt:104-128 compiles these Swift sources
+into swift_core_check (SHA-256 e4bb047346ec548a679cbe4631c635fbcfa7c04fd5eccd49e08d1b0ffd82d278).
+Historical checkpoint recorded before this retirement: deno task verify --filter
+swiftcore --filter clickcheck --verbose: PASS 2/2 selected (24 total), swiftcore
+1.83s. Post-deletion Swift execution is recorded above;
+no current native xcmdcheck execution or differential parity is claimed.
 
 A001 | XcmdTest::writeAfterOpaqueEpochLeavesItUntouched | src/checks/playback/opaque.cpp:17
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:14 :: xcmdPairWriteAfterOpaqueEpochLeavesItUntouched; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(patch && patch->removeEvents.empty() && patch->inserts.size() == 2 &&
-                   patch->inserts[0].tick == 8 && patch->inserts[1].tick == 8,
-               "write after an opaque epoch touched the opaque traffic")
+Mapping/reason: S001, opaque.swift:20-23, xcmdPairWriteAfterOpaqueEpochLeavesItUntouched: identical unknown 0x03 epoch and later known point, write at tick 8; patch exists, zero removals and two inserts both at tick 8.
 
 A002 | XcmdTest::writeInsideOpaqueEpochRejected | src/checks/playback/opaque.cpp:30
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:26 :: xcmdPairWriteInsideOpaqueEpochRejected; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(!xcmd::rewritePoints(events, {}, writes),
-               "write inside an opaque epoch was not rejected")
+Mapping/reason: S002, opaque.swift:31-33, xcmdPairWriteInsideOpaqueEpochRejected: same three-event unknown epoch; interior tick 2 rewrite rejects.
 
 A003 | XcmdTest::writeInsideOpaqueEpochRejected | src/checks/playback/opaque.cpp:33
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:26 :: xcmdPairWriteInsideOpaqueEpochRejected; report.expect assertion 2
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(!xcmd::rewritePoints(events, {}, writes),
-               "write on an opaque epoch's first tick was not rejected")
+Mapping/reason: S003, opaque.swift:34-37, xcmdPairWriteInsideOpaqueEpochRejected: same write mutated to selector tick 1; rewrite rejects.
 
 A004 | XcmdTest::writeInsideStrayRunSpanRejected | src/checks/playback/opaque.cpp:43
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:40 :: xcmdPairWriteInsideStrayRunSpanRejected; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(!xcmd::rewritePoints(events, {}, writes),
-               "write inside a stray-run span was not rejected")
+Mapping/reason: S004, opaque.swift:43-46, xcmdPairWriteInsideStrayRunSpanRejected: same two stray bytes at ticks 1 and 2; write at tick 1 rejects.
 
 A005 | XcmdTest::unknownRemoveIdentitiesRejected | src/checks/playback/opaque.cpp:55
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:49 :: xcmdPairUnknownRemoveIdentitiesRejected; report.expect assertion 1
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(!xcmd::rewritePoints(events, opaqueMember, {}),
-               "removing an opaque member was not rejected")
+Mapping/reason: S005, opaque.swift:54-56, xcmdPairUnknownRemoveIdentitiesRejected: same unknown and known epoch; opaque payload index 1 removal rejects.
 
 A006 | XcmdTest::unknownRemoveIdentitiesRejected | src/checks/playback/opaque.cpp:58
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:49 :: xcmdPairUnknownRemoveIdentitiesRejected; report.expect assertion 2
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(!xcmd::rewritePoints(events, selectorByte, {}),
-               "removing a known selector was not rejected")
+Mapping/reason: S006, opaque.swift:58-60, xcmdPairUnknownRemoveIdentitiesRejected: same fixture; known selector index 2 removal rejects.
 
 A007 | XcmdTest::unknownRemoveIdentitiesRejected | src/checks/playback/opaque.cpp:61
 Disposition: MATCHED
-Swift: src/checks/playback/opaque.swift:49 :: xcmdPairUnknownRemoveIdentitiesRejected; report.expect assertion 3
-Mapping/reason: Original predicate is reproduced conjunct by conjunct with the same fixture inputs and preceding operations. C++ vector size/empty map to Swift count/isEmpty; nullable patch checks map to nil checks. Raw SIZE_MAX source indices map to nil, the Swift fresh-emission representation.
-Original expression:
-  QVERIFY2(!xcmd::rewritePoints(events, staleIdentity, {}),
-               "removing a stale identity was not rejected")
+Mapping/reason: S007, opaque.swift:62-64, xcmdPairUnknownRemoveIdentitiesRejected: same fixture; stale index 999 removal rejects.
+
+Swift predicates
+S001 | xcmdPairWriteAfterOpaqueEpochLeavesItUntouched | src/checks/playback/opaque.swift:20
+S002 | xcmdPairWriteInsideOpaqueEpochRejected | src/checks/playback/opaque.swift:31
+S003 | xcmdPairWriteInsideOpaqueEpochRejected | src/checks/playback/opaque.swift:35
+S004 | xcmdPairWriteInsideStrayRunSpanRejected | src/checks/playback/opaque.swift:44
+S005 | xcmdPairUnknownRemoveIdentitiesRejected | src/checks/playback/opaque.swift:54
+S006 | xcmdPairUnknownRemoveIdentitiesRejected | src/checks/playback/opaque.swift:58
+S007 | xcmdPairUnknownRemoveIdentitiesRejected | src/checks/playback/opaque.swift:62

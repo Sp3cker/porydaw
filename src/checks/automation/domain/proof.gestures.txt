@@ -485,16 +485,16 @@ Original expression:
   QVERIFY(hasPoint(restored.points[1], 48, 60))
 
 A048 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:221
-Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. The guard calls report.fail and returns on the original failure condition; reaching the subsequent assertions establishes the precondition. Representation change: Swift derives the implicit lead-in from the real parameter (Modulation default 0); arbitrary lead-in 20 is no longer a pencil constructor input. The production pencil-start/finish scenario tests default 0, and the heldSpan primitive explicitly checks the original 20-to-80-to-20 two-point result. Neither changes the native fixture.
+Disposition: PARTIAL
+Mapping/reason: Swift's empty-lane pencil starts with the Modulation default 0, not the original explicitly injected lead-in 20. Its start guard covers a related path, but does not prove the original arbitrary-lead-in constructor succeeds.
 Swift counterpart expression:
   report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start on an empty lane")
 Original expression:
   QVERIFY(emptyLaneGesture.has_value())
 
 A049 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:223
-Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. Representation change: Swift derives the implicit lead-in from the real parameter (Modulation default 0); arbitrary lead-in 20 is no longer a pencil constructor input. The production pencil-start/finish scenario tests default 0, and the heldSpan primitive explicitly checks the original 20-to-80-to-20 two-point result. Neither changes the native fixture.
+Disposition: PARTIAL
+Mapping/reason: leadInCompletion checks a direct held-span replacement with lead-in 20; the original asserts the completion of an empty-lane pencil gesture whose constructor received lead-in 20. Swift's actual empty-lane pencil uses default 0.
 Swift counterpart expression:
   report.expect(!leadInCompletion.unchanged, cppID: drawerAutomationPointRangeID,
                     message: "the original implicit lead-in replacement changes the lane")
@@ -502,8 +502,8 @@ Original expression:
   QVERIFY(!emptyCompletion.unchanged)
 
 A050 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:224
-Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. Representation change: Swift derives the implicit lead-in from the real parameter (Modulation default 0); arbitrary lead-in 20 is no longer a pencil constructor input. The production pencil-start/finish scenario tests default 0, and the heldSpan primitive explicitly checks the original 20-to-80-to-20 two-point result. Neither changes the native fixture.
+Disposition: PARTIAL
+Mapping/reason: Swift's held-span primitive produces two points for a supplied lead-in 20, but this does not prove the original two-point result through the empty-lane pencil gesture.
 Swift counterpart expression:
   report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
                           AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
@@ -513,8 +513,8 @@ Original expression:
   QCOMPARE(emptyCompletion.points.size(), std::size_t{2})
 
 A051 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:225
-Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. Representation change: Swift derives the implicit lead-in from the real parameter (Modulation default 0); arbitrary lead-in 20 is no longer a pencil constructor input. The production pencil-start/finish scenario tests default 0, and the heldSpan primitive explicitly checks the original 20-to-80-to-20 two-point result. Neither changes the native fixture.
+Disposition: PARTIAL
+Mapping/reason: The first point matches in the related held-span result, but Swift has not checked this predicate for an empty-lane pencil gesture with the original explicit lead-in 20.
 Swift counterpart expression:
   report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
                           AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
@@ -524,8 +524,8 @@ Original expression:
   QVERIFY(hasPoint(emptyCompletion.points[0], 24, 80))
 
 A052 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:226
-Disposition: MATCHED
-Mapping/reason: src/checks/automation/domain/gestures.swift :: drawerAutomationPointRangeAndPencilReplacements, exact Swift predicate below. Arrays compare both size and every ordered point, covering each original loop iteration. Representation change: Swift derives the implicit lead-in from the real parameter (Modulation default 0); arbitrary lead-in 20 is no longer a pencil constructor input. The production pencil-start/finish scenario tests default 0, and the heldSpan primitive explicitly checks the original 20-to-80-to-20 two-point result. Neither changes the native fixture.
+Disposition: PARTIAL
+Mapping/reason: The held-span primitive restores 20 at tick 48, while the production empty-lane pencil restores its Modulation default 0. The original empty-lane pencil's explicit 20 lead-in has no exact Swift check.
 Swift counterpart expression:
   report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
                           AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,

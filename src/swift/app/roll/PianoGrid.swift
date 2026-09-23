@@ -40,6 +40,7 @@ public final class PianoGrid {
     @QtIgnored private let commands: NoteCommands
     @QtIgnored private(set) var notes: [GridNote] = []
     @QtIgnored private var gesture: GridGesture?
+    @QtIgnored private var pendingControlToggle: NoteID?
     @QtIgnored private var selectionAtRightPress: [NoteID] = []
     @QtIgnored var onCommandAvailabilityChanged: (() -> Void)?
     /// The Set Velocity row's dispatch: the document-bound page opens its own
@@ -357,6 +358,8 @@ public final class PianoGrid {
         guard pressKey >= 0 else { return }
         if let hit = hitNote(x: x, y: y) {
             let note = notes[hit.index]
+            pendingControlToggle = modifiers & QtFact.controlModifier != 0
+                && session.selectedNotes.contains(note.noteId) ? note.noteId : nil
             applyPressSelection(note.noteId, modifiers: modifiers)
             activeNoteId = note.noteId.rawValue
             switch hit.zone {
@@ -391,6 +394,17 @@ public final class PianoGrid {
         self.gesture = gesture.updated(
             x: x, y: y, metrics: metrics, camera: session.camera)
         commitGesture()
+        if let pendingControlToggle {
+            switch self.gesture {
+            case .move(let state) where state.dTick == 0 && state.dKey == 0:
+                session.removeSelectedNote(pendingControlToggle)
+            case .resize(let state) where state.delta == 0:
+                session.removeSelectedNote(pendingControlToggle)
+            default:
+                break
+            }
+        }
+        pendingControlToggle = nil
         self.gesture = nil
         activeNoteId = 0
         refreshFromSession()
@@ -496,6 +510,7 @@ public final class PianoGrid {
             session.setSelectedNotes(selectionAtRightPress)
         }
         stopAudition()
+        pendingControlToggle = nil
         gesture = nil
         activeNoteId = 0
         clearKeyboardHover()
@@ -514,9 +529,7 @@ public final class PianoGrid {
     @QtIgnored
     private func applyPressSelection(_ id: NoteID, modifiers: Int) {
         if modifiers & QtFact.controlModifier != 0 {
-            if session.selectedNotes.contains(id) {
-                session.removeSelectedNote(id)
-            } else {
+            if !session.selectedNotes.contains(id) {
                 session.addSelectedNote(id)
             }
         } else if modifiers & QtFact.shiftModifier != 0 {

@@ -3,8 +3,10 @@ Assertion correspondence: playback/settle.cpp
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/playback/settle.cpp
 Original SHA-256: a6c2aaa4c7119cca57c3b11becc5aa78a12a51d9e308f53b6a1e4b4e877df0d4
-Swift counterpart: src/checks/playback/settle.swift
-Swift SHA-256: 272ea2b5df83ebd3db281922cdd2fb122f394353e28a830bdaef2db711c48ef3
+Swift counterpart: src/checks/playback/settle.swift (shared sequence) and
+src/checks/playback/ResonanceSuppressionChecks.swift (per-case suppressionSettleChecks)
+Swift SHA-256: 272ea2b5df83ebd3db281922cdd2fb122f394353e28a830bdaef2db711c48ef3 (settle.swift);
+2be2bee46bd865a0c085647d0109afb4b01984e9e54f80747d0b4ea2a5b98f32 (ResonanceSuppressionChecks.swift)
 
 Purpose and status
 Each numbered entry records one original assertion/failure site, not one test
@@ -18,10 +20,10 @@ only by the retained native path. None of these labels authorizes deletion or
 claims whole-case equivalence. Native passes do not prove the Swift replacement.
 
 Execution and ownership
-checkControllerSuppression in settle.swift preserves the existing combined Swift sequence. Original independent native cases and their helper assertions are all listed below, including qFail branches.
+checkControllerSuppression in settle.swift preserves the existing combined Swift sequence. suppressionSettleChecks in ResonanceSuppressionChecks.swift (registered by runResonanceSuppressionChecks) now runs every original case on a fresh rig, including the per-caller engageSuppressorWithNoteSong helper assertions. Original independent native cases and their helper assertions are all listed below, including qFail branches.
 
 Fixture, sequence and row constraints
-Swift executes one shared square-wave rig, velocity100/release165, whereas native cases independently initialize note velocity127/release254. Applied-state, unity gain and intermediate cursor assertions now exist. These additions establish predicate correspondence, but do not erase fixture/history differences; all behavioral entries remain PARTIAL.
+The shared-sequence check still uses one square-wave rig at velocity100/release165. suppressionSettleChecks constructs a fresh square rig per case, sets all 128 voices to the native AuditionVoicegroup release254, and binds the original buildNoteSong() layout (program0, key60 velocity127, note-off4800, no CC7). Frame counts, chunk sizes and thresholds match the original parked-device renders; the parked-device precondition itself stays NATIVE-SETUP.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
@@ -38,7 +40,9 @@ Relevant target sources were unchanged during the run. Concurrent edits to
 selectionkey/corefixture.cpp and .h are outside this audio/playback proof scope.
 MATCHED closes only the listed assertion and stated sequence; PARTIAL and
 NATIVE-SETUP remain open for whole-case Swift equivalence. No native check removal
-or full migration sign-off is authorized by this evidence.
+or full migration sign-off is authorized by this evidence. The S001-S031
+suppressionSettleChecks predicates were added after the recorded run and await
+the next swiftcore execution; all other entries were covered by it.
 
 Shared Swift sources used by this refactor (SHA-256)
 src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
@@ -46,7 +50,7 @@ src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
 src/checks/playback/PlaybackChecks.swift: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
-src/checks/playback/ResonanceSuppressionChecks.swift: a20761efc254f055672862b355aa7467985de554458814847905d2926dfeebb1
+src/checks/playback/ResonanceSuppressionChecks.swift: 2be2bee46bd865a0c085647d0109afb4b01984e9e54f80747d0b4ea2a5b98f32
 
 Inherited native fixture assertions (not Swift parity credit)
 Source: src/checks/playback/tst_transport.cpp
@@ -74,14 +78,14 @@ Original expression:
   QTest::qFail("note song built wrong", __FILE__, __LINE__)
 
 A003 | TransportTest::engageSuppressorWithNoteSong | src/checks/playback/settle.cpp:79
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Initial applied Playing is asserted at ramp+settle, but the native helper runs from a fresh rig for each caller; Swift establishes this only once. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: suppressionEngage (S001) asserts applied Playing via one-frame renders bounded by one second on a fresh rig per caller, matching renderUntilApplied; the original velocity127/release254 fixture parameters are now used. The parked-device precondition stays NATIVE-SETUP.
 Original expression:
   QTest::qFail("initial play was not applied", __FILE__, __LINE__)
 
 A004 | TransportTest::engageSuppressorWithNoteSong | src/checks/playback/settle.cpp:84
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The >=0.01 signal and <-0.1 dB adaptation conjunction executes after 144000 frames, but only once for the shared sequence rather than independently for each native caller. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: suppressionEngage (S002) asserts peak>=0.01 and deepestGain<-0.1 after the original three-second render on a fresh rig per caller with the original velocity127/release254 fixture.
 Original expression:
   QTest::qFail("active suppressor control signal did not play or engage", __FILE__, __LINE__)
 
@@ -98,67 +102,67 @@ Original expression:
   QVERIFY2(timeline, "note song built wrong")
 
 A007 | TransportTest::songStartEntersAtUnityGain | src/checks/playback/settle.cpp:102
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Applied Playing is explicitly checked after ramp+settle, rendered one frame at a time. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSongStartUnity (S003) renders one frame at a time until applied Playing on a fresh rig with the original fixture parameters, matching renderUntilApplied.
 Original expression:
   QTest::qFail("initial play was not applied", __FILE__, __LINE__)
 
 A008 | TransportTest::songStartEntersAtUnityGain | src/checks/playback/settle.cpp:105
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The initial onset predicate explicitly checks cutGain>=0.999. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSongStartUnity (S004) asserts cutGain>=0.999 at the applied-Playing onset on a fresh rig with the original fixture parameters.
 Original expression:
   QVERIFY2(engine().m_cutFadeGain >= 0.999f, "initial play began below full output gain")
 
 A009 | TransportTest::songStartEntersAtUnityGain | src/checks/playback/settle.cpp:106
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The initial onset predicate explicitly checks cursor0 before rendering the note. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSongStartUnity (S005) asserts playheadSamples==0 at the same unity-onset boundary.
 Original expression:
   QVERIFY2(pd_player_position(engine().m_player) == 0,
                "initial play advanced before reaching full output gain")
 
 A010 | TransportTest::songStartEntersAtUnityGain | src/checks/playback/settle.cpp:110
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The original signal/adaptation thresholds execute after three seconds; Swift note velocity100 differs from original127. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSongStartUnity (S006) asserts peak>=0.01 and deepestGain<-0.1 after the original three-second render on a fresh rig with the original velocity127/release254 fixture.
 Original expression:
   QVERIFY2(peak(playingAudio) >= 0.01f && deepestResonanceGain(engine()) < -0.1,
                "active suppressor control signal did not play or engage")
 
 A011 | TransportTest::pausePreservesSuppressorAdaptation | src/checks/playback/settle.cpp:122
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The first pause explicitly checks applied Paused. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPausePreservesAdaptation (S007) asserts applied Paused after the original ramp+512-frame pause render on a fresh rig with the original fixture parameters.
 Original expression:
   QVERIFY2(engine().m_appliedTransport == Transport::Paused,
                "pause was not applied during active suppressor check")
 
 A012 | TransportTest::pausePreservesSuppressorAdaptation | src/checks/playback/settle.cpp:124
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The first pause checks deepestGain<-0.1. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPausePreservesAdaptation (S008) asserts deepestGain<-0.1 at the same pause boundary.
 Original expression:
   QVERIFY2(deepestResonanceGain(engine()) < -0.1, "pause reset active suppressor gain state")
 
 A013 | TransportTest::pausePreservesSuppressorAdaptation | src/checks/playback/settle.cpp:132
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The resume endpoint explicitly checks applied Playing. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPausePreservesAdaptation (S009) drains the cut and asserts applied Playing via one-frame renders bounded by one second, matching renderUntilApplied.
 Original expression:
   QVERIFY2(renderUntilApplied(engine(), Transport::Playing),
                "resume was not applied during active suppressor check")
 
 A014 | TransportTest::pausePreservesSuppressorAdaptation | src/checks/playback/settle.cpp:134
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Resume explicitly checks deepestGain<-0.1. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPausePreservesAdaptation (S010) asserts deepestGain<-0.1 after the resume.
 Original expression:
   QVERIFY2(deepestResonanceGain(engine()) < -0.1,
                "resume re-primed active suppressor gain state")
 
 A015 | TransportTest::stopLeaksNoDelayedSuppressorAudio | src/checks/playback/settle.cpp:147
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The stop endpoint explicitly checks applied Stopped after ramp frames. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionStopLeaksNoDelayedAudio (S011) asserts applied Stopped via one-frame renders bounded by one second on a fresh rig with the original fixture parameters.
 Original expression:
   QTest::qFail("stop was not applied during active suppressor check", __FILE__, __LINE__)
 
 A016 | TransportTest::stopLeaksNoDelayedSuppressorAudio | src/checks/playback/settle.cpp:171
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The subsequent capture checks <=1e-7, but begins after a shared retarget sequence rather than a freshly adapted fixture. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionStopLeaksNoDelayedAudio (S012) asserts peak<=1e-7 over the original settle+ramp+ResonanceSuppression.latency capture after the applied stop.
 Original expression:
   QVERIFY2(stoppedPeak <= 1.0e-7f,
                qUtf8Printable(QStringLiteral("stopped transport leaked delayed suppressor audio: "
@@ -179,114 +183,114 @@ Original expression:
                                   .arg(engine().m_cutFadeGain)))
 
 A017 | TransportTest::restartProducesAudioWithSuppression | src/checks/playback/settle.cpp:198
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The shared stop assertion precedes the restart, but this is not an independently adapted restart fixture. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionRestartProducesAudio (S013) asserts applied Stopped via one-frame renders before the restart on a fresh rig with the original fixture parameters.
 Original expression:
   QTest::qFail("stop was not applied before the restart check", __FILE__, __LINE__)
 
 A018 | TransportTest::restartProducesAudioWithSuppression | src/checks/playback/settle.cpp:203
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Restart explicitly checks applied Playing before signal capture. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionRestartProducesAudio (S014) asserts applied Playing via one-frame renders after the restart.
 Original expression:
   QTest::qFail("restart was not applied during active suppressor check", __FILE__, __LINE__)
 
 A019 | TransportTest::restartProducesAudioWithSuppression | src/checks/playback/settle.cpp:207
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Restart peak>=0.01 is asserted over 4096 frames; the original capture/initial sequence differs. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionRestartProducesAudio (S015) asserts peak>=0.01 over the original 2*frameSize (4096-frame) restart capture.
 Original expression:
   QVERIFY2(peak(restartedAudio) >= 0.01f,
                "restart did not produce audio with suppression active")
 
 A020 | TransportTest::secondSongStartDoesNotReuseResumeFade | src/checks/playback/settle.cpp:229
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Second start explicitly checks applied Playing. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSecondSongStart (S016) drains the pause, seeks to zero, and asserts applied Playing via one-frame renders on a fresh rig with the original fixture parameters.
 Original expression:
   QTest::qFail("second song-start play was not applied", __FILE__, __LINE__)
 
 A021 | TransportTest::secondSongStartDoesNotReuseResumeFade | src/checks/playback/settle.cpp:232
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Second start explicitly checks gain>=0.999. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSecondSongStart (S017) asserts cutGain>=0.999 at the second-start applied-Playing boundary.
 Original expression:
   QVERIFY2(engine().m_cutFadeGain >= 0.999f,
                "second song-start play began below full output gain")
 
 A022 | TransportTest::secondSongStartDoesNotReuseResumeFade | src/checks/playback/settle.cpp:234
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Second start explicitly checks cursor0. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionSecondSongStart (S018) asserts playheadSamples==0 at the same boundary.
 Original expression:
   QVERIFY2(pd_player_position(engine().m_player) == 0,
                "second song-start play advanced before reaching full output gain")
 
 A023 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:256
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Resume explicitly checks applied Paused and !cutting before the request. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S019) asserts applied Paused and !cutting after the original one-frame pause drain on a fresh rig with the original fixture parameters.
 Original expression:
   QVERIFY2(engine().m_appliedTransport == Transport::Paused && !engine().m_cutFadeActive,
                "pause did not settle before the resume regression")
 
 A024 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:258
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Resume explicitly checks cursor>0 before the request. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S020) asserts a nonzero cursor at the same boundary.
 Original expression:
   QVERIFY2(pd_player_position(engine().m_player) != 0,
                "resume regression needs a nonzero cursor")
 
 A025 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:271
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Resume explicitly checks applied Playing at the hold endpoint. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S021) asserts applied Playing after the original one-frame resume loop bounded by one second.
 Original expression:
   QVERIFY2(engine().m_appliedTransport == Transport::Playing,
                "resume was not applied for the resume regression")
 
 A026 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:273
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Every one-frame render through ramp+settle asserts the saved cursor, so the previous missing intermediate observation is implemented. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S022) accumulates the original per-frame cursor predicate through the resume loop and asserts no advance during the zero-gain settle.
 Original expression:
   QVERIFY2(!advancedDuringSettle, "resume advanced the player during the zero-gain settle")
 
 A027 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:274
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Resume explicitly checks gain>=0.999 at the hold endpoint. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S023) asserts cutGain>=0.999 at the applied-Playing endpoint.
 Original expression:
   QVERIFY2(engine().m_cutFadeGain >= 0.999f, "resume entered Playing below unity cut-fade gain")
 
 A028 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:275
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Resume explicitly checks equality to the saved cursor at the unity endpoint. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S024) asserts playheadSamples==resumeCursor at the same endpoint.
 Original expression:
   QVERIFY2(pd_player_position(engine().m_player) == resumeCursorPosition,
                "resume consumed timeline audio before full output gain")
 
 A029 | TransportTest::resumeParksSequencerThroughSettle | src/checks/playback/settle.cpp:278
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The next one-frame render asserts saved cursor+1. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionResumeParksSequencer (S025) asserts playheadSamples>resumeCursor after the next one-frame render.
 Original expression:
   QVERIFY2(pd_player_position(engine().m_player) > resumeCursorPosition,
                "timeline did not advance after the resumed start")
 
 A030 | TransportTest::pendingCutRetargetsOntoPlaying | src/checks/playback/settle.cpp:292
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: After one pause frame Swift checks cutting and 0<gain<1, but it does not directly assert !rising. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPendingCutRetarget (S026) asserts cutting && applied==.playing && cutGain<1 one frame after pause; applied stays .playing through the fade-down and flips only when the down-ramp ends, making it the observable form of !m_cutFadeRising.
 Original expression:
   QVERIFY2(engine().m_cutFadeActive && !engine().m_cutFadeRising,
                "pause cut did not start in its fade-down for the retarget check")
 
 A031 | TransportTest::pendingCutRetargetsOntoPlaying | src/checks/playback/settle.cpp:301
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Retarget endpoint explicitly checks !cutting. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPendingCutRetarget (S027) asserts !cutting after the original one-frame retarget loop bounded by one second.
 Original expression:
   QVERIFY2(!engine().m_cutFadeActive, "retargeted cut never completed")
 
 A032 | TransportTest::pendingCutRetargetsOntoPlaying | src/checks/playback/settle.cpp:302
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Retarget endpoint explicitly checks applied Playing. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPendingCutRetarget (S028) asserts applied Playing at the retarget endpoint.
 Original expression:
   QVERIFY2(engine().m_appliedTransport == Transport::Playing,
                "retargeted cut lost the playing state")
 
 A033 | TransportTest::pendingCutRetargetsOntoPlaying | src/checks/playback/settle.cpp:304
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Retarget endpoint explicitly checks gain>=0.999. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionPendingCutRetarget (S029) asserts cutGain>=0.999 at the retarget endpoint.
 Original expression:
   QVERIFY2(engine().m_cutFadeGain >= 0.999f, "retargeted cut ended below unity output gain")
 
@@ -303,8 +307,8 @@ Original expression:
   QVERIFY2(noteTimeline, "note song built wrong")
 
 A036 | TransportTest::coldReplacementLeaksNoPriorSongAudio | src/checks/playback/settle.cpp:317
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: Applied Playing and audible restart are checked before replacement in the shared sequence. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionColdReplacement (S030) asserts applied Playing via one-frame renders before the cold replacement on a fresh rig with the original fixture parameters.
 Original expression:
   QTest::qFail("play was not applied before the cold replacement", __FILE__, __LINE__)
 
@@ -315,13 +319,109 @@ Original expression:
   QVERIFY2(silentTimeline, "silent song built wrong")
 
 A038 | TransportTest::coldReplacementLeaksNoPriorSongAudio | src/checks/playback/settle.cpp:330
-Disposition: PARTIAL
-Mapping/reason: checkControllerSuppression: The replacement silent capture checks <=1e-7; the preceding restart/retarget history and capture interval differ from the fresh original case. Full original-sequence equivalence remains open: Swift shares one rig across cases and uses velocity100/release165 rather than the original note velocity127/release254. Existing scalar matches do not close those setup obligations.
+Disposition: MATCHED
+Mapping/reason: checkSuppressionColdReplacement (S031) asserts peak<=1e-7 over the original settle+2*ramp+2*frameSize capture after binding the silent song.
 Original expression:
   QVERIFY2(peak(silentStart) <= 1.0e-7f,
                "new playback leaked delayed suppressor audio from the prior song")
 
+Swift predicate index
+
+S001 | suppressionEngage | src/checks/playback/ResonanceSuppressionChecks.swift:69
+report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — applied Playing within one second of one-frame renders on each caller's fresh rig.
+
+S002 | suppressionEngage | src/checks/playback/ResonanceSuppressionChecks.swift:75
+report.expect(playingPeak >= 0.01 && deepest < -0.1, ...) — three-second render sounds and adapts the suppressor.
+
+S003 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:86
+report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — initial play applies within one second.
+
+S004 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:89
+report.expect(audio.transportState.cutGain >= 0.999, ...) — onset enters at unity gain.
+
+S005 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:91
+report.expectEqual(UInt64(0), audio.playheadSamples, ...) — cursor stays at zero through the unity onset.
+
+S006 | checkSuppressionSongStartUnity | src/checks/playback/ResonanceSuppressionChecks.swift:94
+report.expect(peak >= 0.01 && deepestGain < -0.1, ...) — three-second render sounds and adapts.
+
+S007 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:105
+report.expect(applied == .paused, ...) — pause applies after ramp+512 frames.
+
+S008 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:107
+report.expect(rig.deepestGain() < -0.1, ...) — pause retains adapted gain.
+
+S009 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:115
+report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — resume applies within one second.
+
+S010 | checkSuppressionPausePreservesAdaptation | src/checks/playback/ResonanceSuppressionChecks.swift:117
+report.expect(rig.deepestGain() < -0.1, ...) — resume does not re-prime adaptation.
+
+S011 | checkSuppressionStopLeaksNoDelayedAudio | src/checks/playback/ResonanceSuppressionChecks.swift:128
+report.expect(suppressionRenderUntilApplied(rig, .stopped), ...) — stop applies within one second.
+
+S012 | checkSuppressionStopLeaksNoDelayedAudio | src/checks/playback/ResonanceSuppressionChecks.swift:132
+report.expect(peak <= 1e-7, ...) — settle+ramp+latency capture leaks no delayed audio.
+
+S013 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift:142
+report.expect(suppressionRenderUntilApplied(rig, .stopped), ...) — stop applies before the restart.
+
+S014 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift:146
+report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — restart applies within one second.
+
+S015 | checkSuppressionRestartProducesAudio | src/checks/playback/ResonanceSuppressionChecks.swift:150
+report.expect(peak >= 0.01, ...) — 2*frameSize restart capture sounds.
+
+S016 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift:169
+report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — second song-start applies within one second.
+
+S017 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift:172
+report.expect(cutGain >= 0.999, ...) — second start enters at unity gain.
+
+S018 | checkSuppressionSecondSongStart | src/checks/playback/ResonanceSuppressionChecks.swift:174
+report.expectEqual(UInt64(0), audio.playheadSamples, ...) — second start consumes nothing below unity.
+
+S019 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:191
+report.expect(applied == .paused && !cutting, ...) — pause fully settles before the resume regression.
+
+S020 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:193
+report.expect(audio.playheadSamples != 0, ...) — resume begins at a nonzero cursor.
+
+S021 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:204
+report.expect(applied == .playing, ...) — resume applies within one second of one-frame renders.
+
+S022 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:206
+report.expect(!advancedDuringSettle, ...) — per-frame cursor predicate holds through the zero-gain settle.
+
+S023 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:208
+report.expect(cutGain >= 0.999, ...) — resume enters Playing at unity cut-fade gain.
+
+S024 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:210
+report.expectEqual(resumeCursor, audio.playheadSamples, ...) — resume consumes no timeline audio before unity.
+
+S025 | checkSuppressionResumeParksSequencer | src/checks/playback/ResonanceSuppressionChecks.swift:213
+report.expect(audio.playheadSamples > resumeCursor, ...) — the next frame advances the timeline.
+
+S026 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:227
+report.expect(cutting && applied == .playing && cutGain < 1, ...) — pause cut is in its fade-down (applied flips only at the down-ramp end, the observable form of !m_cutFadeRising).
+
+S027 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:236
+report.expect(!cutting, ...) — retargeted cut completes within one second of one-frame renders.
+
+S028 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:238
+report.expect(applied == .playing, ...) — retargeted cut keeps the playing state.
+
+S029 | checkSuppressionPendingCutRetarget | src/checks/playback/ResonanceSuppressionChecks.swift:240
+report.expect(cutGain >= 0.999, ...) — retargeted cut ends at unity gain.
+
+S030 | checkSuppressionColdReplacement | src/checks/playback/ResonanceSuppressionChecks.swift:250
+report.expect(suppressionRenderUntilApplied(rig, .playing), ...) — play applies before the cold replacement.
+
+S031 | checkSuppressionColdReplacement | src/checks/playback/ResonanceSuppressionChecks.swift:259
+report.expect(peak <= 1e-7, ...) — silent-song start leaks no prior-song audio over settle+2*ramp+2*frameSize.
+
 Reconciled dependency snapshot (SHA-256)
+src/checks/playback/ResonanceSuppressionChecks.swift: 2be2bee46bd865a0c085647d0109afb4b01984e9e54f80747d0b4ea2a5b98f32
 src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c

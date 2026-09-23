@@ -4,7 +4,7 @@ Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/editcheck/tst_songdocument_metadata.cpp
 Original SHA-256: 01ec83ca4bad203c93f1c9063c73fcce5fb4471770e7477ddeeee7d31d10431a
 Swift counterpart: src/checks/editcheck/EventChecks.swift
-Swift SHA-256: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 
 Scope
 All 125 original assertion sites are listed below across 8 methods. The primary
@@ -12,7 +12,7 @@ Swift counterpart owns runXcmdEditsSuite, trackNameRoles,
 rawTempoAndSignatureEditing, and laneEditing. Format-zero codec conversion is
 additionally pinned by the channel-prefix-routing case in
 src/checks/midi/MidiChecks.swift (SHA-256
-3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50), which asserts
+7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce), which asserts
 exact canonical bytes, chunk/event counts, placed names, and the wasFormatZero
 flag. Live-tempo absence shares the NoteChecks "typed tempo is removed from raw
 chunks" predicate (NoteChecks SHA-256
@@ -474,7 +474,7 @@ Original expression:
 A063 | EditCheckTest::formatZeroSaveRoundTrip | src/checks/editcheck/tst_songdocument_metadata.cpp:275
 Disposition: PARTIAL
 Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: Swift asserts byte/state restoration on undo for other paths ("one undo restores the duplicated range transaction", "undo returns to sealed saved identity"); full-undo-to-baseline bytes here are unproved.
+Mapping/reason: Swift asserts byte/state restoration on undo for other paths ("one undo restores collision victim", "undo returns to sealed saved identity"); full-undo-to-baseline bytes here are unproved.
 Original expression:
   QCOMPARE(document.smf().write(), convertedLive);
 
@@ -908,7 +908,7 @@ Original expression:
 A125 | EditCheckTest::duplicateReplacementsAndNoOps | src/checks/editcheck/tst_songdocument_metadata.cpp:432
 Disposition: PARTIAL
 Swift: src/checks/editcheck/NoteChecks.swift :: saveIdentity
-Mapping/reason: Swift asserts byte/state restoration on undo for other paths ("one undo restores the duplicated range transaction", "undo returns to sealed saved identity"); full-undo-to-baseline bytes here are unproved.
+Mapping/reason: Swift asserts byte/state restoration on undo for other paths ("one undo restores collision victim", "undo returns to sealed saved identity"); full-undo-to-baseline bytes here are unproved.
 Original expression:
   QCOMPARE(document.smf().write(), baseline);
 
@@ -917,25 +917,25 @@ The Swift predicates covering the MATCHED sites above. The MidiChecks codec
 helpers are generic over cppID; each S001-S003 below is instantiated with
 cppID "editcheck/EditCheckTest::formatZeroCoercion/channel-prefix-routing".
 
-S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:807
+S001 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:849
   report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                      what: "independent format-0 provenance")
 
-S002 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:832
+S002 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:885
   report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
                      what: "independent decoded format-0 provenance")
 
-S003 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:834
+S003 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:887
   report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
                      what: "independent decoded chunk count")
 
-S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:50
+S004 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:54
   report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
                      document.state.tempo,
                      cppID: "editcheck/EditCheckTest::formatZeroGlobals",
                      what: "valid conductor tempo becomes typed state")
 
-S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:47
+S005 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:51
   report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
                 cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                 message: "typed tempo is removed from raw chunks")

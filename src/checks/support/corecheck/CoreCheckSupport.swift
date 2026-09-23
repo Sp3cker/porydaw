@@ -106,6 +106,7 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         // same-thread reality the region checker cannot see.
         let boxed = ReportBox(report)
         MainActor.assumeIsolated {
+            coreEditCorpusLoadCheck(boxed.report)
             runNoteEditsSuite(boxed.report)
         }
     case 5:

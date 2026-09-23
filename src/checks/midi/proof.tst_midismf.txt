@@ -4,12 +4,12 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midismf.cpp
 Original SHA-256: 8020c4710e4f59b87aac42d18cd70d595cf81260c9c12dfd64581a7361efe5c3
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: 3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50
+Swift SHA-256: 7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce
 Additional covering Swift files:
 src/checks/editcheck/NoteChecks.swift
 Swift SHA-256: db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac
 src/checks/editcheck/EventChecks.swift
-Swift SHA-256: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -38,8 +38,14 @@ runMidiCodecSuite calls compareFixture for the five checked-in fixtures
 automation_burst) and compareCodecCase for the synthetic byte vectors
 (validFormat0, highDataBytes, velocity-zero/synthetic note orderings, trailing
 data, SmfEngineTrackMapping decode, invalid VLQ/header/division cases,
-overlongTick); compareCodecCase and expectDecodedStructure predicates execute
-per case. runMusicalSemanticsSuite emits per-CC oracle rows consumed through
+overlongTick boundary and just-inside variants); compareCodecCase and
+expectDecodedStructure predicates execute per case. compareCodecCase also
+asserts the encoded format word (S027) on every valid case and, for the five
+fixture cases, re-decodes the encoded bytes and compares division plus
+per-chunk events and end ticks (S028-S030), matching semanticReparseMatches.
+The automation-burst expectation list is generated from the same channel/group
+field formulas, so S013 covers every conductor, group, and note event.
+runMusicalSemanticsSuite emits per-CC oracle rows consumed through
 coreMidiExpectOracleValue/Text. NoteChecks.swift adoptionAndPairing and
 movementAndResize emit the document-pairing predicates. EventChecks.swift
 importAnalysis emits the shared-selector and 0x4B predicates. MidiTimeline
@@ -415,8 +421,8 @@ Original expression:
   QVERIFY2(SmfFile::read(format0Bytes(body), &smf, &error), qPrintable(error))
 
 A019 | MidiSmfTest::validFormat0ParsingAndCoercion | src/checks/midi/tst_midismf.cpp:209
-Disposition: PARTIAL
-Mapping/reason: Swift S001, S003, S007, S009-S013 prove validity, canonical bytes, division, chunk counts, and spot events for the same case; the explicit format == 1 field comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S027 asserts the encoded format word is 1 on the same decoded observation under the same cppID; SmfFile::format is always 1 after parse, so the serialized format word is the equivalent Swift observation.
 Source context since previous assertion:
   ;
 
@@ -498,8 +504,8 @@ Original expression:
   QCOMPARE(int(events[0].data1), 0)
 
 A027 | MidiSmfTest::highDataBytesKeepStreamAlignment | src/checks/midi/tst_midismf.cpp:228
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -507,8 +513,8 @@ Original expression:
   QCOMPARE(int(events[1].status), 0x90)
 
 A028 | MidiSmfTest::highDataBytesKeepStreamAlignment | src/checks/midi/tst_midismf.cpp:229
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -516,8 +522,8 @@ Original expression:
   QCOMPARE(int(events[1].data0), 0x3C)
 
 A029 | MidiSmfTest::highDataBytesKeepStreamAlignment | src/checks/midi/tst_midismf.cpp:230
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -596,8 +602,8 @@ Original expression:
   QVERIFY2(SmfFile::readFile(fixturePath(kFixture), &smf, &error), qPrintable(error))
 
 A037 | MidiSmfTest::opaqueSysExAndMetaEventsRoundTrip | src/checks/midi/tst_midismf.cpp:246
-Disposition: PARTIAL
-Mapping/reason: Swift S001, S003, S007, S009-S013 prove validity, canonical bytes, division, chunk counts, and spot events for the same case; the explicit format == 1 field comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S027 asserts the encoded format word is 1 on the same decoded observation under the same cppID; SmfFile::format is always 1 after parse, so the serialized format word is the equivalent Swift observation.
 Source context since previous assertion:
   ;
 
@@ -799,8 +805,8 @@ Original expression:
   QCOMPARE(int(notes.events[1].data1), 0)
 
 A059 | MidiSmfTest::opaqueSysExAndMetaEventsRoundTrip | src/checks/midi/tst_midismf.cpp:274
-Disposition: PARTIAL
-Mapping/reason: Swift S001 and S003 prove validity and canonical byte-vector identity on the same fixture bytes; the semantic write/re-read comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S028-S030 re-decode the encoded bytes and compare division plus per-chunk events and end ticks under the same cppID, matching sameSmf's semantic comparison (format is always 1 after parse in both implementations).
 Source context since previous assertion:
   ;
 
@@ -826,8 +832,8 @@ Original expression:
   QVERIFY2(SmfFile::readFile(fixturePath(kFixture), &smf, &error), qPrintable(error))
 
 A061 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:284
-Disposition: PARTIAL
-Mapping/reason: Swift S001, S003, S007, S009-S013 prove validity, canonical bytes, division, chunk counts, and spot events for the same case; the explicit format == 1 field comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S027 asserts the encoded format word is 1 on the same decoded observation under the same cppID; SmfFile::format is always 1 after parse, so the serialized format word is the equivalent Swift observation.
 Source context since previous assertion:
   ;
 
@@ -873,8 +879,8 @@ Original expression:
   QVERIFY2(track.events.size() == 12, "VLQ/running-status event count changed")
 
 A066 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:292
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -883,8 +889,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[0].tick), qulonglong(0))
 
 A067 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:293
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -892,8 +898,8 @@ Original expression:
   QCOMPARE(int(track.events[0].status), 0xB0)
 
 A068 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:294
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -901,8 +907,8 @@ Original expression:
   QCOMPARE(int(track.events[0].data0), 0x65)
 
 A069 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:295
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -910,8 +916,8 @@ Original expression:
   QCOMPARE(int(track.events[0].data1), 0)
 
 A070 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:296
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -919,8 +925,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[1].tick), qulonglong(0))
 
 A071 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:297
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -928,8 +934,8 @@ Original expression:
   QCOMPARE(int(track.events[1].status), 0xB0)
 
 A072 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:298
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -937,8 +943,8 @@ Original expression:
   QCOMPARE(int(track.events[1].data0), 0x64)
 
 A073 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:299
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -946,8 +952,8 @@ Original expression:
   QCOMPARE(int(track.events[1].data1), 1)
 
 A074 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:300
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -955,8 +961,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[2].tick), qulonglong(0))
 
 A075 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:301
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -964,8 +970,8 @@ Original expression:
   QCOMPARE(int(track.events[2].status), 0xB0)
 
 A076 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:302
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -973,8 +979,8 @@ Original expression:
   QCOMPARE(int(track.events[2].data0), 0x06)
 
 A077 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:303
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -982,8 +988,8 @@ Original expression:
   QCOMPARE(int(track.events[2].data1), 2)
 
 A078 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:304
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -991,8 +997,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[3].tick), qulonglong(0))
 
 A079 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:305
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1000,8 +1006,8 @@ Original expression:
   QCOMPARE(int(track.events[3].status), 0xB0)
 
 A080 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:306
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1009,8 +1015,8 @@ Original expression:
   QCOMPARE(int(track.events[3].data0), 0x26)
 
 A081 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:307
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1054,8 +1060,8 @@ Original expression:
   QCOMPARE(int(track.events[4].data1), 0)
 
 A086 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:312
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1063,8 +1069,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[5].tick), qulonglong(24611))
 
 A087 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:313
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1072,8 +1078,8 @@ Original expression:
   QCOMPARE(int(track.events[5].status), 0xC0)
 
 A088 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:314
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1081,8 +1087,8 @@ Original expression:
   QCOMPARE(int(track.events[5].data0), 6)
 
 A089 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:315
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1198,8 +1204,8 @@ Original expression:
   QCOMPARE(int(track.events[8].data1), 0x64)
 
 A102 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:328
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1207,8 +1213,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[9].tick), qulonglong(24739))
 
 A103 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:329
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1216,8 +1222,8 @@ Original expression:
   QCOMPARE(int(track.events[9].status), 0x90)
 
 A104 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:330
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1225,8 +1231,8 @@ Original expression:
   QCOMPARE(int(track.events[9].data0), 0x3E)
 
 A105 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:331
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1234,8 +1240,8 @@ Original expression:
   QCOMPARE(int(track.events[9].data1), 0x50)
 
 A106 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:332
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1243,8 +1249,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[10].tick), qulonglong(24835))
 
 A107 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:333
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1252,8 +1258,8 @@ Original expression:
   QCOMPARE(int(track.events[10].status), 0x80)
 
 A108 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:334
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1261,8 +1267,8 @@ Original expression:
   QCOMPARE(int(track.events[10].data0), 0x3C)
 
 A109 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:335
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -1306,8 +1312,8 @@ Original expression:
   QCOMPARE(int(track.events[11].data1), 0)
 
 A114 | MidiSmfTest::vlqRunningStatusResetsAcrossMeta | src/checks/midi/tst_midismf.cpp:341
-Disposition: PARTIAL
-Mapping/reason: Swift S001 and S003 prove validity and canonical byte-vector identity on the same fixture bytes; the semantic write/re-read comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S028-S030 re-decode the encoded bytes and compare division plus per-chunk events and end ticks under the same cppID, matching sameSmf's semantic comparison (format is always 1 after parse in both implementations).
 Source context since previous assertion:
   ;
 
@@ -1333,8 +1339,8 @@ Original expression:
   QVERIFY2(SmfFile::readFile(fixturePath(kFixture), &smf, &error), qPrintable(error))
 
 A116 | MidiSmfTest::duplicateEndOfTrackCanonicalizes | src/checks/midi/tst_midismf.cpp:351
-Disposition: PARTIAL
-Mapping/reason: Swift S001, S003, S007, S009-S013 prove validity, canonical bytes, division, chunk counts, and spot events for the same case; the explicit format == 1 field comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S027 asserts the encoded format word is 1 on the same decoded observation under the same cppID; SmfFile::format is always 1 after parse, so the serialized format word is the equivalent Swift observation.
 Source context since previous assertion:
   ;
 
@@ -1390,8 +1396,8 @@ Original expression:
   QCOMPARE(smf.write(), canonical)
 
 A122 | MidiSmfTest::duplicateEndOfTrackCanonicalizes | src/checks/midi/tst_midismf.cpp:360
-Disposition: PARTIAL
-Mapping/reason: Swift S001 and S003 prove validity and canonical byte-vector identity on the same fixture bytes; the semantic write/re-read comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S028-S030 re-decode the encoded bytes and compare division plus per-chunk events and end ticks under the same cppID, matching sameSmf's semantic comparison (format is always 1 after parse in both implementations).
 Source context since previous assertion:
   ;
 
@@ -1421,8 +1427,8 @@ Original expression:
   QVERIFY2(SmfFile::readFile(fixturePath(kFixture), &smf, &error), qPrintable(error))
 
 A124 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:375
-Disposition: PARTIAL
-Mapping/reason: Swift S001, S003, S007, S009-S013 prove validity, canonical bytes, division, chunk counts, and spot events for the same case; the explicit format == 1 field comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S027 asserts the encoded format word is 1 on the same decoded observation under the same cppID; SmfFile::format is always 1 after parse, so the serialized format word is the equivalent Swift observation.
 Source context since previous assertion:
   ;
 
@@ -1468,8 +1474,8 @@ Original expression:
   QCOMPARE(qulonglong(conductor.endTick), qulonglong(kEndTick))
 
 A129 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:382
-Disposition: PARTIAL
-Mapping/reason: Automation conductor count and end tick are proved (S010, S011); the conductor's event field values have no Swift S013 spot check and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same conductor chunk, index, and event value (meta type and payload bytes) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -1477,8 +1483,8 @@ Original expression:
   QCOMPARE(qulonglong(conductor.events[0].tick), qulonglong(0))
 
 A130 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:383
-Disposition: PARTIAL
-Mapping/reason: Automation conductor count and end tick are proved (S010, S011); the conductor's event field values have no Swift S013 spot check and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same conductor chunk, index, and event value (meta type and payload bytes) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -1486,8 +1492,8 @@ Original expression:
   QCOMPARE(int(conductor.events[0].status), 0xFF)
 
 A131 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:384
-Disposition: PARTIAL
-Mapping/reason: Automation conductor count and end tick are proved (S010, S011); the conductor's event field values have no Swift S013 spot check and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same conductor chunk, index, and event value (meta type and payload bytes) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -1495,8 +1501,8 @@ Original expression:
   QCOMPARE(int(conductor.events[0].metaType), 0x51)
 
 A132 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:385
-Disposition: PARTIAL
-Mapping/reason: Automation conductor count and end tick are proved (S010, S011); the conductor's event field values have no Swift S013 spot check and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same conductor chunk, index, and event value (meta type and payload bytes) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -1504,8 +1510,8 @@ Original expression:
   QCOMPARE(qulonglong(conductor.events[1].tick), qulonglong(0))
 
 A133 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:386
-Disposition: PARTIAL
-Mapping/reason: Automation conductor count and end tick are proved (S010, S011); the conductor's event field values have no Swift S013 spot check and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same conductor chunk, index, and event value (meta type and payload bytes) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -1513,8 +1519,8 @@ Original expression:
   QCOMPARE(int(conductor.events[1].status), 0xFF)
 
 A134 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:387
-Disposition: PARTIAL
-Mapping/reason: Automation conductor count and end tick are proved (S010, S011); the conductor's event field values have no Swift S013 spot check and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same conductor chunk, index, and event value (meta type and payload bytes) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -1580,8 +1586,8 @@ Original expression:
   QCOMPARE(int(track.events[0].data1), 0)
 
 A141 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:412
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1603,8 +1609,8 @@ Original expression:
   QCOMPARE(qulonglong(firstCc.tick), qulonglong(tick))
 
 A142 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:413
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1612,8 +1618,8 @@ Original expression:
   QCOMPARE(int(firstCc.status), int(ccStatus))
 
 A143 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:414
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1621,8 +1627,8 @@ Original expression:
   QCOMPARE(int(firstCc.data0), int(firstController))
 
 A144 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:415
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1630,8 +1636,8 @@ Original expression:
   QCOMPARE(int(firstCc.data1), int(firstValue))
 
 A145 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:418
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1641,8 +1647,8 @@ Original expression:
   QCOMPARE(qulonglong(secondCc.tick), qulonglong(tick))
 
 A146 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:419
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1650,8 +1656,8 @@ Original expression:
   QCOMPARE(int(secondCc.status), int(ccStatus))
 
 A147 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:420
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1659,8 +1665,8 @@ Original expression:
   QCOMPARE(int(secondCc.data0), int(secondController))
 
 A148 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:421
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1668,8 +1674,8 @@ Original expression:
   QCOMPARE(int(secondCc.data1), int(secondValue))
 
 A149 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:424
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1679,8 +1685,8 @@ Original expression:
   QCOMPARE(qulonglong(bend.tick), qulonglong(tick))
 
 A150 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:425
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1688,8 +1694,8 @@ Original expression:
   QCOMPARE(int(bend.status), int(bendStatus))
 
 A151 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:426
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1697,8 +1703,8 @@ Original expression:
   QCOMPARE(int(bend.data0), int(bendLsb))
 
 A152 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:427
-Disposition: PARTIAL
-Mapping/reason: The per-event order invariant (S005) and per-chunk counts (S011) execute over all 64 groups on both channels; the exact per-group CC/bend field values are unproved. This one source site expands over 128 group-channel instances.
+Disposition: MATCHED
+Mapping/reason: Swift S013 asserts the same per-group event fields generated from the same channel/group formulas over all 64 groups on both channels; S005 and S006 assert tick order and end-tick invariants. This one source site expands over 128 group-channel instances.
 Source context since previous assertion:
   ;
 
@@ -1782,8 +1788,8 @@ Original expression:
   QCOMPARE(int(track.events[noteOn + 1].data1), 0)
 
 A161 | MidiSmfTest::automationBurstPreservesEveryChannelEvent | src/checks/midi/tst_midismf.cpp:442
-Disposition: PARTIAL
-Mapping/reason: Swift S001 and S003 prove validity and canonical byte-vector identity on the same fixture bytes; the semantic write/re-read comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S028-S030 re-decode the encoded bytes and compare division plus per-chunk events and end ticks under the same cppID, matching sameSmf's semantic comparison (format is always 1 after parse in both implementations).
 Source context since previous assertion:
   ;
       }
@@ -1810,8 +1816,8 @@ Original expression:
   QVERIFY2(SmfFile::readFile(fixturePath(kFixture), &smf, &error), qPrintable(error))
 
 A163 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:452
-Disposition: PARTIAL
-Mapping/reason: Swift S001, S003, S007, S009-S013 prove validity, canonical bytes, division, chunk counts, and spot events for the same case; the explicit format == 1 field comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S027 asserts the encoded format word is 1 on the same decoded observation under the same cppID; SmfFile::format is always 1 after parse, so the serialized format word is the equivalent Swift observation.
 Source context since previous assertion:
   ;
 
@@ -2037,8 +2043,8 @@ Original expression:
   QCOMPARE(int(track.events[7].data1), 0)
 
 A188 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:479
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2046,8 +2052,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[8].tick), qulonglong(96))
 
 A189 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:480
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2055,8 +2061,8 @@ Original expression:
   QCOMPARE(int(track.events[8].status), 0x90)
 
 A190 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:481
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2064,8 +2070,8 @@ Original expression:
   QCOMPARE(int(track.events[8].data0), 0x40)
 
 A191 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:482
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2073,8 +2079,8 @@ Original expression:
   QCOMPARE(int(track.events[8].data1), 0x60)
 
 A192 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:483
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2082,8 +2088,8 @@ Original expression:
   QCOMPARE(qulonglong(track.events[9].tick), qulonglong(120))
 
 A193 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:484
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2091,8 +2097,8 @@ Original expression:
   QCOMPARE(int(track.events[9].status), 0x80)
 
 A194 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:485
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2100,8 +2106,8 @@ Original expression:
   QCOMPARE(int(track.events[9].data0), 0x40)
 
 A195 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:486
-Disposition: PARTIAL
-Mapping/reason: Chunk structure, tick order, counts, and end ticks are proved (S005-S007, S009-S011); this event's exact field values are not among Swift's S013 spot checks and are unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S013 spot-checks the same chunk, index, and event value under the same cppID; S005 and S006 assert tick order and end-tick invariants over every event of the same observation.
 Source context since previous assertion:
   ;
 
@@ -2369,8 +2375,8 @@ Original expression:
   QCOMPARE(int(notes[3].channel), 0)
 
 A224 | MidiSmfTest::noteLifecyclePreservesSameTickOrdering | src/checks/midi/tst_midismf.cpp:524
-Disposition: PARTIAL
-Mapping/reason: Swift S001 and S003 prove validity and canonical byte-vector identity on the same fixture bytes; the semantic write/re-read comparison is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S028-S030 re-decode the encoded bytes and compare division plus per-chunk events and end ticks under the same cppID, matching sameSmf's semantic comparison (format is always 1 after parse in both implementations).
 Source context since previous assertion:
   ;
 
@@ -2809,8 +2815,8 @@ Original expression:
                               .arg(milliseconds)))
 
 A266 | MidiSmfTest::overlongTickFailsParsing | src/checks/midi/tst_midismf.cpp:645
-Disposition: PARTIAL
-Mapping/reason: Swift S001 proves an overlong-tick construction invalid under the same cppID; the exact sixteen-0x0FFFFFFF-plus-0x10 boundary construction below is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S001 proves the exact sixteen-0x0FFFFFFF-plus-0x10 boundary construction invalid under the same cppID.
 Source context since previous assertion:
   ;
   }
@@ -2836,8 +2842,8 @@ Original expression:
   QVERIFY2(!SmfFile::read(format0Bytes(overlongBody), &smf, &error), "overlong tick parsed")
 
 A267 | MidiSmfTest::overlongTickFailsParsing | src/checks/midi/tst_midismf.cpp:646
-Disposition: PARTIAL
-Mapping/reason: Swift S001 proves invalidity for this case but asserts no expected error text; the exact diagnostic below is unproved.
+Disposition: MATCHED
+Mapping/reason: Swift S002 asserts the Swift error contains 'tick position exceeds 32-bit tick range' for the same boundary construction under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -2846,8 +2852,8 @@ Original expression:
                qPrintable(error))
 
 A268 | MidiSmfTest::overlongTickFailsParsing | src/checks/midi/tst_midismf.cpp:652
-Disposition: GAP
-Mapping/reason: No Swift case parses the just-inside kMaxTick boundary construction; read success and endTick == kMaxTick below are unproved. The related shiftTick oracle (S015) covers clamping arithmetic, not this parser boundary.
+Disposition: MATCHED
+Mapping/reason: Swift S031 and S032 decode the just-inside construction (sixteen 0x0FFFFFFF deltas plus a 0x0E delta) and assert the format-0 coercion produced two chunks under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -2859,8 +2865,8 @@ Original expression:
   QVERIFY2(SmfFile::read(format0Bytes(justInsideBody), &smf, &error), qPrintable(error))
 
 A269 | MidiSmfTest::overlongTickFailsParsing | src/checks/midi/tst_midismf.cpp:653
-Disposition: GAP
-Mapping/reason: No Swift case parses the just-inside kMaxTick boundary construction; read success and endTick == kMaxTick below are unproved. The related shiftTick oracle (S015) covers clamping arithmetic, not this parser boundary.
+Disposition: MATCHED
+Mapping/reason: Swift S033 asserts the channel chunk end tick equals TimeDefaults.maxTick (CoreTimeDefaults::kMaxTick) under the same cppID.
 Source context since previous assertion:
   ;
 
@@ -3959,112 +3965,146 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:795
+S001 | compareCodecCase | src/checks/midi/MidiChecks.swift:833
       report.expectEqual(expectedValid, swift.valid, cppID: cppID,
                          what: "independent Swift validity (error=\(swift.error))")
 
-S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:798
+S002 | compareCodecCase | src/checks/midi/MidiChecks.swift:836
           report.expect(swift.error.contains(expectedSwiftError), cppID: cppID,
                         message: "Swift error expected to contain '\(expectedSwiftError)', actual='\(swift.error)'")
 
-S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:804
+S003 | compareCodecCase | src/checks/midi/MidiChecks.swift:842
               report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
                                  what: "independent canonical byte vector")
 
-S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:807
+S004 | compareCodecCase | src/checks/midi/MidiChecks.swift:849
           report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                              what: "independent format-0 provenance")
 
-S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:819
+S005 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:872
                   report.expect(chunk.events[eventIndex - 1].tick <= chunk.events[eventIndex].tick,
                                 cppID: cppID,
                                 message: "independent decoded order chunk=\(chunkIndex) event=\(eventIndex)")
 
-S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:825
+S006 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:878
               report.expect(last.tick <= chunk.endTick, cppID: cppID,
                             message: "independent end tick chunk=\(chunkIndex) last=\(last.tick) end=\(chunk.endTick)")
 
-S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:830
+S007 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:883
       report.expectEqual(expected.division, file.division, cppID: cppID,
                          what: "independent decoded division")
 
-S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:832
+S008 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:885
       report.expectEqual(expected.wasFormatZero, file.wasFormat0, cppID: cppID,
                          what: "independent decoded format-0 provenance")
 
-S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:834
+S009 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:887
       report.expectEqual(expected.endTicks.count, file.chunks.count, cppID: cppID,
                          what: "independent decoded chunk count")
 
-S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:837
+S010 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:890
           report.expectEqual(expected.endTicks[index], file.chunks[index].endTick, cppID: cppID,
                              what: "independent decoded chunk=\(index) end tick")
 
-S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:839
+S011 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:892
           report.expectEqual(expected.eventCounts[index], file.chunks[index].events.count,
                              cppID: cppID, what: "independent decoded chunk=\(index) event count")
 
-S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:846
+S012 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:899
               report.fail(cppID, "independent decoded event missing chunk=\(item.chunk) index=\(item.index)")
 
-S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:849
+S013 | expectDecodedStructure | src/checks/midi/MidiChecks.swift:902
           report.expectEqual(item.event, file.chunks[item.chunk].events[item.index],
                              cppID: cppID,
                              what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
 
-S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:525
+S014 | runMusicalSemanticsSuite | src/checks/midi/MidiChecks.swift:561
   coreMidiExpectOracleValue(Int64(m4aExportSupport(controller).rawValue), .ccExport, Int64(cc),
                             row: "cc-\(cc)-export", cppID: m4aSemanticsID, report: report)
 
-S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift:1133
+S015 | coreMidiExpectOracleValue | src/checks/midi/MidiChecks.swift:1238
       report.expectEqual(independent, actual, cppID: cppID,
                          what: "row=\(row) independent expected value")
 
-S016 | coreMidiExpectOracleText | src/checks/midi/MidiChecks.swift:1141
+S016 | coreMidiExpectOracleText | src/checks/midi/MidiChecks.swift:1246
       report.expectEqual(independent, actual, cppID: cppID,
                          what: "row=\(row) independent expected text")
 
-S017 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:35
+S017 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:39
       report.expectEqual(3, notes.count,
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "all note-ons projected")
 
-S018 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:38
+S018 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:42
       report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
                          cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
                          what: "first following matching ends pair exactly")
 
-S019 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:41
+S019 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:45
       report.expect(notes[2].isUnterminated,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "unterminated note is preserved")
 
-S020 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
+S020 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:64
       report.expect(document.state.file.chunks[1].events[3].status == 0x80,
                     cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
                     message: "note-end status is retained during adoption")
 
-S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:173
+S021 | movementAndResize | src/checks/editcheck/NoteChecks.swift:177
           report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                       "unterminated fixture was not projected")
 
-S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:178
+S022 | movementAndResize | src/checks/editcheck/NoteChecks.swift:182
       report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
                     cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
                     message: "moving an unterminated note does not invent an end")
 
-S023 | importAnalysis | src/checks/editcheck/EventChecks.swift:275
+S023 | importAnalysis | src/checks/editcheck/EventChecks.swift:289
       report.expectEqual(2, analysis.xcmd.first?.count,
                          cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
                          what: "import counts logical XCMD points")
 
-S024 | importAnalysis | src/checks/editcheck/EventChecks.swift:278
+S024 | importAnalysis | src/checks/editcheck/EventChecks.swift:292
       report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
                          cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
                          what: "unknown controller is not exported")
 
-S025 | compareFixture | src/checks/midi/MidiChecks.swift:764
+
+S025 | compareFixture | src/checks/midi/MidiChecks.swift:801
           report.fail(cppID, "missing --swiftcore fixture root")
 
-S026 | compareFixture | src/checks/midi/MidiChecks.swift:782
+S026 | compareFixture | src/checks/midi/MidiChecks.swift:820
           report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
+
+S027 | compareCodecCase | src/checks/midi/MidiChecks.swift:845
+        report.expect(swift.encoded.count > 9 &&
+                      swift.encoded[8] == 0 && swift.encoded[9] == 1,
+                      cppID: cppID,
+                      message: "independent encoded format word is 1")
+
+S028 | compareCodecCase | src/checks/midi/MidiChecks.swift:854
+            report.expect(reparsed.valid, cppID: cppID,
+                          message: "independent semantic reparse validity (error=\(reparsed.error))")
+
+S029 | compareCodecCase | src/checks/midi/MidiChecks.swift:857
+                report.expectEqual(file.division, reread.division, cppID: cppID,
+                                   what: "independent semantic reparse division")
+
+S030 | compareCodecCase | src/checks/midi/MidiChecks.swift:859
+                report.expectEqual(file.chunks, reread.chunks, cppID: cppID,
+                                   what: "independent semantic reparse chunks")
+
+S031 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:510
+        report.pass(justInsideID, row: "independent Swift validity")
+
+S032 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:511
+        report.expectEqual(2, file.chunks.count, cppID: justInsideID,
+                           what: "independent decoded chunk count")
+
+S033 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:513
+        report.expectEqual(TimeDefaults.maxTick, file.chunks.last?.endTick,
+                           cppID: justInsideID,
+                           what: "independent decoded chunk=1 end tick")
+
+S034 | runMidiCodecSuite | src/checks/midi/MidiChecks.swift:517
+        report.fail(justInsideID, "just-inside tick rejected: \(error)")

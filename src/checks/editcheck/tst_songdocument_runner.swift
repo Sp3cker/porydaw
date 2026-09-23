@@ -48,6 +48,21 @@ internal func coreEditCorpusSongs(_ report: CheckReport) throws -> [CoreEditCorp
     }
     return songs
 }
+@MainActor
+internal func coreEditCorpusLoadCheck(_ report: CheckReport) {
+    do {
+        for loaded in try coreEditCorpusSongs(report) {
+            let file = try MidiFile.decode(loaded.midiBytes)
+            let document = SongDocument(file: file, config: loaded.config, source: loaded.source)
+            report.expect(document.rawChunks.count == file.chunks.count,
+                          cppID: "editcheck/EditCheckTest::initTestCase",
+                          message: "staged MIDI parses and loads every track into the document")
+        }
+    } catch {
+        report.fail("editcheck/EditCheckTest::initTestCase", "staged MIDI cannot load: \(error)")
+    }
+}
+
 
 @MainActor
 internal func coreEditDistantBase(_ document: SongDocument) -> Tick {

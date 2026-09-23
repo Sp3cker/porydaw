@@ -16,6 +16,10 @@ GAP means an equivalent Swift assertion is not established;
 NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
 only by the retained native path. None of these labels authorizes deletion or
 claims whole-case equivalence. Native passes do not prove the Swift replacement.
+File retirement: BLOCKED. These Swift predicates exercise the separate Swift
+ResonanceSuppression implementation; the native ResonanceSuppressor still runs
+in the C++ audio engine and wave export. Identical input/output assertions
+do not replace coverage of that live native DSP implementation.
 
 Execution and ownership
 resonanceLawChecks is called by runResonanceSuppressionChecks. Shared signal generation, measurement and rendering live in audio/resonancefixture.swift. Additional Swift-only reset/chunking checks remain in swiftcore/ResonanceSuppressionChecks.swift.
@@ -26,10 +30,11 @@ Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Verification evidence
-Current assertion-gap closure is in progress. The earlier audio-only 7/7 run
-predates the expanded Swift predicates and does not certify this file's current
-content. Latest combined verification and refreshed source hashes are required
-before this pairing is complete.
+Latest Swift run: deno task verify --filter swiftcore --verbose — PASS 1/24
+(23 skipped), swiftcore 9.64s. Native run: deno task verify --filter
+trackactivitycheck --filter resonancecheck --filter resonancecheck-timing
+--verbose — PASS 3/24 (21 skipped). No cross-implementation differential
+or retirement certification is claimed.
 
 Shared Swift sources used by this refactor (SHA-256)
 src/checks/audio/controllerfixture.swift: c9a1a81a199c1afdc1b7f9cb48365019c28703c96c44fa70e26e7a80947ea6a6

@@ -15,9 +15,9 @@ S identifiers identify exact counterpart predicates, listed after the inventory.
 Six node-lane contract cases (points, ranges, delete, move, move-collision,
 replace-span) run across Tempo and CC adapters, followed by engine-default nodes,
 logical xcmd occurrences and edits, xcmd sweep note preservation, and row-rebuild
-handle identity. Forty-two sites are partial toward converted model predicates,
-twenty stay open, and five require the retired native canvas stack.
-Disposition tally: 67 sites: 20 GAP, 5 NATIVE, 42 PARTIAL.
+handle identity. Thirty-seven sites are partial toward converted model predicates,
+twenty-five have no Swift assertion, and five require the retired native canvas stack.
+Disposition tally: 67 sites: 25 GAP, 5 NATIVE, 37 PARTIAL.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -260,7 +260,7 @@ Original expression:
 
 A004 | checkUndoRestores | src/checks/automationgesturecheck/contract.cpp:191
 Disposition: PARTIAL
-Mapping/reason: Redo-restore outcome; S014 covers redo-adjacent undo identity at model level; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Mapping/reason: Redo restoration is exercised by the model-level Pan history predicate S022; unproved: NodeLane delivery, Tempo/CC adapters, and the retired contract fixture.
 Source context since previous assertion:
       document.undoStack()->redo();
       const auto redone = snapshot(document);
@@ -272,8 +272,8 @@ Original expression:
               .arg(redone.undoIndex));
 
 A005 | checkEffectivePoints | src/checks/automationgesturecheck/contract.cpp:231
-Disposition: PARTIAL
-Mapping/reason: Effective-points outcome; S013 covers the held-span replacement at model level; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Empty-lane effective points have no corresponding assertion in the current Swift gesture predicates; the held-span replacement predicate S013 tests a different write.
 Source context since previous assertion:
       document.undoStack()->undo();
   }
@@ -315,8 +315,8 @@ Original expression:
                             QStringLiteral("empty lane exposed %1").arg(formatPoints(lane.points())));
 
 A006 | checkEffectivePoints | src/checks/automationgesturecheck/contract.cpp:246
-Disposition: PARTIAL
-Mapping/reason: Same-tick raw-value outcome; S013 covers held-span seams at model level; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Preserving ordered same-tick raw CC events has no corresponding assertion in the current Swift gesture predicates; S013 tests a held-span replacement instead.
 Source context since previous assertion:
       if (context.adapter.kind == AdapterKind::Tempo) {
           setTempo(document, {tempoAt(288, 110), tempoAt(0, 120), tempoAt(96, 150)});
@@ -565,8 +565,8 @@ Original expression:
                                 QStringLiteral("unknown-tick move mutated the document"));
 
 A023 | checkMove | src/checks/automationgesturecheck/contract.cpp:386
-Disposition: PARTIAL
-Mapping/reason: Move outcome; S009 covers released-stroke move semantics at model level; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Preserving fractional Tempo microseconds on an unchanged-value move has no corresponding Swift predicate; generic move classification does not assert the exact Tempo value.
 Source context since previous assertion:
           const auto preservedBpm = tempoBpm(kPreservedTempoUs);
           applyMoves(context, {{uint64_t{96}, NodePoint{192, preservedBpm}}});
@@ -579,8 +579,8 @@ Original expression:
                                 QStringLiteral("unchanged-value Tempo move discarded microseconds"));
 
 A024 | checkMove | src/checks/automationgesturecheck/contract.cpp:396
-Disposition: PARTIAL
-Mapping/reason: Move outcome; S009 covers released-stroke move semantics at model level; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Rewriting fractional Tempo microseconds on a value-changing move has no corresponding Swift predicate; generic move classification does not assert Tempo serialization.
 Source context since previous assertion:
           checkUndoRestores(context, before, beforePoints, {{192, preservedBpm}, {288, 110}});
           const auto rewriteBefore = snapshot(document);
@@ -622,8 +622,8 @@ Original expression:
                             QStringLiteral("unknown-tick move mutated the document"));
 
 A027 | checkMove | src/checks/automationgesturecheck/contract.cpp:417
-Disposition: PARTIAL
-Mapping/reason: Move outcome; S009 covers released-stroke move semantics at model level; unproved: native NodeLane event delivery, the AutomationGestureCheckRig fixture, and the retired lane-stack surface.
+Disposition: GAP
+Mapping/reason: Moving an ordered same-tick CC group while removing source events has no corresponding Swift predicate; generic move classification does not exercise duplicate raw events.
 Source context since previous assertion:
       applyMoves(context, {{uint64_t{96}, NodePoint{192, 20}}});
       expectOneEdit(context, before);
@@ -1585,3 +1585,6 @@ Counterpart expression:
 S021 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationcanvasediting.swift:53
 Counterpart expression:
       report.expect(fixture.undo(), cppID: drawerAutomationCancelID, message: "the stationary delete is undoable")
+S022 | coreAutomationPanUndoRegression | src/checks/automation/domain/gestures.swift:769
+Counterpart expression:
+    report.expectEqual(moved, fx.document.state, cppID: id, what: "redo restores the node value move")

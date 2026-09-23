@@ -50,6 +50,14 @@ func reorderCommitsAndRebuildsHeader(
     let initial = HeaderDocumentBaseline(fx.document)
     let start = fx.point(.title)
     let bottom = Double(fx.trackRows.count * h.rowHeight)
+    _ = h.beginPointer(x: start.x, y: start.y, button: 1, modifiers: 0)
+    _ = h.updatePointer(x: start.x, y: 0, modifiers: 0)
+    report.expect(h.reorderIndicatorVisible, cppID: id,
+                  message: "no-op drag displays insertion marker")
+    report.expectEqual(0, h.reorderIndicatorY, cppID: id,
+                       what: "no-op drag marker stays at the top insertion slot")
+    _ = h.endPointer(x: start.x, y: 0, button: 1, modifiers: 0)
+    initial.expectUnchanged(report, fx.document, cppID: id, phase: "no-op reorder drop")
     for reason in 0...3 {
         _ = h.beginPointer(x: start.x, y: start.y, button: 1, modifiers: 0)
         _ = h.updatePointer(x: start.x, y: bottom, modifiers: 0)
@@ -66,10 +74,15 @@ func reorderCommitsAndRebuildsHeader(
     }
     _ = h.beginPointer(x: start.x, y: start.y, button: 1, modifiers: 0)
     _ = h.updatePointer(x: start.x, y: bottom, modifiers: 0)
-    _ = h.endPointer(x: start.x, y: bottom, button: 2, modifiers: 0)
+    report.expect(h.endPointer(x: start.x, y: bottom, button: 2, modifiers: 0),
+                  cppID: id, message: "wrong-button release consumes the armed drag")
+    report.expect(!h.reorderIndicatorVisible, cppID: id,
+                  message: "wrong-button release clears the insertion marker")
     initial.expectUnchanged(report, fx.document, cppID: id, phase: "wrong-button reorder release")
 
     let notes = fx.document.notes(in: 0).map { "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)" }
+    report.expect(!notes.isEmpty, cppID: id,
+                  message: "the reorder fixture track carries content to move")
     fx.session.mutedTracks = [0]
     h.refreshFromDocument()
     h.beginRename(track: 0)
@@ -124,6 +137,8 @@ func addTrackOpensPickerAndRebuildsHeader(
     _ = h.beginPointer(x: add.x, y: add.y, button: 1, modifiers: 0)
     _ = h.endPointer(x: add.x, y: add.y - Double(h.rowHeight), button: 1, modifiers: 0)
     report.expectEqual(0, requests, cppID: id, what: "release outside add row requests no picker")
+    report.expect(!h.rows[2].addPressed, cppID: id,
+                  message: "outside release clears the add row press")
     fx.click(report, .add, row: 2, cppID: id)
     report.expectEqual(1, requests, cppID: id, what: "add click requests existing voice picker")
     baseline.expectUnchanged(report, fx.document, cppID: id, phase: "picker opened")
@@ -152,6 +167,7 @@ func addTrackOpensPickerAndRebuildsHeader(
     report.expectEqual(3, h.rows.count, cppID: id, what: "undo restores prior rows")
     report.expect(fx.document.history.redoDocument(), cppID: id, message: "add redo succeeds")
     report.expectEqual(accepted, fx.document.state, cppID: id, what: "redo restores accepted track")
+    report.expectEqual(4, h.rows.count, cppID: id, what: "redo restores the accepted rows")
 
     // A picker completion arriving after remap cannot edit the replacement raw slot.
     var voiceRequests: [Int] = []

@@ -137,7 +137,7 @@ Original expression:
 
 A002 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:99
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Original native fixture/window discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
 Source context since previous assertion:
   ;
       m_quick = m_view->quickView();
@@ -147,7 +147,7 @@ Original expression:
 
 A003 | TrackActivityMeterTest::init | src/checks/trackheaders/tst_trackactivitymeter.cpp:101
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Original native model discovery is test setup. Swift uses the nonoptional typed TrackHeadersFixture presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
 Source context since previous assertion:
   ;
       m_model = m_view->findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"));
@@ -173,7 +173,7 @@ Original expression:
 
 A005 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:139
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Swift fixture always publishes two tracks plus an add row, so the single-row model contract has no exact predicate.
 Source context since previous assertion:
   ;
   }
@@ -207,16 +207,16 @@ Original expression:
   QCOMPARE(m_model->rowCount(), 1)
 
 A006 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:140
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[1] === untouched) and h.rows[0] access prove the meter row exists at index 0. [S014]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(row, 0)
 
 A007 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:142
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(height > 0 && h.activityWidth > 0): meter geometry exists. [S013]
 Source context since previous assertion:
   ;
       const int meterHeight = std::max(0, m_model->rowHeight() - m_model->separatorWidth());
@@ -235,8 +235,8 @@ Original expression:
   QVERIFY2(!warm.isNull(), qPrintable(error))
 
 A009 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:148
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: configureViewport(dpr:) accepts positive device pixel ratios 1.0, 1.25, 2.0. [S015]
 Source context since previous assertion:
   ;
       const qreal dpr = warm.devicePixelRatio();
@@ -245,7 +245,7 @@ Original expression:
 
 A010 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:149
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the presenter takes dpr as a parameter but the native Quick window devicePixelRatio has no counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -253,7 +253,7 @@ Original expression:
 
 A011 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:152
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt activity role numbers have no presenter role registry.
 Source context since previous assertion:
   ;
 
@@ -286,7 +286,7 @@ Original expression:
 
 A013 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:169
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; row identity proves the level change republished the row, but the Qt dataChanged emission count has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -294,7 +294,7 @@ Original expression:
 
 A014 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:170
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged first-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -302,7 +302,7 @@ Original expression:
 
 A015 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:171
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged last-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -310,15 +310,15 @@ Original expression:
 
 A016 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:172
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged role list has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(changes.roles, roles)
 
 A017 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:175
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.fail guard: fixture has no two levels within a physical pixel. [S017]
 Source context since previous assertion:
   ;
 
@@ -352,23 +352,23 @@ Original expression:
 
 A020 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:186
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; retained row identity S018 proves the underlying state, but the raster image equality has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(samePixel, within)
 
 A021 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:187
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[0] === within): same physical pixel publishes no row, i.e. zero observable change. [S018]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(changes.count, 0)
 
 A022 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:190
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.fail guard: fixture has no next physical pixel. [S019]
 Source context since previous assertion:
   ;
 
@@ -390,7 +390,7 @@ Original expression:
 
 A024 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:196
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the changed height S020 proves the underlying state, but the raster image inequality has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -398,7 +398,7 @@ Original expression:
 
 A025 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:197
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the changed row S020 proves republish, but the Qt dataChanged emission count has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -406,7 +406,7 @@ Original expression:
 
 A026 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:198
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged first-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -414,7 +414,7 @@ Original expression:
 
 A027 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:199
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged last-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -422,15 +422,15 @@ Original expression:
 
 A028 | TrackActivityMeterTest::roleScopedUpdatesAndPhysicalPixelBoundaries | src/checks/trackheaders/tst_trackactivitymeter.cpp:200
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged role list has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(changes.roles, roles)
 
 A029 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:207
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(paused fill, h.rows[0].activityLeftHeight): the meter row exists and fills when paused. [S021]
 Source context since previous assertion:
   ;
       QObject::disconnect(connection);
@@ -478,7 +478,7 @@ Original expression:
 
 A032 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:228
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; paused fill S021 proves republish, but the Qt dataChanged emission count has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -486,7 +486,7 @@ Original expression:
 
 A033 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:229
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged first-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -494,7 +494,7 @@ Original expression:
 
 A034 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:230
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged last-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -502,7 +502,7 @@ Original expression:
 
 A035 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:231
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged role list has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -510,7 +510,7 @@ Original expression:
 
 A036 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:233
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the native timeline band layout geometry has no presenter counterpart.
 Source context since previous assertion:
   ;
       const auto &band = m_view->timelineBandLayout().geometry(songview::TimelineBand::TrackHeaders);
@@ -519,7 +519,7 @@ Original expression:
 
 A037 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:236
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the physical pixel span of the captured raster width has no presenter counterpart.
 Source context since previous assertion:
   ;
       const int y = band->rect.y() + qRound(row * m_model->rowHeight() - m_model->scrollY());
@@ -530,7 +530,7 @@ Original expression:
 
 A038 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:238
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the physical pixel span of the captured raster height has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -554,7 +554,7 @@ Original expression:
 
 A041 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:252
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the paused fill S021 proves the state, but the raster column scan has no presenter counterpart.
 Source context since previous assertion:
   ;
       int completeColumns = 0;
@@ -581,8 +581,8 @@ Original expression:
               paused.pixelColor(paused.width() / 4, paused.height() / 4))
 
 A043 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:258
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Int((0.15 * height * dpr).rounded()), capped): playing intensity obeys the cap. [S023]
 Source context since previous assertion:
   ;
       const track_activity_render::State capped{{1.0F, 1.0F}, true, 0.15F};
@@ -592,8 +592,8 @@ Original expression:
   QCOMPARE(cappedRows, qRound(0.15 * meterHeight * dpr))
 
 A044 | TrackActivityMeterTest::pauseRasterAndIntensityCapUseObservedDpr | src/checks/trackheaders/tst_trackactivitymeter.cpp:260
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(TrackActivity.physicalHeight(..., playing: false) > capped): pause ignores the playing cap. [S024]
 Source context since previous assertion:
   ;
       const track_activity_render::State uncapped{{1.0F, 1.0F}, false, 0.15F};
@@ -602,8 +602,8 @@ Original expression:
                                                     dpr) > cappedRows)
 
 A045 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:268
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[0].activityLeftHeight > h.rows[0].activityRightHeight): the stereo row exists with independent channel heights. [S025]
 Source context since previous assertion:
   ;
       QObject::disconnect(connection);
@@ -649,8 +649,8 @@ Original expression:
                image.pixelColor(right, image.height() - 1))
 
 A049 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:291
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)): rebuilt meter rows address each engine track exactly once. [S008]
 Source context since previous assertion:
   ;
 
@@ -667,8 +667,8 @@ Original expression:
   QCOMPARE(m_model->rowCount(), 2)
 
 A050 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:292
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)) and per-track heights: both rows exist. [S008, S026]
 Source context since previous assertion:
   ;
 Original expression:
@@ -732,7 +732,7 @@ Original expression:
 
 A056 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:314
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; independent heights S025/S026 prove republish, but the Qt dataChanged emission count has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -740,7 +740,7 @@ Original expression:
 
 A057 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:315
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged first-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -748,7 +748,7 @@ Original expression:
 
 A058 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:316
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged last-row payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -756,15 +756,15 @@ Original expression:
 
 A059 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:317
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; the Qt dataChanged role list has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(changes.roles, activityRoles(*m_model))
 
 A060 | TrackActivityMeterTest::stereoRasterAndRebuiltTracksRetainIdentity | src/checks/trackheaders/tst_trackactivitymeter.cpp:321
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027 in src/checks/trackheaders/tst_trackactivitymeter.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(zip(rows, fx.trackRows).allSatisfy { $0 === $1 }): unchanged converged levels retain all rows, i.e. zero observable change. [S027]
 Source context since previous assertion:
   ;
       changes = {};

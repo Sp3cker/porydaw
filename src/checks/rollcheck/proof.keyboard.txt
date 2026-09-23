@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/keyboard.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/keyboard.cpp
 Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9ebaee
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -21,7 +21,7 @@ GAP identifies an original predicate without a replacement assertion.
 Eleven keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize); the gated routing and resize slots nudge, delete, toggle and edge-resize notes on the Swift grid surface but establish almost none of these key-driven outcomes. Eleven framebuffer and popup observations stay native, three sites are partial, and the remaining ninety-one stay open.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
+Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
@@ -111,7 +111,7 @@ Original expression:
 
 A004 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:59
 Disposition: PARTIAL
-Mapping/reason: focusedGridCommandRouting (S007..S028) nudges the selected note right one snap on the Swift grid surface and verifies tick and pitch; unproved: native key-event delivery, the rollcheck song and fixture, and the octave transpose and off-grid snap-back in this slot.
+Mapping/reason: focusedGridCommandRouting (S007..S028) nudges the selected note right one snap on the Swift grid surface and verifies tick and pitch; commandRouting (S029..S042) proves octave transpose up/down restoring pitch and off-grid snap-back nudges on the Swift surface; unproved: native key-event delivery and the rollcheck song and fixture.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
 Original expression:
@@ -1439,7 +1439,7 @@ Original expression:
 
 A100 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:808
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; unproved: native key-event delivery, the one-tick floor with its uniform batch delta, merged undo, and the time-selection block in this slot.
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; commandRouting (S029..S042) proves the one-tick floor clamp, the uniform batch delta, merged undo, and floor no-op presses on the Swift surface; unproved: native key-event delivery and the time-selection block in this slot.
 Source context since previous assertion:
       }
 Original expression:
@@ -1448,7 +1448,7 @@ Original expression:
 
 A101 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:814
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; unproved: native key-event delivery, the one-tick floor with its uniform batch delta, merged undo, and the time-selection block in this slot. Extra presses at the floor are consumed no-ops.
+Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; commandRouting (S029..S042) proves the one-tick floor clamp, the uniform batch delta, merged undo, and floor no-op presses on the Swift surface; unproved: native key-event delivery and the time-selection block in this slot. Extra presses at the floor are consumed no-ops.
 Source context since previous assertion:
       const QByteArray floorBytes = doc.smf().write();
       const int floorIndex = doc.undoStack()->index();
@@ -1513,7 +1513,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S028 are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid. S029..S042 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::commandRouting, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | SwiftRollGatedTest::resizeEdgesRespectMinimumDuration | src/checks/swiftrollgated/gesturechecks.cpp:349
 Counterpart expression:
@@ -1645,3 +1645,91 @@ Counterpart expression:
 S028 | SwiftRollGatedTest::focusedGridCommandRouting | src/checks/swiftrollgated/gesturechecks.cpp:642
 Counterpart expression:
   QCOMPARE(fixture.grid()->property("noteSummary").toString(), beforeGesture);
+
+S029 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:661
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.tick) == 24 + snap } == true,
+    cppID: id, message: "nudge right advances the selected note one snap cell")
+
+S030 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:665
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.tick) == 24 } == true,
+    cppID: id, message: "nudge left returns the selected note one snap cell")
+
+S031 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:670
+Counterpart expression:
+report.expect(
+    session.document.note(c).map { Int($0.tick) == 12 } == true,
+    cppID: id, message: "nudge right snaps an off-grid note forward to the lattice")
+
+S032 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:674
+Counterpart expression:
+report.expect(
+    session.document.note(c).map { Int($0.tick) == 6 } == true,
+    cppID: id, message: "nudge left snaps an off-grid note back to the lattice")
+
+S033 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:679
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.pitch) == pitch + 12 } == true,
+    cppID: id, message: "octave transpose raises the selected note twelve keys")
+
+S034 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:683
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.pitch) == pitch } == true,
+    cppID: id, message: "octave transpose down restores the selected note pitch")
+
+S035 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:688
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.duration) == 1 } == true
+        && session.document.note(b).map { Int($0.duration) == 7 } == true,
+    cppID: id, message: "shorten clamps the shorter note at one tick")
+
+S036 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:694
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.duration) == 1 } == true
+        && session.document.note(b).map { Int($0.duration) == 1 } == true,
+    cppID: id, message: "repeated shorten at the floor is a no-op")
+
+S037 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:699
+Counterpart expression:
+report.expect(
+    session.document.note(a).map { Int($0.duration) == 7 } == true
+        && session.document.note(b).map { Int($0.duration) == 13 } == true,
+    cppID: id, message: "merged shorten presses undo in one step")
+
+S038 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:706
+Counterpart expression:
+report.expect(
+    grid.noteSummary == summaryBeforeCopy
+        && session.document.revision == revisionBeforeCopy,
+    cppID: id, message: "copy leaves the document and published summary untouched")
+
+S039 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:720
+Counterpart expression:
+report.expect(
+    grid.noteSummary == midGestureSummary && session.document.note(a) != nil,
+    cppID: id, message: "delete is refused while a pointer gesture owns the grid")
+
+S040 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:725
+Counterpart expression:
+report.expect(
+    grid.pencilMode == !pencilBefore && grid.noteSummary == midGestureSummary,
+    cppID: id, message: "pencil mode still toggles mid-gesture without touching notes")
+
+S041 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:729
+Counterpart expression:
+report.expect(
+    grid.pencilMode == pencilBefore && grid.noteSummary == midGestureSummary,
+    cppID: id, message: "pencil mode toggles back mid-gesture without touching notes")
+
+S042 | swiftcore/EditorGridCamera::commandRouting | src/checks/rollcheck/EditorGridCameraChecks.swift:733
+Counterpart expression:
+report.expect(
+    session.document.revision == revisionBeforePress && session.document.note(a) != nil,
+    cppID: id, message: "releasing a zero-delta press commits nothing")

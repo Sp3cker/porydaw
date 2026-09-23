@@ -9,6 +9,20 @@ func runEventEditsSuite(_ report: CheckReport) {
     runRawEventOriginalChecks(report)
     laneEditing(report)
     coreEventAutomationGestureCoreSeams(report)
+    trackCreateDeleteContract(report)
+    trackDuplicateContract(report)
+    trackMoveContract(report)
+    trackMarkerNameContract(report)
+    trackDeleteRescueContract(report)
+    trackRenameContract(report)
+    songTimeSignatureContract(report)
+    loopCfgUndoRedoContract(report)
+    formatZeroCoercionContract(report)
+    formatZeroSaveRoundTripContract(report)
+    markerVersusTrackNameContract(report)
+    duplicateLaneAndTempoLoadContract(report)
+    duplicateCanonicalizationContract(report)
+    duplicateReplacementsAndNoOpsContract(report)
 }
 
 @MainActor
@@ -322,4 +336,896 @@ private func importTransforms(_ report: CheckReport) {
                            cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
                            what: "overflow rejection leaves file untouched")
     }
+}
+
+// MARK: - SongDocument track contracts (songtracks proof coverage)
+
+private func chunksSortedByTick(_ file: MidiFile) -> Bool {
+    file.chunks.allSatisfy { chunk in
+        zip(chunk.events, chunk.events.dropFirst()).allSatisfy { $0.0.tick <= $0.1.tick }
+    }
+}
+
+private func channelFields(_ event: MidiEvent) -> (data0: UInt8, data1: UInt8)? {
+    guard case let .channel(_, data0, data1) = event.payload else { return nil }
+    return (data0, data1)
+}
+
+private func bareTrackNameCount(_ chunk: MidiChunk) -> Int {
+    var insideChannelPrefixSpan = false
+    var count = 0
+    for event in chunk.events {
+        if case let .meta(type, data) = event.payload, type == 0x20 {
+            insideChannelPrefixSpan = !data.isEmpty
+            continue
+        }
+        if event.isChannel {
+            insideChannelPrefixSpan = false
+            continue
+        }
+        if case let .meta(type, _) = event.payload, type == 0x03, !insideChannelPrefixSpan {
+            count += 1
+        }
+    }
+    return count
+}
+
+@MainActor
+private func trackCreateDeleteContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 1)], endTick: 48),
+    ]))
+    report.expect(document.engineTracks.usedTrackCount < document.trackBudget,
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "track budget admits a new track")
+    guard let added = document.addTrack(voice: 7) else {
+        report.fail("editcheck/EditCheckTest::trackCreateDelete",
+                    "addTrack rejected an in-budget track")
+        return
+    }
+    let voices = document.lanePoints(track: added, lane: .voice)
+    report.expect(!voices.isEmpty,
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "new track seeds a voice lane point")
+    report.expectEqual(Tick(0), voices.first?.tick,
+                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                       what: "seeded voice lane point sits at tick zero")
+    report.expectEqual(7, voices.first?.value,
+                       cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                       what: "seeded voice lane point carries the requested voice")
+    _ = try? document.addNotes([NewNote(track: added, tick: 40, pitch: 72,
+                                        duration: 96, velocity: 100)])
+    report.expect(document.notes(in: added).contains { $0.tick == 40 && $0.pitch == 72 },
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "added note is queryable on the new track")
+    document.deleteTrack(added)
+    report.expect(!document.notes(in: added).contains { $0.tick == 40 && $0.pitch == 72 },
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "deleted track no longer reports the note")
+    report.expect(chunksSortedByTick(document.state.file),
+                  cppID: "editcheck/EditCheckTest::trackCreateDelete",
+                  message: "raw chunks stay tick-sorted after delete")
+}
+
+@MainActor
+private func trackDuplicateContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .channel(status: 0xC0, data0: 1),
+            .channel(tick: 12, status: 0x90, data0: 60, data1: 100),
+            .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 48),
+    ]))
+    report.expect(document.engineTracks.usedTrackCount < document.trackBudget,
+                  cppID: "editcheck/EditCheckTest::trackDuplicate",
+                  message: "track budget admits a duplicate")
+    let source = document.notes(in: 0).map { "\($0.tick):\($0.pitch):\($0.duration)" }
+    guard let copy = document.duplicateTrack(0) else {
+        report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
+        return
+    }
+    report.expect(copy != 0,
+                  cppID: "editcheck/EditCheckTest::trackDuplicate",
+                  message: "duplicate occupies a different engine slot")
+    report.expectEqual(source, document.notes(in: copy)
+        .map { "\($0.tick):\($0.pitch):\($0.duration)" },
+        cppID: "editcheck/EditCheckTest::trackDuplicate",
+        what: "duplicate carries the same notes")
+    document.deleteTrack(copy)
+    report.expect(chunksSortedByTick(document.state.file),
+                  cppID: "editcheck/EditCheckTest::trackDuplicate",
+                  message: "raw chunks stay tick-sorted after deleting the copy")
+}
+
+@MainActor
+private func trackMoveContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .meta(tick: 4, type: 0x06, data: [0x5B]),
+            .channel(status: 0xC0, data0: 1),
+            .channel(tick: 12, status: 0x90, data0: 60, data1: 100),
+            .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 48),
+        MidiChunk(events: [
+            .meta(tick: 16, type: 0x06, data: [0x5D]),
+            .channel(status: 0xC1, data0: 2),
+        ], endTick: 48),
+    ]))
+    report.expect(document.engineTracks.usedTrackCount >= 2,
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "fixture exposes two engine tracks")
+    document.editTempo(TempoEdit(add: [
+        TempoPoint(tick: 264, microsecondsPerQuarterNote: 413_793)]))
+    document.setTimeSignature(tick: 288, numerator: 5, denominatorPower: 2)
+    let source = document.notes(in: 0).map { "\($0.tick):\($0.pitch):\($0.duration)" }
+    let sourceChannel = document.engineTracks.tracks[0].channel
+    let last = document.engineTracks.usedTrackCount - 1
+    let before = document.revision
+    report.expect(!document.moveTrack(0, to: 0),
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "same-slot move is a no-op")
+    report.expectEqual(before, document.revision,
+                       cppID: "editcheck/EditCheckTest::trackMove",
+                       what: "no-op move records no history entry")
+    report.expect(document.moveTrack(0, to: last),
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "move to the last slot succeeds")
+    report.expectEqual(before + 1, document.revision,
+                       cppID: "editcheck/EditCheckTest::trackMove",
+                       what: "real move records one history entry")
+    report.expectEqual(source, document.notes(in: last)
+        .map { "\($0.tick):\($0.pitch):\($0.duration)" },
+        cppID: "editcheck/EditCheckTest::trackMove",
+        what: "notes move with their track")
+    report.expectEqual(sourceChannel, document.engineTracks.tracks[last].channel,
+                       cppID: "editcheck/EditCheckTest::trackMove",
+                       what: "channel assignment follows the moved track")
+    report.expect(document.state.tempo.contains(
+        TempoPoint(tick: 264, microsecondsPerQuarterNote: 413_793)),
+        cppID: "editcheck/EditCheckTest::trackMove",
+        message: "staged tempo point survives the move")
+    report.expect(document.timeSignatures.contains { $0.tick == 288 && $0.numerator == 5 },
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "staged signature survives the move")
+    let movedTimeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(Tick(4), movedTimeline.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::trackMove",
+                       what: "loop start survives the move")
+    report.expectEqual(Tick(16), movedTimeline.loopEndTick,
+                       cppID: "editcheck/EditCheckTest::trackMove",
+                       what: "loop end survives the move")
+    _ = document.history.undoDocument()
+    report.expectEqual(source, document.notes(in: 0)
+        .map { "\($0.tick):\($0.pitch):\($0.duration)" },
+        cppID: "editcheck/EditCheckTest::trackMove",
+        what: "undo restores the notes to track zero")
+    _ = document.history.redoDocument()
+    report.expect(document.moveTrack(last, to: 0),
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "move back to the first slot succeeds")
+    report.expectEqual(source, document.notes(in: 0)
+        .map { "\($0.tick):\($0.pitch):\($0.duration)" },
+        cppID: "editcheck/EditCheckTest::trackMove",
+        what: "notes return with the track")
+    report.expect(chunksSortedByTick(document.state.file),
+                  cppID: "editcheck/EditCheckTest::trackMove",
+                  message: "raw chunks stay tick-sorted after the reorder")
+}
+
+@MainActor
+private func trackMarkerNameContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .channel(status: 0xC0, data0: 1),
+            .channel(tick: 12, status: 0x90, data0: 60, data1: 100),
+            .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 48),
+        MidiChunk(events: [.channel(status: 0xC1, data0: 2)], endTick: 48),
+    ]))
+    let bytesBefore = try? document.state.file.encoded()
+    let nameBefore = document.trackName(0)
+    let last = document.engineTracks.usedTrackCount - 1
+    document.renameTrack(0, to: "")
+    document.insertRawEvent(chunk: 0, event: .meta(tick: 0, type: 0x03, data: [0x5B]))
+    document.insertRawEvent(chunk: 0, event: .meta(tick: 40, type: 0x06, data: [0x5D, 0x5B]))
+    let loopStart = PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopStartTick
+    let loopEnd = PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopEndTick
+    report.expect(document.moveTrack(0, to: last),
+                  cppID: "editcheck/EditCheckTest::trackMarkerName",
+                  message: "move succeeds for the renamed track")
+    report.expectEqual("[", document.trackName(last),
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "marker-shaped track name moves with its track")
+    let afterMove = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(loopStart, afterMove.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "loop start survives the move")
+    report.expectEqual(loopEnd, afterMove.loopEndTick,
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "loop end survives the move")
+    report.expect(document.rawChunks[0].events.contains {
+        $0.metaType == 0x06 && $0.blob == [0x5D, 0x5B]
+    }, cppID: "editcheck/EditCheckTest::trackMarkerName",
+    message: "exact ][ marker blob stays in the front track")
+    while document.history.canUndo { _ = document.history.undoDocument() }
+    report.expectEqual(bytesBefore, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "undo restores the pre-edit bytes")
+    report.expectEqual(nameBefore, document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "undo restores the prior track name")
+    let restored = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(loopStart, restored.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "undo restores the loop start")
+    report.expectEqual(loopEnd, restored.loopEndTick,
+                       cppID: "editcheck/EditCheckTest::trackMarkerName",
+                       what: "undo restores the loop end")
+    report.expect(chunksSortedByTick(document.state.file),
+                  cppID: "editcheck/EditCheckTest::trackMarkerName",
+                  message: "raw chunks are tick-sorted after undo")
+}
+
+@MainActor
+private func trackDeleteRescueContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .meta(tick: 4, type: 0x06, data: [0x5B]),
+            .channel(status: 0xC0, data0: 1),
+        ], endTick: 48),
+        MidiChunk(events: [
+            .meta(tick: 16, type: 0x06, data: [0x5D]),
+            .channel(status: 0xC1, data0: 2),
+        ], endTick: 48),
+    ]))
+    document.deleteTrack(0)
+    var timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(Tick(4), timeline.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::trackDeleteRescue",
+                       what: "loop start survives the track delete")
+    report.expectEqual(Tick(16), timeline.loopEndTick,
+                       cppID: "editcheck/EditCheckTest::trackDeleteRescue",
+                       what: "loop end survives the track delete")
+    _ = document.history.undoDocument()
+    timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(Tick(4), timeline.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::trackDeleteRescue",
+                       what: "undo restores the loop start")
+    report.expectEqual(Tick(16), timeline.loopEndTick,
+                       cppID: "editcheck/EditCheckTest::trackDeleteRescue",
+                       what: "undo restores the loop end")
+}
+
+@MainActor
+private func trackRenameContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .channel(status: 0xC0, data0: 1),
+            .channel(tick: 12, status: 0x90, data0: 60, data1: 100),
+            .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 48),
+    ]))
+    document.renameTrack(0, to: "editcheck name")
+    report.expectEqual("editcheck name", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "rename stores the exact name")
+    report.expectEqual(1, document.state.file.chunks.first.map(bareTrackNameCount),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "exactly one bare name meta remains")
+    let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual("editcheck name", timeline.tracks.first?.name,
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "timeline reports the renamed track")
+    let before = document.revision
+    document.renameTrack(0, to: "  editcheck name  ")
+    report.expectEqual(before, document.revision,
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "trimmed same-name rename records no entry")
+    document.renameTrack(0, to: "[")
+    document.renameTrack(0, to: " ][ ")
+    report.expectEqual(before, document.revision,
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "marker-shaped renames record no entry")
+    report.expectEqual("editcheck name", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "name survives the rejected renames")
+    document.renameTrack(0, to: "")
+    report.expectEqual("", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "rename clears the stored name")
+    report.expectEqual(0, document.state.file.chunks.first.map(bareTrackNameCount),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "no bare name meta remains")
+    _ = document.history.undoDocument()
+    report.expectEqual("editcheck name", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "undo restores the stored name")
+    _ = document.history.redoDocument()
+    report.expectEqual("", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::trackRename",
+                       what: "redo clears the name again")
+}
+
+@MainActor
+private func songTimeSignatureContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 1)], endTick: 48),
+    ]))
+    let before = document.timeSignatures.count
+    document.setTimeSignature(tick: 96, numerator: 3, denominatorPower: 3)
+    report.expect(document.timeSignatures.contains { $0.tick == 96 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "signature exists at the staged tick")
+    report.expectEqual(3, document.timeSignatures.first { $0.tick == 96 }?.numerator,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "staged numerator is stored")
+    report.expectEqual(3, document.timeSignatures.first { $0.tick == 96 }?.denominatorPower,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "staged denominator power is stored")
+    document.setTimeSignature(tick: 96, numerator: 7, denominatorPower: 2)
+    report.expect(document.timeSignatures.contains { $0.tick == 96 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "signature still exists after replacement")
+    report.expectEqual(7, document.timeSignatures.first { $0.tick == 96 }?.numerator,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "replacement numerator is stored")
+    report.expectEqual(2, document.timeSignatures.first { $0.tick == 96 }?.denominatorPower,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "replacement denominator power is stored")
+    report.expectEqual(before + 1, document.timeSignatures.count,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "same-tick replacement grows the count by one")
+    document.moveTimeSignature(from: 96, to: 192)
+    report.expect(!document.timeSignatures.contains { $0.tick == 96 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "source tick no longer holds a signature")
+    report.expect(document.timeSignatures.contains { $0.tick == 192 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "signature exists at the destination tick")
+    report.expectEqual(7, document.timeSignatures.first { $0.tick == 192 }?.numerator,
+                       cppID: "editcheck/EditCheckTest::songTimeSignature",
+                       what: "moved signature keeps its numerator")
+    document.deleteTimeSignature(at: 192)
+    report.expect(!document.timeSignatures.contains { $0.tick == 192 },
+                  cppID: "editcheck/EditCheckTest::songTimeSignature",
+                  message: "deleted signature is gone")
+}
+
+@MainActor
+private func loopCfgUndoRedoContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 1)], endTick: 48),
+    ]))
+    let baseline = try? document.state.file.encoded()
+    let originalVolume = document.state.config.masterVolume
+    let loopStart = PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopStartTick
+    document.setLoop(end: false,
+                     tick: loopStart == TimeDefaults.noTick ? 0 : Int64(loopStart) + 24)
+    report.expect(chunksSortedByTick(document.state.file),
+                  cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
+                  message: "raw chunks stay tick-sorted after the loop edit")
+    var config = document.state.config
+    config.masterVolume = config.masterVolume == 80 ? 90 : 80
+    document.setConfig(config)
+    while document.history.canUndo { _ = document.history.undoDocument() }
+    report.expectEqual(baseline, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
+                       what: "undo-all restores the baseline bytes")
+    report.expectEqual(originalVolume, document.state.config.masterVolume,
+                       cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
+                       what: "undo-all restores the original master volume")
+    while document.history.canRedo { _ = document.history.redoDocument() }
+    let redone = try? document.state.file.encoded()
+    report.expect(redone != baseline,
+                  cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
+                  message: "redo-all reapplies the edits")
+    while document.history.canUndo { _ = document.history.undoDocument() }
+    report.expectEqual(baseline, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::loopCfgUndoRedo",
+                       what: "second undo-all restores the baseline bytes")
+}
+
+// MARK: - SongDocument metadata contracts (metadata proof coverage)
+
+private func formatZeroTrackBytes() -> [UInt8] {
+    // The format-0 fixture from tst_songdocument_metadata.cpp, verbatim bytes.
+    func vlq(_ value: UInt32) -> [UInt8] {
+        var digits = [UInt8(value & 0x7F)]
+        var rest = value >> 7
+        while rest > 0 { digits.insert(UInt8((rest & 0x7F) | 0x80), at: 0); rest >>= 7 }
+        return digits
+    }
+    var track: [UInt8] = []
+    var previous: UInt32 = 0
+    func emit(_ tick: UInt32, _ bytes: [UInt8]) {
+        track.append(contentsOf: vlq(tick - previous))
+        track.append(contentsOf: bytes)
+        previous = tick
+    }
+    emit(0, [0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20])
+    emit(0, [0xFF, 0x03, 0x04]) ; track.append(contentsOf: "Song".utf8)
+    emit(0, [0xFF, 0x20, 0x01, 0x04])
+    emit(0, [0xFF, 0x03, 0x04]) ; track.append(contentsOf: "Lead".utf8)
+    emit(0, [0xFF, 0x04, 0x03]) ; track.append(contentsOf: "Gtr".utf8)
+    emit(0, [0x91, 60, 100])
+    emit(0, [0x94, 64, 100])
+    emit(0, [0x97, 67, 100])
+    emit(12, [0xFF, 0x06, 0x01, 0x5B])
+    emit(12, [0xFF, 0x20, 0x01, 0x07])
+    emit(12, [0xFF, 0x03, 0x01, 0x3A])
+    emit(24, [0x81, 60, 0])
+    emit(24, [0x84, 64, 0])
+    emit(24, [0x87, 67, 0])
+    emit(36, [0xFF, 0x06, 0x01, 0x5D])
+    emit(36, [0xFF, 0x20, 0x01, 0x09])
+    emit(36, [0xFF, 0x03, 0x07]) ; track.append(contentsOf: "Ambient".utf8)
+    emit(48, [0xFF, 0x2F, 0x00])
+    var bytes: [UInt8] = [0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 0, 0, 1, 0, 24,
+                          0x4D, 0x54, 0x72, 0x6B]
+    bytes.append(UInt8((track.count >> 24) & 0xFF))
+    bytes.append(UInt8((track.count >> 16) & 0xFF))
+    bytes.append(UInt8((track.count >> 8) & 0xFF))
+    bytes.append(UInt8(track.count & 0xFF))
+    bytes.append(contentsOf: track)
+    return bytes
+}
+
+private func duplicateFixtureFile() -> MidiFile {
+    MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .meta(type: 0x01, data: Array("conductor".utf8)),
+            .meta(tick: 24, type: 0x51, data: [0x5B, 0x8D, 0x80]),
+            .meta(tick: 48, type: 0x51, data: [0x07, 0xA1, 0x20]),
+            .meta(tick: 48, type: 0x51, data: [0x06, 0x1A, 0x80]),
+            .meta(tick: 48, type: 0x01, data: Array("shared tick".utf8)),
+            .meta(tick: 72, type: 0x51, data: [0x03, 0x0D, 0x40]),
+            .meta(tick: 96, type: 0x51, data: [0x05, 0xB8, 0xD9]),
+        ], endTick: 120),
+        MidiChunk(events: [
+            .channel(status: 0xC0, data0: 5),
+            .channel(status: 0xB0, data0: 7, data1: 100),
+            .channel(status: 0xC0, data0: 9),
+            .channel(status: 0xB0, data0: 7, data1: 80),
+            .channel(status: 0x90, data0: 60, data1: 100),
+            .meta(tick: 48, type: 0x51, data: [0x09, 0x27, 0xC0]),
+            .channel(tick: 96, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 96),
+    ])
+}
+
+@MainActor
+private func xcmdSaveSnapshotContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 1)], endTick: 96),
+    ]))
+    let base: Tick = 100
+    document.insertRawEvent(chunk: 0, event: .channel(tick: base + 1, status: 0xB0,
+                                                    data0: Xcmd.selectorController, data1: 0x08))
+    document.insertRawEvent(chunk: 0, event: .channel(tick: base + 2, status: 0xB0,
+                                                    data0: Xcmd.payloadController, data1: 34))
+    document.insertRawEvent(chunk: 0, event: .channel(tick: base + 3, status: 0xB0,
+                                                    data0: Xcmd.selectorController, data1: 0x09))
+    let liveBytes = try? document.state.file.encoded()
+    let revision = document.revision
+    let dirty = document.isDirty
+    guard let snapshot = try? document.captureSave() else {
+        report.fail("editcheck/EditCheckTest::xcmdSaveSnapshot", "captureSave failed")
+        return
+    }
+    report.expectEqual(liveBytes, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "capture leaves live bytes untouched")
+    report.expectEqual(revision, document.revision,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "capture records no history entry")
+    report.expectEqual(dirty, document.isDirty,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "capture leaves the dirty flag untouched")
+    guard let saved = try? MidiFile.decode(snapshot.bytes) else {
+        report.fail("editcheck/EditCheckTest::xcmdSaveSnapshot",
+                    "snapshot bytes do not decode")
+        return
+    }
+    let events = saved.chunks[0].events
+    report.expect(!events.contains {
+        $0.tick == base + 1 && channelFields($0)?.data0 == Xcmd.selectorController
+    }, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+    message: "delayed selector is not saved")
+    let payload = events.filter {
+        guard $0.tick == base + 2, let fields = channelFields($0) else { return false }
+        return fields.data0 == Xcmd.selectorController || fields.data0 == Xcmd.payloadController
+    }
+    report.expectEqual(2, payload.count,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "canonical selector/payload pair is saved")
+    guard payload.count == 2 else { return }
+    report.expectEqual(Xcmd.selectorController, channelFields(payload[0])?.data0,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "saved pair leads with the selector controller")
+    report.expectEqual(UInt8(0x08), channelFields(payload[0])?.data1,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "saved selector carries its value")
+    report.expectEqual(Xcmd.payloadController, channelFields(payload[1])?.data0,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "saved pair follows with the payload controller")
+    report.expectEqual(UInt8(34), channelFields(payload[1])?.data1,
+                       cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+                       what: "saved payload carries its value")
+    report.expect(!events.contains {
+        $0.tick == base + 3 && channelFields($0)?.data0 == Xcmd.selectorController
+    }, cppID: "editcheck/EditCheckTest::xcmdSaveSnapshot",
+    message: "dangling selector is not saved")
+}
+
+@MainActor
+private func formatZeroCoercionContract(_ report: CheckReport) {
+    guard let file = try? MidiFile.decode(formatZeroTrackBytes()) else {
+        report.fail("editcheck/EditCheckTest::formatZeroCoercion",
+                    "format-0 fixture failed to decode")
+        return
+    }
+    let document = SongDocument(file: file)
+    let encodedHeader = (try? file.encoded()).map { Array($0.prefix(10)) }
+    report.expectEqual([0x4D, 0x54, 0x68, 0x64, 0, 0, 0, 6, 0, 1], encodedHeader,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "converted file encodes as format 1")
+    report.expectEqual(3, document.engineTracks.usedTrackCount,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "three channel streams map to engine tracks")
+    report.expectEqual(UInt8(1), document.engineTracks.tracks[0].channel,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "first engine track keeps channel 1")
+    report.expectEqual(UInt8(4), document.engineTracks.tracks[1].channel,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "second engine track keeps channel 4")
+    report.expectEqual(UInt8(7), document.engineTracks.tracks[2].channel,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "third engine track keeps channel 7")
+    report.expectEqual(1, document.engineTracks.tracks[0].midiChunk,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "first engine track maps to chunk 1")
+    report.expectEqual(UInt8(60), document.notes(in: 0).first?.pitch,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "first track keeps its note key")
+    report.expectEqual(Tick(24), document.notes(in: 0).first?.duration,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "first track keeps its note duration")
+    report.expectEqual(UInt8(64), document.notes(in: 1).first?.pitch,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "second track keeps its note key")
+    report.expectEqual(UInt8(67), document.notes(in: 2).first?.pitch,
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "third track keeps its note key")
+    report.expectEqual("Lead", document.trackName(1),
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "prefixed name lands on the second track")
+    report.expectEqual("", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "first track has no name")
+    report.expectEqual("", document.trackName(2),
+                       cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                       what: "third track has no name")
+    let chunks = document.rawChunks
+    report.expect(chunks[2].events.contains {
+        $0.metaType == 0x04 && $0.blob == Array("Gtr".utf8)
+    }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+    message: "instrument meta lands on the Lead chunk")
+    report.expect(chunks[0].events.contains {
+        $0.metaType == 0x03 && $0.blob == [0x3A]
+    }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+    message: "prefixed marker lands on the conductor chunk")
+    report.expect(!chunks[3].events.contains {
+        $0.metaType == 0x03 && $0.blob == [0x3A]
+    }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+    message: "marker stays out of the channel-7 chunk")
+    report.expect(chunks[4].events.contains {
+        $0.metaType == 0x03 && $0.blob == Array("Ambient".utf8)
+    }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+    message: "prefixed name lands on the Ambient chunk")
+    report.expect(chunks[0].events.enumerated().contains { index, event in
+        index > 0 && event.metaType == 0x03 && event.blob == [0x3A] &&
+            chunks[0].events[index - 1].metaType == 0x20
+    }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+    message: "channel prefix stays adjacent to its marker")
+    report.expect(chunks.enumerated().allSatisfy { index, chunk in
+        index == 0 || chunk.events.allSatisfy { $0.metaType != 0x20 }
+    }, cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+    message: "channel prefixes stay out of non-conductor chunks")
+    report.expect(chunks[0].events.allSatisfy { !$0.isChannel },
+                  cppID: "editcheck/EditCheckTest::formatZeroCoercion",
+                  message: "conductor chunk holds no channel events")
+}
+
+@MainActor
+private func formatZeroGlobalsContract(_ report: CheckReport) {
+    guard let file = try? MidiFile.decode(formatZeroTrackBytes()) else {
+        report.fail("editcheck/EditCheckTest::formatZeroGlobals",
+                    "format-0 fixture failed to decode")
+        return
+    }
+    let document = SongDocument(file: file)
+    let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(Tick(12), timeline.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                       what: "converted loop start lands at tick 12")
+    report.expectEqual(Tick(36), timeline.loopEndTick,
+                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                       what: "converted loop end lands at tick 36")
+    report.expectEqual(3, timeline.usedTrackCount,
+                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                       what: "timeline reports three used tracks")
+    report.expectEqual("Lead", timeline.tracks.count > 1 ? timeline.tracks[1].name : nil,
+                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                       what: "timeline names the second track Lead")
+    report.expectEqual(Tick(12), timeline.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                       what: "timeline loop start matches the document")
+    report.expect(chunksSortedByTick(document.state.file),
+                  cppID: "editcheck/EditCheckTest::formatZeroGlobals",
+                  message: "converted chunks are tick-sorted")
+}
+
+@MainActor
+private func formatZeroSaveRoundTripContract(_ report: CheckReport) {
+    guard let file = try? MidiFile.decode(formatZeroTrackBytes()) else {
+        report.fail("editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                    "format-0 fixture failed to decode")
+        return
+    }
+    let document = SongDocument(file: file)
+    let convertedLive = try? document.state.file.encoded()
+    guard let snapshot = try? document.captureSave(),
+          let saved = try? MidiFile.decode(snapshot.bytes) else {
+        report.fail("editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                    "capture or decode failed")
+        return
+    }
+    let tempos = document.state.tempo
+    report.expectEqual(1, tempos.count,
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "one typed tempo point survives conversion")
+    var tempoOutsideConductor = false
+    var tempoFirst = true
+    var savedTempos: [TempoPoint] = []
+    for (trackIndex, chunk) in saved.chunks.enumerated() {
+        var tick: Tick = 0
+        var haveTick = false
+        var nonTempoAtTick = false
+        for event in chunk.events {
+            if !haveTick || event.tick != tick {
+                tick = event.tick
+                haveTick = true
+                nonTempoAtTick = false
+            }
+            guard event.metaType == 0x51, let blob = event.blob else {
+                nonTempoAtTick = true
+                continue
+            }
+            tempoOutsideConductor = tempoOutsideConductor || trackIndex != 0
+            tempoFirst = tempoFirst && !nonTempoAtTick
+            if blob.count == 3 {
+                savedTempos.append(TempoPoint(tick: event.tick,
+                    microsecondsPerQuarterNote: UInt32(blob[0]) << 16 |
+                        UInt32(blob[1]) << 8 | UInt32(blob[2])))
+            }
+        }
+    }
+    report.expect(!tempoOutsideConductor,
+                  cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                  message: "saved tempos stay in the conductor chunk")
+    report.expect(tempoFirst,
+                  cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                  message: "saved tempos lead their tick group")
+    report.expectEqual(tempos, savedTempos,
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "saved tempos match the typed state")
+    report.expectEqual(convertedLive, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "live bytes survive the save")
+    document.renameTrack(0, to: "Bass")
+    report.expect(document.moveTrack(0, to: 2),
+                  cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                  message: "move to slot 2 succeeds")
+    report.expectEqual("Bass", document.trackName(2),
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "name follows its track across the move")
+    while document.history.canUndo { _ = document.history.undoDocument() }
+    report.expectEqual(convertedLive, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::formatZeroSaveRoundTrip",
+                       what: "undo-all restores the converted bytes")
+}
+
+@MainActor
+private func markerVersusTrackNameContract(_ report: CheckReport) {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [
+            .meta(type: 0x20, data: [0]),
+            .meta(type: 0x03, data: [0x5B]),
+            .channel(status: 0x90, data0: 60, data1: 100),
+            .meta(type: 0x03, data: Array("Real".utf8)),
+            .channel(tick: 24, status: 0x80, data0: 60, data1: 0),
+        ], endTick: 24),
+    ]))
+    report.expectEqual("Real", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "bare name wins over the marker-shaped name")
+    let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(Tick(0), timeline.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "marker-shaped name still opens the loop")
+    document.renameTrack(0, to: "Renamed")
+    report.expectEqual("Renamed", document.trackName(0),
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "rename stores the new name")
+    let renamed = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(Tick(0), renamed.loopStartTick,
+                       cppID: "editcheck/EditCheckTest::markerVersusTrackName",
+                       what: "loop start survives the rename")
+}
+
+@MainActor
+private func duplicateLaneAndTempoLoadContract(_ report: CheckReport) {
+    let document = SongDocument(file: duplicateFixtureFile())
+    report.expectEqual(2, document.lanePoints(track: 0, lane: .voice).count,
+                       cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                       what: "both voice lane points load")
+    report.expectEqual(2, document.lanePoints(track: 0, lane: .controller(7))
+        .filter { $0.tick == 0 }.count,
+        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+        what: "both CC7 duplicates load at tick zero")
+    report.expectEqual(80, document.lanePoints(track: 0, lane: .controller(7))
+        .last { $0.tick == 0 }?.value,
+        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+        what: "last CC7 duplicate wins the loaded value")
+    report.expectEqual(9, document.lanePoints(track: 0, lane: .voice)
+        .last { $0.tick == 0 }?.value,
+        cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+        what: "last voice duplicate wins the loaded value")
+    report.expectEqual([
+        TempoPoint(tick: 24, microsecondsPerQuarterNote: 3_000_000),
+        TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000),
+        TempoPoint(tick: 72, microsecondsPerQuarterNote: 235_294),
+        TempoPoint(tick: 96, microsecondsPerQuarterNote: 375_001),
+    ], document.state.tempo,
+    cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+    what: "clamped and exact tempo points load in order")
+    let timeline = PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+    report.expectEqual(5, timeline.tempoMap.count,
+                       cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                       what: "tempo map gains the default tick-zero point")
+    report.expectEqual(120.0, timeline.tempoMap.first?.beatsPerMinute,
+                       cppID: "editcheck/EditCheckTest::duplicateLaneAndTempoLoad",
+                       what: "tempo map fronts the default tempo")
+}
+
+@MainActor
+private func duplicateCanonicalizationContract(_ report: CheckReport) {
+    let document = SongDocument(file: duplicateFixtureFile())
+    let baseline = try? document.state.file.encoded()
+    var changedCount = 0
+    document.onChange = { _ in changedCount += 1 }
+    guard let point = document.lanePoints(track: 0, lane: .controller(7))
+        .first(where: { $0.tick == 0 }) else {
+        report.fail("editcheck/EditCheckTest::duplicateCanonicalization",
+                    "no CC7 lane point at tick zero")
+        return
+    }
+    let revision = document.revision
+    document.moveLanePoints(track: 0, lane: .controller(7), moves: [
+        LanePointMove(point: point, tick: point.tick, value: point.value)])
+    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+        .filter { $0.tick == 0 }.count,
+        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+        what: "no-op move collapses the duplicate lane points")
+    report.expectEqual(revision + 1, document.revision,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "canonicalizing move records one revision")
+    report.expectEqual(1, changedCount,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "canonicalizing move publishes one change")
+    let canonicalRevision = document.revision
+    changedCount = 0
+    _ = document.history.undoDocument()
+    let restored = document.lanePoints(track: 0, lane: .controller(7))
+        .filter { $0.tick == 0 }
+    report.expectEqual(2, restored.count,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "undo restores both duplicates")
+    report.expectEqual(100, restored.first?.value,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "undo restores the first duplicate value")
+    report.expectEqual(80, restored.dropFirst().first?.value,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "undo restores the second duplicate value")
+    report.expectEqual(baseline, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "undo restores the baseline bytes")
+    report.expectEqual(canonicalRevision + 1, document.revision,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "undo records another revision")
+    report.expectEqual(1, changedCount,
+                       cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+                       what: "undo publishes one change")
+    document.writeLane(track: 0, lane: .controller(7), from: 0, through: 0,
+                       points: [LaneWrite(tick: 0, value: 70)])
+    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+        .filter { $0.tick == 0 }.count,
+        cppID: "editcheck/EditCheckTest::duplicateCanonicalization",
+        what: "lane write collapses the restored duplicates")
+}
+
+@MainActor
+private func duplicateReplacementsAndNoOpsContract(_ report: CheckReport) {
+    let document = SongDocument(file: duplicateFixtureFile())
+    let baseline = try? document.state.file.encoded()
+    var changedCount = 0
+    document.onChange = { _ in changedCount += 1 }
+    document.writeLane(track: 0, lane: .controller(7), from: 48, through: 48,
+                       points: [LaneWrite(tick: 48, value: 55)])
+    guard let point = document.lanePoints(track: 0, lane: .controller(7))
+        .first(where: { $0.tick == 48 }) else {
+        report.fail("editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                    "no CC7 lane point at tick 48")
+        return
+    }
+    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+        .filter { $0.tick == 48 }.count,
+        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+        what: "lane write leaves one point at the tick")
+    let noOpBytes = try? document.state.file.encoded()
+    let noOpRevision = document.revision
+    changedCount = 0
+    document.moveLanePoints(track: 0, lane: .controller(7), moves: [
+        LanePointMove(point: point, tick: point.tick, value: point.value)])
+    report.expectEqual(noOpBytes, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "no-op lane move leaves bytes untouched")
+    report.expectEqual(noOpRevision, document.revision,
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "no-op lane move leaves the revision untouched")
+    report.expectEqual(0, changedCount,
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "no-op lane move publishes no change")
+    document.moveLanePoints(track: 0, lane: .controller(7), moves: [
+        LanePointMove(point: point, tick: 0, value: 55)])
+    report.expectEqual(1, document.lanePoints(track: 0, lane: .controller(7))
+        .filter { $0.tick == 0 }.count,
+        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+        what: "move onto an occupied tick collapses to one point")
+    report.expect(document.lanePoints(track: 0, lane: .controller(7))
+        .allSatisfy { $0.tick != 48 },
+        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+        message: "source tick is vacated by the move")
+    let noOpTempo = TempoPoint(tick: 48, microsecondsPerQuarterNote: 500_000)
+    document.editTempo(TempoEdit(add: [noOpTempo]))
+    report.expect(document.state.tempo.contains(noOpTempo),
+                  cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                  message: "applied tempo point is present")
+    let tempoBytes = try? document.state.file.encoded()
+    let tempoPoints = document.state.tempo
+    let tempoRevision = document.revision
+    changedCount = 0
+    document.editTempo(TempoEdit(add: [noOpTempo]))
+    report.expectEqual(tempoBytes, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "duplicate tempo apply leaves bytes untouched")
+    report.expectEqual(tempoPoints, document.state.tempo,
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "duplicate tempo apply leaves tempo points untouched")
+    report.expectEqual(tempoRevision, document.revision,
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "duplicate tempo apply leaves the revision untouched")
+    report.expectEqual(0, changedCount,
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "duplicate tempo apply publishes no change")
+    _ = document.history.undoDocument()
+    report.expect(document.state.tempo.contains(
+        TempoPoint(tick: 48, microsecondsPerQuarterNote: 400_000)),
+        cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+        message: "undo restores the replaced tempo point")
+    _ = document.history.redoDocument()
+    while document.history.canUndo { _ = document.history.undoDocument() }
+    report.expectEqual(baseline, try? document.state.file.encoded(),
+                       cppID: "editcheck/EditCheckTest::duplicateReplacementsAndNoOps",
+                       what: "undo-all restores the baseline bytes")
 }

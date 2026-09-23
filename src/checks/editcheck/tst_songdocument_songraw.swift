@@ -8,6 +8,7 @@ internal func runRawEventOriginalChecks(_ report: CheckReport) {
             try coreRawMutationRow(report, loaded: loaded)
             try coreRawReorderRow(report, loaded: loaded)
         }
+        try coreRawEventDocumentSeams(report)
     } catch {
         report.fail("editcheck/EditCheckTest::rawEventMutate", "corpus loading or encoding failed: \(error)")
     }
@@ -229,4 +230,53 @@ internal func coreRawEventEditing(_ report: CheckReport, document: SongDocument)
     report.expect(rawRewound == rawBaseline && rawReplayed == rawEdited,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         message: "raw mutation history fully rewinds to encoded baseline and replays exactly")
+}
+
+// Document-level seams of the eventviews originals: a raw insert pushes exactly
+// one undoable step (edits.cpp rawTempoAtomic), and a channel event on a free
+// channel promotes a metadata-only chunk to an engine track with undo/redo
+// demotion and repromotion (remap.cpp metadataChunkTransition).
+@MainActor
+private func coreRawEventDocumentSeams(_ report: CheckReport) throws {
+    let seamID = "eventviews/EventViewsEditsTest::rawTempoAtomic"
+    let seam = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 24),
+    ]))
+    let seamBefore = try coreEditHistoryCountAtTip(seam, report: report, cppID: seamID)
+    seam.insertRawEvent(chunk: 0, event: .meta(type: 0x06, data: Array("eventviews conversion".utf8)))
+    report.expectEqual(seamBefore + 1,
+                       try coreEditHistoryCountAtTip(seam, report: report, cppID: seamID),
+                       cppID: seamID,
+                       what: "raw insert pushes exactly one undoable step")
+
+    let remapID = "eventviews/EventViewsRemapTest::metadataChunkTransition"
+    let metadataChunk = 1
+    let promoted = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 120),
+        MidiChunk(events: [.meta(tick: 5, type: 0x06, data: Array("metadata only".utf8))],
+                  endTick: 120),
+        MidiChunk(events: [.channel(status: 0xC1, data0: 1)], endTick: 120),
+    ]))
+    let usedChannels = Set(promoted.engineTracks.tracks
+        .prefix(promoted.engineTracks.usedTrackCount).map(\.channel))
+    guard let freeChannel = (0..<16).map(UInt8.init).first(where: { !usedChannels.contains($0) })
+    else {
+        report.fail(remapID, "no free channel for metadata-chunk promotion")
+        return
+    }
+    promoted.insertRawEvent(chunk: metadataChunk,
+                            event: .channel(status: 0xC0 | freeChannel, data0: 3))
+    report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
+                       what: "channel event promotes the metadata chunk to an engine track")
+    report.expect(promoted.engineTracks.tracks
+        .prefix(promoted.engineTracks.usedTrackCount)
+        .contains { $0.midiChunk == metadataChunk },
+        cppID: remapID,
+        message: "an engine track owns the promoted metadata chunk")
+    _ = promoted.history.undoDocument()
+    report.expectEqual(2, promoted.engineTracks.usedTrackCount, cppID: remapID,
+                       what: "undo demotes the metadata chunk")
+    _ = promoted.history.redoDocument()
+    report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
+                       what: "redo repromotes the metadata chunk")
 }

@@ -5,7 +5,7 @@ Deleted in: 91cab247f7600b41c92b14114ad0352e3a002df0 Refine check suite boundari
 Original: src/checks/rollcheck/header_reconciliation.cpp
 Original SHA-256: 70afce2bc8c968ac2e07bda2381e175882152793f4e4c6748a6cb2760a84d566
 Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
-Swift SHA-256: 1d4a80e02d1c7f340a95039ed96cf7e5954eb9415f6cc74aab457f4f02e79951
+Swift SHA-256: 0ae3978d46ea8641d2d5a1f1ad82a17aadc9a50c450b0d54255d8c657a5d0b89
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -302,11 +302,11 @@ Counterpart expression:
           report.expectEqual([names.count], addRows, cppID: cppID,
                              what: "\(phase): add-track row remains last")
 
-S006 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:111
+S006 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:124
 Counterpart expression:
       report.expect(h.rows[2].addHovered, cppID: id, message: "add row displays hover")
 
-S007 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:113
+S007 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:126
 Counterpart expression:
       report.expect(!h.rows[2].addHovered, cppID: id, message: "leave clears add hover")
 

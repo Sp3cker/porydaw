@@ -4,7 +4,7 @@ Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
 Swift counterpart: src/checks/editcheck/EventChecks.swift (partial lineage: importAnalysis/importDedup/importRescale/importRescaleOverflow predicates only)
-Swift SHA-256: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -32,7 +32,7 @@ The swiftcore lane covers only the S predicates in EventChecks.swift; it does no
 
 Swift sources inspected (SHA-256)
 No same-dir import.swift exists. Related predicates live in
-src/checks/editcheck/EventChecks.swift: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+src/checks/editcheck/EventChecks.swift: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 Only that file references onboardcheck/ cppIDs in Swift; the S
 entries below are its report.expect*/report.fail calls carrying
 onboardcheck cppIDs. Predicates in the same Swift functions with
@@ -1221,35 +1221,35 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 S identifiers below are the report.expect*/report.fail calls in src/checks/editcheck/EventChecks.swift carrying onboardcheck cppIDs. All execute under runMidiImportSuite, except S001 which executes under the event-edits suite path (trackNameRoles) and carries its cppID as oracle lineage only: it observes document track-name queries, not the analyzeForImport budgets/warnings asserted in importAnalysis.
 
-S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift:156
+S001 | trackNameRoles | src/checks/editcheck/EventChecks.swift:170
 Verbatim call:
   report.expectEqual("Bare", imported.tracks.first?.name,
                          cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
                          what: "import and document queries select the same bare name")
 
 
-S002 | importAnalysis | src/checks/editcheck/EventChecks.swift:281
+S002 | importAnalysis | src/checks/editcheck/EventChecks.swift:295
 Verbatim call:
   report.expectEqual(1, analysis.silentTracks,
                          cppID: "onboardcheck/OnboardingTest::importAnalysis",
                          what: "player track budget identifies silent tracks")
 
 
-S003 | importAnalysis | src/checks/editcheck/EventChecks.swift:284
+S003 | importAnalysis | src/checks/editcheck/EventChecks.swift:298
 Verbatim call:
   report.expect(analysis.tracks[0].notesBeforeProgram,
                     cppID: "onboardcheck/OnboardingTest::importAnalysis",
                     message: "notes before instrument are reported")
 
 
-S004 | importTransforms | src/checks/editcheck/EventChecks.swift:296
+S004 | importTransforms | src/checks/editcheck/EventChecks.swift:310
 Verbatim call:
   report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
                          cppID: "onboardcheck/OnboardingTest::importDedup",
                          what: "only eligible same-tick setter is removed")
 
 
-S005 | importTransforms | src/checks/editcheck/EventChecks.swift:299
+S005 | importTransforms | src/checks/editcheck/EventChecks.swift:313
 Verbatim call:
   report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
           if case let .channel(status, data0, data1) = $0.payload {
@@ -1260,27 +1260,27 @@ Verbatim call:
       what: "action-like XCMD selectors are preserved")
 
 
-S006 | importTransforms | src/checks/editcheck/EventChecks.swift:307
+S006 | importTransforms | src/checks/editcheck/EventChecks.swift:321
 Verbatim call:
   report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
                          cppID: "onboardcheck/OnboardingTest::importRescale",
                          what: "rescale uses floor arithmetic")
 
 
-S007 | importTransforms | src/checks/editcheck/EventChecks.swift:310
+S007 | importTransforms | src/checks/editcheck/EventChecks.swift:324
 Verbatim call:
   report.expectEqual(Tick(1), file.chunks[0].endTick,
                          cppID: "onboardcheck/OnboardingTest::importRescale",
                          what: "end tick uses the same floor arithmetic")
 
 
-S008 | importTransforms | src/checks/editcheck/EventChecks.swift:318
+S008 | importTransforms | src/checks/editcheck/EventChecks.swift:332
 Verbatim call:
   report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
                       "overflowing rescale unexpectedly succeeded")
 
 
-S009 | importTransforms | src/checks/editcheck/EventChecks.swift:321
+S009 | importTransforms | src/checks/editcheck/EventChecks.swift:335
 Verbatim call:
   report.expectEqual(baseline, overflow,
                              cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",

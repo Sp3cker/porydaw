@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/trackheaders/trackheadermutations.cpp
 Original SHA-256: 33aaa04ef0108105def9b4a5a1a4a870ef78099e242c98fbb967bf32358a4785
 Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
-Swift SHA-256: 1d4a80e02d1c7f340a95039ed96cf7e5954eb9415f6cc74aab457f4f02e79951
+Swift SHA-256: 0ae3978d46ea8641d2d5a1f1ad82a17aadc9a50c450b0d54255d8c657a5d0b89
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -199,8 +199,8 @@ Original expression:
                    "the Quick rename input did not adopt the draft focus")
 
 A012 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:107
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.doublePointer(x: p.x, ...)): the source row exists and accepts the rename double click. [S001]
 Source context since previous assertion:
   ;
       // QTest's QWindow char overload synthesizes the literal character as the
@@ -224,8 +224,8 @@ Original expression:
   QVERIFY(sourceRow)
 
 A013 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:109
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.doublePointer(x: p.x, ...)): the source title point exists and accepts the double click. [S001]
 Source context since previous assertion:
   ;
       const std::optional<QPointF> sourceTitle = fx.titlePoint(*sourceRow);
@@ -233,8 +233,8 @@ Original expression:
   QVERIFY(sourceTitle)
 
 A014 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:112
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.doublePointer(...)): title double click opens rename. [S001]
 Source context since previous assertion:
   ;
       const QString original = fx.tab().document().trackName(fx.sourceTrack());
@@ -243,8 +243,8 @@ Original expression:
           pointerInput(fx.input(), *sourceTitle, Qt::LeftButton, Qt::LeftButton)))
 
 A015 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:114
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, h.renamingTrack): rename targets the clicked track. [S002]
 Source context since previous assertion:
   ;
 Original expression:
@@ -261,7 +261,7 @@ Original expression:
 
 A017 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:118
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermutations.swift; renamingTrack is proven but the native editor item has no presenter counterpart.
 Source context since previous assertion:
   ;
       QQuickItem *const editor = fx.rename().parentItem();
@@ -270,7 +270,7 @@ Original expression:
 
 A018 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:119
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermutations.swift; renamingTrack is proven but native editor x geometry has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -278,7 +278,7 @@ Original expression:
 
 A019 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:120
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermutations.swift; renamingTrack is proven but native editor y geometry has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -286,8 +286,8 @@ Original expression:
                                     headers.renameEditorRect().y()))
 
 A020 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:124
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(-1, h.renamingTrack): cancel closes the editor. [S003]
 Source context since previous assertion:
   ;
       headers.finishRename(false, false);
@@ -296,8 +296,8 @@ Original expression:
   QCOMPARE(headers.renamingTrack(), -1)
 
 A021 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:125
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): cancelled rename keeps the original name. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
@@ -312,8 +312,8 @@ Original expression:
   QVERIFY(!fx.rename().isVisible())
 
 A023 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:131
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(-1, h.renamingTrack): hidden cancels the draft. [S004]
 Source context since previous assertion:
   ;
 
@@ -324,16 +324,16 @@ Original expression:
   QCOMPARE(headers.renamingTrack(), -1)
 
 A024 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:132
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state): hidden cancellation keeps the original name. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().trackName(fx.sourceTrack()), original)
 
 A025 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:137
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(-1, h.renamingTrack): commit closes the editor. [S005]
 Source context since previous assertion:
   ;
       headers.beginRename(fx.sourceTrack());
@@ -344,8 +344,8 @@ Original expression:
   QCOMPARE(headers.renamingTrack(), -1)
 
 A026 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:138
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(state, document.state) before commit: the draft alone writes nothing. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
 Original expression:
@@ -360,8 +360,8 @@ Original expression:
   QVERIFY(!fx.rename().isVisible())
 
 A028 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:144
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(-1, h.renamingTrack): the committed editor stays closed. [S005]
 Source context since previous assertion:
   ;
 
@@ -372,8 +372,8 @@ Original expression:
   QCOMPARE(headers.renamingTrack(), -1)
 
 A029 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:145
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("HdrSrc", fx.document.trackName(0)): commit writes the new name. [S007]
 Source context since previous assertion:
   ;
 Original expression:
@@ -381,8 +381,8 @@ Original expression:
                    QString::fromLatin1(kRenamedTitle))
 
 A030 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:148
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("1 · HdrSrc", h.rows[0].title): renamed title survives presenter rebuild. [S009]
 Source context since previous assertion:
   ;
       QString error;
@@ -390,8 +390,8 @@ Original expression:
   QVERIFY2(fx.rebuild(error), qPrintable(error))
 
 A031 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:150
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("1 · HdrSrc", h.rows[0].title): the renamed row exists. [S009]
 Source context since previous assertion:
   ;
       const std::optional<int> renamedRow = fx.rowForTrack(fx.sourceTrack());
@@ -399,8 +399,8 @@ Original expression:
   QVERIFY(renamedRow)
 
 A032 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:151
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("1 · HdrSrc", h.rows[0].title): the title role shows the new name. [S009]
 Source context since previous assertion:
   ;
 Original expression:
@@ -409,8 +409,8 @@ Original expression:
                   .contains(QString::fromLatin1(kRenamedTitle)))
 
 A033 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:161
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): one undo restores the pre-rename name. [S011]
 Source context since previous assertion:
   ;
   }
@@ -425,8 +425,8 @@ Original expression:
                    QString::fromLatin1(kRenamedTitle))
 
 A034 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:164
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible): the source row exists and drags. [S012]
 Source context since previous assertion:
   ;
       const std::optional<int> sourceRow = fx.rowForTrack(fx.sourceTrack());
@@ -434,8 +434,8 @@ Original expression:
   QVERIFY(sourceRow)
 
 A035 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:166
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible): the start point exists and arms the drag. [S012]
 Source context since previous assertion:
   ;
       const std::optional<QPointF> start = fx.titlePoint(*sourceRow);
@@ -443,8 +443,8 @@ Original expression:
   QVERIFY(start)
 
 A036 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:170
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible) after beginPointer proves the press was delivered. [S012, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 
@@ -454,32 +454,32 @@ Original expression:
   QVERIFY(headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)))
 
 A037 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:171
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible): the no-op drag move displays the marker. [S012]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headers.pointerMove(pointerInput(fx.input(), noOpDrop, Qt::NoButton, Qt::LeftButton)))
 
 A038 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:172
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible): no-op drag displays the insertion marker. [S012]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headers.reorderIndicatorVisible())
 
 A039 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:173
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, h.reorderIndicatorY): no-op marker stays at the top insertion slot. [S013]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(headers.reorderIndicatorY(), 0.0))
 
 A040 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:174
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.endPointer(...)) inside the no-op drop: left release accepted. [S012, headerinputfixture.swift:30]
 Source context since previous assertion:
   ;
 Original expression:
@@ -487,16 +487,16 @@ Original expression:
           headers.pointerRelease(pointerInput(fx.input(), noOpDrop, Qt::LeftButton, Qt::NoButton)))
 
 A041 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:176
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: initial.expectUnchanged: no-op reorder drop writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), noOpRevision)
 
 A042 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:181
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible) after beginPointer proves the press was delivered. [S014, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 
@@ -507,8 +507,8 @@ Original expression:
   QVERIFY(headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)))
 
 A043 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:182
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(bottom, h.reorderIndicatorY): the drag move reaches the bottom slot. [S015]
 Source context since previous assertion:
   ;
 Original expression:
@@ -516,16 +516,16 @@ Original expression:
           headers.pointerMove(pointerInput(fx.input(), bottomDrop, Qt::NoButton, Qt::LeftButton)))
 
 A044 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:184
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible): the drag displays the marker. [S014]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headers.reorderIndicatorVisible())
 
 A045 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:185
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(bottom, h.reorderIndicatorY): marker sits at the bottom insertion slot. [S015]
 Source context since previous assertion:
   ;
 Original expression:
@@ -542,7 +542,7 @@ Original expression:
 
 A047 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:188
 Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S012-S029 in src/checks/trackheaders/trackheadermutations.swift; reorderIndicatorY is proven but the native marker item has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -550,15 +550,15 @@ Original expression:
 
 A048 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:189
 Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S012-S029 in src/checks/trackheaders/trackheadermutations.swift; reorderIndicatorY is proven but native marker bounds have no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fx.marker().y() + fx.marker().height() <= fx.input().height() + kGeometryTolerance)
 
 A049 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:191
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.reorderIndicatorVisible): cancel clears the marker. [S016]
 Source context since previous assertion:
   ;
       headers.inputCancelled(songview::TimelineInputCancelReason::PointerUngrabbed);
@@ -566,8 +566,8 @@ Original expression:
   QVERIFY(!headers.reorderIndicatorVisible())
 
 A050 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:192
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.endPointer(x: start.x, y: bottom, ...)): cancelled drag rejects the release. [S017]
 Source context since previous assertion:
   ;
 Original expression:
@@ -575,24 +575,24 @@ Original expression:
           pointerInput(fx.input(), bottomDrop, Qt::LeftButton, Qt::NoButton)))
 
 A051 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:194
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: initial.expectUnchanged: cancelled reorder writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), cancelRevision)
 
 A052 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:196
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible) after beginPointer proves the press was delivered. [S014, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)))
 
 A053 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:197
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(bottom, h.reorderIndicatorY): the drag move reaches the bottom slot. [S015]
 Source context since previous assertion:
   ;
 Original expression:
@@ -600,8 +600,8 @@ Original expression:
           headers.pointerMove(pointerInput(fx.input(), bottomDrop, Qt::NoButton, Qt::LeftButton)))
 
 A054 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:199
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.endPointer(..., button: 2)): wrong-button release consumes the armed drag. [S018]
 Source context since previous assertion:
   ;
 Original expression:
@@ -609,24 +609,24 @@ Original expression:
           pointerInput(fx.input(), bottomDrop, Qt::RightButton, Qt::LeftButton)))
 
 A055 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:201
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.reorderIndicatorVisible): wrong-button release clears the marker. [S019]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!headers.reorderIndicatorVisible())
 
 A056 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:202
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: initial.expectUnchanged: wrong-button reorder release writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), cancelRevision)
 
 A057 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:208
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!notes.isEmpty): the reorder fixture track carries content to move. [S020]
 Source context since previous assertion:
   ;
 
@@ -638,8 +638,8 @@ Original expression:
   QVERIFY2(!draggedNotes.empty(), "the reorder fixture track carried no content to move")
 
 A058 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:213
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.reorderIndicatorVisible) after beginPointer proves the press was delivered. [S014, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
       fx.view().setTrackMute(fx.sourceTrack(), true);
@@ -650,8 +650,8 @@ Original expression:
   QVERIFY(headers.pointerPress(pointerInput(fx.input(), *start, Qt::LeftButton, Qt::LeftButton)))
 
 A059 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:214
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(bottom, h.reorderIndicatorY): the drag move reaches the bottom slot. [S015]
 Source context since previous assertion:
   ;
 Original expression:
@@ -659,8 +659,8 @@ Original expression:
           headers.pointerMove(pointerInput(fx.input(), bottomDrop, Qt::NoButton, Qt::LeftButton)))
 
 A060 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:216
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(headers.endPointer(...)) inside the committing drop: left release accepted. [S021, headerinputfixture.swift:30]
 Source context since previous assertion:
   ;
 Original expression:
@@ -668,24 +668,24 @@ Original expression:
           headers.pointerRelease(pointerInput(fx.input(), bottomDrop, Qt::LeftButton, Qt::NoButton)))
 
 A061 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:218
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("Dragged", fx.document.trackName(1)) and the undo pair prove the move committed exactly one transaction. [S020, S024]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(fx.tab().document().revision() > commitRevision)
 
 A062 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:219
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("Dragged", fx.document.trackName(1)): the move carries the committed name. [S020]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().trackName(fx.reorderTargetTrack()), QStringLiteral("Dragged"))
 
 A063 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:222
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, fx.document.notes(in: 1)...): moved note count matches. [S021]
 Source context since previous assertion:
   ;
       const std::vector<DocNote> movedNotes =
@@ -694,8 +694,8 @@ Original expression:
   QCOMPARE(movedNotes.size(), draggedNotes.size())
 
 A064 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:224
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, ...): moved tick matches. [S021]
 Source context since previous assertion:
   ;
       for (size_t i = 0; i < movedNotes.size(); ++i) {
@@ -703,16 +703,16 @@ Original expression:
   QCOMPARE(movedNotes[i].tick, draggedNotes[i].tick)
 
 A065 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:225
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(notes, ...): moved key matches. [S021]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(movedNotes[i].key, draggedNotes[i].key)
 
 A066 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:227
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Set([1]), fx.session.mutedTracks): the move carries the mute mask. [S022]
 Source context since previous assertion:
   ;
       }
@@ -720,16 +720,16 @@ Original expression:
   QVERIFY(fx.view().trackMuted(fx.reorderTargetTrack()))
 
 A067 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:228
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Set([1]), fx.session.mutedTracks): the source track is unmuted after the move. [S022]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fx.view().trackMuted(fx.sourceTrack()))
 
 A068 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:231
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Set([0]), fx.session.mutedTracks): undo restores the mute mask. [S025]
 Source context since previous assertion:
   ;
       // The complete TrackRemap re-addresses view masks on undo and redo too.
@@ -738,16 +738,16 @@ Original expression:
   QVERIFY(fx.view().trackMuted(fx.sourceTrack()))
 
 A069 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:232
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Set([0]), fx.session.mutedTracks): the moved track is unmuted after undo. [S025]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fx.view().trackMuted(fx.reorderTargetTrack()))
 
 A070 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:234
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Set([1]), fx.session.mutedTracks): redo restores the moved mute mask. [S028]
 Source context since previous assertion:
   ;
       fx.tab().document().undoStack()->redo();
@@ -755,16 +755,16 @@ Original expression:
   QVERIFY(fx.view().trackMuted(fx.reorderTargetTrack()))
 
 A071 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:235
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(Set([1]), fx.session.mutedTracks): the source track is unmuted after redo. [S028]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fx.view().trackMuted(fx.sourceTrack()))
 
 A072 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:238
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("2 · Dragged", h.rows[1].title): the rebuilt row exists. [S029]
 Source context since previous assertion:
   ;
       fx.view().setTrackMute(fx.reorderTargetTrack(), false);
@@ -773,8 +773,8 @@ Original expression:
   QVERIFY2(fx.rebuild(error), qPrintable(error))
 
 A073 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:240
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("2 · Dragged", h.rows[1].title): the moved row exists. [S029]
 Source context since previous assertion:
   ;
       const std::optional<int> movedRow = fx.rowForTrack(fx.reorderTargetTrack());
@@ -782,8 +782,8 @@ Original expression:
   QVERIFY(movedRow)
 
 A074 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:241
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual("2 · Dragged", h.rows[1].title): the title role shows the moved name. [S029]
 Source context since previous assertion:
   ;
 Original expression:
@@ -808,8 +808,8 @@ Original expression:
   QVERIFY2(fx.focusInput(error), qPrintable(error))
 
 A076 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:256
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addHovered): the add row exists and shows hover. [S030]
 Source context since previous assertion:
   ;
       songview::TrackHeaderModel &headers = fx.headers();
@@ -819,8 +819,8 @@ Original expression:
   QVERIFY(row)
 
 A077 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:261
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addHovered): the add point exists and hovers. [S030]
 Source context since previous assertion:
   ;
       const qreal halfProbe = kProbeExtent / 2.0;
@@ -831,8 +831,8 @@ Original expression:
   QVERIFY(addPoint)
 
 A078 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:269
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addHovered): the hover move is delivered and visible. [S030]
 Source context since previous assertion:
   ;
       const int undoIndex = fx.tab().document().undoStack()->index();
@@ -845,16 +845,16 @@ Original expression:
   QVERIFY(headers.pointerMove(pointerInput(fx.input(), *addPoint, Qt::NoButton, Qt::NoButton)))
 
 A079 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:270
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addHovered): add row displays hover. [S030]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(rowData(headers, *row, songview::TrackHeaderModel::AddHoveredRole).toBool())
 
 A080 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:272
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.rows[2].addHovered): leave clears add hover. [S031]
 Source context since previous assertion:
   ;
       headers.pointerLeave();
@@ -862,8 +862,8 @@ Original expression:
   QVERIFY(!rowData(headers, *row, songview::TrackHeaderModel::AddHoveredRole).toBool())
 
 A081 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:273
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen && requests == 0): right press on the add row is handled without a menu or picker. [S032]
 Source context since previous assertion:
   ;
 Original expression:
@@ -871,24 +871,24 @@ Original expression:
           pointerInput(fx.input(), *addPoint, Qt::RightButton, Qt::RightButton)))
 
 A082 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:275
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, fx.session.selectedTrack): add row press keeps the selection. [S033]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.view().selectionModel().primaryTrack(), selected)
 
 A083 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:276
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): right press writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), revision)
 
 A084 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:278
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addPressed) after beginPointer proves the press was delivered. [S034, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 Original expression:
@@ -896,16 +896,16 @@ Original expression:
           headers.pointerPress(pointerInput(fx.input(), *addPoint, Qt::LeftButton, Qt::LeftButton)))
 
 A085 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:280
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addPressed): left press depresses the add row. [S034]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(rowData(headers, *row, songview::TrackHeaderModel::AddPressedRole).toBool())
 
 A086 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:282
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.rows[2].addPressed): FocusLost releases the add row. [S035]
 Source context since previous assertion:
   ;
       headers.inputCancelled(songview::TimelineInputCancelReason::FocusLost);
@@ -913,16 +913,16 @@ Original expression:
   QVERIFY(!rowData(headers, *row, songview::TrackHeaderModel::AddPressedRole).toBool())
 
 A087 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): cancelled press writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), revision)
 
 A088 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:284
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.endPointer(x: add.x, y: add.y, ...)): cancelled add row rejects the release. [S036]
 Source context since previous assertion:
   ;
 Original expression:
@@ -930,8 +930,8 @@ Original expression:
           !headers.pointerRelease(pointerInput(fx.input(), *addPoint, Qt::LeftButton, Qt::NoButton)))
 
 A089 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:287
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addPressed) after beginPointer proves the press was delivered. [S034, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 Original expression:
@@ -940,7 +940,7 @@ Original expression:
 
 A090 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:290
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the outside release outcome is proven by S037/S038 but the in-bounds guard condition itself is unasserted.
 Source context since previous assertion:
   ;
       const QPointF outsideRow = *addPoint - QPointF{0.0, qreal(headers.rowHeight())};
@@ -948,8 +948,8 @@ Original expression:
   QVERIFY(fx.input().bounds().contains(outsideRow))
 
 A091 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:291
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(0, requests): release outside the add row requests no picker. [S037]
 Source context since previous assertion:
   ;
 Original expression:
@@ -957,24 +957,24 @@ Original expression:
           headers.pointerRelease(pointerInput(fx.input(), outsideRow, Qt::LeftButton, Qt::NoButton)))
 
 A092 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:293
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): outside release writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), revision)
 
 A093 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:294
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.rows[2].addPressed): outside release clears the add row press. [S038]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!rowData(headers, *row, songview::TrackHeaderModel::AddPressedRole).toBool())
 
 A094 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:295
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addPressed) after beginPointer proves the press was delivered. [S034, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 Original expression:
@@ -982,8 +982,8 @@ Original expression:
           headers.pointerPress(pointerInput(fx.input(), *addPoint, Qt::LeftButton, Qt::LeftButton)))
 
 A095 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:297
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(1, requests) after fx.click: the release is accepted and requests the picker. [S039, headerinputfixture.swift:30]
 Source context since previous assertion:
   ;
 Original expression:
@@ -992,7 +992,7 @@ Original expression:
 
 A096 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:299
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the onAddTrackRequested callback is proven but the native voice-picker window has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1000,7 +1000,7 @@ Original expression:
 
 A097 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:301
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker cancelled = checks::voicepicker::active(fx.view());
@@ -1019,7 +1019,7 @@ Original expression:
 
 A099 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:315
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; picker cancellation is proven but the audition callback lives on VoiceChangesPage, not the header presenter.
 Source context since previous assertion:
   ;
       const QPoint cancelledHeldPoint =
@@ -1037,7 +1037,7 @@ Original expression:
 
 A100 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:316
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1045,7 +1045,7 @@ Original expression:
 
 A101 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:317
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1053,7 +1053,7 @@ Original expression:
 
 A102 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:318
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1061,7 +1061,7 @@ Original expression:
 
 A103 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:321
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release event has no presenter counterpart.
 Source context since previous assertion:
   ;
       checks::voicepicker::release(cancelled, 127);
@@ -1071,7 +1071,7 @@ Original expression:
 
 A104 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:322
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1079,7 +1079,7 @@ Original expression:
 
 A105 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:323
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1087,7 +1087,7 @@ Original expression:
 
 A106 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:324
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1095,7 +1095,7 @@ Original expression:
 
 A107 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:325
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; completeVoiceRequest(-1) covers cancellation but native outside-press picker dismissal has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1111,31 +1111,31 @@ Original expression:
 
 A109 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:327
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition count after dismissal has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(cancelledAudition.count(), 2)
 
 A110 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:328
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): cancelled picker writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), revision)
 
 A111 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:329
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(history, document.history.currentIdentity): cancelled picker leaves history unchanged. [headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().undoStack()->index(), undoIndex)
 
 A112 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:331
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[2].addPressed) after beginPointer proves the press was delivered. [S034, headerinputfixture.swift:28]
 Source context since previous assertion:
   ;
 Original expression:
@@ -1143,8 +1143,8 @@ Original expression:
           headers.pointerPress(pointerInput(fx.input(), *addPoint, Qt::LeftButton, Qt::LeftButton)))
 
 A113 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:333
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(2, requests): the picker can reopen after cancel. [S040]
 Source context since previous assertion:
   ;
 Original expression:
@@ -1153,7 +1153,7 @@ Original expression:
 
 A114 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:335
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the reopened picker request is proven but the native picker window has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1161,7 +1161,7 @@ Original expression:
 
 A115 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:337
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(fx.view());
@@ -1170,7 +1170,7 @@ Original expression:
 
 A116 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:340
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but the native accept-button state has no presenter counterpart.
 Source context since previous assertion:
   ;
 
@@ -1189,8 +1189,8 @@ Original expression:
   QVERIFY(quick_popup::popupSession(fx.view())->isOpen())
 
 A118 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:344
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(revision, document.revision): browsing the picker writes nothing. [headerinputfixture.swift:65]
 Source context since previous assertion:
   ;
 Original expression:
@@ -1209,7 +1209,7 @@ Original expression:
 
 A120 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:351
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition hold event has no presenter counterpart.
 Source context since previous assertion:
   ;
       QSignalSpy audition(&fx.view(), &SongView::auditionVoice);
@@ -1219,7 +1219,7 @@ Original expression:
 
 A121 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:352
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1227,7 +1227,7 @@ Original expression:
 
 A122 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:353
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1235,7 +1235,7 @@ Original expression:
 
 A123 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:354
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1243,7 +1243,7 @@ Original expression:
 
 A124 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:359
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release event has no presenter counterpart.
 Source context since previous assertion:
   ;
       // Release while this picker still owns the input. Accepting tears down
@@ -1255,7 +1255,7 @@ Original expression:
 
 A125 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:360
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1263,7 +1263,7 @@ Original expression:
 
 A126 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:361
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1271,7 +1271,7 @@ Original expression:
 
 A127 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:362
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1288,40 +1288,40 @@ Original expression:
   QTRY_VERIFY(!quick_popup::popupSession(fx.view())->isOpen())
 
 A129 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:366
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.revision + 1, fx.document.revision): picker acceptance creates one edit. [S044]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().revision(), revision + 1)
 
 A130 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:367
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.revision + 1, ...) plus the undo pair: exactly one undoable edit. [S044, S049]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.tab().document().undoStack()->index(), undoIndex + 1)
 
 A131 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:368
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([127], fx.document.lanePoints(track: 2, lane: .voice).map(\.value)): the new track takes the picked program. [S043]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_COMPARE(fx.view().currentProgram(fx.view().selectionModel().primaryTrack()), 127)
 
 A132 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:369
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(accepted, fx.document.state): completion publishes the accepted track. [S045]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY2(fx.rebuild(error), qPrintable(error))
 
 A133 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:372
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(4, h.rows.count): rebuilt add row follows the accepted track. [S047]
 Source context since previous assertion:
   ;
       const std::vector<int> after = modelTracks(headers);
@@ -1330,48 +1330,48 @@ Original expression:
   QCOMPARE(headers.rowCount(), rowCount + 1)
 
 A134 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:373
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)): the track set grows by one. [S046]
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(after.size(), before.size() + 1)
 
 A135 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:374
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)): track order stays sorted. [S046]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::is_sorted(after.cbegin(), after.cend()))
 
 A136 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:375
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)): the new set includes the originals. [S046]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::includes(after.cbegin(), after.cend(), before.cbegin(), before.cend()))
 
 A137 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:376
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0, 1, 2], fx.trackRows.map(\.track)): no duplicate tracks. [S046]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::adjacent_find(after.cbegin(), after.cend()) == after.cend())
 
 A138 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:377
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(h.rows[3].isAddTrack): the add row remains last. [S048]
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(afterRow && *afterRow == headers.rowCount() - 1)
 
 A139 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:381
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(baseline.state, fx.document.state): one undo restores the prior engine count. [S050]
 Source context since previous assertion:
   ;
       // Undoing the accepted add restores the previous records and add row;
@@ -1381,16 +1381,16 @@ Original expression:
   QTRY_COMPARE(fx.tab().document().engineTrackCount(), int(before.size()))
 
 A140 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:382
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(3, h.rows.count): undo restores the prior rows and add row. [S051]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(fx.addTrackRow() && modelTracks(headers) == before)
 
 A141 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:384
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(accepted, fx.document.state): redo restores the accepted engine count. [S053]
 Source context since previous assertion:
   ;
       fx.tab().document().undoStack()->redo();
@@ -1398,16 +1398,16 @@ Original expression:
   QTRY_COMPARE(fx.tab().document().engineTrackCount(), int(before.size()) + 1)
 
 A142 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:385
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(4, h.rows.count): redo restores the accepted rows. [S054]
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_COMPARE(headers.rowCount(), rowCount + 1)
 
 A143 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:389
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0], voiceRequests): the remap row exists and the voice double click targets it. [S055]
 Source context since previous assertion:
   ;
 
@@ -1417,8 +1417,8 @@ Original expression:
   QVERIFY(remapRow)
 
 A144 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:392
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual([0], voiceRequests): the remap voice point exists and requests the picker. [S055]
 Source context since previous assertion:
   ;
       headers.setScrollY(qreal(*remapRow * fx.rowHeight()));
@@ -1428,7 +1428,7 @@ Original expression:
 
 A145 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:398
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remapped picker request is proven but the native picker window has no presenter counterpart.
 Source context since previous assertion:
   ;
       // Drive the opening gesture through the QQuickWindow. Calling the model
@@ -1441,7 +1441,7 @@ Original expression:
 
 A146 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:400
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker remapped = checks::voicepicker::active(fx.view());
@@ -1460,7 +1460,7 @@ Original expression:
 
 A148 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:415
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remap-hold audition event has no presenter counterpart.
 Source context since previous assertion:
   ;
       const QPoint remapHeldPoint =
@@ -1479,7 +1479,7 @@ Original expression:
 
 A149 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:416
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition program payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1487,7 +1487,7 @@ Original expression:
 
 A150 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:417
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition key payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1495,7 +1495,7 @@ Original expression:
 
 A151 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:418
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition velocity payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1516,7 +1516,7 @@ Original expression:
 
 A153 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:425
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remap-release audition event has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1524,7 +1524,7 @@ Original expression:
 
 A154 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:426
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release program payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1532,7 +1532,7 @@ Original expression:
 
 A155 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:427
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release key payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1540,15 +1540,15 @@ Original expression:
 
 A156 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:428
 Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the audition release velocity payload has no presenter counterpart.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(remapReleaseAudition.at(0).at(2).toInt(), 0)
 
 A157 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:431
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: report.expect(fx.document.moveTrack(0, to: 1)) plus remapped baseline history: exactly the move's write. [S056, headerinputfixture.swift:67]
 Source context since previous assertion:
   ;
       QTest::mouseRelease(remapped.window, Qt::LeftButton, Qt::NoModifier, remapHeldPoint);
@@ -1557,8 +1557,8 @@ Original expression:
   QCOMPARE(fx.tab().document().undoStack()->index(), remapUndoIndex + 1)
 
 A158 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:433
-Disposition: PARTIAL
-Mapping/reason: Related predicates S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041, S042, S043, S044, S045, S046, S047, S048, S049, S050 in src/checks/trackheaders/trackheadermutations.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: remapped baseline state equality: the document equals the post-remap bytes. [headerinputfixture.swift:64]
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -1608,137 +1608,164 @@ S010 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutat
 S011 | renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:40
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo restores name")
 
-S012 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:56
+S012 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:55
+  report.expect(h.reorderIndicatorVisible, cppID: id,
+                    message: "no-op drag displays insertion marker")
+
+S013 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:57
+  report.expectEqual(0, h.reorderIndicatorY, cppID: id,
+                         what: "no-op drag marker stays at the top insertion slot")
+
+S014 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:64
   report.expect(h.reorderIndicatorVisible, cppID: id,
                         message: "cancel \(reason): drag displays insertion marker")
 
-S013 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:58
+S015 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:66
   report.expectEqual(bottom, h.reorderIndicatorY, cppID: id,
                              what: "cancel \(reason): marker reaches bottom insertion slot")
 
-S014 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:61
+S016 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:69
   report.expect(!h.reorderIndicatorVisible, cppID: id,
                         message: "cancel \(reason): marker clears")
 
-S015 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:63
+S017 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:71
   report.expect(!h.endPointer(x: start.x, y: bottom, button: 1, modifiers: 0),
                         cppID: id, message: "cancel \(reason): late release is rejected")
 
-S016 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:80
+S018 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:77
+  report.expect(h.endPointer(x: start.x, y: bottom, button: 2, modifiers: 0),
+                    cppID: id, message: "wrong-button release consumes the armed drag")
+
+S019 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:79
+  report.expect(!h.reorderIndicatorVisible, cppID: id,
+                    message: "wrong-button release clears the insertion marker")
+
+S020 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:84
+  report.expect(!notes.isEmpty, cppID: id,
+                    message: "the reorder fixture track carries content to move")
+
+S021 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:93
   report.expectEqual("Dragged", fx.document.trackName(1), cppID: id,
                          what: "drag commits pending name before moving its track")
 
-S017 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:82
+S022 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:95
   report.expectEqual(notes, fx.document.notes(in: 1).map {
           "\($0.tick):\($0.pitch):\($0.duration):\($0.velocity)"
       }, cppID: id, what: "reorder carries musical content to destination")
 
-S018 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:85
+S023 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:98
   report.expectEqual(Set([1]), fx.session.mutedTracks, cppID: id, what: "mute follows moved identity")
 
-S019 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:86
+S024 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:99
   report.expectEqual([1], fx.trackRows.filter(\.muteChecked).map(\.track), cppID: id,
                          what: "moved row displays migrated mute")
 
-S020 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:88
+S025 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:101
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "move undo succeeds")
 
-S021 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:89
+S026 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:102
   report.expectEqual(Set([0]), fx.session.mutedTracks, cppID: id, what: "undo restores mute identity")
 
-S022 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:90
+S027 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:103
   report.expectEqual("Dragged", fx.document.trackName(0), cppID: id,
                          what: "move undo retains earlier committed rename")
 
-S023 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:92
+S028 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:105
   report.expect(fx.document.history.redoDocument(), cppID: id, message: "move redo succeeds")
 
-S024 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:93
+S029 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:106
   report.expectEqual(Set([1]), fx.session.mutedTracks, cppID: id, what: "redo moves mute again")
 
-S025 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:95
+S030 | reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:108
   report.expectEqual("2 · Dragged", h.rows[1].title, cppID: id,
                          what: "moved title survives rebuild at new numbered slot")
 
-S026 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:111
+S031 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:124
   report.expect(h.rows[2].addHovered, cppID: id, message: "add row displays hover")
 
-S027 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:113
+S032 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:126
   report.expect(!h.rows[2].addHovered, cppID: id, message: "leave clears add hover")
 
-S028 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:115
+S033 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:128
   report.expect(!h.menuOpen && requests == 0, cppID: id,
                     message: "right press on add row opens neither menu nor picker")
 
-S029 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:117
+S034 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:130
   report.expectEqual(0, fx.session.selectedTrack, cppID: id, what: "add row preserves selection")
 
-S030 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:119
+S035 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:132
   report.expect(h.rows[2].addPressed, cppID: id, message: "left press depresses add row")
 
-S031 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:121
+S036 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:134
   report.expect(!h.rows[2].addPressed, cppID: id, message: "FocusLost releases add row")
 
-S032 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:122
+S037 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:135
   report.expect(!h.endPointer(x: add.x, y: add.y, button: 1, modifiers: 0),
                     cppID: id, message: "late add release is rejected")
 
-S033 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:126
+S038 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:139
   report.expectEqual(0, requests, cppID: id, what: "release outside add row requests no picker")
 
-S034 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:128
+S039 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:140
+  report.expect(!h.rows[2].addPressed, cppID: id,
+                    message: "outside release clears the add row press")
+
+S040 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:143
   report.expectEqual(1, requests, cppID: id, what: "add click requests existing voice picker")
 
-S035 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:133
+S041 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:148
   report.expectEqual(2, requests, cppID: id, what: "picker can reopen after cancellation")
 
-S036 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:135
+S042 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:150
   report.expectEqual(3, fx.document.engineTracks.usedTrackCount, cppID: id,
                          what: "picker acceptance creates one engine track")
 
-S037 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:137
+S043 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:152
   report.expectEqual(2, fx.session.selectedTrack, cppID: id, what: "new track becomes primary")
 
-S038 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:138
+S044 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:153
   report.expectEqual([127], fx.document.lanePoints(track: 2, lane: .voice).map(\.value),
                          cppID: id, what: "new track receives accepted program")
 
-S039 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:140
+S045 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:155
   report.expectEqual(baseline.revision + 1, fx.document.revision, cppID: id,
                          what: "accepted add writes once")
 
-S040 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:144
+S046 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:159
   report.expectEqual(accepted, fx.document.state, cppID: id, what: "completion is single use")
 
-S041 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:146
+S047 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:161
   report.expectEqual([0, 1, 2], fx.trackRows.map(\.track), cppID: id,
                          what: "rebuilt tracks remain ordered and unique")
 
-S042 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:148
+S048 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:163
   report.expectEqual(4, h.rows.count, cppID: id, what: "rebuilt add row follows three tracks")
 
-S043 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:149
+S049 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:164
   report.expect(h.rows[3].isAddTrack, cppID: id, message: "add row remains last")
 
-S044 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:150
+S050 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:165
   report.expect(fx.document.history.undoDocument(), cppID: id, message: "add undo succeeds")
 
-S045 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:151
+S051 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:166
   report.expectEqual(baseline.state, fx.document.state, cppID: id, what: "one undo removes added track")
 
-S046 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:152
+S052 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:167
   report.expectEqual(3, h.rows.count, cppID: id, what: "undo restores prior rows")
 
-S047 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:153
+S053 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:168
   report.expect(fx.document.history.redoDocument(), cppID: id, message: "add redo succeeds")
 
-S048 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:154
+S054 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:169
   report.expectEqual(accepted, fx.document.state, cppID: id, what: "redo restores accepted track")
 
-S049 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:161
+S055 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:170
+  report.expectEqual(4, h.rows.count, cppID: id, what: "redo restores the accepted rows")
+
+S056 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:177
   report.expectEqual([0], voiceRequests, cppID: id, what: "voice double click requests picker")
 
-S050 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:162
+S057 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:178
   report.expect(fx.document.moveTrack(0, to: 1), cppID: id, message: "picker target remaps")
 
 Shared helper: src/checks/trackheaders/headerfixture.swift

@@ -1,4 +1,5 @@
 Assertion correspondence: editcheck/tst_songdocument_songnotes.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.61s; build 12.39s).
 
 Reference revision: 8b9bb8fdf1f64c40ca190e9ed159756b023500f6
 Original: src/checks/editcheck/tst_songdocument_songnotes.cpp
@@ -8,2119 +9,580 @@ Swift SHA-256: db816d9c204e232c950f04a45679b53d474a0ab42664f0b7155d7fff494178ac
 Swift counterpart: src/checks/editcheck/tst_songdocument_songnotes.swift
 Swift SHA-256: 17115616495723d9812ffc39039ac6435815f1351c75da6cb870d232a9aec542
 Swift counterpart: src/checks/editcheck/tst_songdocument_runner.swift
-Swift SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+Swift SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 Swift counterpart: src/checks/editcheck/NoteCorpusChecks.swift
 Swift SHA-256: 8d789f67288946585e461481fc9ac21492625dbeb363ec8dc6abb0ea58d1caf5
 Shared helper: src/checks/editcheck/tst_songdocument_songranges.swift
 Shared SHA-256: b5e6d6e2404d710db924f74452a4a3d32114b4463a4436727be2e09bac619624
 
-Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below in file order, including fixture and
-setup guards. Source context preserves setup, rows, loops, and guards between
-assertions verbatim. S identifiers identify exact Swift predicates, listed after
-the inventory. MATCHED identifies an equivalent Swift predicate that would
-execute; execution must still be verified. PARTIAL identifies a related Swift
-predicate with an explicit unproved condition. NATIVE identifies retained
-native-window/rendering or native setup obligations; it does not establish
-coverage of any converted surface. GAP identifies an original predicate without
-an equivalent Swift assertion. Unsure PARTIAL-versus-GAP calls were resolved to
-GAP. None of these labels authorizes deletion or claims whole-case equivalence.
+Covered native implementation: src/core/songdocument.cpp :: SongDocument::addNote, addNotes, deleteNotes, moveNotes, moveNotesToPitches, resizeNotes, resizeNotesLeft, resizeNotesDurations, setNotesVelocity, nudgeNotesVelocity; overlap planning and document history commands in that file.
+The legacy native SongDocument implementation is retained on disk, not compiled into current application/check targets. The active song-document engine is Swift PorydawCore; the active QtBridge connects the Swift app to Qt, not to this legacy C++ SongDocument. This retires check translations only; no production or bridge source is deleted.
 
-Fixture, sequence and row constraints
-Resize-stop case is synthetic: a reverse false/true loop over resizeNotesDurations scenarios (capped extension, exact shrink), zero-capacity and kMaxTick rejections, per-note duration/identity/velocity preservation, undo-counted extension/shortening with byte identity, save-boundary cleanliness, and a compatible-inverse no-op asserted through full SavedDocState mismatch emptiness. The Swift port preserves every value and ordering: resizeNotesDurations becomes the pure Span<Note> planner document.resizeNotesDurations(_:byTicks:); mergeable resizeNotes(notes, d, true) becomes document.resizeNoteLengths(ids, byTicks:) (incremental keyboard semantics: merges compatible cumulative results, splits capped reversals, respects save boundaries, removes compatible inverse gestures); non-mergeable resizeNotes(notes, d) becomes document.resizeNotes(ids, edge: .trailing, byTicks:). undoStack()->clear() is unrepresentable in public Swift history, so each clear site recreates a fresh SongDocument from the encoded state and re-resolves note ids; undoStack()->count() becomes coreRangeHistoryPosition [count, cursor] probes; setClean() becomes didSave(captureSave()); isClean() becomes !isDirty; findNote(track,tick,key) becomes coreNoteFind over notes(in:); smf().write() becomes state.file.encoded(). SavedDocState/docStateMismatch become CoreNoteDocState/coreNoteStateMismatch covering the same fields (bytes, revision, save-identity analogue, undo count/cursor, clean, canRedo, track count, tempo, per-note id+velocity). Representational adaptations, all equivalence-preserving: (a) the original mutates DocNote copies for the adjacent/zeroCap planner inputs; Swift Note is immutable, so sibling synthetic documents supply notes with identical tick/pitch/duration/track — the only fields the pure planner reads; (b) history traversal publishes a revision, so undo count/cursor are probed once per site after the operation instead of inside every per-batch mismatch, and A054 additionally replays each rejection prefix on companion fixtures so per-batch count/cursor preservation is still proven; (c) the reverse loop distinguishes rows via [forward]/[reverse] cppID suffixes, matching corpus [label] convention. Supplemental regression: coreUnterminatedResizeChecks now covers the formerly missing trailing-resize termination. Both direct and keyboard paths generate a channel-matched velocity-zero note-on endpoint for positive and floor-clamped negative deltas, preserve the original note identity and bytes, and restore missing/present endpoints through undo/redo. Zero delta and overflow remain no-ops; compatible keyboard extensions merge; returning a cumulative gesture to zero restores its unterminated origin. These isolated-note regressions are additional behavior evidence, not new original A### sites or a claim of exhaustive unterminated-note collision/leading-resize parity.
-Batch-collision case is synthetic: three conflicting insertion batches looped against one SavedDocState (each must leave zero mismatch while preserving the staged redo branch), followed by exact-duplicate insertion asserting distinct assigned identities with identical tick/duration/key/velocity, plus undo/redo byte identity. The Swift port preserves all values: the same three batches reject via thrown NoteEditError.conflictingEditedNotes (try? mirrors the original's silent void rejection), the same three-note batch inserts, and the same exact-duplicate pair inserts with per-note tick/duration/key/velocity and assigned-distinct identity assertions.
-Corpus cases (noteEditingBasic/Batch/Abutting) enumerate every staged EditableTrack row at distantBase/step arithmetic. Basic covers the full gesture chain on one note: add, move by (8 steps, +3 keys), trailing resize, leading resizes (including the duration-1 clamp and end preservation), velocity set/nudge/clamp-to-127, and delete. Batch covers two-note insertion with single-entry undo/redo. Abutting covers seam-adjacent [seam-2step,seam)/[seam,seam+2step) notes with endIndex distinctness and a raw-event pairing-boundary scan.
+Certificate scope: each original macro/failure site is indexed below in source order. MATCHED means the cited Swift predicate executes on the corresponding synthetic scenario or each eligible corpus row, including fixture guards and failure branches; not a claim that every behavior of the C++ implementation matches Swift. Original source is recoverable at Reference revision and Original SHA-256. No live native differential comparison is claimed; the post-retirement Swift check is recorded above.
 
-Execution and ownership
-runNoteEditsSuite (adoptionAndPairing, insertionAndCollision, movementAndResize, velocityEditing, compatibilityRegressions, coreNoteTransactionChecks, coreNoteCorpusChecks), dispatched through pdcSuiteRun. coreNoteTransactionChecks (tst_songdocument_songnotes.swift) owns A001-A069 via coreNoteResizeChecks and coreNoteBatchCollisionChecks; it reuses the internal helpers coreRangeHistoryPosition and coreRangeNotePairsConsistent from tst_songdocument_songranges.swift. Synthetic fixtures are built by coreNoteDocument (throwing MidiFile encode/decode round trip, matching native makeDocument staging) plus direct addNotes/resizeNotes/resizeNoteLengths calls; coreNoteCorpusChecks (NoteCorpusChecks.swift) owns A070-A111, using coreEditCorpusSongs and firstNoteTrack for the same EditableTrack eligibility, fresh decode per method/row, and coreEditHistoryCountAtTip for exact batch history cardinality. Every required family fails rather than passing vacuously if no eligible row exists. The synthetic and corpus scenarios have separate owners because their fixture selection and execution contracts differ.
+Fixture and row constraints: A001-A030 loop over forward/reversed selection using two program-track fixtures (end tick 200); duration plans [20,30]/[20,40], same-tick zero-capacity and maxTick rejection, identity/velocity/pairing, cumulative keyboard resize merge/split, byte-exact undo/redo and save boundary. A031-A052 resize five notes across two tracks; stationary victim, inverse cancellation, floor-clamped no-op preserve snapshot bytes, revision, save identity, count/cursor, cleanliness, redo, track/tempo and note identity/velocity. Swift reconstructs from MIDI bytes instead of undoStack.clear, resolves IDs anew; history traversal is isolated from revision comparison. A053-A069 loop three conflicting insertion batches against staged redo, then three-note accepted batch and exact duplicate pair (distinct assigned IDs, identical tick/duration/key/velocity), undo/redo bytes; per-prefix companion fixtures test undo count/cursor without perturbing revision. A070-A111 cover every staged EditableTrack row on a fresh document, first track with notes, distantBase=max chunk end+100*ticksPerClock, with step=ticksPerClock: basic add/move(+8 steps,+3 keys)/trailing and leading resizes/velocity/delete; batch at +20/+22 steps; abutting seam at +30 steps with distinct end indexes and raw endpoint scan. Corpus loader rejects missing/duplicate config rows, unexpected flags and an empty eligible corpus. Positional lookups use NoteCorpusChecks.swift:58-70 and raw sortedness:73-77.
+Execution: runNoteEditsSuite in NoteChecks.swift:8-17 invokes coreNoteTransactionChecks (A001-A069) and coreNoteCorpusChecks (A070-A111); pdc_suite_run suite 4 in src/checks/support/corecheck/CoreCheckSupport.swift. Swift source files are registered in src/checks/CMakeLists.txt:121-122.
+Historical verification before this retirement: focused swiftcore noteEdits and documentHistory PASS artifact://90; then full deno task verify 24/24. The separate post-deletion result is recorded above.
 
-Verification
-Command: deno task verify --filter swiftcore --verbose --qt noteEdits documentHistory
-Result: PASS (focused noteEdits/documentHistory, artifact://90), followed by
-full deno task verify PASS 24/24 (33.98s) and lsp:swift index 6/6.
-All 111 original sites are MATCHED; A070-A111 now execute on the staged corpus.
-Focused run history: an earlier focused run passed the other targeted predicates
-but false-failed A052/A054 on revision because the mismatch helper traversed
-history before comparing revision; the fix compares direct invariants first and probes
-count/cursor once per site plus per-prefix companion fixtures for A054.
-Legacy editcheck is not registered in the current check catalog; no native run
-or live C++/Swift differential parity is claimed.
-
-Original assertion inventory
-
-A001 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:17
+Original assertion inventory (A site -> exact Swift S predicate)
+A001 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:17
 Disposition: MATCHED
-Swift: S040 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S040
 Mapping/reason: Swift S040 asserts the throwing coreNoteDocument fixture loads two editable tracks (usedTrackCount == 2), covering the original QVERIFY(fixture) validity guard; fixture failure reaches report.fail like the original's abort.
-Source context since previous assertion:
-  #include "checks/editcheck/tst_songdocument.h"
-
-  #include <QtTest>
-
-  #include <algorithm>
-
-  #include "checks/editcheck/tst_songdocument_support.h"
-
-  void EditCheckTest::noteResizeStopsAtNextSelectedStart()
-  {
-      using namespace songdocument_test;
-      for (bool reverse : {false, true}) {
-          SmfFile smf;
-          smf.tracks = {
-              conductor(), {{channel(0xC0, 0, 0, 0)}, 200}, {{channel(0xC1, 0, 0, 0)}, 200}};
-          auto fixture = makeDocument(smf);
-
-Original expression:
-  QVERIFY(fixture)
-
-A002 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:20
+A002 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:20
 Disposition: MATCHED
-Swift: S041 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S041
 Mapping/reason: Swift S041 asserts coreRangeNotePairsConsistent(track: 0) after the two-note insertion, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-          auto &doc = fixture->document;
-          doc.addNotes(0, {{0, 60, 10, 81}, {20, 60, 10, 92}});
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A003 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:23
+A003 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:23
 Disposition: MATCHED
-Swift: S042 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S042
 Mapping/reason: Swift S042 asserts the +20 plan exists (non-nil), matching the original's QVERIFY(durations).
-Source context since previous assertion:
-  ;
-          auto originals = doc.notesForTrack(0);
-          auto durations = doc.resizeNotesDurations(originals, 20);
-
-Original expression:
-  QVERIFY(durations)
-
-A004 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:24
+A004 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:24
 Disposition: MATCHED
-Swift: S043 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S043
 Mapping/reason: Swift S043 asserts the +20 plan equals [20,30], matching the original's QCOMPARE on the capped-extension preview vector.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(*durations, (std::vector<uint32_t>{20, 30}))
-
-A005 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:29
+A005 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:29
 Disposition: MATCHED
-Swift: S044 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S044
 Mapping/reason: Swift S044 asserts the adjacent-input plan exists (non-nil), matching the original's QVERIFY(durations).
-Source context since previous assertion:
-  ;
-          auto adjacent = originals;
-          adjacent[0].duration = 20;
-          adjacent[1].duration = 30;
-          durations = doc.resizeNotesDurations(adjacent, 10);
-
-Original expression:
-  QVERIFY(durations)
-
-A006 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:30
+A006 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:30
 Disposition: MATCHED
-Swift: S045 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S045
 Mapping/reason: Swift S045 asserts the adjacent-input plan equals [20,40], matching the original's QCOMPARE on the mutated-copy preview vector; the Swift sibling document supplies notes with identical tick/pitch/duration/track since Note is immutable.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(*durations, (std::vector<uint32_t>{20, 40}))
-
-A007 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:33
+A007 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:33
 Disposition: MATCHED
-Swift: S046 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S046
 Mapping/reason: Swift S046 asserts resizeNotesDurations returns nil for the zero-capacity input (both notes at the same tick), matching the original's QVERIFY(!durations) rejection.
-Source context since previous assertion:
-  ;
-          auto zeroCap = originals;
-          zeroCap[1].tick = zeroCap[0].tick;
-
-Original expression:
-  QVERIFY(!doc.resizeNotesDurations(zeroCap, 20))
-
-A008 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:34
+A008 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:34
 Disposition: MATCHED
-Swift: S047 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S047
 Mapping/reason: Swift S047 asserts resizeNotesDurations returns nil at the kMaxTick boundary, matching the original's QVERIFY(!durations) rejection.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!doc.resizeNotesDurations(originals, CoreTimeDefaults::kMaxTick))
-
-A009 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:42
+A009 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:42
 Disposition: MATCHED
-Swift: S049 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S049
 Mapping/reason: Swift S049 asserts duration 20 on the (0,60) note after the +20 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-          const auto before = doc.smf().write();
-          doc.undoStack()->clear();
-          auto selected = originals;
-          if (reverse)
-              std::reverse(selected.begin(), selected.end());
-          doc.resizeNotes(selected, 20, true);
-          auto notes = doc.notesForTrack(0);
-
-Original expression:
-  QCOMPARE(notes[0].duration, uint32_t(20))
-
-A010 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:43
+A010 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:43
 Disposition: MATCHED
-Swift: S050 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S050
 Mapping/reason: Swift S050 asserts duration 30 on the (20,60) note after the +20 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[1].duration, uint32_t(30))
-
-A011 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:45
+A011 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:45
 Disposition: MATCHED
-Swift: S051 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S051
 Mapping/reason: Swift S051 asserts note identities preserved across the +20 resize via the same resolved ids, matching the original's noteId QCOMPAREs.
-Source context since previous assertion:
-  ;
-          for (size_t i = 0; i < notes.size(); ++i) {
-
-Original expression:
-  QCOMPARE(notes[i].noteId, originals[i].noteId)
-
-A012 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:46
+A012 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:46
 Disposition: MATCHED
-Swift: S052 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S052
 Mapping/reason: Swift S052 asserts velocity 81/92 preserved on both notes across the +20 resize, matching the original's per-note QCOMPAREs.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[i].velocity, originals[i].velocity)
-
-A013 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:48
+A013 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:48
 Disposition: MATCHED
-Swift: S053 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S053
 Mapping/reason: Swift S053 asserts coreRangeNotePairsConsistent(track: 0) after the first +20 resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-          }
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A014 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:50
+A014 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:50
 Disposition: MATCHED
-Swift: S054 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S054
 Mapping/reason: Swift S054 asserts coreRangeNotePairsConsistent(track: 0) after the second +20 resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-          doc.resizeNotes(notes, 10, true);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A015 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:51
+A015 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:51
 Disposition: MATCHED
-Swift: S055 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S055
 Mapping/reason: Swift S055 asserts coreRangeHistoryPosition == [1,1] after the cumulative +20 resize merged into one entry, matching the original QCOMPARE(count,1).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(doc.undoStack()->count(), 1)
-
-A016 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:53
+A016 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:53
 Disposition: MATCHED
-Swift: S057 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S057
 Mapping/reason: Swift S057 asserts duration 20 on the (0,60) note after the second +20 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-          notes = doc.notesForTrack(0);
-
-Original expression:
-  QCOMPARE(notes[0].duration, uint32_t(20))
-
-A017 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:54
+A017 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:54
 Disposition: MATCHED
-Swift: S058 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S058
 Mapping/reason: Swift S058 asserts duration 40 on the (20,60) note after the second +20 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[1].duration, uint32_t(40))
-
-A018 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:57
+A018 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:57
 Disposition: MATCHED
-Swift: S059 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S059
 Mapping/reason: Swift S059 asserts coreRangeNotePairsConsistent(track: 0) after the -10 shortening, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-          const auto extended = doc.smf().write();
-          doc.resizeNotes(notes, -10, true);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A019 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:59
+A019 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:59
 Disposition: MATCHED
-Swift: S061 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S061
 Mapping/reason: Swift S061 asserts duration 10 on the (0,60) note after the -10 shortening, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-          notes = doc.notesForTrack(0);
-
-Original expression:
-  QCOMPARE(notes[0].duration, uint32_t(10))
-
-A020 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:60
+A020 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:60
 Disposition: MATCHED
-Swift: S062 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S062
 Mapping/reason: Swift S062 asserts duration 30 on the (20,60) note after the -10 shortening, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(notes[1].duration, uint32_t(30))
-
-A021 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:61
+A021 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:61
 Disposition: MATCHED
-Swift: S063 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S063
 Mapping/reason: Swift S063 asserts coreRangeHistoryPosition == [2,2] after the capped reversal split the gesture into two entries, matching the original QCOMPARE(count,2).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(doc.undoStack()->count(), 2)
-
-A022 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:64
+A022 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:64
 Disposition: MATCHED
-Swift: S064 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S064
 Mapping/reason: Swift S064 asserts state.file.encoded() equals the extended bytes after the first undoDocument() reverts the shortening, the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ; // capped extension is not additive on reversal
-          const auto shortened = doc.smf().write();
-          doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), extended)
-
-A023 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:66
+A023 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:66
 Disposition: MATCHED
-Swift: S065 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S065
 Mapping/reason: Swift S065 asserts state.file.encoded() equals the pre-resize bytes after the second undoDocument(), the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
-
-A024 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:68
+A024 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:68
 Disposition: MATCHED
-Swift: S066 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S066
 Mapping/reason: Swift S066 asserts coreRangeNotePairsConsistent(track: 0) after the second undoDocument(), the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->redo();
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A025 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:70
+A025 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:70
 Disposition: MATCHED
-Swift: S067 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S067
 Mapping/reason: Swift S067 asserts state.file.encoded() equals the shortened bytes after redoDocument(), the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), shortened)
-
-A026 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:71
+A026 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:71
 Disposition: MATCHED
-Swift: S068 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S068
 Mapping/reason: Swift S068 asserts coreRangeNotePairsConsistent(track: 0) after redoDocument() replays the shortening, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A027 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:75
+A027 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:75
 Disposition: MATCHED
-Swift: S069 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S069
 Mapping/reason: Swift S069 asserts coreRangeNotePairsConsistent(track: 0) after the first post-save resizeNoteLengths(+1), the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-
-          doc.undoStack()->clear();
-          doc.resizeNotes(doc.notesForTrack(0), 1, true);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A028 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:78
+A028 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:78
 Disposition: MATCHED
-Swift: S070 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S070
 Mapping/reason: Swift S070 asserts coreRangeNotePairsConsistent(track: 0) after the second post-save resizeNoteLengths(+1), the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->setClean();
-          doc.resizeNotes(doc.notesForTrack(0), 1, true);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A029 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:79
+A029 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:79
 Disposition: MATCHED
-Swift: S071 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S071
 Mapping/reason: Swift S071 asserts coreRangeHistoryPosition == [2,1] after the two post-save resizeNoteLengths(+1) gestures, matching the original QCOMPARE(count,2) with cursor at the top.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(doc.undoStack()->count(), 2)
-
-A030 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:81
+A030 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:81
 Disposition: MATCHED
-Swift: S072 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S072
 Mapping/reason: Swift S072 asserts !document.isDirty after undoDocument() returns to the didSave boundary, matching the original's isClean() observation at the same point.
-Source context since previous assertion:
-  ;
-          doc.undoStack()->undo();
-
-Original expression:
-  QVERIFY(doc.undoStack()->isClean())
-
-A031 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:87
+A031 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:87
 Disposition: MATCHED
-Swift: S073 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S073
 Mapping/reason: Swift S073 asserts the throwing coreNoteDocument fixture loads two editable tracks (usedTrackCount == 2), covering the original QVERIFY(fixture) validity guard; fixture failure reaches report.fail like the original's abort.
-Source context since previous assertion:
-  ;
-      }
-
-      SmfFile smf;
-      smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}, {{channel(0xC1, 0, 0, 0)}, 200}};
-      auto fixture = makeDocument(smf);
-
-Original expression:
-  QVERIFY(fixture)
-
-A032 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:94
+A032 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:94
 Disposition: MATCHED
-Swift: S073 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S073 asserts coreRangeNotePairsConsistent(track: 0) after the multi-track +30 resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-      auto &doc = fixture->document;
-      doc.addNotes(0, {{0, 60, 10, 81}, {20, 60, 10, 82}, {40, 60, 10, 83}, {0, 61, 10, 84}});
-      doc.addNote(1, 0, 60, 10, 85);
-      auto selected = doc.notesForTrack(0);
-      selected.push_back(doc.notesForTrack(1).front());
-      doc.resizeNotes(selected, 30);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A033 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:95
+Swift: S074
+Mapping/reason: Swift S074 asserts coreRangeNotePairsConsistent(track: 0) after the multi-track +30 resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
+A033 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:95
 Disposition: MATCHED
-Swift: S074 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S074 asserts coreRangeNotePairsConsistent(track: 1) after the multi-track +30 resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
-
-A034 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:97
+Swift: S075
+Mapping/reason: Swift S075 asserts coreRangeNotePairsConsistent(track: 1) after the multi-track +30 resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
+A034 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:97
 Disposition: MATCHED
-Swift: S075 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S075 asserts coreNoteFind(track 0, tick 0, pitch 60) returns the note, matching the original's findNote(0,0,60) presence check.
-Source context since previous assertion:
-  ;
-      DocNote note;
-
-Original expression:
-  QVERIFY(doc.findNote(0, 0, 60, &note))
-
-A035 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:98
+Swift: S076
+Mapping/reason: Swift S076 asserts coreNoteFind(track 0, tick 0, pitch 60) returns the note, matching the original's findNote(0,0,60) presence check.
+A035 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:98
 Disposition: MATCHED
-Swift: S076 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S076 asserts duration 20 on the (0,60) note after the +30 resize capped at the next selected start, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(20))
-
-A036 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:99
+Swift: S077
+Mapping/reason: Swift S077 asserts duration 20 on the (0,60) note after the +30 resize capped at the next selected start, matching the original's QCOMPARE on the same value.
+A036 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:99
 Disposition: MATCHED
-Swift: S077 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S077 asserts coreNoteFind(track 0, tick 20, pitch 60) returns the note, matching the original's findNote(0,20,60) presence check.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(doc.findNote(0, 20, 60, &note))
-
-A037 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:100
+Swift: S078
+Mapping/reason: Swift S078 asserts coreNoteFind(track 0, tick 20, pitch 60) returns the note, matching the original's findNote(0,20,60) presence check.
+A037 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:100
 Disposition: MATCHED
-Swift: S078 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S078 asserts duration 20 on the (20,60) note after the +30 resize capped at the next selected start, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(20))
-
-A038 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:101
+Swift: S079
+Mapping/reason: Swift S079 asserts duration 20 on the (20,60) note after the +30 resize capped at the next selected start, matching the original's QCOMPARE on the same value.
+A038 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:101
 Disposition: MATCHED
-Swift: S079 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S079 asserts coreNoteFind(track 0, tick 40, pitch 60) returns the note, matching the original's findNote(0,40,60) presence check.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(doc.findNote(0, 40, 60, &note))
-
-A039 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:102
+Swift: S080
+Mapping/reason: Swift S080 asserts coreNoteFind(track 0, tick 40, pitch 60) returns the note, matching the original's findNote(0,40,60) presence check.
+A039 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:102
 Disposition: MATCHED
-Swift: S080 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S080 asserts duration 40 on the (40,60) note after the +30 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(40))
-
-A040 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:103
+Swift: S081
+Mapping/reason: Swift S081 asserts duration 40 on the (40,60) note after the +30 resize, matching the original's QCOMPARE on the same value.
+A040 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:103
 Disposition: MATCHED
-Swift: S081 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S081 asserts coreNoteFind(track 0, tick 0, pitch 61) returns the note, matching the original's findNote(0,0,61) presence check.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(doc.findNote(0, 0, 61, &note))
-
-A041 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:104
+Swift: S082
+Mapping/reason: Swift S082 asserts coreNoteFind(track 0, tick 0, pitch 61) returns the note, matching the original's findNote(0,0,61) presence check.
+A041 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:104
 Disposition: MATCHED
-Swift: S082 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S082 asserts duration 40 on the (0,61) note after the +30 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(40))
-
-A042 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:105
+Swift: S083
+Mapping/reason: Swift S083 asserts duration 40 on the (0,61) note after the +30 resize, matching the original's QCOMPARE on the same value.
+A042 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:105
 Disposition: MATCHED
-Swift: S083 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S083 asserts coreNoteFind(track 1, tick 0, pitch 60) returns the note, matching the original's findNote(1,0,60) presence check.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(doc.findNote(1, 0, 60, &note))
-
-A043 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:106
+Swift: S084
+Mapping/reason: Swift S084 asserts coreNoteFind(track 1, tick 0, pitch 60) returns the note, matching the original's findNote(1,0,60) presence check.
+A043 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:106
 Disposition: MATCHED
-Swift: S084 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S084 asserts duration 40 on the track-1 note after the +30 resize, matching the original's QCOMPARE on the same value.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(40))
-
-A044 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:110
+Swift: S085
+Mapping/reason: Swift S085 asserts duration 40 on the track-1 note after the +30 resize, matching the original's QCOMPARE on the same value.
+A044 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:110
 Disposition: MATCHED
-Swift: S086 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S086
 Mapping/reason: Swift S086 asserts coreRangeNotePairsConsistent(track: 1) after the added track-1 note, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-
-      // A compatible inverse removes the gesture and restores its stationary victim.
-      doc.addNote(1, 42, 60, 10, 93);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
-
-A045 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:113
+A045 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:113
 Disposition: MATCHED
-Swift: S087 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S087
 Mapping/reason: Swift S087 asserts coreNoteFind(track 1, tick 0, pitch 60) returns the note, matching the original's findNote(1,0,60) presence check.
-Source context since previous assertion:
-  ;
-      doc.undoStack()->clear();
-      const auto before = doc.smf().write();
-
-Original expression:
-  QVERIFY(doc.findNote(1, 0, 60, &note))
-
-A046 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:115
+A046 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:115
 Disposition: MATCHED
-Swift: S088 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
-Mapping/reason: Swift S088 asserts coreRangeNotePairsConsistent(track: 0) after the inverse resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-      doc.resizeNotes({note}, 5, true);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
-
-A047 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:116
+Swift: S088
+Mapping/reason: Swift S088 asserts coreRangeNotePairsConsistent(track: 1) after the inverse resize, the same exhaustive on/off pairing invariant the original QVERIFYs.
+A047 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:116
 Disposition: MATCHED
-Swift: S089 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S089
 Mapping/reason: Swift S089 asserts document.note(id) returns the note after the inverse resize, matching the original's findNote(noteId) presence check.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(doc.findNote(note.noteId, &note))
-
-A048 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:118
+A048 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:118
 Disposition: MATCHED
-Swift: S090 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S090
 Mapping/reason: Swift S090 asserts state.file.encoded() equals the pre-resize bytes after the compatible-inverse resize, the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-      doc.resizeNotes({note}, -5, true);
-
-Original expression:
-  QCOMPARE(doc.smf().write(), before)
-
-A049 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:119
+A049 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:119
 Disposition: MATCHED
-Swift: S091 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S091
 Mapping/reason: Swift S091 asserts coreRangeHistoryPosition == [0,0] after the compatible-inverse resize removed the gesture entry entirely, matching the original QCOMPARE(count,0).
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(doc.undoStack()->count(), 0)
-
-A050 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:120
+A050 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:120
 Disposition: MATCHED
-Swift: S092 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S092
 Mapping/reason: Swift S092 asserts coreRangeNotePairsConsistent(track: 1) after the inverse resize removed the gesture, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
-
-A051 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:122
+A051 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:122
 Disposition: MATCHED
-Swift: S093 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S093
 Mapping/reason: Swift S093 asserts coreRangeNotePairsConsistent(track: 1) after the floor-clamped drag, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-      doc.resizeNotes(doc.notesForTrack(1), -100);
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 1))
-
-A052 | EditCheckTest::noteResizeStopsAtNextSelectedStart | src/checks/editcheck/tst_songdocument_songnotes.cpp:125
+A052 | EditCheckTest::noteResizeStopsAtNextSelectedStart | tst_songdocument_songnotes.cpp:125
 Disposition: MATCHED
-Swift: S094/S095 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteResizeChecks
+Swift: S094; S095
 Mapping/reason: Swift S094 asserts coreNoteStateMismatch == nil after the resizeNoteLengths(-1) no-op against the pre-op snapshot, covering every SavedDocState field the original docStateMismatch emptiness covers; S095 asserts coreRangeHistoryPosition equals the pre-op position, covering the undo count/cursor fields that traversal's revision publish would otherwise disturb.
-Source context since previous assertion:
-  ;
-      const SavedDocState noOp = captureDocState(doc, 1);
-      doc.resizeNotes(doc.notesForTrack(1), -1, true);
-
-Original expression:
-  QVERIFY2(docStateMismatch(doc, noOp, 1).isEmpty(), qPrintable(docStateMismatch(doc, noOp, 1)))
-
-A053 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:134
+A053 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:134
 Disposition: MATCHED
-Swift: S096 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S096
 Mapping/reason: Swift S096 asserts the throwing coreNoteDocument fixture loads one editable track (usedTrackCount == 1), covering the original QVERIFY(fixture) validity guard; fixture failure reaches report.fail like the original's abort.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::noteBatchCollisionRejects()
-  {
-      using namespace songdocument_test;
-      SmfFile smf;
-      smf.tracks = {conductor(), {{channel(0xC0, 0, 0, 0)}, 200}};
-      auto fixture = makeDocument(smf);
-
-Original expression:
-  QVERIFY(fixture)
-
-A054 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:145
+A054 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:145
 Disposition: MATCHED
-Swift: S097/S098/S099 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S097; S098; S099
 Mapping/reason: Swift S097 asserts coreNoteStateMismatch == nil after each of the three rejected batches against one saved baseline, covering every SavedDocState field (bytes, revision, save identity, clean, canRedo, track count, tempo, note ids/velocities) the original docStateMismatch emptiness covers; S098 probes the post-loop history position and S099 replays each rejection prefix on companion fixtures probing coreRangeHistoryPosition == [2,1], together proving per-batch undo count/cursor preservation that a single post-loop probe could not (a transient history mutation restored by a later batch would evade it).
-Source context since previous assertion:
-  ;
-      auto &doc = fixture->document;
-      doc.addNote(0, 0, 60, 100, 91);
-      doc.addNote(0, 150, 62, 10, 72);
-      doc.undoStack()->undo(); // refusal must not discard this redo branch
-      const SavedDocState saved = captureDocState(doc);
-      for (const std::vector<SongDocument::NewNote> &batch :
-           {std::vector<SongDocument::NewNote>{{10, 60, 20, 80}, {20, 60, 20, 90}},
-            std::vector<SongDocument::NewNote>{{10, 60, 20, 80}, {10, 60, 10, 90}},
-            std::vector<SongDocument::NewNote>{{10, 60, 40, 80}, {20, 60, 10, 90}}}) {
-          doc.addNotes(0, batch);
-
-Original expression:
-  QVERIFY2(docStateMismatch(doc, saved).isEmpty(), qPrintable(docStateMismatch(doc, saved)))
-
-A055 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:148
+A055 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:148
 Disposition: MATCHED
-Swift: S100 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S100
 Mapping/reason: Swift S100 asserts coreRangeNotePairsConsistent(track: 0) after the three-note batch insertion, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-      }
-      doc.addNotes(0, {{110, 60, 10, 81}, {120, 60, 10, 82}, {110, 61, 20, 83}});
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A056 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:151
+A056 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:151
 Disposition: MATCHED
-Swift: S101 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S101
 Mapping/reason: Swift S101 asserts state.file.encoded() equals saved.bytes after undoDocument() removes the batch, the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-      const auto after = doc.smf().write();
-      doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), saved.bytes)
-
-A057 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:153
+A057 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:153
 Disposition: MATCHED
-Swift: S102 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S102
 Mapping/reason: Swift S102 asserts state.file.encoded() equals the post-insertion bytes after redoDocument() replays the batch, the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-      doc.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), after)
-
-A058 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:154
+A058 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:154
 Disposition: MATCHED
-Swift: S103 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S103
 Mapping/reason: Swift S103 asserts coreRangeNotePairsConsistent(track: 0) after the three-note batch insertion, the same exhaustive on/off pairing invariant the original QVERIFYs.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(notePairsConsistent(doc, 0))
-
-A059 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:157
+A059 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:157
 Disposition: MATCHED
-Swift: S104 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S104
 Mapping/reason: Swift S104 asserts state.file.encoded() equals saved.bytes after undoDocument() removes the three-note batch, the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-
-      doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), saved.bytes)
-
-A060 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:160
+A060 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:160
 Disposition: MATCHED
-Swift: S105 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S105, S106
 Mapping/reason: Swift S105 asserts notes(in: 0).count == 3 after the exact-duplicate insertion on the same fixture (one surviving original plus two duplicates); S106 guards the indexing like QCOMPARE's abort.
-Source context since previous assertion:
-  ;
-      doc.addNotes(0, {{110, 60, 10, 81}, {110, 60, 10, 81}});
-      const auto duplicates = doc.notesForTrack(0);
-
-Original expression:
-  QCOMPARE(duplicates.size(), size_t(3))
-
-A061 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:163
+A061 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:163
 Disposition: MATCHED
-Swift: S107 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S107
 Mapping/reason: Swift S107 asserts the first duplicate's identity is assigned under the same cppID, matching the original's isAssigned check.
-Source context since previous assertion:
-  ;
-      const DocNote &first = duplicates[1];
-      const DocNote &second = duplicates[2];
-
-Original expression:
-  QVERIFY(first.noteId.isAssigned())
-
-A062 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:164
+A062 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:164
 Disposition: MATCHED
-Swift: S108 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S108
 Mapping/reason: Swift S108 asserts the second duplicate's identity is assigned under the same cppID, matching the original's isAssigned check.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(second.noteId.isAssigned())
-
-A063 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:165
+A063 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:165
 Disposition: MATCHED
-Swift: S109 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S109
 Mapping/reason: Swift S109 asserts the two duplicate identities differ under the same cppID, matching the original's noteId inequality.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(first.noteId != second.noteId)
-
-A064 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:167
+A064 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:167
 Disposition: MATCHED
-Swift: S110 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S110
 Mapping/reason: Swift S110 asserts tick 110 on each duplicate note under the same cppID, matching the original's per-note QCOMPARE.
-Source context since previous assertion:
-  ;
-      for (const DocNote *note : {&first, &second}) {
-
-Original expression:
-  QCOMPARE(note->tick, Tick(110))
-
-A065 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:168
+A065 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:168
 Disposition: MATCHED
-Swift: S111 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S111
 Mapping/reason: Swift S111 asserts duration 10 on each duplicate note under the same cppID, matching the original's per-note QCOMPARE.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note->duration, uint32_t(10))
-
-A066 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:169
+A066 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:169
 Disposition: MATCHED
-Swift: S112 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S112
 Mapping/reason: Swift S112 asserts pitch 60 on each duplicate note under the same cppID, matching the original's per-note QCOMPARE.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note->key, uint8_t(60))
-
-A067 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:170
+A067 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:170
 Disposition: MATCHED
-Swift: S113 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S113
 Mapping/reason: Swift S113 asserts velocity 81 on each duplicate note under the same cppID, matching the original's per-note QCOMPARE.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note->velocity, uint8_t(81))
-
-A068 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:174
+A068 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:174
 Disposition: MATCHED
-Swift: S114 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S114
 Mapping/reason: Swift S114 asserts state.file.encoded() equals saved.bytes after undoDocument() removes the duplicate insertion, the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-      }
-      const auto duplicateBytes = doc.smf().write();
-      doc.undoStack()->undo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), saved.bytes)
-
-A069 | EditCheckTest::noteBatchCollisionRejects | src/checks/editcheck/tst_songdocument_songnotes.cpp:176
+A069 | EditCheckTest::noteBatchCollisionRejects | tst_songdocument_songnotes.cpp:176
 Disposition: MATCHED
-Swift: S115 | src/checks/editcheck/tst_songdocument_songnotes.swift :: coreNoteBatchCollisionChecks
+Swift: S115
 Mapping/reason: Swift S115 asserts state.file.encoded() equals the pre-undo duplicate bytes after redoDocument(), the same serialized-byte restoration the original QCOMPAREs.
-Source context since previous assertion:
-  ;
-      doc.undoStack()->redo();
-
-Original expression:
-  QCOMPARE(doc.smf().write(), duplicateBytes)
-
-A070 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:188
+A070 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:188
 Disposition: MATCHED
-Swift: S118 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S118
 Mapping/reason: Every eligible corpus row has a nonempty staged MIDI path. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::noteEditingBasic_data()
-  {
-      addSongRows(SongCapability::EditableTrack);
-  }
-
-  void EditCheckTest::noteEditingBasic()
-  {
-      QFETCH(QString, songLabel);
-      const SongInfo song = songForLabel(songLabel);
-
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for basic note editing")
-
-A071 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:192
+A071 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:192
 Disposition: MATCHED
-Swift: S119 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S119
 Mapping/reason: Throwing MIDI decode and SongDocument construction succeed for the staged row; failure reports the row rather than passing the load site. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-      SongDocument document;
-      QString error;
-
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
-
-A072 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:194
+A072 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:194
 Disposition: MATCHED
-Swift: S120 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S120
 Mapping/reason: The freshly loaded row has a first track containing notes, matching firstEditableTrack. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      const int track = songdocument_test::firstEditableTrack(document);
-
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
-
-A073 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:199
+A073 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:199
 Disposition: MATCHED
-Swift: S121 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S121
 Mapping/reason: After insertion, every adjacent raw-event tick in every chunk is nondecreasing. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      const uint64_t base = songdocument_test::distantBase(document);
-      const uint32_t step = document.ticksPerClock();
-
-      document.addNote(track, base, 60, step * 4, 100);
-
-Original expression:
-  QVERIFY(songdocument_test::tracksSorted(document.smf()))
-
-A074 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:201
+A074 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:201
 Disposition: MATCHED
-Swift: S122 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S122
 Mapping/reason: After insertion, the note is found by track, base tick, and pitch 60. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      DocNote note;
-
-Original expression:
-  QVERIFY(document.findNote(track, base, 60, &note))
-
-A075 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:203
+A075 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:203
 Disposition: MATCHED
-Swift: S123 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S123
 Mapping/reason: After movement, every adjacent raw-event tick in every chunk is nondecreasing. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.moveNotes({note}, int64_t(step) * 8, 3);
-
-Original expression:
-  QVERIFY(songdocument_test::tracksSorted(document.smf()))
-
-A076 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:204
+A076 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:204
 Disposition: MATCHED
-Swift: S124 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S124
 Mapping/reason: After movement by eight steps and three keys, lookup finds the note at base+8step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 8, 63, &note))
-
-A077 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:206
+A077 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:206
 Disposition: MATCHED
-Swift: S125 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S125
 Mapping/reason: After trailing resize, lookup still finds the note at base+8step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.resizeNotes({note}, int64_t(step) * 2);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 8, 63, &note))
-
-A078 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:207
+A078 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:207
 Disposition: MATCHED
-Swift: S126 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S126
 Mapping/reason: Trailing resize produces duration 6step. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, step * 6)
-
-A079 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:209
+A079 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:209
 Disposition: MATCHED
-Swift: S127 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S127
 Mapping/reason: Leading resize by -2step finds the note at base+6step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.resizeNotesLeft({note}, -int64_t(step) * 2);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 6, 63, &note))
-
-A080 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:210
+A080 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:210
 Disposition: MATCHED
-Swift: S128 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S128
 Mapping/reason: Leading resize produces duration 8step. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, step * 8)
-
-A081 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:212
+A081 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:212
 Disposition: MATCHED
-Swift: S129 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S129
 Mapping/reason: Leading resize by +100step clamps the lookup location to base+14step-1, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.resizeNotesLeft({note}, int64_t(step) * 100);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 14 - 1, 63, &note))
-
-A082 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:213
+A082 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:213
 Disposition: MATCHED
-Swift: S130 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S130
 Mapping/reason: The clamped note has duration one tick. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, uint32_t(1))
-
-A083 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:215
+A083 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:215
 Disposition: MATCHED
-Swift: S131 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S131
 Mapping/reason: Leading resize by -8step+1 restores the lookup location base+6step, pitch 63. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.resizeNotesLeft({note}, -int64_t(step) * 8 + 1);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 6, 63, &note))
-
-A084 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:216
+A084 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:216
 Disposition: MATCHED
-Swift: S132 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S132
 Mapping/reason: The restored note has duration 8step. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.duration, step * 8)
-
-A085 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:218
+A085 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:218
 Disposition: MATCHED
-Swift: S133 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S133
 Mapping/reason: After setting velocity, positional lookup still finds the note. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.setNotesVelocity({note}, 88);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 6, 63, &note))
-
-A086 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:219
+A086 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:219
 Disposition: MATCHED
-Swift: S134 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S134
 Mapping/reason: Absolute velocity assignment produces velocity 88. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.velocity, uint8_t(88))
-
-A087 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:221
+A087 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:221
 Disposition: MATCHED
-Swift: S135 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S135
 Mapping/reason: After nudging velocity -30, positional lookup still finds the note. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.nudgeNotesVelocity({note}, -30);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 6, 63, &note))
-
-A088 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:222
+A088 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:222
 Disposition: MATCHED
-Swift: S136 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S136
 Mapping/reason: The negative velocity nudge produces velocity 58. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.velocity, uint8_t(58))
-
-A089 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:224
+A089 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:224
 Disposition: MATCHED
-Swift: S137 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S137
 Mapping/reason: After nudging velocity +200, positional lookup still finds the note. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.nudgeNotesVelocity({note}, 200);
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 6, 63, &note))
-
-A090 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:225
+A090 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:225
 Disposition: MATCHED
-Swift: S138 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S138
 Mapping/reason: The positive velocity nudge clamps velocity to 127. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(note.velocity, uint8_t(127))
-
-A091 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:227
+A091 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:227
 Disposition: MATCHED
-Swift: S139 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S139
 Mapping/reason: Deletion removes the note from positional lookup. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.deleteNotes({note});
-
-Original expression:
-  QVERIFY(!document.findNote(track, base + step * 6, 63, &note))
-
-A092 | EditCheckTest::noteEditingBasic | src/checks/editcheck/tst_songdocument_songnotes.cpp:228
+A092 | EditCheckTest::noteEditingBasic | tst_songdocument_songnotes.cpp:228
 Disposition: MATCHED
-Swift: S140 | src/checks/editcheck/NoteCorpusChecks.swift :: basicNoteRow
+Swift: S140
 Mapping/reason: After deletion, every adjacent raw-event tick in every chunk is nondecreasing. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(songdocument_test::tracksSorted(document.smf()))
-
-A093 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:240
+A093 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:240
 Disposition: MATCHED
-Swift: S141 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S141
 Mapping/reason: Every eligible batch corpus row has a nonempty staged MIDI path. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::noteEditingBatch_data()
-  {
-      addSongRows(SongCapability::EditableTrack);
-  }
-
-  void EditCheckTest::noteEditingBatch()
-  {
-      QFETCH(QString, songLabel);
-      const SongInfo song = songForLabel(songLabel);
-
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for batch note editing")
-
-A094 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:244
+A094 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:244
 Disposition: MATCHED
-Swift: S142 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S142
 Mapping/reason: Throwing MIDI decode and SongDocument construction succeed on a fresh batch row; failures report the row. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-      SongDocument document;
-      QString error;
-
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
-
-A095 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:246
+A095 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:246
 Disposition: MATCHED
-Swift: S143 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S143
 Mapping/reason: The freshly loaded batch row has a first track containing notes. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      const int track = songdocument_test::firstEditableTrack(document);
-
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
-
-A096 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:255
+A096 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:255
 Disposition: MATCHED
-Swift: S144 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S144
 Mapping/reason: The single batch insertion creates the first note at base+20step, pitch 64. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      const uint64_t base = songdocument_test::distantBase(document);
-      const uint32_t step = document.ticksPerClock();
-
-      const int before = document.undoStack()->count();
-      document.addNotes(track, {{Tick(base + step * 20), 64, step * 2, 96},
-                                {Tick(base + step * 22), 67, step * 2, 96}});
-      DocNote first;
-      DocNote second;
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 20, 64, &first))
-
-A097 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:256
+A097 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:256
 Disposition: MATCHED
-Swift: S145 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S145
 Mapping/reason: The same batch insertion creates the second note at base+22step, pitch 67. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 22, 67, &second))
-
-A098 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:257
+A098 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:257
 Disposition: MATCHED
-Swift: S146 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S146
 Mapping/reason: Public undo/redo traversal counts exactly one added history entry and restores the exact document state and identity before continuing. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(document.undoStack()->count(), before + 1)
-
-A099 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:259
+A099 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:259
 Disposition: MATCHED
-Swift: S147 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S147
 Mapping/reason: One undo removes the first note from positional lookup. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.undoStack()->undo();
-
-Original expression:
-  QVERIFY(!document.findNote(track, base + step * 20, 64, &first))
-
-A100 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:260
+A100 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:260
 Disposition: MATCHED
-Swift: S148 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S148
 Mapping/reason: That same undo removes the second note from positional lookup. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(!document.findNote(track, base + step * 22, 67, &second))
-
-A101 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:262
+A101 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:262
 Disposition: MATCHED
-Swift: S149 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S149
 Mapping/reason: One redo restores the first note at its original batch position. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.undoStack()->redo();
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 20, 64, &first))
-
-A102 | EditCheckTest::noteEditingBatch | src/checks/editcheck/tst_songdocument_songnotes.cpp:263
+A102 | EditCheckTest::noteEditingBatch | tst_songdocument_songnotes.cpp:263
 Disposition: MATCHED
-Swift: S150 | src/checks/editcheck/NoteCorpusChecks.swift :: batchNoteRow
+Swift: S150
 Mapping/reason: That same redo restores the second note at its original batch position. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(track, base + step * 22, 67, &second))
-
-A103 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:275
+A103 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:275
 Disposition: MATCHED
-Swift: S151 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S151
 Mapping/reason: Every eligible abutting corpus row has a nonempty staged MIDI path. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-  }
-
-  void EditCheckTest::noteEditingAbutting_data()
-  {
-      addSongRows(SongCapability::EditableTrack);
-  }
-
-  void EditCheckTest::noteEditingAbutting()
-  {
-      QFETCH(QString, songLabel);
-      const SongInfo song = songForLabel(songLabel);
-
-Original expression:
-  QVERIFY2(!song.midPath.isEmpty(), "corpus staged no editable song for abutting notes")
-
-A104 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:279
+A104 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:279
 Disposition: MATCHED
-Swift: S152 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S152
 Mapping/reason: Throwing MIDI decode and SongDocument construction succeed on a fresh abutting row; failures report the row. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-      SongDocument document;
-      QString error;
-
-Original expression:
-  QVERIFY2(document.load(song, &error), qPrintable(error))
-
-A105 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:281
+A105 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:281
 Disposition: MATCHED
-Swift: S153 | src/checks/editcheck/NoteCorpusChecks.swift :: coreNoteCorpusChecks
+Swift: S153
 Mapping/reason: The freshly loaded abutting row has a first track containing notes. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      const int track = songdocument_test::firstEditableTrack(document);
-
-Original expression:
-  QVERIFY2(track >= 0, "classified editable song loaded without an editable track")
-
-A106 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:293
+A106 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:293
 Disposition: MATCHED
-Swift: S154 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Swift: S154
 Mapping/reason: After right-first then left-second insertion, lookup finds the left note at seam-2step, pitch 60. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      const uint64_t base = songdocument_test::distantBase(document);
-      const uint32_t step = document.ticksPerClock();
-
-      // The seam sits at base+30step (old suite used 2step inside a shared
-      // document); every offset this slot touches is disjoint within its
-      // own fresh document, so no pairing boundary contract is lost.
-      const uint64_t seam = base + step * 30;
-      document.addNote(track, seam, 60, step * 2, 100);
-      document.addNote(track, seam - step * 2, 60, step * 2, 100);
-      DocNote left;
-      DocNote right;
-
-Original expression:
-  QVERIFY(document.findNote(track, seam - step * 2, 60, &left))
-
-A107 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:294
+A107 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:294
 Disposition: MATCHED
-Swift: S155 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Swift: S155
 Mapping/reason: The same insertion sequence finds the right note at seam, pitch 60. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(document.findNote(track, seam, 60, &right))
-
-A108 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:295
+A108 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:295
 Disposition: MATCHED
-Swift: S156 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Swift: S156
 Mapping/reason: The left note has duration 2step and ends at the seam. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(left.duration, step * 2)
-
-A109 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:296
+A109 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:296
 Disposition: MATCHED
-Swift: S157 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Swift: S157
 Mapping/reason: The right note has duration 2step. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QCOMPARE(right.duration, step * 2)
-
-A110 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:297
+A110 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:297
 Disposition: MATCHED
-Swift: S158 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Swift: S158
 Mapping/reason: The two notes have distinct end-event indices. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-
-Original expression:
-  QVERIFY(left.endIndex != right.endIndex)
-
-A111 | EditCheckTest::noteEditingAbutting | src/checks/editcheck/tst_songdocument_songnotes.cpp:301
+A111 | EditCheckTest::noteEditingAbutting | tst_songdocument_songnotes.cpp:301
 Disposition: MATCHED
-Swift: S159 | src/checks/editcheck/NoteCorpusChecks.swift :: abuttingNoteRow
+Swift: S159
 Mapping/reason: After deleting both notes, every raw event in the mapped MIDI chunk is checked: no channel note-on or note-end remains at or after seam-2step. Executed on every staged EditableTrack row in the original method sequence.
-Source context since previous assertion:
-  ;
-      document.deleteNotes({left, right});
-      for (const SmfEvent &event :
-           document.smf().tracks[size_t(document.smfTrackFor(track))].events) {
 
-Original expression:
-  QVERIFY(!(event.isChannel() && event.tick >= seam - step * 2 &&
-                    (event.isNoteOn() || event.isNoteEnd())))
-
-Remaining original source (closing sequence and helper bodies):
-  ;
-      }
-  }
-
-Swift assertion predicates
-Every report.expect/expectEqual/fail call in the mapped Swift functions:
-
-S001 | movementAndResize | src/checks/editcheck/NoteChecks.swift:115
-  report.fail(noteEditsBasicID, "fixture insertion failed")
-
-S002 | movementAndResize | src/checks/editcheck/NoteChecks.swift:120
-  report.expectEqual(Tick(2), trimmed?.tick,
-                         cppID: "editcheck/EditCheckTest::noteMoveOverlap",
-                         what: "edited note wins and stationary tail survives")
-
-S003 | movementAndResize | src/checks/editcheck/NoteChecks.swift:123
-  report.expectEqual(Tick(2), trimmed?.duration,
-                         cppID: "editcheck/EditCheckTest::noteMoveCollision",
-                         what: "tail trim preserves surviving duration")
-
-S004 | movementAndResize | src/checks/editcheck/NoteChecks.swift:126
-  report.expectEqual(ids[0], trimmed?.id,
-                         cppID: "editcheck/EditCheckTest::documentCrossingIdentities",
-                         what: "stationary trim preserves identity")
-
-S005 | movementAndResize | src/checks/editcheck/NoteChecks.swift:130
-  report.expectEqual(Tick(0), document.note(ids[0])?.tick,
-                         cppID: "editcheck/EditCheckTest::noteMoveBatch",
-                         what: "one undo restores collision victim")
-
-S006 | movementAndResize | src/checks/editcheck/NoteChecks.swift:134
-  report.expectEqual(UInt8(70), document.note(ids[1])?.pitch,
-                         cppID: "editcheck/EditCheckTest::noteMoveMerge",
-                         what: "redo restores edited pitch")
-
-S007 | movementAndResize | src/checks/editcheck/NoteChecks.swift:143
-  report.fail("editcheck/EditCheckTest::noteMoveCollisionRejects",
-                      "rejection fixture insertion failed")
-
-S008 | movementAndResize | src/checks/editcheck/NoteChecks.swift:149
-  report.expectEqual(revision, rejectionDocument.revision,
-                         cppID: "editcheck/EditCheckTest::noteMoveCollisionRejects",
-                         what: "conflicting pitch destinations reject whole operation")
-
-S009 | movementAndResize | src/checks/editcheck/NoteChecks.swift:153
-  report.expectEqual(revision, rejectionDocument.revision,
-                         cppID: "editcheck/EditCheckTest::noteMoveRejects",
-                         what: "zero movement creates no entry")
-
-S010 | movementAndResize | src/checks/editcheck/NoteChecks.swift:158
-  report.expectEqual(Tick(29), document.note(ids[2])?.tick,
-                         cppID: noteEditsBasicID,
-                         what: "leading resize clamps to one tick")
-
-S011 | movementAndResize | src/checks/editcheck/NoteChecks.swift:161
-  report.expectEqual(Tick(1), document.note(ids[2])?.duration,
-                         cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
-                         what: "resize enforces minimum duration")
-
-S012 | movementAndResize | src/checks/editcheck/NoteChecks.swift:165
-  report.expectEqual(UInt64(30), document.note(ids[2])?.endTick,
-                         cppID: noteEditsBasicID,
-                         what: "leading resize preserves note end")
-
-S013 | movementAndResize | src/checks/editcheck/NoteChecks.swift:173
-  report.fail("smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                      "unterminated fixture was not projected")
-
-S014 | movementAndResize | src/checks/editcheck/NoteChecks.swift:178
-  report.expect(unterminated.note(unterminatedID)?.isUnterminated == true,
-                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                    message: "moving an unterminated note does not invent an end")
-
-S015 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:77
-  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
-                      "overlapping edited participants were accepted")
-
-S016 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:80
-  report.expectEqual(initialRevision, document.revision,
-                             cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
-                             what: "rejected batch leaves revision unchanged")
-
-S017 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:84
-  report.fail("editcheck/EditCheckTest::noteBatchCollisionRejects",
-                      "unexpected rejection: \(error)")
-
-S018 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:92
-  report.expect(duplicateIDs?.count == 2 && duplicateIDs?[0] != duplicateIDs?[1],
-                    cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
-                    message: "exact duplicate insertions receive distinct identities")
-
-S019 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:95
-  report.expectEqual(2, document.notes(in: 0).filter {
-          $0.tick == 110 && $0.pitch == 61 && $0.duration == 10
-      }.count, cppID: "editcheck/EditCheckTest::noteEditingBatch",
-      what: "exact duplicate insertions remain distinct notes")
-
-S020 | insertionAndCollision | src/checks/editcheck/NoteChecks.swift:102
-  report.expectEqual(revisionBeforeNoOp, document.revision,
-                         cppID: "editcheck/EditCheckTest::documentPublicationNetZero",
-                         what: "empty delete is a no-op")
-
-S021 | velocityEditing | src/checks/editcheck/NoteChecks.swift:191
-  report.expectEqual(UInt8(1), document.note(ids[2])?.velocity,
-                         cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
-                         what: "inserted velocity zero shares the domain floor")
-
-S022 | velocityEditing | src/checks/editcheck/NoteChecks.swift:200
-  report.expect(changed == revision + 1 && document.note(ids[0])?.velocity == 99 &&
-          document.note(ids[1])?.velocity == 127,
-          cppID: "editcheck/EditCheckTest::documentVelocityAtomic",
-          message: "batch velocity is atomic, clamped, and last-write-wins")
-
-S023 | velocityEditing | src/checks/editcheck/NoteChecks.swift:205
-  report.expect(document.setVelocities([NoteVelocity(noteID: ids[0], velocity: 20)],
-                                           expectedRevision: revision) == nil &&
-          document.state == beforeStale,
-          cppID: "editcheck/EditCheckTest::documentVelocityRejects",
-          message: "stale velocity revision rejects without mutation")
-
-S024 | velocityEditing | src/checks/editcheck/NoteChecks.swift:212
-  report.expect(document.note(ids[0])?.velocity == 1 && document.note(ids[1])?.velocity == 1,
-                    cppID: "velocity-model/VelocityModelTest::gestureClampedDeltaAndCancellation",
-                    message: "relative velocity clamps each note")
-
-S025 | velocityEditing | src/checks/editcheck/NoteChecks.swift:220
-  report.expect(invalid == nil && document.revision == beforeInvalid,
-                    cppID: "velocity-model/VelocityModelTest::gestureAtomicity",
-                    message: "one invalid participant rejects the whole batch")
-
-S026 | velocityEditing | src/checks/editcheck/NoteChecks.swift:223
-  report.expectEqual(beforeNudge + 1, beforeInvalid,
-                         cppID: "velocity-model/VelocityModelTest::gestureCompletionAndDeltaFromOriginals",
-                         what: "one relative batch publishes one revision")
-
-S027 | velocityEditing | src/checks/editcheck/NoteChecks.swift:230
-  report.expect(restored && document.note(ids[0])?.velocity == 1,
-                    cppID: "velocity-model/VelocityModelTest::gestureLifecycle",
-                    message: "velocity batch participates in undo and redo")
-
-S028 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:249
-  report.expect(rejection.state == before && rejection.revision == revision &&
-          rejection.isDirty == dirty && rejection.history.canRedo == redo &&
-          Set(rejection.notes(in: 0).map(\.id)) == Set(selected),
-          cppID: "editcheck/EditCheckTest::noteBatchCollisionRejects",
-          message: "unchanged selected participant rejects collision without consuming redo")
-
-S029 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:271
-  report.expect(originalEnd == endPayload && movedEnd == shiftedEndPayload(endPayload, pitch: 66) &&
-              undoneEnd == endPayload && redoneEnd == shiftedEndPayload(endPayload, pitch: 66),
-              cppID: "editcheck/EditCheckTest::noteMoveBatch",
-              message: "move and history preserve the original note-end form and release velocity")
-
-S030 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:283
-  report.expect(noteEndPayload(resized, id: id) ==
-              .channel(status: 0x80, data0: 65, data1: 47),
-              cppID: "editcheck/EditCheckTest::noteResizeStopsAtNextSelectedStart",
-              message: "resize retains explicit note-off bytes")
-
-S031 | compatibilityRegressions | src/checks/editcheck/NoteChecks.swift:299
-  report.expect(retainedEnd == .channel(status: 0x80, data0: 67, data1: 39),
-          cppID: "editcheck/EditCheckTest::noteMoveOverlap",
-          message: "collision trim retains the stationary note's end-event bytes")
-
-S032 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:35
-  report.expectEqual(3, notes.count,
-                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                         what: "all note-ons projected")
-
-S033 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:38
-  report.expectEqual([Tick(8), Tick(6), Tick(0)], notes.map(\.duration),
-                         cppID: "smfcheck/MidiSmfTest::complexInterleavedNotesPairExactly",
-                         what: "first following matching ends pair exactly")
-
-S034 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:41
-  report.expect(notes[2].isUnterminated,
-                    cppID: "smfcheck/MidiSmfTest::unterminatedNotePairingStaysLinear",
-                    message: "unterminated note is preserved")
-
-S035 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:44
-  report.expect(notes.allSatisfy { $0.id.isAssigned } && Set(notes.map(\.id)).count == 3,
-                    cppID: "noteidcheck/NoteIdentityCheckTest::adoptedSmfRemintsForeignIds",
-                    message: "adoption remints unique document identities")
-
-S036 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:47
-  report.expect(!document.rawChunks.flatMap(\.events).contains(where: { $0.metaType == 0x51 }),
-                    cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
-                    message: "typed tempo is removed from raw chunks")
-
-S037 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:50
-  report.expectEqual([TempoPoint(tick: 0, microsecondsPerQuarterNote: 500_000)],
-                         document.state.tempo,
-                         cppID: "editcheck/EditCheckTest::formatZeroGlobals",
-                         what: "valid conductor tempo becomes typed state")
-
-S038 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:56
-  report.expect(decoded?.chunks.flatMap(\.events).filter(\.isNoteOn)
-          .allSatisfy { !($0.noteID?.isAssigned ?? false) } == true,
-          cppID: "noteidcheck/NoteIdentityCheckTest::parsedMidiLeavesIdsUnassigned",
-          message: "serialized MIDI carries no note identity")
-
-S039 | adoptionAndPairing | src/checks/editcheck/NoteChecks.swift:60
-  report.expect(document.state.file.chunks[1].events[3].status == 0x80,
-                    cppID: "smfcheck/MidiSmfTest::noteLifecyclePreservesSameTickOrdering",
-                    message: "note-end status is retained during adoption")
-
+Swift predicate index (source path, function and current line)
 S040 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:97
-  report.expectEqual(2, document.engineTracks.usedTrackCount, cppID: id,
-      what: "A001 fixture loads with two editable tracks")
-
 S041 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:103
-  report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
-      message: "A002 inserted notes keep consistent on/off pairs")
-
 S042 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:107
-  report.expect(planned != nil, cppID: id, message: "A003 +20 duration plan exists")
-
 S043 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:108
-  report.expectEqual([Tick(20), Tick(30)], planned, cppID: id,
-      what: "A004 +20 plan caps at the next selected start")
-
 S044 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:121
-  report.expect(adjacentPlan != nil, cppID: id,
-      message: "A005 adjacent +10 duration plan exists")
-
 S045 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:123
-  report.expectEqual([Tick(20), Tick(40)], adjacentPlan, cppID: id,
-      what: "A006 adjacent +10 plan extends the last note")
-
 S046 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:132
-  report.expect(
-      document.resizeNotesDurations(zeroCapNotes.span, byTicks: 20) == nil,
-      cppID: id, message: "A007 zero capacity rejects the duration plan")
-
 S047 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:135
-  report.expect(
-      document.resizeNotesDurations(originals.span,
-                                    byTicks: Int64(TimeDefaults.maxTick)) == nil,
-      cppID: id, message: "A008 max-tick delta rejects the duration plan")
-
-S048 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:150
-  report.fail(id, "capped resize changed the note count")
-
 S049 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:153
-  report.expectEqual(Tick(20), notes[0].duration, cppID: id,
-      what: "A009 capped resize keeps duration 20")
-
 S050 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:155
-  report.expectEqual(Tick(30), notes[1].duration, cppID: id,
-      what: "A010 capped resize grows duration to 30")
-
 S051 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:158
-  report.expectEqual(clearedOriginals[index].id, notes[index].id, cppID: id,
-      what: "A011 resize preserves note identity")
-
 S052 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:160
-  report.expectEqual(clearedOriginals[index].velocity, notes[index].velocity,
-      cppID: id, what: "A012 resize preserves velocity")
-
 S053 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:163
-  report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
-      message: "A013 first resize keeps consistent on/off pairs")
-
 S054 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:166
-  report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
-      message: "A014 merged resize keeps consistent on/off pairs")
-
 S055 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:168
-  report.expectEqual([1, 1], coreRangeHistoryPosition(cleared, report, id),
-      cppID: id, what: "A015 cumulative resize merges into one entry")
-
-S056 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:173
-  report.fail(id, "merged resize changed the note count")
-
 S057 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:176
-  report.expectEqual(Tick(20), notes[0].duration, cppID: id,
-      what: "A016 merged resize keeps duration 20")
-
 S058 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:178
-  report.expectEqual(Tick(40), notes[1].duration, cppID: id,
-      what: "A017 merged resize grows duration to 40")
-
 S059 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:182
-  report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
-      message: "A018 shortened resize keeps consistent on/off pairs")
-
-S060 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:186
-  report.fail(id, "reversed resize changed the note count")
-
 S061 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:189
-  report.expectEqual(Tick(10), notes[0].duration, cppID: id,
-      what: "A019 reversal shrinks duration to 10")
-
 S062 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:191
-  report.expectEqual(Tick(30), notes[1].duration, cppID: id,
-      what: "A020 reversal shrinks duration to 30")
-
 S063 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:193
-  report.expectEqual([2, 2], coreRangeHistoryPosition(cleared, report, id),
-      cppID: id, what: "A021 capped reversal splits into two entries")
-
 S064 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:198
-  report.expectEqual(extended, try cleared.state.file.encoded(), cppID: id,
-      what: "A022 first undo restores the extended bytes")
-
 S065 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:201
-  report.expectEqual(before, try cleared.state.file.encoded(), cppID: id,
-      what: "A023 second undo restores the original bytes")
-
 S066 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:204
-  report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
-      message: "A024 undone resize keeps consistent on/off pairs")
-
 S067 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:207
-  report.expectEqual(shortened, try cleared.state.file.encoded(), cppID: id,
-      what: "A025 redo restores the shortened bytes")
-
 S068 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:209
-  report.expect(coreRangeNotePairsConsistent(cleared, track: 0), cppID: id,
-      message: "A026 redone resize keeps consistent on/off pairs")
-
 S069 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:216
-  report.expect(coreRangeNotePairsConsistent(boundary, track: 0), cppID: id,
-      message: "A027 first post-save resize keeps consistent on/off pairs")
-
 S070 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:220
-  report.expect(coreRangeNotePairsConsistent(boundary, track: 0), cppID: id,
-      message: "A028 second post-save resize keeps consistent on/off pairs")
-
 S071 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:222
-  report.expectEqual([2, 2], coreRangeHistoryPosition(boundary, report, id),
-      cppID: id, what: "A029 save boundary keeps both resize entries")
-
 S072 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:226
-  report.expect(!boundary.isDirty, cppID: id,
-      message: "A030 undo to the save boundary restores clean")
-
 S073 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:231
-  report.expectEqual(2, multi.engineTracks.usedTrackCount, cppID: id,
-      what: "A031 multi-track fixture loads with two editable tracks")
-
 S074 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:243
-  report.expect(coreRangeNotePairsConsistent(multi, track: 0), cppID: id,
-      message: "A032 multi-track resize keeps track 0 pairs consistent")
-
 S075 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:245
-  report.expect(coreRangeNotePairsConsistent(multi, track: 1), cppID: id,
-      message: "A033 multi-track resize keeps track 1 pairs consistent")
-
 S076 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:247
-  report.expect(coreNoteFind(multi, track: 0, tick: 0, pitch: 60) != nil, cppID: id,
-      message: "A034 note found at track 0 tick 0 pitch 60")
-
 S077 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:249
-  report.expectEqual(Tick(20), coreNoteFind(multi, track: 0, tick: 0, pitch: 60)?.duration,
-      cppID: id, what: "A035 capped duration 20 at tick 0")
-
 S078 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:251
-  report.expect(coreNoteFind(multi, track: 0, tick: 20, pitch: 60) != nil, cppID: id,
-      message: "A036 note found at track 0 tick 20 pitch 60")
-
 S079 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:253
-  report.expectEqual(Tick(20), coreNoteFind(multi, track: 0, tick: 20, pitch: 60)?.duration,
-      cppID: id, what: "A037 capped duration 20 at tick 20")
-
 S080 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:255
-  report.expect(coreNoteFind(multi, track: 0, tick: 40, pitch: 60) != nil, cppID: id,
-      message: "A038 note found at track 0 tick 40 pitch 60")
-
 S081 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:257
-  report.expectEqual(Tick(40), coreNoteFind(multi, track: 0, tick: 40, pitch: 60)?.duration,
-      cppID: id, what: "A039 uncapped duration 40 at tick 40")
-
 S082 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:259
-  report.expect(coreNoteFind(multi, track: 0, tick: 0, pitch: 61) != nil, cppID: id,
-      message: "A040 note found at track 0 tick 0 pitch 61")
-
 S083 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:261
-  report.expectEqual(Tick(40), coreNoteFind(multi, track: 0, tick: 0, pitch: 61)?.duration,
-      cppID: id, what: "A041 uncapped duration 40 at pitch 61")
-
 S084 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:263
-  report.expect(coreNoteFind(multi, track: 1, tick: 0, pitch: 60) != nil, cppID: id,
-      message: "A042 note found at track 1 tick 0 pitch 60")
-
 S085 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:265
-  report.expectEqual(Tick(40), coreNoteFind(multi, track: 1, tick: 0, pitch: 60)?.duration,
-      cppID: id, what: "A043 different track is not capped")
-
 S086 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:272
-  report.expect(coreRangeNotePairsConsistent(multi, track: 1), cppID: id,
-      message: "A044 added note keeps track 1 pairs consistent")
-
 S087 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:278
-  report.expect(victim != nil, cppID: id,
-      message: "A045 note found at track 1 tick 0 pitch 60")
-
 S088 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:282
-  report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
-      message: "A046 inverse-gesture extension keeps consistent pairs")
-
 S089 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:285
-  report.expect(grown != nil, cppID: id, message: "A047 note found by identity")
-
 S090 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:288
-  report.expectEqual(inverseBefore, try inverse.state.file.encoded(), cppID: id,
-      what: "A048 compatible inverse restores the exact bytes")
-
 S091 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:290
-  report.expectEqual([0, 0], coreRangeHistoryPosition(inverse, report, id), cppID: id,
-      what: "A049 compatible inverse removes the gesture")
-
 S092 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:292
-  report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
-      message: "A050 inverse removal keeps consistent on/off pairs")
-
 S093 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:295
-  report.expect(coreRangeNotePairsConsistent(inverse, track: 1), cppID: id,
-      message: "A051 floor-clamped drag keeps consistent on/off pairs")
-
 S094 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:300
-  report.expect(noOpMismatch == nil, cppID: id,
-      message: "A052 duration-floor resize leaves full state untouched")
-
 S095 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:303
-  report.expectEqual(noOp.position, coreRangeHistoryPosition(inverse, report, id),
-      cppID: id, what: "A052 duration-floor resize preserves history count and cursor")
-
 S096 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:340
-  report.expectEqual(1, document.engineTracks.usedTrackCount, cppID: id,
-      what: "A053 fixture loads with one editable track")
-
 S097 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:346
-  report.expect(mismatch == nil, cppID: id,
-      message: "A054 rejected batch leaves full state untouched")
-
 S098 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:351
-  report.expectEqual(saved.position, coreRangeHistoryPosition(document, report, id),
-      cppID: id, what: "A054 rejected batches preserve history count and cursor")
-
 S099 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:362
-  report.expectEqual([2, 1], coreRangeHistoryPosition(probe, report, id),
-      cppID: id, what: "A054 rejected batch prefix \(prefix) preserves "
-      + "history count and cursor")
-
 S100 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:372
-  report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
-      message: "A055 batch insertion keeps consistent on/off pairs")
-
 S101 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:376
-  report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
-      what: "A056 batch undo restores the saved bytes")
-
 S102 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:379
-  report.expectEqual(after, try document.state.file.encoded(), cppID: id,
-      what: "A057 batch redo restores the batch bytes")
-
 S103 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:381
-  report.expect(coreRangeNotePairsConsistent(document, track: 0), cppID: id,
-      message: "A058 redone batch keeps consistent on/off pairs")
-
 S104 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:385
-  report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
-      what: "A059 second batch undo restores the saved bytes")
-
 S105 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:392
-  report.expectEqual(3, duplicates.count, cppID: id,
-      what: "A060 duplicate insertion yields three notes")
-
-S106 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:395
-  report.fail(id, "duplicate insertion changed the note count")
-
+S106 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:394
 S107 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:400
-  report.expect(first.id.isAssigned, cppID: id,
-      message: "A061 first duplicate identity is assigned")
-
 S108 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:402
-  report.expect(second.id.isAssigned, cppID: id,
-      message: "A062 second duplicate identity is assigned")
-
 S109 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:404
-  report.expect(first.id != second.id, cppID: id,
-      message: "A063 duplicate identities differ")
-
 S110 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:407
-  report.expectEqual(Tick(110), note.tick, cppID: id,
-      what: "A064 duplicate keeps tick 110")
-
 S111 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:409
-  report.expectEqual(Tick(10), note.duration, cppID: id,
-      what: "A065 duplicate keeps duration 10")
-
 S112 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:411
-  report.expectEqual(UInt8(60), note.pitch, cppID: id,
-      what: "A066 duplicate keeps key 60")
-
 S113 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:413
-  report.expectEqual(UInt8(81), note.velocity, cppID: id,
-      what: "A067 duplicate keeps velocity 81")
-
 S114 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:418
-  report.expectEqual(saved.bytes, try document.state.file.encoded(), cppID: id,
-      what: "A068 duplicate undo restores the saved bytes")
-
 S115 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:421
-  report.expectEqual(duplicateBytes, try document.state.file.encoded(), cppID: id,
-      what: "A069 duplicate redo restores the duplicate bytes")
-
-S116 | coreNoteResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:307
-  report.fail(id, "original note transaction fixture failed: \(error)")
-
-S117 | coreNoteBatchCollisionChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:424
-  report.fail(id, "original note batch fixture failed: \(error)")
-
-Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
-Shared SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
-coreEditCorpusSongs enumerates every staged sound/songs/midi/*.mid file and
-rejects an empty corpus; coreEditHistoryCountAtTip counts public undo entries
-at the tip and asserts equal traversal counts with exact restored SongState and
-DocumentIdentity. The range/raw suites and the corpus note scenarios invoke these helpers. Their
-history-restoration predicate is:
-  report.expect(count == replayed && document.state == restoredState &&
-      document.history.currentIdentity == restoredIdentity, cppID: cppID,
-      message: "counting public undo entries restores the exact state and identity")
-
-Corpus predicate inventory (A070-A111)
-Shared lookup predicate, requireCorpusNote, NoteCorpusChecks.swift:68-69:
-    report.expect(note != nil, cppID: id,
-                  message: "\(site) note exists at track \(track), tick \(tick), pitch \(pitch)")
-The lookup searches notes(in: track) by tick and pitch. Each call below supplies
-the exact site ID; its trailing comment describes this shared predicate.
-Shared sortedness predicate: corpusTracksSorted checks nondecreasing ticks
-across every raw chunk, matching tracksSorted rather than note-only ordering.
-
-S118 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19 | A070
-                report.expect(!loaded.midiPath.isEmpty, cppID: id,
-                              message: "\(pathSite) corpus row has a MIDI path")
-
-S119 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24 | A071
-                    report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded")
-
-S120 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26 | A072
-                    report.expect(track != nil, cppID: id,
-                                  message: "\(trackSite) classified row reloads with an editable track")
-
-S121 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:86 | A073
-    report.expect(corpusTracksSorted(document), cppID: id, message: "A073 insertion keeps all tracks sorted")
-
-S122 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:87 | A074
-    guard let inserted = requireCorpusNote(document, track, base, 60, report, id, "A074") else { return }
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S123 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:89 | A075
-    report.expect(corpusTracksSorted(document), cppID: id, message: "A075 movement keeps all tracks sorted")
-
-S124 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:90 | A076
-    guard let moved = requireCorpusNote(document, track, base + step * 8, 63, report, id, "A076")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S125 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:93 | A077
-    guard let extended = requireCorpusNote(document, track, base + step * 8, 63, report, id, "A077")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S126 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:95 | A078
-    report.expectEqual(step * 6, extended.duration, cppID: id, what: "A078 trailing resize adds two steps")
-
-S127 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:97 | A079
-    guard let leading = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A079")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S128 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:99 | A080
-    report.expectEqual(step * 8, leading.duration, cppID: id, what: "A080 leading resize preserves the end")
-
-S129 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:101 | A081
-    guard let clamped = requireCorpusNote(document, track, base + step * 14 - 1, 63, report, id, "A081")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S130 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:103 | A082
-    report.expectEqual(Tick(1), clamped.duration, cppID: id, what: "A082 leading resize clamps to one tick")
-
-S131 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:105 | A083
-    guard let restored = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A083")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S132 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:107 | A084
-    report.expectEqual(step * 8, restored.duration, cppID: id, what: "A084 leading resize restores eight steps")
-
-S133 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:110 | A085
-    guard let set = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A085")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S134 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:112 | A086
-    report.expectEqual(UInt8(88), set.velocity, cppID: id, what: "A086 velocity is set to 88")
-
-S135 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:114 | A087
-    guard let lowered = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A087")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S136 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:116 | A088
-    report.expectEqual(UInt8(58), lowered.velocity, cppID: id, what: "A088 negative nudge yields 58")
-
-S137 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:118 | A089
-    guard let raised = requireCorpusNote(document, track, base + step * 6, 63, report, id, "A089")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S138 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:120 | A090
-    report.expectEqual(UInt8(127), raised.velocity, cppID: id, what: "A090 positive nudge clamps to 127")
-
-S139 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:123 | A091
-    report.expect(corpusNote(document, track, base + step * 6, 63) == nil, cppID: id,
-                  message: "A091 deleted note is absent")
-
-S140 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:124 | A092
-    report.expect(corpusTracksSorted(document), cppID: id, message: "A092 deletion keeps all tracks sorted")
-
-S141 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19 | A093
-                report.expect(!loaded.midiPath.isEmpty, cppID: id,
-                              message: "\(pathSite) corpus row has a MIDI path")
-
-S142 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24 | A094
-                    report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded")
-
-S143 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26 | A095
-                    report.expect(track != nil, cppID: id,
-                                  message: "\(trackSite) classified row reloads with an editable track")
-
-S144 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:135 | A096
-    guard requireCorpusNote(document, track, base + step * 20, 64, report, id, "A096") != nil,
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S145 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:136 | A097
-          requireCorpusNote(document, track, base + step * 22, 67, report, id, "A097") != nil else { return }
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S146 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:138 | A098
-    report.expectEqual(before + 1, try coreEditHistoryCountAtTip(document, report: report, cppID: id),
-                       cppID: id, what: "A098 batch adds exactly one undo entry")
-
-S147 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:141 | A099
-    report.expect(corpusNote(document, track, base + step * 20, 64) == nil, cppID: id,
-                  message: "A099 one undo removes first batch note")
-
-S148 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:143 | A100
-    report.expect(corpusNote(document, track, base + step * 22, 67) == nil, cppID: id,
-                  message: "A100 one undo removes second batch note")
-
-S149 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:145 | A101
-    _ = requireCorpusNote(document, track, base + step * 20, 64, report, id, "A101")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S150 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:146 | A102
-    _ = requireCorpusNote(document, track, base + step * 22, 67, report, id, "A102")
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S151 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19 | A103
-                report.expect(!loaded.midiPath.isEmpty, cppID: id,
-                              message: "\(pathSite) corpus row has a MIDI path")
-
-S152 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24 | A104
-                    report.pass(id, row: "\(loadSite) staged MIDI decoded and loaded")
-
-S153 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26 | A105
-                    report.expect(track != nil, cppID: id,
-                                  message: "\(trackSite) classified row reloads with an editable track")
-
-S154 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:159 | A106
-    guard let left = requireCorpusNote(document, track, seam - step * 2, 60, report, id, "A106"),
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S155 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:160 | A107
-          let right = requireCorpusNote(document, track, seam, 60, report, id, "A107") else { return }
-    // requireCorpusNote: report.expect(note != nil, cppID: id, message: site + positional lookup details)
-
-S156 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:161 | A108
-    report.expectEqual(step * 2, left.duration, cppID: id, what: "A108 left note ends at the seam")
-
-S157 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:162 | A109
-    report.expectEqual(step * 2, right.duration, cppID: id, what: "A109 right note retains its full duration")
-
-S158 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:163 | A110
-    report.expect(left.endIndex != right.endIndex, cppID: id, message: "A110 abutting notes have distinct ends")
-
-S159 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:169 | A111
-        report.expect(!(event.isChannel && event.tick >= seam - step * 2 &&
-                        (event.isNoteOn || event.isNoteEnd)), cppID: id,
-                      message: "A111 deleting both notes leaves no note endpoints at or beyond the seam")
-
-
-Supplemental unterminated-resize regression
-Owner: coreUnterminatedResizeChecks, called by coreNoteTransactionChecks.
-Reference behavior: src/core/songdocument.cpp at 8b9bb8f,
-buildResizeNotesOps / resizeNotes (lines 1541-1594): nonzero resize inserts
-a velocity-zero note-on end, including when no end existed.
-Failure-first: deno task verify --filter swiftcore --verbose --qt noteEdits
-failed with duration 0 instead of 1/12, no endpoint, and zero undo entries
-for both direct and keyboard paths (artifact://87).
-Post-fix: noteEdits and documentHistory pass (artifact://90).
-The original A001-A111 inventory and source sequences are unchanged.
-
-U001 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:445
-                    report.fail(id, "fixture must contain an unterminated note"); continue
-
-U002 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:458
-                report.expect(document.state == before && document.revision == revision &&
-                    document.history.currentIdentity == identity && !document.history.canUndo,
-                    cppID: id, message: "zero delta leaves the unterminated note and history untouched")
-
-U003 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:462
-                report.expect(document.state == before && document.revision == revision &&
-                    document.history.currentIdentity == identity && !document.history.canUndo,
-                    cppID: id, message: "overflow rejects without terminating or recording the note")
-
-U004 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:468
-                report.expectEqual(duration, document.note(original.id)?.duration, cppID: id,
-                                   what: "nonzero resize supplies the planned duration")
-
-U005 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:470
-                report.expect(document.note(original.id)?.endTick == UInt64(end), cppID: id,
-                              message: "resized note has an actual endpoint")
-
-U006 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:475
-                report.expectEqual(try expected.encoded(), try document.state.file.encoded(),
-                    cppID: id, what: "resize preserves note-on bytes and adds the canonical channel end")
-
-U007 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:477
-                report.expect(document.note(original.id)?.tick == original.tick &&
-                    document.note(original.id)?.pitch == original.pitch &&
-                    document.note(original.id)?.velocity == original.velocity,
-                    cppID: id, message: "termination preserves identity, tick, pitch, and velocity")
-
-U008 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:481
-                report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
-                                   cppID: id, what: "termination records exactly one undo entry")
-
-U009 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:485
-                report.expect(document.state == before &&
-                    document.note(original.id)?.isUnterminated == true &&
-                    document.history.currentIdentity == identity && !document.isDirty,
-                    cppID: id, message: "undo restores the unterminated state, identity, and cleanliness")
-
-U010 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:490
-                report.expect(document.state == terminated &&
-                    document.note(original.id)?.endTick == UInt64(end),
-                    cppID: id, message: "redo restores the same terminated note")
-
-U011 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:495
-                    report.expectEqual(Tick(15), document.note(original.id)?.duration, cppID: id,
-                                       what: "next keyboard press extends the newly terminated note")
-
-U012 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:497
-                    report.expectEqual([1, 1], coreRangeHistoryPosition(document, report, id),
-                                       cppID: id, what: "compatible keyboard presses merge")
-
-U013 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:500
-                    report.expectEqual(before, document.state, cppID: id,
-                                       what: "merged undo restores the original missing endpoint")
-
-U014 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:504
-                report.fail(id, "unterminated resize fixture failed: \(error)")
-
-U015 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:512
-            report.fail(id, "fixture note is missing"); return
-
-U016 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:517
-        report.expectEqual(UInt64(20), document.note(note.id)?.endTick, cppID: id,
-                           what: "cumulative resize creates an endpoint")
-
-U017 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:520
-        report.expect(document.state == before && !document.history.canUndo && !document.isDirty,
-                      cppID: id, message: "return to gesture origin removes the generated endpoint")
-
-U018 | coreUnterminatedResizeChecks | src/checks/editcheck/tst_songdocument_songnotes.swift:523
-        report.fail(id, "cumulative resize fixture failed: \(error)")
-
+S118 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19
+S119 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24
+S120 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26
+S121 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:86
+S122 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:87
+S123 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:89
+S124 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:90
+S125 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:93
+S126 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:95
+S127 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:97
+S128 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:99
+S129 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:101
+S130 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:103
+S131 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:105
+S132 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:107
+S133 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:110
+S134 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:112
+S135 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:114
+S136 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:116
+S137 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:118
+S138 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:120
+S139 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:122
+S140 | basicNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:124
+S141 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19
+S142 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24
+S143 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26
+S144 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:135
+S145 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:136
+S146 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:137
+S147 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:140
+S148 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:142
+S149 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:145
+S150 | batchNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:146
+S151 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:19
+S152 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:24
+S153 | coreNoteCorpusChecks | src/checks/editcheck/NoteCorpusChecks.swift:26
+S154 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:159
+S155 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:160
+S156 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:161
+S157 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:162
+S158 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:163
+S159 | abuttingNoteRow | src/checks/editcheck/NoteCorpusChecks.swift:169

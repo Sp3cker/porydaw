@@ -120,8 +120,23 @@ func runMidiCodecSuite(_ report: CheckReport) {
                 division: 96, endTicks: [0, 24_835], eventCounts: [2, 12],
                 events: [
                     DecodedEventExpectation(
+                        chunk: 1, index: 0,
+                        event: .channel(status: 0xB0, data0: 0x65, data1: 0)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 1,
+                        event: .channel(status: 0xB0, data0: 0x64, data1: 1)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 2,
+                        event: .channel(status: 0xB0, data0: 0x06, data1: 2)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 3,
+                        event: .channel(status: 0xB0, data0: 0x26, data1: 0)),
+                    DecodedEventExpectation(
                         chunk: 1, index: 4,
                         event: .channel(tick: 24_611, status: 0xC0, data0: 5)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 5,
+                        event: .channel(tick: 24_611, status: 0xC0, data0: 6)),
                     DecodedEventExpectation(
                         chunk: 1, index: 6,
                         event: .meta(tick: 24_611, type: 1, data: [0x58])),
@@ -132,6 +147,14 @@ func runMidiCodecSuite(_ report: CheckReport) {
                         chunk: 1, index: 8,
                         event: .channel(tick: 24_739, status: 0x90,
                                         data0: 0x3C, data1: 0x64)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 9,
+                        event: .channel(tick: 24_739, status: 0x90,
+                                        data0: 0x3E, data1: 0x50)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 10,
+                        event: .channel(tick: 24_835, status: 0x80,
+                                        data0: 0x3C, data1: 0)),
                     DecodedEventExpectation(
                         chunk: 1, index: 11,
                         event: .channel(tick: 24_835, status: 0x80,
@@ -164,6 +187,12 @@ func runMidiCodecSuite(_ report: CheckReport) {
                     DecodedEventExpectation(
                         chunk: 1, index: 7,
                         event: .channel(tick: 72, status: 0x80, data0: 0x3E, data1: 0)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 8,
+                        event: .channel(tick: 96, status: 0x90, data0: 0x40, data1: 0x60)),
+                    DecodedEventExpectation(
+                        chunk: 1, index: 9,
+                        event: .channel(tick: 120, status: 0x80, data0: 0x40, data1: 0)),
                 ])),
         (
             "smfcheck/MidiSmfTest::duplicateEndOfTrackCanonicalizes",
@@ -175,24 +204,7 @@ func runMidiCodecSuite(_ report: CheckReport) {
             "test_midis/smf/stress/automation_burst.mid", nil,
             DecodedCodecExpectation(
                 division: 96, endTicks: [352, 352, 352], eventCounts: [2, 195, 195],
-                events: [
-                    DecodedEventExpectation(
-                        chunk: 1, index: 0,
-                        event: .channel(status: 0xC0, data0: 5)),
-                    DecodedEventExpectation(
-                        chunk: 1, index: 193,
-                        event: .channel(tick: 256, status: 0x90,
-                                        data0: 0x3C, data1: 0x50)),
-                    DecodedEventExpectation(
-                        chunk: 1, index: 194,
-                        event: .channel(tick: 352, status: 0x80, data0: 0x3C)),
-                    DecodedEventExpectation(
-                        chunk: 2, index: 0,
-                        event: .channel(status: 0xC1, data0: 40)),
-                    DecodedEventExpectation(
-                        chunk: 2, index: 194,
-                        event: .channel(tick: 352, status: 0x81, data0: 0x43)),
-                ])),
+                events: automationBurstExpectations())),
     ]
     let projectSongs: [(path: String, cppID: String)] = [
         ("sound/songs/midi/mus_caught.mid",
@@ -271,7 +283,8 @@ func runMidiCodecSuite(_ report: CheckReport) {
     for fixture in fixtures {
         compareFixture(relativePath: fixture.path, cppID: fixture.cppID,
                        expectedCanonicalBytes: fixture.canonical,
-                       expectedDecoded: fixture.decoded, report: report)
+                       expectedDecoded: fixture.decoded,
+                       assertSemanticReparse: true, report: report)
     }
 
     let validFormat0 = formatZeroBytes(hex("00903c4010803c4000c07f00ff2f00"))
@@ -309,6 +322,9 @@ func runMidiCodecSuite(_ report: CheckReport) {
             events: [
                 DecodedEventExpectation(
                     chunk: 1, index: 0, event: .channel(status: 0xC0, data0: 0x80)),
+                DecodedEventExpectation(
+                    chunk: 1, index: 1,
+                    event: .channel(status: 0x90, data0: 0x3C, data1: 0x40)),
                 DecodedEventExpectation(
                     chunk: 1, index: 2,
                     event: .channel(status: 0xB0, data0: 0x07, data1: 0x80)),
@@ -475,11 +491,31 @@ func runMidiCodecSuite(_ report: CheckReport) {
         bytes: formatZeroBytes(hex("8180808000903c4000ff2f00")), expectedValid: false,
         expectedSwiftError: "VLQ exceeds 4 bytes", report: report)
 
+    // Sixteen 0x0FFFFFFF deltas put the tick at 0xFFFFFFF0; one more delta of
+    // 0x10 crosses the 32-bit bound while 0x0E (TimeDefaults.maxTick) parses.
     var overlong: [UInt8] = []
-    for _ in 0..<17 { overlong += hex("ffffff7f903c40") }
-    overlong += hex("00ff2f00")
+    for _ in 0..<16 { overlong += hex("ffffff7f904040") }
+    overlong += hex("10")
     compareCodecCase(cppID: "smfcheck/MidiSmfTest::overlongTickFailsParsing",
-                     bytes: formatZeroBytes(overlong), expectedValid: false, report: report)
+                     bytes: formatZeroBytes(overlong), expectedValid: false,
+                     expectedSwiftError: "tick position exceeds 32-bit tick range",
+                     report: report)
+
+    var justInside = overlong
+    justInside.removeLast()
+    justInside += hex("0eff2f00")
+    let justInsideID = "smfcheck/MidiSmfTest::overlongTickFailsParsing/just-inside"
+    do {
+        let file = try MidiFile.decode(formatZeroBytes(justInside))
+        report.pass(justInsideID, row: "independent Swift validity")
+        report.expectEqual(2, file.chunks.count, cppID: justInsideID,
+                           what: "independent decoded chunk count")
+        report.expectEqual(TimeDefaults.maxTick, file.chunks.last?.endTick,
+                           cppID: justInsideID,
+                           what: "independent decoded chunk=1 end tick")
+    } catch {
+        report.fail(justInsideID, "just-inside tick rejected: \(error)")
+    }
 
     let blankID = "project/SongRegistry::blankSong"
     let expectedBlank = hex(
@@ -758,6 +794,7 @@ private func compareFixture(relativePath: String, cppID: String,
                             assertCanonicalBytes: Bool = true,
                             expectedFormatZero: Bool = false,
                             expectedDecoded: DecodedCodecExpectation? = nil,
+                            assertSemanticReparse: Bool = false,
                             encodedOutputURL: URL? = nil,
                             report: CheckReport) {
     guard let path = CheckEnvironment.fixturePath(relativePath) else {
@@ -771,7 +808,8 @@ private func compareFixture(relativePath: String, cppID: String,
             expectedCanonicalBytes: expectedCanonicalBytes ?? sourceBytes,
             assertCanonicalBytes: assertCanonicalBytes,
             expectedFormatZero: expectedFormatZero,
-            expectedDecoded: expectedDecoded, report: report)
+            expectedDecoded: expectedDecoded,
+            assertSemanticReparse: assertSemanticReparse, report: report)
         if let encodedOutputURL, observation.valid {
             try FileManager.default.createDirectory(
                 at: encodedOutputURL.deletingLastPathComponent(),
@@ -782,7 +820,6 @@ private func compareFixture(relativePath: String, cppID: String,
         report.fail(cppID, "fixture/export I/O failed for \(path): \(error)")
     }
 }
-
 @discardableResult
 private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool,
                               expectedSwiftError: String? = nil,
@@ -790,6 +827,7 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
                               assertCanonicalBytes: Bool = true,
                               expectedFormatZero: Bool = false,
                               expectedDecoded: DecodedCodecExpectation? = nil,
+                              assertSemanticReparse: Bool = false,
                               report: CheckReport) -> CodecObservation {
     let swift = swiftCodec(bytes)
     report.expectEqual(expectedValid, swift.valid, cppID: cppID,
@@ -804,9 +842,24 @@ private func compareCodecCase(cppID: String, bytes: [UInt8], expectedValid: Bool
             report.expectEqual(expectedCanonicalBytes ?? bytes, swift.encoded, cppID: cppID,
                                what: "independent canonical byte vector")
         }
+        report.expect(swift.encoded.count > 9 &&
+                      swift.encoded[8] == 0 && swift.encoded[9] == 1,
+                      cppID: cppID,
+                      message: "independent encoded format word is 1")
         report.expectEqual(expectedFormatZero, file.wasFormat0, cppID: cppID,
                            what: "independent format-0 provenance")
         expectDecodedStructure(file, expected: expectedDecoded, cppID: cppID, report: report)
+        if assertSemanticReparse {
+            let reparsed = swiftCodec(swift.encoded)
+            report.expect(reparsed.valid, cppID: cppID,
+                          message: "independent semantic reparse validity (error=\(reparsed.error))")
+            if let reread = reparsed.decoded {
+                report.expectEqual(file.division, reread.division, cppID: cppID,
+                                   what: "independent semantic reparse division")
+                report.expectEqual(file.chunks, reread.chunks, cppID: cppID,
+                                   what: "independent semantic reparse chunks")
+            }
+        }
     }
     return swift
 }
@@ -850,6 +903,58 @@ private func expectDecodedStructure(_ file: MidiFile, expected: DecodedCodecExpe
                            cppID: cppID,
                            what: "independent decoded event chunk=\(item.chunk) index=\(item.index)")
     }
+}
+
+// The automation-burst fixture's full decoded contract: conductor metas, the
+// program change, 64 groups of (CC, CC, pitch bend) per channel, and the
+// trailing note on/off pair. Mirrors the C++ per-group field formulas.
+private func automationBurstExpectations() -> [DecodedEventExpectation] {
+    var events: [DecodedEventExpectation] = [
+        DecodedEventExpectation(
+            chunk: 0, index: 0, event: .meta(type: 0x51, data: hex("07a120"))),
+        DecodedEventExpectation(
+            chunk: 0, index: 1, event: .meta(type: 0x58, data: hex("04021808"))),
+    ]
+    for channel in 0..<2 {
+        let chunk = channel + 1
+        let ccStatus = UInt8(0xB0 + channel)
+        let bendStatus = UInt8(0xE0 + channel)
+        events.append(DecodedEventExpectation(
+            chunk: chunk, index: 0,
+            event: .channel(status: UInt8(0xC0 + channel),
+                            data0: channel == 0 ? 5 : 40)))
+        for group in 0..<64 {
+            let base = 1 + group * 3
+            let tick = Tick(4 * group)
+            let firstController = UInt8(channel == 0 ? 7 : 1)
+            let firstValue = UInt8(channel == 0 ? 20 + group : (3 * group) & 0x7F)
+            let secondController = UInt8(channel == 0 ? 11 : 10)
+            let secondValue = UInt8(channel == 0 ? 0x7F - group : 40 + group)
+            let bendLsb = UInt8(channel == 0 ? group : (5 * group) & 0x7F)
+            let bendMsb = UInt8(channel == 0 ? (2 * group) & 0x7F : (7 * group) & 0x7F)
+            events.append(DecodedEventExpectation(
+                chunk: chunk, index: base,
+                event: .channel(tick: tick, status: ccStatus,
+                                data0: firstController, data1: firstValue)))
+            events.append(DecodedEventExpectation(
+                chunk: chunk, index: base + 1,
+                event: .channel(tick: tick, status: ccStatus,
+                                data0: secondController, data1: secondValue)))
+            events.append(DecodedEventExpectation(
+                chunk: chunk, index: base + 2,
+                event: .channel(tick: tick, status: bendStatus,
+                                data0: bendLsb, data1: bendMsb)))
+        }
+        let note = UInt8(channel == 0 ? 0x3C : 0x43)
+        events.append(DecodedEventExpectation(
+            chunk: chunk, index: 193,
+            event: .channel(tick: 256, status: UInt8(0x90 + channel),
+                            data0: note, data1: 0x50)))
+        events.append(DecodedEventExpectation(
+            chunk: chunk, index: 194,
+            event: .channel(tick: 352, status: UInt8(0x80 + channel), data0: note)))
+    }
+    return events
 }
 
 

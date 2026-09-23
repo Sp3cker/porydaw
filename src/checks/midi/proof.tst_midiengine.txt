@@ -4,7 +4,7 @@ Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/midi/tst_midiengine.cpp
 Original SHA-256: 6260d911943cb93de174b2061578b626bf4c717e05ddf0ac17e038218ffc1648
 Swift counterpart: src/checks/midi/MidiChecks.swift
-Swift SHA-256: 3f4245e5afc1343b51c07bd3b96e1ff4536920b329423a189ec3db02eb8d8e50
+Swift SHA-256: 7ce499f2dc6ce74ce2fe5011c60331c2590e118809bf2c9133c346deeb44b4ce
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every

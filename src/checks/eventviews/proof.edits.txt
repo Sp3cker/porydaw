@@ -4,19 +4,19 @@ Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/eventviews/edits.cpp
 Original SHA-256: 89da4c7d7d2708876b618fa5595b067bebe31388d76709f960abc899e20d584b
 Swift counterpart: src/checks/editcheck/tst_songdocument_songraw.swift
-Swift SHA-256: 8921251081d73aab391d6063e78d00225d48ebf753192176ec82fba18ab9d19f
+Swift SHA-256: 7c5dc3cac4f4652f22a1bdc91eedd7000788a27fdbc5d8875e0acd05d19b3c16
 Additional Swift counterpart: src/checks/editcheck/EventChecks.swift
-Additional Swift SHA-256: 9d44bf48ffa6ca7affeacb398232f663f398dded9cfa3332c9d4db9852256ed1
+Additional Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 
 Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including the file-local typeDigits helper guard. PARTIAL identifies document-state predicates (ticks, counts, order, undo index/count, tempo points, blob bytes) with related Swift document-level predicates and an explicit unproved condition (the EventTableModel/controller commit path, the gesture translation path, or the kMaxTick boundary value). NATIVE identifies predicates that observe the rendered in-cell editor, typed key delivery, pointer-drag gestures, the live row-menu session, or Quick focus arbitration. GAP identifies fixture guards, commit-result predicates, model lookups, Qt signal counts, tick-boundary refusals, the EOT-row refusal, keymap lookups, and drawer-focus Delete routing with no Swift equivalent; unsure between PARTIAL and GAP resolves to GAP. The Swift counterpart search covered src/checks/swiftcore (EventChecks rawTempoAndSignatureEditing) and src/checks/editcheck (runRawEventOriginalChecks, coreRawEventEditing); MidiChecks tick-arithmetic oracles do not cover raw-event boundary commits. None of these labels authorizes deletion or claims whole-case equivalence.
+This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including the file-local typeDigits helper guard. PARTIAL identifies document-state predicates (ticks, counts, order, undo index/count, tempo points, blob bytes) with related Swift document-level predicates and an explicit unproved condition (the EventTableModel/controller commit path, the gesture translation path, or the kMaxTick boundary value). Assertions whose stimulus is a direct document call and whose observable is portable are MATCHED when a registered Swift predicate exercises the same contract (A071: the raw-insert undo-step count, proved by S092). NATIVE identifies predicates that observe the rendered in-cell editor, typed key delivery, pointer-drag gestures, the live row-menu session, or Quick focus arbitration. GAP identifies fixture guards, commit-result predicates, model lookups, Qt signal counts, tick-boundary refusals, the EOT-row refusal, keymap lookups, and drawer-focus Delete routing with no Swift equivalent; unsure between PARTIAL and GAP resolves to GAP. The Swift counterpart search covered src/checks/swiftcore (EventChecks rawTempoAndSignatureEditing) and src/checks/editcheck (runRawEventOriginalChecks, coreRawEventEditing, coreRawEventDocumentSeams); MidiChecks tick-arithmetic oracles do not cover raw-event boundary commits. None of these labels authorizes deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
-Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift), which calls rawTempoAndSignatureEditing for tempo/raw cross-conversion atomicity and runRawEventOriginalChecks plus coreRawEventEditing for raw insert, modify, delete, reorder, move-bounds, opaque-byte, and full-history rewind/replay predicates (src/checks/editcheck/tst_songdocument_songraw.swift). Corpus rows load via coreEditCorpusSongs and history-tip counting via coreEditHistoryCountAtTip (src/checks/editcheck/tst_songdocument_runner.swift, inventoried as a shared helper below). Controller/model/native-delivery observations have no Swift owner. Native ownership of the full cases: runEventViewsEditsCheck in this file drives EventViewsEditsTest (tickEditQueued, tick64BitExact, tickHighBitExact, tickHighBitThroughEditor, channelAndDataConversions, rawTempoAtomic, insertCopy, sameTickReorder, deleteMatrix, drawerClickAfterEditOwnsDelete).
+Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift), which calls rawTempoAndSignatureEditing for tempo/raw cross-conversion atomicity and runRawEventOriginalChecks plus coreRawEventEditing for raw insert, modify, delete, reorder, move-bounds, opaque-byte, and full-history rewind/replay predicates (src/checks/editcheck/tst_songdocument_songraw.swift). runRawEventOriginalChecks also calls coreRawEventDocumentSeams, which proves the document-stimulus seams: a raw insert pushes exactly one undoable step (A071) and a channel event on a free channel promotes a metadata-only chunk to an engine track with undo/redo demotion and repromotion (remap.cpp metadataChunkTransition). Corpus rows load via coreEditCorpusSongs and history-tip counting via coreEditHistoryCountAtTip (src/checks/editcheck/tst_songdocument_runner.swift, inventoried as a shared helper below). Controller/model/native-delivery observations have no Swift owner. Native ownership of the full cases: runEventViewsEditsCheck in this file drives EventViewsEditsTest (tickEditQueued, tick64BitExact, tickHighBitExact, tickHighBitThroughEditor, channelAndDataConversions, rawTempoAtomic, insertCopy, sameTickReorder, deleteMatrix, drawerClickAfterEditOwnsDelete).
 
 Fixture, sequence and row constraints
 No _data rows exist in this file; sequencing is phasal instead. rawTempoAtomic expands its conversion sites over six phases (meta-to-tempo convert, undo, redo, tempo-to-meta convert, undo, redo), each asserting undo index/count arithmetic, tempo-row projection, row lookup, and tick-zero meta preservation. sameTickReorder expands over five gesture phases (legal drag swap, illegal pre-run drop, illegal cross-tick drop, pinned note-end no-op, menu MoveEventDown, key move_down, boundary move_up no-op). deleteMatrix runs a two-selection delete phase and a single-selection delete phase; drawerClickAfterEditOwnsDelete sequences an edit, a drawer-focus commit, and a drawer-focus Delete. tick64BitExact and tickHighBitExact pin single boundary values (3e9, kNoTick refusal, kMaxTick commit) rather than row suites.
@@ -905,8 +905,9 @@ Original expression:
 QVERIFY(widgets.model->tempoRowForExactTick(0) >= 0)
 
 A071 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:337
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S092 | src/checks/editcheck/tst_songdocument_songraw.swift :: coreRawEventDocumentSeams
+Mapping/reason: The stimulus is a direct document.insertRawEvent call, not the model commit path; Swift S092 asserts the same observable — one undoable step pushed at the history tip — via coreEditHistoryCountAtTip under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -2327,383 +2328,383 @@ int runEventViewsEditsCheck(const QStringList &qtArguments)
 
 Swift assertion predicates
 
-S001 | runRawEventOriginalChecks | src/checks/editcheck/tst_songdocument_songraw.swift:12
+S001 | runRawEventOriginalChecks | src/checks/editcheck/tst_songdocument_songraw.swift:13
   report.fail("editcheck/EditCheckTest::rawEventMutate", "corpus loading or encoding failed: \(error)")
 
-S002 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:33
+S002 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:34
   report.expect(!loaded.midiPath.isEmpty, cppID: cppID, message: "row has a playable MIDI path")
 
-S003 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:37
+S003 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:38
   report.fail(cppID, "loaded song has no SMF chunk")
 
-S004 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:46
+S004 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:47
   report.expectEqual(before + 1, document.rawChunks[chunk].events.count, cppID: cppID,
                        what: "insert increments the raw event count")
 
-S005 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:48
+S005 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:49
   report.expectEqual(1, document.rawChunks[chunk].events.filter { $0 == event }.count,
                        cppID: cppID, what: "inserted event occurs exactly once")
 
-S006 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:50
+S006 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:51
   report.expectEqual(base, document.rawChunks[chunk].endTick, cppID: cppID,
                        what: "insert extends chunk end")
 
-S007 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:52
+S007 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:53
   report.expect(coreRawTracksSorted(document), cppID: cppID, message: "insert keeps all tracks sorted")
 
-S008 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:55
+S008 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:56
   report.fail(cppID, "inserted event is absent")
 
-S009 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:60
+S009 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:61
   report.expectEqual(sameTickIndex, document.rawChunks[chunk].events.firstIndex(of: event),
                        cppID: cppID, what: "same-tick modification retains index")
 
-S010 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:62
+S010 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:63
   report.expect(coreRawTracksSorted(document), cppID: cppID, message: "same-tick modification keeps sorting")
 
-S011 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:65
+S011 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:66
   report.fail(cppID, "modified event is absent")
 
-S012 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:71
+S012 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:72
   report.expectEqual(countBeforeMove + 1, document.rawChunks[chunk].events.filter { $0 == event }.count,
                        cppID: cppID, what: "tick change creates the destination event")
 
-S013 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:73
+S013 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:74
   report.expectEqual(before + 1, document.rawChunks[chunk].events.count, cppID: cppID,
                        what: "tick change retains event count")
 
-S014 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:75
+S014 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:76
   report.expect(coreRawTracksSorted(document), cppID: cppID, message: "tick change keeps sorting")
 
-S015 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:77
+S015 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:78
   report.fail(cppID, "moved event is absent")
 
-S016 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:81
+S016 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:82
   report.expectEqual(before, document.rawChunks[chunk].events.count, cppID: cppID,
                        what: "delete restores initial event count")
 
-S017 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:84
+S017 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:85
   report.expectEqual(base + 500, document.rawChunks[chunk].endTick, cppID: cppID,
                        what: "explicit chunk-end extension")
 
-S018 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:88
+S018 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:89
   report.expectEqual(lastTick, document.rawChunks[chunk].endTick, cppID: cppID,
                        what: "chunk end clamps to the last event")
 
-S019 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:91
+S019 | coreRawMutationRow | src/checks/editcheck/tst_songdocument_songraw.swift:92
   report.expectEqual(baseline, try document.state.file.encoded(), cppID: cppID,
                        what: "all mutations undo to exact MIDI bytes")
 
-S020 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:98
+S020 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:99
   report.expect(!loaded.midiPath.isEmpty, cppID: cppID, message: "row has a playable MIDI path")
 
-S021 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:102
+S021 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:103
   report.fail(cppID, "loaded song has no SMF chunk")
 
-S022 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:115
+S022 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:116
   report.fail(cppID, "first inserted controller is absent")
 
-S023 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:120
+S023 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:121
   report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "second controller follows first")
 
-S024 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:122
+S024 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:123
   report.expectEqual(noteIndex, document.rawChunks[chunk].events.firstIndex(of: noteOn),
                        cppID: cppID, what: "note follows controllers")
 
-S025 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:125
+S025 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:126
   report.expect(firstBounds != nil, cppID: cppID, message: "controller move bounds exist")
 
-S026 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:126
+S026 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:127
   report.expectEqual(firstIndex, firstBounds?.lowerBound, cppID: cppID, what: "controller lower bound")
 
-S027 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:127
+S027 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:128
   report.expectEqual(secondIndex, firstBounds?.upperBound, cppID: cppID, what: "controller upper bound")
 
-S028 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:129
+S028 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:130
   report.expect(noteBounds != nil, cppID: cppID, message: "note move bounds exist")
 
-S029 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:130
+S029 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:131
   report.expectEqual(noteIndex, noteBounds?.lowerBound, cppID: cppID, what: "note lower bound")
 
-S030 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:131
+S030 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:132
   report.expectEqual(noteIndex, noteBounds?.upperBound, cppID: cppID, what: "note upper bound")
 
-S031 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:134
+S031 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:135
   report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "reorder moves second controller before first")
 
-S032 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:136
+S032 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:137
   report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "reorder moves first controller after second")
 
-S033 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:138
+S033 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:139
   report.expect(coreRawTracksSorted(document), cppID: cppID, message: "reordering keeps sorting")
 
-S034 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:142
+S034 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:143
   report.expectEqual(undoCount, try coreEditHistoryCountAtTip(document, report: report, cppID: cppID),
                        cppID: cppID, what: "both forbidden moves leave history entry count unchanged")
 
-S035 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:144
+S035 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:145
   report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "forbidden moves retain first controller position")
 
-S036 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:146
+S036 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:147
   report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "forbidden moves retain second controller position")
 
-S037 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:149
+S037 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:150
   report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "undo restores first controller position")
 
-S038 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:151
+S038 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:152
   report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "undo restores second controller position")
 
-S039 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:154
+S039 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:155
   report.expectEqual(secondIndex, document.rawChunks[chunk].events.firstIndex(of: first),
                        cppID: cppID, what: "redo restores reordered first controller")
 
-S040 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:156
+S040 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:157
   report.expectEqual(firstIndex, document.rawChunks[chunk].events.firstIndex(of: second),
                        cppID: cppID, what: "redo restores reordered second controller")
 
-S041 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:160
+S041 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:161
   report.expectEqual(baseline, try document.state.file.encoded(), cppID: cppID,
                        what: "undo all restores exact baseline bytes")
 
-S042 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:163
+S042 | coreRawReorderRow | src/checks/editcheck/tst_songdocument_songraw.swift:164
   report.expectEqual(edited, try document.state.file.encoded(), cppID: cppID,
                        what: "redo all restores exact edited bytes")
 
-S043 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:170
+S043 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:171
   report.expectEqual(Optional(0...1), document.rawMoveBounds(chunk: 0, index: 0),
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "setup events reorder only before the note")
 
-S044 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:173
+S044 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:174
   report.expectEqual(Optional(2...2), document.rawMoveBounds(chunk: 0, index: 2),
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "note cannot cross pinned setup events")
 
-S045 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:183
+S045 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:184
   report.expectEqual(UInt8(10), firstController,
                        cppID: "editcheck/EditCheckTest::rawEventReorder",
                        what: "same-tick raw order changes")
 
-S046 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:196
+S046 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:197
   report.expect(undoControllers == [7, 10] && redoControllers == [10, 7],
         cppID: "editcheck/EditCheckTest::rawEventReorder",
         message: "raw reorder undo and redo reproduce the exact event order")
 
-S047 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:202
+S047 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:203
   report.expectEqual([UInt8(0x7D), 1, 2, 0xF7], document.rawChunks[0].events
         .first(where: { $0.isSystemExclusive })?.blob,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         what: "opaque bytes are stored without normalization")
 
-S048 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:216
+S048 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:217
   report.expectEqual([UInt8(0x7D), 9, 8, 0xF7], document.rawChunks[0].events
         .first(where: { $0.isSystemExclusive })?.blob,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         what: "modify and delete retain the intended opaque mutation")
 
-S049 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:221
+S049 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:222
   report.expectEqual(Tick(11), document.rawChunks[0].endTick,
                        cppID: "editcheck/EditCheckTest::rawEventMutate",
                        what: "chunk end clamps to its last event tick")
 
-S050 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:229
+S050 | coreRawEventEditing | src/checks/editcheck/tst_songdocument_songraw.swift:230
   report.expect(rawRewound == rawBaseline && rawReplayed == rawEdited,
         cppID: "editcheck/EditCheckTest::rawEventMutate",
         message: "raw mutation history fully rewinds to encoded baseline and replays exactly")
 
-S051 | trackEditing | src/checks/editcheck/EventChecks.swift:54
+S051 | trackEditing | src/checks/editcheck/EventChecks.swift:68
   report.expectEqual(2, added,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "new track occupies the next engine slot")
 
-S052 | trackEditing | src/checks/editcheck/EventChecks.swift:57
+S052 | trackEditing | src/checks/editcheck/EventChecks.swift:71
   report.expectEqual(127, document.lanePoints(track: added ?? -1, lane: .voice).first?.value,
                        cppID: "editcheck/EditCheckTest::voiceLanePoint",
                        what: "new track voice is clamped and seeded")
 
-S053 | trackEditing | src/checks/editcheck/EventChecks.swift:60
+S053 | trackEditing | src/checks/editcheck/EventChecks.swift:74
   report.expectEqual([0, 1], changes.last?.trackRemap?.engineTrackMap.compactMap { $0 },
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "add publishes old engine-track identities")
 
-S054 | trackEditing | src/checks/editcheck/EventChecks.swift:64
+S054 | trackEditing | src/checks/editcheck/EventChecks.swift:78
   report.expectEqual(2, changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "undo publishes the inverse track remap")
 
-S055 | trackEditing | src/checks/editcheck/EventChecks.swift:68
+S055 | trackEditing | src/checks/editcheck/EventChecks.swift:82
   report.expectEqual(3, changes.last?.trackRemap?.newEngineTrackCount,
                        cppID: "editcheck/EditCheckTest::documentPublicationTrackRemap",
                        what: "redo republishes the forward track remap")
 
-S056 | trackEditing | src/checks/editcheck/EventChecks.swift:73
+S056 | trackEditing | src/checks/editcheck/EventChecks.swift:87
   report.fail("editcheck/EditCheckTest::trackDuplicate", "track duplication failed")
 
-S057 | trackEditing | src/checks/editcheck/EventChecks.swift:76
+S057 | trackEditing | src/checks/editcheck/EventChecks.swift:90
   report.expectEqual(["8:60:4"],
                        document.notes(in: copy).map { "\($0.tick):\($0.pitch):\($0.duration)" },
                        cppID: "editcheck/EditCheckTest::trackDuplicate",
                        what: "duplicate preserves the fixture's literal note")
 
-S058 | trackEditing | src/checks/editcheck/EventChecks.swift:80
+S058 | trackEditing | src/checks/editcheck/EventChecks.swift:94
   report.expect(document.notes(in: 0).first?.id != document.notes(in: copy).first?.id,
                   cppID: "editcheck/EditCheckTest::documentDuplicateIdentities",
                   message: "duplicate remints note identities")
 
-S059 | trackEditing | src/checks/editcheck/EventChecks.swift:85
+S059 | trackEditing | src/checks/editcheck/EventChecks.swift:99
   report.expect(document.timeSignatures.contains { $0.tick == 2 },
                   cppID: "editcheck/EditCheckTest::trackMove",
                   message: "conductor time signature survives reorder")
 
-S060 | trackEditing | src/checks/editcheck/EventChecks.swift:88
+S060 | trackEditing | src/checks/editcheck/EventChecks.swift:102
   report.expect(document.rawChunks[0].events.contains { MidiFile.metaIsMarker($0) },
                   cppID: "editcheck/EditCheckTest::trackMarkerName",
                   message: "conductor marker remains in chunk zero")
 
-S061 | trackEditing | src/checks/editcheck/EventChecks.swift:93
+S061 | trackEditing | src/checks/editcheck/EventChecks.swift:107
   report.expect(document.rawChunks[0].events.contains { event in
         event.metaType == 0x58 && event.tick == 2
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "global signature is rescued before chunk deletion")
 
-S062 | trackEditing | src/checks/editcheck/EventChecks.swift:97
+S062 | trackEditing | src/checks/editcheck/EventChecks.swift:111
   report.expect(document.rawChunks[0].events.contains { event in
         event.tick == 16 && MidiFile.metaIsMarker(event)
     }, cppID: "editcheck/EditCheckTest::trackDeleteRescue",
     message: "winning loop marker is rescued")
 
-S063 | trackEditing | src/checks/editcheck/EventChecks.swift:101
+S063 | trackEditing | src/checks/editcheck/EventChecks.swift:115
   report.expectEqual(chunksBeforeChunkZeroDelete, document.rawChunks.count,
                        cppID: "editcheck/EditCheckTest::trackCreateDelete",
                        what: "deleting the chunk-zero track retains the conductor chunk")
 
-S064 | trackEditing | src/checks/editcheck/EventChecks.swift:107
+S064 | trackEditing | src/checks/editcheck/EventChecks.swift:121
   report.expectEqual("Bass", document.trackName(0),
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "rename trims the stored display name")
 
-S065 | trackEditing | src/checks/editcheck/EventChecks.swift:111
+S065 | trackEditing | src/checks/editcheck/EventChecks.swift:125
   report.expectEqual(revision + 1, document.revision,
                        cppID: "editcheck/EditCheckTest::trackRename",
                        what: "loop-marker-shaped name is rejected")
 
-S066 | trackEditing | src/checks/editcheck/EventChecks.swift:116
+S066 | trackEditing | src/checks/editcheck/EventChecks.swift:130
   report.expect(budgetLimited.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "configured track budget rejects an added track")
 
-S067 | trackEditing | src/checks/editcheck/EventChecks.swift:123
+S067 | trackEditing | src/checks/editcheck/EventChecks.swift:137
   report.expect(ceiling.addTrack(voice: 1) == nil,
                   cppID: "editcheck/EditCheckTest::trackCreateDelete",
                   message: "hardware track ceiling rejects a seventeenth track")
 
-S068 | trackNameRoles | src/checks/editcheck/EventChecks.swift:142
+S068 | trackNameRoles | src/checks/editcheck/EventChecks.swift:156
   report.expectEqual("Bare", document.trackName(0),
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "document query ignores a channel-prefixed name")
 
-S069 | trackNameRoles | src/checks/editcheck/EventChecks.swift:151
+S069 | trackNameRoles | src/checks/editcheck/EventChecks.swift:165
   report.expectEqual(["Scoped", "Lead", "ScopedAfterBare"], names,
                        cppID: "editcheck/EditCheckTest::markerVersusTrackName",
                        what: "rename changes only bare names after empty-prefix or channel clearing")
 
-S070 | trackNameRoles | src/checks/editcheck/EventChecks.swift:156
+S070 | trackNameRoles | src/checks/editcheck/EventChecks.swift:170
   report.expectEqual("Bare", imported.tracks.first?.name,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis[default]",
                        what: "import and document queries select the same bare name")
 
-S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:173
+S071 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:187
   report.expectEqual(beforeTempoRaw, document.revision,
                        cppID: "editcheck/EditCheckTest::documentGlobalMetadata",
                        what: "raw tempo meta is rejected")
 
-S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:181
+S072 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:195
   report.expectEqual([TempoPoint(tick: 8, microsecondsPerQuarterNote: 600_000)],
                        document.state.tempo,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "tempo normalization keeps the last same-tick value")
 
-S073 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:189
+S073 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
   report.expectEqual(rawCount, document.rawChunks[0].events.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "mixed raw and tempo replacement is atomic")
 
-S074 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:193
+S074 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
   report.expectEqual(1, document.state.tempo.count,
                        cppID: "editcheck/EditCheckTest::tempoRawCrossConversion",
                        what: "one undo restores both domains")
 
-S075 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:199
+S075 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:213
   report.expectEqual(1, document.timeSignatures.filter { $0.tick == 20 }.count,
                        cppID: "editcheck/EditCheckTest::songTimeSignature",
                        what: "same-tick signature is replaced")
 
-S076 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:203
+S076 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:217
   report.expect(document.timeSignatures.contains { $0.tick == 24 && $0.numerator == 3 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature moves with its payload")
 
-S077 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:207
+S077 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:221
   report.expect(!document.timeSignatures.contains { $0.tick == 24 },
                   cppID: "editcheck/EditCheckTest::songTimeSignature",
                   message: "signature deletion removes destination")
 
-S078 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:220
+S078 | rawTempoAndSignatureEditing | src/checks/editcheck/EventChecks.swift:234
   report.expectEqual([3, 5], crossChunk.timeSignatures.filter { $0.tick == 24 }
         .map { Int($0.numerator) }.sorted(),
         cppID: "editcheck/EditCheckTest::songTimeSignature",
         what: "move preserves every cross-chunk source signature")
 
-S079 | laneEditing | src/checks/editcheck/EventChecks.swift:235
+S079 | laneEditing | src/checks/editcheck/EventChecks.swift:249
   report.expectEqual([LanePoint(chunk: 0, eventIndex: 1, tick: 6, value: 127)],
                        document.lanePoints(track: 0, lane: .controller(7)),
                        cppID: "editcheck/EditCheckTest::automationLanePoints",
                        what: "span write replaces and clamps points")
 
-S080 | laneEditing | src/checks/editcheck/EventChecks.swift:243
+S080 | laneEditing | src/checks/editcheck/EventChecks.swift:257
   report.expectEqual(["9:40"], document.lanePoints(track: 0, lane: .controller(7))
         .map { "\($0.tick):\($0.value)" },
         cppID: "automation-domain/laneMoveDestinationCollision",
         what: "lane move relocates the selected identity")
 
-S081 | laneEditing | src/checks/editcheck/EventChecks.swift:256
+S081 | laneEditing | src/checks/editcheck/EventChecks.swift:270
   report.expectEqual(beforeForeignDelete, xcmdDocument.rawChunks,
                        cppID: "automation-domain/laneDeleteForeignChunk",
                        what: "foreign-chunk XCMD point cannot delete a local event")
 
-S082 | importAnalysis | src/checks/editcheck/EventChecks.swift:275
+S082 | importAnalysis | src/checks/editcheck/EventChecks.swift:289
   report.expectEqual(2, analysis.xcmd.first?.count,
                        cppID: "smfcheck/MidiSmfTest::importReportCountsEveryPayloadOfSharedSelector",
                        what: "import counts logical XCMD points")
 
-S083 | importAnalysis | src/checks/editcheck/EventChecks.swift:278
+S083 | importAnalysis | src/checks/editcheck/EventChecks.swift:292
   report.expectEqual(.notExported, analysis.controllers.first { $0.controller == 0x4B }?.support,
                        cppID: "smfcheck/MidiSmfTest::importReportVerdictsOrdinaryControllers",
                        what: "unknown controller is not exported")
 
-S084 | importAnalysis | src/checks/editcheck/EventChecks.swift:281
+S084 | importAnalysis | src/checks/editcheck/EventChecks.swift:295
   report.expectEqual(1, analysis.silentTracks,
                        cppID: "onboardcheck/OnboardingTest::importAnalysis",
                        what: "player track budget identifies silent tracks")
 
-S085 | importAnalysis | src/checks/editcheck/EventChecks.swift:284
+S085 | importAnalysis | src/checks/editcheck/EventChecks.swift:298
   report.expect(analysis.tracks[0].notesBeforeProgram,
                   cppID: "onboardcheck/OnboardingTest::importAnalysis",
                   message: "notes before instrument are reported")
 
-S086 | importTransforms | src/checks/editcheck/EventChecks.swift:296
+S086 | importTransforms | src/checks/editcheck/EventChecks.swift:310
   report.expectEqual(1, MidiImport.removeRedundantSetters(&file),
                        cppID: "onboardcheck/OnboardingTest::importDedup",
                        what: "only eligible same-tick setter is removed")
 
-S087 | importTransforms | src/checks/editcheck/EventChecks.swift:299
+S087 | importTransforms | src/checks/editcheck/EventChecks.swift:313
   report.expectEqual([UInt8(2), 8, 9], file.chunks[0].events.map {
         if case let .channel(status, data0, data1) = $0.payload {
             return status >> 4 == 0xC ? data0 : data1
@@ -2712,27 +2713,55 @@ S087 | importTransforms | src/checks/editcheck/EventChecks.swift:299
     }, cppID: "onboardcheck/OnboardingTest::importDedup",
     what: "action-like XCMD selectors are preserved")
 
-S088 | importTransforms | src/checks/editcheck/EventChecks.swift:307
+S088 | importTransforms | src/checks/editcheck/EventChecks.swift:321
   report.expectEqual([Tick(0), 0, 0], file.chunks[0].events.map(\.tick),
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "rescale uses floor arithmetic")
 
-S089 | importTransforms | src/checks/editcheck/EventChecks.swift:310
+S089 | importTransforms | src/checks/editcheck/EventChecks.swift:324
   report.expectEqual(Tick(1), file.chunks[0].endTick,
                        cppID: "onboardcheck/OnboardingTest::importRescale",
                        what: "end tick uses the same floor arithmetic")
 
-S090 | importTransforms | src/checks/editcheck/EventChecks.swift:318
+S090 | importTransforms | src/checks/editcheck/EventChecks.swift:332
   report.fail("onboardcheck/OnboardingTest::importRescaleOverflow",
                     "overflowing rescale unexpectedly succeeded")
 
-S091 | importTransforms | src/checks/editcheck/EventChecks.swift:321
+S091 | importTransforms | src/checks/editcheck/EventChecks.swift:335
   report.expectEqual(baseline, overflow,
                            cppID: "onboardcheck/OnboardingTest::importRescaleOverflow",
                            what: "overflow rejection leaves file untouched")
 
+S092 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:247
+  report.expectEqual(seamBefore + 1,
+                       try coreEditHistoryCountAtTip(seam, report: report, cppID: seamID),
+                       cppID: seamID,
+                       what: "raw insert pushes exactly one undoable step")
+
+S093 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:264
+  report.fail(remapID, "no free channel for metadata-chunk promotion")
+
+S094 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:269
+  report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
+                       what: "channel event promotes the metadata chunk to an engine track")
+
+S095 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:271
+  report.expect(promoted.engineTracks.tracks
+        .prefix(promoted.engineTracks.usedTrackCount)
+        .contains { $0.midiChunk == metadataChunk },
+        cppID: remapID,
+        message: "an engine track owns the promoted metadata chunk")
+
+S096 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:277
+  report.expectEqual(2, promoted.engineTracks.usedTrackCount, cppID: remapID,
+                       what: "undo demotes the metadata chunk")
+
+S097 | coreRawEventDocumentSeams | src/checks/editcheck/tst_songdocument_songraw.swift:280
+  report.expectEqual(3, promoted.engineTracks.usedTrackCount, cppID: remapID,
+                       what: "redo repromotes the metadata chunk")
+
 Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
-SHA-256: 50f44d61a0599a0559d00d52fe616c37834ef35b629d3c3dd48f1faea6c0a64b
+SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187
 src/checks/editcheck/tst_songdocument_runner.swift:16
   report.fail("editcheck/EditCheckTest::initTestCase", "missing staged project root")
 src/checks/editcheck/tst_songdocument_runner.swift:22
@@ -2742,7 +2771,7 @@ src/checks/editcheck/tst_songdocument_runner.swift:30
   report.fail("editcheck/EditCheckTest::initTestCase", "expected one fixture config for \(filename)")
 src/checks/editcheck/tst_songdocument_runner.swift:38
   report.fail("editcheck/EditCheckTest::initTestCase", "fixture flags changed for \(filename): \(flags)")
-src/checks/editcheck/tst_songdocument_runner.swift:68
+src/checks/editcheck/tst_songdocument_runner.swift:83
   report.expect(count == replayed && document.state == restoredState &&
         document.history.currentIdentity == restoredIdentity, cppID: cppID,
         message: "counting public undo entries restores the exact state and identity")

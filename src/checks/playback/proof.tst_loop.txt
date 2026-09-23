@@ -1,90 +1,79 @@
 Assertion correspondence: playback/tst_loop.cpp
-
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 selected, 23 skipped (SwiftCoreTest 9.61s; build 12.39s).
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/playback/tst_loop.cpp
 Original SHA-256: a96225b0fa13175e78177a2f42657aca96b52cd2cd5939dcb92a13b88bc4ffa1
 Swift counterpart: src/checks/playback/tst_loop.swift
 Swift SHA-256: 156fe5d8ee9f67788af48fca50a7d217ed057763e69d48f187e936ae12edbff0
 
-Purpose and status
-One entry per original assertion or failure site, including initialization.
-MATCHED means the listed predicate and its scenario are represented in Swift;
-execution evidence is recorded separately below. This is source correspondence,
-not a live C++/Swift differential comparison or permission to delete native checks.
-There are no omitted original assertion sites in this file.
-
-Execution and ownership
-runPlaybackSuite calls runPairedLoopChecks in the same position as before.
-Shared loader and writer: swiftcore/PlaybackChecks.swift. Shared engine and channel
-inspection: playback/transportfixture.swift. Engine uses the retained native M4A
-backend while timeline generation and chase/prime/render operations use Swift.
-
-Fixture, sequence and rows
-Division 24; 48000 Hz; 120 BPM; 1000 samples per tick. Conductor loop markers 96/288; end 384. Program 0. Notes (on,off,key): (96,120,60), (192,312,67), (240,300,65), (264,288,62), (288,312,64), velocity 100. Fresh engine and Sequencer for each row; render in <=512-frame chunks to the exact sample position; inspect sorted keyed-on PCM keys (CHN_ON set, CHN_STOP clear).
-Rows (sample,looping,keys): pass-1-tied-note-sounds=(200000,true,[67]); pass-2-gate-carry-holds-across-wrap=(298000,true,[60,65,67]); gate-carry-releases-at-written-duration=(310000,true,[60,67]); pass-2-tied-note-stacks=(392000,true,[67,67]); pass-3-tied-note-stacks=(584000,true,[67,67,67]); loop-boundary-notes-play-without-looping=(298000,false,[64,65,67]).
-
-Verification evidence
-Command: deno task verify --filter swiftcore --filter clickcheck --verbose
-Result: PASS 2/2 selected checks (24 total, 22 skipped); swiftcore 1.83s.
-This records the completed checkpoint before the subsequent shared corpus-loader
-extraction/range additions; updated combined verification is pending.
-Legacy native source suites are not registered in the current checkcatalog;
-no native loopcheck/primecheck execution is claimed.
-
-Shared fixture provenance
-The engine bridge uses checks::SustainVoicegroup from playback/sustainvoicegroup.h.
-Its program 2 override is unused by these fixtures (loop program 0; prime 5/7/9).
-src/checks/playback/transportfixture.swift SHA-256: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
-src/checks/playback/PlaybackChecks.swift SHA-256: 202f3952a32b3b37eebd19fc59ea6cb9f4ed5eacaf1db533b070ecfade24b4ee
-src/checks/playback/sustainvoicegroup.h SHA-256: 2605285c630cfa4cf37212ac02a59140adb17d5fcaa5567ac48fd0c55abbffe5
-src/checks/support/corecheck/native_check.cpp SHA-256: 5093b74731d2bc0c64ee6793df3649d97b280b6146cc97844ea6a54704c75815
+Retirement certificate
+Reference and pre-deletion working original hashes agree. All six original failure sites are matched; the original .cpp and exclusively owned .h were retired. This is source-predicate correspondence, not a live C++/Swift differential run.
+Covered native implementation: src/core/miditimeline.cpp :: MidiTimeline::build/buildTimeline resolves marker positions; src/core/timelineplayer.cpp :: TimelinePlayer::render/dispatchEvent drives loop wraps and note events. The native M4A synthesis engine remains linked as poryaaaa_engine (CMakeLists.txt:137-162) and active via src/checks/support/corecheck/native_check.cpp :: PdcPlaybackEngine / pdc_playback_engine_create/destroy/pointer; this certificate retires only the C++ check, not those implementations.
+Fixture: division 24, tempo 500000 us/quarter, sample rate 48000, 1000 samples/tick; conductor markers '[' tick 96, ']' tick 288, end 384; program 0; notes (on,off,key) (96,120,60), (192,312,67), (240,300,65), (264,288,62), (288,312,64), all velocity 100. Swift creates/loads swiftcore-loop.mid (tst_loop.swift:73-97), then renders each row from zero with a fresh native M4A engine and Swift Sequencer in <=512-frame chunks. playbackCheckPcmKeys inspects sorted CHN_ON && !CHN_STOP PCM keys, retaining duplicates (tst_loop.swift:34-69; transportfixture.swift:26-59).
+Rows (sample,looping,sorted keyed-on keys): pass-1-tied-note-sounds=(200000,true,[67]); pass-2-gate-carry-holds-across-wrap=(298000,true,[60,65,67]); gate-carry-releases-at-written-duration=(310000,true,[60,67]); pass-2-tied-note-stacks=(392000,true,[67,67]); pass-3-tied-note-stacks=(584000,true,[67,67,67]); loop-boundary-notes-play-without-looping=(298000,false,[64,65,67]). Swift row literals: tst_loop.swift:17-32.
+Execution: tst_loop.swift:93 runPairedLoopChecks -> PlaybackChecks.swift:30 runPlaybackSuite -> CoreCheckSupport.swift:99 pdc_suite_run(3) -> checkcatalog.cpp:155-159 --swiftcore -> swift_core_check target (src/checks/CMakeLists.txt:104-115). Native engine bridge: native_check.cpp:67-91,191-206 owns M4AEngine and checks::SustainVoicegroup; transportfixture.swift:26-59 creates/destroys it and inspects actual PCM channels. Original .cpp/.h were already omitted from native CMake/catalog; the header was only included by its original .cpp.
+Verification: recorded baseline deno task verify --filter swiftcore --filter clickcheck --verbose: PASS 2/2 selected (24 total, 22 skipped), swiftcore 1.83s, before subsequent shared-loader changes. The parallel retirement agent did not run the post-deletion check; the integrated result is above.
 
 Original assertion inventory
 
 A001 | LoopTest::init | src/checks/playback/tst_loop.cpp:123
 Disposition: MATCHED
-Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks / playbackPairLoadSwiftTimeline
-Mapping/reason: The original non-null timeline requirement is enforced by the throwing MIDI loader and guard binding of loopTimeline; failure reports and aborts this suite.
-Original expression:
-  QVERIFY2(timeline, "synthesized song built wrong")
+Mapping/reason: Timeline non-null is guarded by S001; a failed loader reports and aborts before playback.
+Original expression: QVERIFY2(timeline, "synthesized song built wrong")
 
 A002 | LoopTest::init | src/checks/playback/tst_loop.cpp:126
 Disposition: MATCHED
-Swift: src/checks/playback/tst_loop.swift :: runLoopRows
-Mapping/reason: Each row checks hasLoop and start == 96 * 1000 and end == 288 * 1000 before rendering.
-Original expression:
-  QVERIFY2(timeline->hasLoop() && timeline->loopStartSample == kLoopStartTick * kSamplesPerTick &&
-                   timeline->loopEndSample == kLoopEndTick * kSamplesPerTick,
-               "synthesized song has wrong loop points")
+Mapping/reason: S002 checks hasLoop and exact start/end samples before each row.
+Original expression: QVERIFY2(timeline->hasLoop() && timeline->loopStartSample == 96000 && timeline->loopEndSample == 288000, "synthesized song has wrong loop points")
 
 A003 | LoopTest::synthesizedLoopSongHasExactLoopPoints | src/checks/playback/tst_loop.cpp:152
 Disposition: MATCHED
-Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks
-Mapping/reason: report.expect(loopTimeline.hasLoop) checks the same property.
-Original expression:
-  QVERIFY2(m_timeline->hasLoop(), "synthesized song has no loop")
+Mapping/reason: S003 checks loopTimeline.hasLoop.
+Original expression: QVERIFY2(m_timeline->hasLoop(), "synthesized song has no loop")
 
 A004 | LoopTest::synthesizedLoopSongHasExactLoopPoints | src/checks/playback/tst_loop.cpp:153
 Disposition: MATCHED
-Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks
-Mapping/reason: report.expectEqual(96 * playbackCheckSamplesPerTick, loopTimeline.loopStartSample) checks sample 96000.
-Original expression:
-  QCOMPARE(m_timeline->loopStartSample, kLoopStartTick * kSamplesPerTick)
+Mapping/reason: S004 compares loop-start sample to 96 * 1000.
+Original expression: QCOMPARE(m_timeline->loopStartSample, kLoopStartTick * kSamplesPerTick)
 
 A005 | LoopTest::synthesizedLoopSongHasExactLoopPoints | src/checks/playback/tst_loop.cpp:154
 Disposition: MATCHED
-Swift: src/checks/playback/tst_loop.swift :: runPairedLoopChecks
-Mapping/reason: report.expectEqual(288 * playbackCheckSamplesPerTick, loopTimeline.loopEndSample) checks sample 288000.
-Original expression:
-  QCOMPARE(m_timeline->loopEndSample, kLoopEndTick * kSamplesPerTick)
+Mapping/reason: S005 compares loop-end sample to 288 * 1000.
+Original expression: QCOMPARE(m_timeline->loopEndSample, kLoopEndTick * kSamplesPerTick)
 
 A006 | LoopTest::loopWrapMatchesHardwareGoto | src/checks/playback/tst_loop.cpp:213
 Disposition: MATCHED
-Swift: src/checks/playback/tst_loop.swift :: runLoopRows
-Mapping/reason: report.expectEqual(row.expectedKeys, actualKeys) replaces the original keys != expected QFAIL branch. Exact six sample positions, looping flags and ordered key multisets are retained.
-Original expression:
-  QFAIL(qPrintable(QStringLiteral("keyed-on notes at t=%1 (looping=%2): [%3 ], expected "
-                                          "[%4 ]")
-                               .arg(samplePos)
-                               .arg(looping)
-                               .arg(actualKeys, expectedText)))
+Mapping/reason: S006 compares ordered, duplicate-preserving actual PCM keys with the expected multiset for each of the six named rows; mismatches fail the report.
+Original expression: QFAIL(...) when keyed-on keys != expectedKeys
+
+Swift assertion predicates
+
+S001 | runPairedLoopChecks | src/checks/playback/tst_loop.swift:95
+  guard playbackPairWriteFixture(loopSong(), path: loopPath, cppID: loopPointsID, report: report),
+        let loopTimeline = playbackPairLoadSwiftTimeline(path: loopPath, cppID: loopPointsID,
+                                             report: report) else { return false }
+
+S002 | runLoopRows | src/checks/playback/tst_loop.swift:35
+  guard timeline.hasLoop,
+        timeline.loopStartSample == 96 * playbackCheckSamplesPerTick,
+        timeline.loopEndSample == 288 * playbackCheckSamplesPerTick else {
+      report.fail("loopcheck/LoopTest::init", "synthesized song has wrong loop points")
+      return
+  }
+
+S003 | runPairedLoopChecks | src/checks/playback/tst_loop.swift:99
+  report.expect(loopTimeline.hasLoop, cppID: loopPointsID,
+                message: "loop fixture did not produce a loop")
+
+S004 | runPairedLoopChecks | src/checks/playback/tst_loop.swift:101
+  report.expectEqual(96 * playbackCheckSamplesPerTick, loopTimeline.loopStartSample,
+                     cppID: loopPointsID, what: "loop-start sample")
+
+S005 | runPairedLoopChecks | src/checks/playback/tst_loop.swift:103
+  report.expectEqual(288 * playbackCheckSamplesPerTick, loopTimeline.loopEndSample,
+                     cppID: loopPointsID, what: "loop-end sample")
+
+S006 | runLoopRows | src/checks/playback/tst_loop.swift:66
+  let actualKeys = playbackCheckPcmKeys(engine.pointer)
+  report.expectEqual(row.expectedKeys, actualKeys, cppID: cppID,
+                     what: "sample=\(row.samplePosition) looping=\(row.looping) keyed-on MIDI keys")

@@ -177,37 +177,36 @@ Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(view))
 
 A007 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:124
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:147, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:146, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S033):
   expect(value() != nil, 124)
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A008 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:125
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:148, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:147, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S034):
   expect(value() == 7, 125)
 Original expression:
   QCOMPARE(point.value, 7)
 
 A009 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:126
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:149, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:148, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S035):
   expect(document.revision == before.revision + 1, 126)
 Original expression:
   QCOMPARE(fixture.document().revision(), before.revision + 1)
 
 A010 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:127
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:186, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:185, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
+Swift counterpart expression (S054):
   expect(bytes() == beforeBytes && document.history.currentIdentity == before.identity
   && document.history.canUndo == before.canUndo, 127)
 Original expression:
-  QCOMPARE(fixture.document().undoStack()->index(), before.undoIndex + 1)
 
 A011 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:134
 Disposition: PARTIAL
@@ -257,36 +256,35 @@ Original expression:
   QTRY_VERIFY(!checks::voicepicker::active(view))
 
 A017 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:143
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:162, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:161, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S041):
   expect(value() != nil, 143)
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A018 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:144
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:163, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:162, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S042):
   expect(value() == 3, 144)
 Original expression:
   QCOMPARE(point.value, 3)
 
 A019 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:145
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:164, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:163, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S043):
   expect(document.revision == inserted.revision + 1, 145)
 Original expression:
   QCOMPARE(fixture.document().revision(), changed.revision + 1)
 
 A020 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:146
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:182, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:181, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
+Swift counterpart expression (S051):
   expect(bytes() == insertedBytes && document.history.currentIdentity == inserted.identity, 146)
 Original expression:
-  QCOMPARE(fixture.document().undoStack()->index(), changed.undoIndex + 1)
 
 A021 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:153
 Disposition: PARTIAL
@@ -304,81 +302,79 @@ Original expression:
                "the Delete row did not receive a real click")
 
 A023 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:156
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:171, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. Swift presenter state only: original native popup existence, drawn rows or ListView state remains an open UI assertion. No keyboard/focus/window equivalence is claimed.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:170, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The Delete pick requires page.menuOpen false, the same session-closure observable matched for the automation lane menus.
+Swift counterpart expression (S045):
   expect(!page.menuOpen, 156)
 Original expression:
-  QVERIFY2(!deleteMenu.session->isOpen(), "the Delete pick left the voice menu open")
 
 A024 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:157
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:172, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:171, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S046):
   expect(value() == nil, 157)
 Original expression:
   QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A025 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:158
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:173, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:172, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S047):
   expect(document.revision == changed.revision + 1, 158)
 Original expression:
   QCOMPARE(fixture.document().revision(), changedAgain.revision + 1)
 
 A026 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:159
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:178, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:177, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run. The original three-undo sequence verifies one-step restoration of full serialized bytes and checkpoint history identity for this specific transaction; this replaces private Qt stack-index inspection. The assertion is evaluated at its corresponding undo step, not before undo.
+Swift counterpart expression (S048):
   expect(bytes() == changedBytes && document.history.currentIdentity == changed.identity, 159)
 Original expression:
-  QCOMPARE(fixture.document().undoStack()->index(), changedAgain.undoIndex + 1)
 
 A027 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:163
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:179, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:178, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S049):
   expect(value() != nil, 163)
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A028 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:164
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:180, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:179, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S050):
   expect(value() == 3, 164)
 Original expression:
   QCOMPARE(point.value, 3)
 
 A029 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:166
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:183, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:182, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S052):
   expect(value() != nil, 166)
 Original expression:
   QVERIFY(fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A030 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:167
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:184, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:183, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S053):
   expect(value() == 7, 167)
 Original expression:
   QCOMPARE(point.value, 7)
 
 A031 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:169
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:188, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:187, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S055):
   expect(value() == nil, 169)
 Original expression:
   QVERIFY(!fixture.document().findLanePoint(0, DOC_CC_VOICE, kEmptyTick, &point))
 
 A032 | DrawerPresentationTest::voiceContextMenuTransactions | src/checks/drawerpresentation/voicemenus.cpp:170
-Disposition: PARTIAL
-Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:189, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
-Swift counterpart expression:
+Disposition: MATCHED
+Mapping/reason: drawerVoiceOriginalMenuTransactions in src/checks/drawerpresentation/voicemenus.swift:188, exact original programs/ticks/MIDI fixture; predicate below. Central execution passed in the recorded swiftcore run.
+Swift counterpart expression (S056):
   expect(bytes() == beforeBytes, 170)
 Original expression:
   QVERIFY(fixture.document().smf().write() == before.smf)
@@ -844,6 +840,123 @@ S027 | drawerVoiceContextMenuTransactions | src/checks/drawerpresentation/voicem
 Swift expression:
   report.expectEqual(rewritten, fixture.snapshot, cppID: drawerVoiceMenuID,
                          what: "the stale activation leaves the rewrite as the only change")
+
+S028 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:138
+Swift expression:
+  expect(page.menuOpen && page.menuTargetTick == 144, 111)
+
+S029 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:140
+Swift expression:
+  expect(page.pickerOpen && page.pickerTargetTick == 144, 115)
+
+S030 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:141
+Swift expression:
+  expect(!page.menuOpen, 116)
+
+S031 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:143
+Swift expression:
+  expect(page.pickerRowPrograms == [7] && page.pickerIndex == 0, 119)
+
+S032 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:145
+Swift expression:
+  expect(!page.pickerOpen, 121)
+
+S033 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:146
+Swift expression:
+  expect(value() != nil, 124)
+
+S034 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:147
+Swift expression:
+  expect(value() == 7, 125)
+
+S035 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:148
+Swift expression:
+  expect(document.revision == before.revision + 1, 126)
+
+S036 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:153
+Swift expression:
+  expect(page.menuOpen && page.menuTargetTick == 144, 134)
+
+S037 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:155
+Swift expression:
+  expect(page.pickerOpen, 137)
+
+S038 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:156
+Swift expression:
+  expect(page.pickerIndex == 7, 138)
+
+S039 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:158
+Swift expression:
+  expect(page.pickerRowPrograms == [3] && page.pickerIndex == 0, 140)
+
+S040 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:160
+Swift expression:
+  expect(!page.pickerOpen, 142)
+
+S041 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:161
+Swift expression:
+  expect(value() != nil, 143)
+
+S042 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:162
+Swift expression:
+  expect(value() == 3, 144)
+
+S043 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:163
+Swift expression:
+  expect(document.revision == inserted.revision + 1, 145)
+
+S044 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:168
+Swift expression:
+  expect(page.menuOpen && page.menuTargetTick == 144, 153)
+
+S045 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:170
+Swift expression:
+  expect(!page.menuOpen, 156)
+
+S046 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:171
+Swift expression:
+  expect(value() == nil, 157)
+
+S047 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:172
+Swift expression:
+  expect(document.revision == changed.revision + 1, 158)
+
+S048 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:177
+Swift expression:
+  expect(bytes() == changedBytes && document.history.currentIdentity == changed.identity, 159)
+
+S049 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:178
+Swift expression:
+  expect(value() != nil, 163)
+
+S050 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:179
+Swift expression:
+  expect(value() == 3, 164)
+
+S051 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:181
+Swift expression:
+  expect(bytes() == insertedBytes && document.history.currentIdentity == inserted.identity, 146)
+
+S052 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:182
+Swift expression:
+  expect(value() != nil, 166)
+
+S053 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:183
+Swift expression:
+  expect(value() == 7, 167)
+
+S054 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:185
+Swift expression:
+  expect(bytes() == beforeBytes && document.history.currentIdentity == before.identity
+      && document.history.canUndo == before.canUndo, 127)
+
+S055 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:187
+Swift expression:
+  expect(value() == nil, 169)
+
+S056 | drawerVoiceOriginalMenuTransactions | src/checks/drawerpresentation/voicemenus.swift:188
+Swift expression:
+  expect(bytes() == beforeBytes, 170)
 
 
 Pinned menu transaction addition

@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/remap.cpp
 Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/rollcheck/remap.cpp
 Original SHA-256: f0c18ebf9ff091b783f1892f9ccbb39ea8760142f97a3a740811dffb5f9e0441
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -21,7 +21,7 @@ GAP identifies an original predicate without a replacement assertion.
 Track move/insert/duplicate/delete owner remap, metadata-only invariance and raw metadata-to-engine promotion are exercised against SongView mute/solo/selection/cosmetics ordering invariants (remap-before-documentChanged, headers-follow-timeline). The gated counterpart switches track and replaces the session on the Swift grid surface; signal ordering, header follow and per-owner state remap remain open.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
+Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
@@ -235,7 +235,7 @@ QFAIL("track-remap fixture lacks two tracks and an insertion slot")
 
 A004 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:198
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
 
@@ -265,7 +265,7 @@ QFAIL("move did not remap before documentChanged")
 
 A005 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:200
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     if (!fixture.headersFollowTimeline())
@@ -275,7 +275,7 @@ QFAIL("track header list did not follow the rebuilt timeline")
 
 A006 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:204
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -287,7 +287,7 @@ QFAIL("move did not re-address complete SongView track state")
 
 A007 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:209
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     }
@@ -300,7 +300,7 @@ QFAIL("move undo did not remap before documentChanged")
 
 A008 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:211
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     if (!fixture.headersFollowTimeline())
@@ -310,7 +310,7 @@ QFAIL("track header list did not follow the rebuilt timeline")
 
 A009 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:215
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -322,7 +322,7 @@ QFAIL("move undo did not restore remapped owners")
 
 A010 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:220
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     }
@@ -335,7 +335,7 @@ QFAIL("move redo did not remap before documentChanged")
 
 A011 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:222
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     if (!fixture.headersFollowTimeline())
@@ -345,7 +345,7 @@ QFAIL("track header list did not follow the rebuilt timeline")
 
 A012 | PianoRollTest::trackRemapMove | src/checks/rollcheck/remap.cpp:226
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: remap-before-documentChanged signal ordering, header-model follow, per-owner mute/solo/scope/cosmetic remap, undo/redo owner restoration.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves mute/solo/selection owner remap on move, remap-before-document-change ordering, undo inverse remap, and track-switch republish on the Swift surface; unproved: header-model follow, scope/cosmetic owner remap (no Swift API), and redo owner restoration.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -415,7 +415,7 @@ QFAIL("track-remap fixture could not insert a track")
 
 A017 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:254
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     if (!fixture.remapPrecedesDocument())
@@ -425,7 +425,7 @@ QFAIL("insert did not remap before documentChanged")
 
 A018 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:256
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     if (!fixture.headersFollowTimeline())
@@ -435,7 +435,7 @@ QFAIL("track header list did not follow the rebuilt timeline")
 
 A019 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:262
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -449,7 +449,7 @@ QFAIL("inserted track inherited existing SongView state")
 
 A020 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:267
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     }
@@ -462,7 +462,7 @@ QFAIL("insert undo did not remap before documentChanged")
 
 A021 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:269
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     if (!fixture.headersFollowTimeline())
@@ -472,7 +472,7 @@ QFAIL("track header list did not follow the rebuilt timeline")
 
 A022 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:272
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -483,7 +483,7 @@ QFAIL("insert undo did not restore existing SongView state")
 
 A023 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:276
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
 
@@ -495,7 +495,7 @@ QFAIL("insert redo did not remap before documentChanged")
 
 A024 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:278
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     if (!fixture.headersFollowTimeline())
@@ -505,7 +505,7 @@ QFAIL("track header list did not follow the rebuilt timeline")
 
 A025 | PianoRollTest::trackRemapInsert | src/checks/rollcheck/remap.cpp:281
 Disposition: PARTIAL
-Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; unproved: insert remap ordering, fresh-owner cosmetic isolation, undo/redo state preservation.
+Mapping/reason: trackFollowAndSessionReplacement (S001..S009) switches track and replaces the session on the Swift grid surface and verifies the rerender; trackOwnerRemap (S010..S019) proves the inserted track inherits no mute/solo/selection owner state and that undo restores the original track count on the Swift surface; unproved: header-model follow, fresh-owner cosmetic isolation (no Swift API), and redo state preservation.
 Source context since previous assertion:
 ;
     fixture.clearOrder();
@@ -1136,7 +1136,7 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S009 are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid. S010..S019 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::trackOwnerRemap, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:542
 Counterpart expression:
@@ -1190,3 +1190,75 @@ QVERIFY(finalView.isNull())
 S009 | SwiftRollGatedTest::trackFollowAndSessionReplacement | src/checks/swiftrollgated/gesturechecks.cpp:581
 Counterpart expression:
 QVERIFY(finalGrid.isNull())
+
+S010 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1034
+Counterpart expression:
+report.expect(
+    session.mutedTracks == [0] && session.soloedTracks == [0]
+        && session.selectedTrack == 0,
+    cppID: id, message: "inserted track inherits no mute, solo, or selection owner state")
+
+S011 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1041
+Counterpart expression:
+report.expect(
+    switchGrid.trackIndex == added
+        && switchGrid.renderedNoteCount == session.document.notes(in: added).count,
+    cppID: id, message: "track switch republishes the grid filtered to the new track")
+
+S012 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1050
+Counterpart expression:
+report.expect(
+    session.mutedTracks == [1] && session.soloedTracks == [0]
+        && session.selectedTrack == 0,
+    cppID: id, message: "move remaps mute, solo, and selection owners to the new index")
+
+S013 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1054
+Counterpart expression:
+report.expect(
+    remappedAtDocument.last.map {
+        $0.muted == [1] && $0.soloed == [0] && $0.selected == 0
+    } == true,
+    cppID: id, message: "owner remap lands before the document change publishes")
+
+S014 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1060
+Counterpart expression:
+report.expect(
+    session.mutedTracks == [0] && session.soloedTracks == [1]
+        && session.selectedTrack == 1,
+    cppID: id, message: "undo applies the inverse remap to every owner")
+
+S015 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1065
+Counterpart expression:
+report.expect(
+    session.mutedTracks == [0] && session.soloedTracks == [1]
+        && session.selectedTrack == 1,
+    cppID: id, message: "duplicate keeps owner identity on the source track")
+
+S016 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1071
+Counterpart expression:
+report.expect(
+    session.soloedTracks.isEmpty && session.mutedTracks == [0]
+        && session.selectedTrack == 0,
+    cppID: id, message: "delete drops the removed owner and falls selection back")
+
+S017 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1076
+Counterpart expression:
+report.expect(
+    session.soloedTracks.isEmpty && session.mutedTracks == [0]
+        && session.selectedTrack == 0
+        && session.document.engineTracks.usedTrackCount == added + 1,
+    cppID: id, message: "undo restores the track without reviving dropped owner state")
+
+S018 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1082
+Counterpart expression:
+report.expect(
+    session.document.engineTracks.usedTrackCount == 1
+        && session.mutedTracks == [0] && session.selectedTrack == 0,
+    cppID: id, message: "undoing the add restores the original track count")
+
+S019 | swiftcore/EditorGridCamera::trackOwnerRemap | src/checks/rollcheck/EditorGridCameraChecks.swift:1041
+Counterpart expression:
+report.expect(
+    switchGrid.trackIndex == added
+        && switchGrid.renderedNoteCount == session.document.notes(in: added).count,
+    cppID: id, message: "track switch republishes the grid filtered to the new track")

@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/pencil.cpp
 Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/rollcheck/pencil.cpp
 Original SHA-256: 446556b3d179cf5d822cf62c7e75a28c732ce3300b4557a6f4b8346711b3ef50
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -21,7 +21,7 @@ GAP identifies an original predicate without a replacement assertion.
 Pencil drawing, fractional displayed-cell editing, abutting raster paint and gutter selection are exercised through native pointer gestures on the legacy roll surface. The gated counterpart draws, moves, neighbor-trims and undo/redoes notes on the Swift grid surface; exact velocity latches, fractional camera placement, raster pixel colors and gutter selection remain open.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
+Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
 
 Execution and ownership
@@ -243,7 +243,7 @@ QVERIFY2(cell.key >= 0, "no free grid cell to draw in")
 
 A011 | PianoRollTest::pencilPlacement | src/checks/rollcheck/pencil.cpp:134
 Disposition: PARTIAL
-Mapping/reason: pointerDrawMoveAndNeighborTrim (S001..S011) draws via live pointer on the Swift grid surface and verifies tick/duration/pitch plus the rendered face; unproved: default-velocity latch, native SnappedRows fixture, double-click gesture.
+Mapping/reason: pointerDrawMoveAndNeighborTrim (S001..S011) draws via live pointer on the Swift grid surface and verifies tick/duration/pitch plus the rendered face; drawLatchAndCancel (S021..S026) proves the default-velocity latch, the latched last-used velocity, and double-press delete on the Swift surface; unproved: native SnappedRows fixture and native double-click event delivery.
 Source context since previous assertion:
 ;
     const Tick overlayTick = cell.tick + 3 * cell.dur;
@@ -301,7 +301,7 @@ QVERIFY2(cell.key >= 0, "no free grid cell to draw in")
 
 A015 | PianoRollTest::pencilAbuttingRaster | src/checks/rollcheck/pencil.cpp:161
 Disposition: PARTIAL
-Mapping/reason: pointerDrawMoveAndNeighborTrim (S001..S011) draws via live pointer on the Swift grid surface and verifies tick/duration/pitch plus the rendered face; unproved: abutting-raster paint, native camera rows, double-click gesture.
+Mapping/reason: pointerDrawMoveAndNeighborTrim (S001..S011) draws via live pointer on the Swift grid surface and verifies tick/duration/pitch plus the rendered face; drawLatchAndCancel (S021..S026) proves the double-press delete gesture on the Swift surface; unproved: abutting-raster paint, native camera rows, and native double-click event delivery.
 Source context since previous assertion:
 ;
     const Tick overlayTick = cell.tick + 3 * cell.dur;
@@ -444,7 +444,7 @@ Remaining original source (closing sequence and helper bodies):
 }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001..S020 are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid. S021..S025 are report.expect predicates in the registered Swift check swiftcore/EditorGridCamera::drawLatchAndCancel, which runs under the swiftcore filter. Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
 
 S001 | SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim | src/checks/swiftrollgated/gesturechecks.cpp:305
 Counterpart expression:
@@ -548,3 +548,40 @@ QVERIFY(QTest::qWaitFor(
                    restored->duration == added->duration && fixture.noteItem(added->id) != nullptr;
         },
         kSettleTimeoutMs))
+
+S021 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:947
+Counterpart expression:
+report.expect(
+    session.document.revision == revision + 1
+        && created.map { Int($0.velocity) == 100 } == true,
+    cppID: id, message: "draw commits one note at the default latched velocity")
+
+S022 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:962
+Counterpart expression:
+report.expect(
+    latched.map { Int($0.velocity) == 77 } == true,
+    cppID: id, message: "draw commits at the latched last-used velocity")
+
+S023 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:967
+Counterpart expression:
+report.expect(
+    session.document.note(latchedID) == nil,
+    cppID: id, message: "double press deletes the note under the pointer")
+
+S024 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:991
+Counterpart expression:
+report.expect(
+    session.document.revision == cancelRevision
+        && session.document.notes(in: grid.trackIndex).count == cancelCount
+        && grid.lastCancelReason == reason.rawValue
+        && !grid.interactionActive
+        && grid.noteSummary == pressedSummary,
+    cppID: id,
+    message: "\(reason) cancel discards the gesture, records the reason, and keeps the summary")
+
+S025 | swiftcore/EditorGridCamera::drawLatchAndCancel | src/checks/rollcheck/EditorGridCameraChecks.swift:1005
+Counterpart expression:
+report.expect(
+    session.selectedNotes.isEmpty && session.document.revision == escapeRevision
+        && grid.lastCancelReason == GridCancelReason.hidden.rawValue,
+    cppID: id, message: "idle Escape clears selection without a cancel reason or mutation")
