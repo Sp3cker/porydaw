@@ -220,8 +220,7 @@ extension SongDocument {
         if mutation.state.file.chunks[chunk].events[index].tick == event.tick {
             mutation.replace(chunk: chunk, offset: index, with: event)
         } else {
-            mutation.remove(chunk: chunk, offset: index)
-            mutation.insert(event, chunk: chunk)
+            mutation.apply(removing: [index], inserting: [event], chunk: chunk)
         }
         commit(mutation, group: nil, operation: .modifyRawEvent)
     }
@@ -232,7 +231,7 @@ extension SongDocument {
         let valid = Set(indices.filter { state.file.chunks[chunk].events.indices.contains($0) })
         guard !valid.isEmpty else { return }
         var mutation = DocumentMutation(state)
-        for index in valid.sorted(by: >) { mutation.remove(chunk: chunk, offset: index) }
+        mutation.apply(removing: Array(valid), inserting: [], chunk: chunk)
         commit(mutation, group: nil, operation: .deleteRawEvents)
     }
 
@@ -280,8 +279,8 @@ extension SongDocument {
         let valid = Set(indices.filter {
             mutation.state.file.chunks[chunk].events.indices.contains($0)
         })
-        for index in valid.sorted(by: >) { mutation.remove(chunk: chunk, offset: index) }
-        if let event { mutation.insert(event, chunk: chunk) }
+        mutation.apply(removing: Array(valid), inserting: event.map { [$0] } ?? [],
+                       chunk: chunk)
         mutation.setTempo(editedTempo(state.tempo, tempo))
         commit(mutation, group: nil, operation: .editRawAndTempo)
     }
@@ -382,18 +381,18 @@ extension SongDocument {
             return
         }
         var mutation = DocumentMutation(state)
-        for index in mutation.state.file.chunks[mapping.chunk].events.indices.reversed() {
+        var removals: [Int] = []
+        for index in mutation.state.file.chunks[mapping.chunk].events.indices {
             let event = mutation.state.file.chunks[mapping.chunk].events[index]
             if event.tick >= begin && event.tick <= end &&
                 laneMatches(event, lane: lane, channel: mapping.channel) {
-                mutation.remove(chunk: mapping.chunk, offset: index)
+                removals.append(index)
             }
         }
-        for point in points {
-            mutation.insert(makeLaneEvent(
-                lane: lane, channel: mapping.channel, tick: point.tick, value: point.value),
-                chunk: mapping.chunk)
+        let insertions = points.map {
+            makeLaneEvent(lane: lane, channel: mapping.channel, tick: $0.tick, value: $0.value)
         }
+        mutation.apply(removing: removals, inserting: insertions, chunk: mapping.chunk)
         commit(mutation, group: nil, operation: .writeLane)
     }
 
@@ -416,14 +415,11 @@ extension SongDocument {
             return
         }
         var mutation = DocumentMutation(state)
-        for index in plan.removeIndices.sorted(by: >) {
-            mutation.remove(chunk: mapping.chunk, offset: index)
+        let insertions = plan.writes.map {
+            makeLaneEvent(lane: lane, channel: mapping.channel, tick: $0.tick, value: $0.value)
         }
-        for write in plan.writes {
-            mutation.insert(makeLaneEvent(
-                lane: lane, channel: mapping.channel, tick: write.tick, value: write.value),
-                chunk: mapping.chunk)
-        }
+        mutation.apply(removing: plan.removeIndices, inserting: insertions,
+                       chunk: mapping.chunk)
         commit(mutation, group: nil, operation: .moveLanePoints)
     }
 
@@ -442,10 +438,7 @@ extension SongDocument {
         }
         var mutation = DocumentMutation(state)
         let indices = Set(points.filter { $0.chunk == mapping.chunk }.map(\.eventIndex))
-        for index in indices.sorted(by: >)
-            where mutation.state.file.chunks[mapping.chunk].events.indices.contains(index) {
-            mutation.remove(chunk: mapping.chunk, offset: index)
-        }
+        mutation.apply(removing: Array(indices), inserting: [], chunk: mapping.chunk)
         commit(mutation, group: nil, operation: .deleteLanePoints)
     }
 
@@ -462,16 +455,12 @@ extension SongDocument {
             let stream = streamByChunk[chunk] ?? UInt8(truncatingIfNeeded: chunk)
             let patch = Xcmd.canonicalizeForExport(Xcmd.traffic(in: copy.chunks[chunk],
                                                                 stream: stream))
-            for identity in patch.removeEvents.sorted(by: >)
-                where identity <= UInt64(Int.max) &&
-                    copy.chunks[chunk].events.indices.contains(Int(identity)) {
-                copy.chunks[chunk].events.remove(at: Int(identity))
+            let removals = patch.removeEvents.filter { $0 <= UInt64(Int.max) }.map(Int.init)
+            let insertions = patch.inserts.map {
+                MidiEvent.channel(tick: $0.tick, status: 0xB0 | $0.channel,
+                                  data0: $0.controller, data1: $0.value)
             }
-            for emission in patch.inserts {
-                Self.insert(.channel(tick: emission.tick, status: 0xB0 | emission.channel,
-                                     data0: emission.controller, data1: emission.value),
-                            into: &copy.chunks[chunk])
-            }
+            copy.chunks[chunk].apply(removing: removals, inserting: insertions)
         }
         return copy
     }
@@ -594,26 +583,20 @@ private extension SongDocument {
     func applyXcmdPatch(_ patch: Xcmd.Patch, chunk: Int, operation: HistoryOperation) {
         var mutation = DocumentMutation(state)
         let originals = state.file.chunks[chunk].events
-        for identity in patch.removeEvents.sorted(by: >) {
-            guard identity <= UInt64(Int.max),
-                  mutation.state.file.chunks[chunk].events.indices.contains(Int(identity)) else {
-                return
-            }
-            mutation.remove(chunk: chunk, offset: Int(identity))
-        }
-        for emission in patch.inserts {
-            let event: MidiEvent
+        let removals = patch.removeEvents.filter { $0 <= UInt64(Int.max) }.map(Int.init)
+        guard removals.count == patch.removeEvents.count,
+              removals.allSatisfy({ originals.indices.contains($0) }) else { return }
+        let insertions = patch.inserts.map { emission -> MidiEvent in
             if let source = emission.sourceIndex, source <= UInt64(Int.max),
                originals.indices.contains(Int(source)) {
                 var copy = originals[Int(source)]
                 copy.tick = emission.tick
-                event = copy
-            } else {
-                event = .channel(tick: emission.tick, status: 0xB0 | emission.channel,
-                                 data0: emission.controller, data1: emission.value)
+                return copy
             }
-            mutation.insert(event, chunk: chunk)
+            return .channel(tick: emission.tick, status: 0xB0 | emission.channel,
+                            data0: emission.controller, data1: emission.value)
         }
+        mutation.apply(removing: removals, inserting: insertions, chunk: chunk)
         commit(mutation, group: nil, operation: operation)
     }
 

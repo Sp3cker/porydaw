@@ -71,22 +71,47 @@ std::vector<TempoMapPoint> buildTempoMap(const std::vector<TempoPoint> &tempoPoi
     return map;
 }
 
-// Round a tick through the canonical tempo map: unrounded origin of the
-// segment in effect plus that segment's exact length, rounded once — the
-// same rounding the scheduled events use.
-uint64_t quantizedSampleForTick(uint64_t tick, const std::vector<TempoMapPoint> &tempoMap,
+// Round a tick through one tempo segment: the segment's unrounded origin plus
+// its exact length, rounded once — the rounding every scheduled event uses.
+uint64_t quantizedSampleInSegment(Tick tick, const TempoMapPoint &point, uint32_t tpqn,
+                                  double sampleRate)
+{
+    const double segment = double(tick - point.tick) * double(point.microsecondsPerQuarterNote) /
+                           double(tpqn) / 1000000.0 * sampleRate;
+    return uint64_t(point.samplePos + segment + 0.5);
+}
+
+// Monotonic sampler for a tick-sorted event run: within one run the segment in
+// effect only moves forward, so the map is scanned once per run instead of once
+// per event. Random-access callers stay on quantizedSampleForTick.
+struct TempoCursor {
+    size_t index = 0;
+
+    uint64_t sample(Tick tick, const std::vector<TempoMapPoint> &tempoMap, uint32_t tpqn,
+                    double sampleRate)
+    {
+        while (index + 1 < tempoMap.size() && tempoMap[index + 1].tick <= tick)
+            index += 1;
+        return quantizedSampleInSegment(tick, tempoMap[index], tpqn, sampleRate);
+    }
+};
+
+// Round a tick through the canonical tempo map: the last tempo point at or
+// before the tick (the map is sorted and starts at tick 0), same rounding the
+// scheduled events use.
+uint64_t quantizedSampleForTick(Tick tick, const std::vector<TempoMapPoint> &tempoMap,
                                 uint32_t tpqn, double sampleRate)
 {
-    // tempoMap always has an entry at tick 0.
-    const TempoMapPoint *tp = &tempoMap.front();
-    for (const TempoMapPoint &p : tempoMap) {
-        if (p.tick > tick)
-            break;
-        tp = &p;
+    size_t low = 0;
+    size_t high = tempoMap.size() - 1;
+    while (low < high) {
+        const size_t mid = (low + high + 1) / 2;
+        if (tempoMap[mid].tick <= tick)
+            low = mid;
+        else
+            high = mid - 1;
     }
-    const double segment = double(tick - tp->tick) * double(tp->microsecondsPerQuarterNote) /
-                           double(tpqn) / 1000000.0 * sampleRate;
-    return uint64_t(tp->samplePos + segment + 0.5);
+    return quantizedSampleInSegment(tick, tempoMap[low], tpqn, sampleRate);
 }
 
 TimelineEvent makeTempoEvent(uint64_t samplePos, Tick tick, double bpm)
@@ -280,13 +305,16 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
 
     std::vector<TimelineEvent> noteEvents;
     noteEvents.reserve(rawEvents.size());
+    // rawEvents is tick-sorted, so one forward-only cursor samples the whole
+    // run (the tempo map was built above, before any position).
+    TempoCursor noteTempo;
     for (const RawEvent &re : rawEvents) {
         const int engineTrack = smfToEngine[re.smfTrack];
         if (engineTrack < 0)
             continue; // beyond 16 usable tracks
 
         TimelineEvent ev;
-        ev.samplePos = quantizedSampleForTick(re.tick, timeline->tempoMap, tpqn, sampleRate);
+        ev.samplePos = noteTempo.sample(re.tick, timeline->tempoMap, tpqn, sampleRate);
         ev.tick = re.tick;
         ev.type = re.type;
         ev.track = static_cast<uint8_t>(engineTrack);
@@ -345,11 +373,12 @@ buildTimeline(const SmfFile &smf, const std::vector<TempoPoint> &tempoPoints, do
     std::stable_sort(rawOthers.begin(), rawOthers.end(),
                      [](const RawOther &a, const RawOther &b) { return a.tick < b.tick; });
     timeline->otherEvents.reserve(rawOthers.size());
+    TempoCursor otherTempo; // rawOthers is tick-sorted too
     for (RawOther &ro : rawOthers) {
         const int engineTrack = smfToEngine[ro.smfTrack];
         timeline->otherEvents.push_back(
-            {ro.tick, quantizedSampleForTick(ro.tick, timeline->tempoMap, tpqn, sampleRate),
-             engineTrack, std::move(ro.label)});
+            {ro.tick, otherTempo.sample(ro.tick, timeline->tempoMap, tpqn, sampleRate), engineTrack,
+             std::move(ro.label)});
         timeline->lengthTicks = std::max(timeline->lengthTicks, ro.tick);
     }
 

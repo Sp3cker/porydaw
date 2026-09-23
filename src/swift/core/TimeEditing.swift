@@ -177,19 +177,15 @@ extension SongDocument {
                             insertions: &xcmdInsertions, chunk: chunk) else { return false }
             }
         }
+        var insertions = Array(repeating: [MidiEvent](), count: mutation.state.file.chunks.count)
+        for insertion in xcmdInsertions { insertions[insertion.chunk].append(insertion.event) }
+        for write in ordinaryWrites { insertions[write.chunk].append(write.event) }
         for chunk in removals.indices {
-            for index in removals[chunk].sorted(by: >) {
-                guard mutation.state.file.chunks[chunk].events.indices.contains(index) else {
-                    return false
-                }
-                mutation.remove(chunk: chunk, offset: index)
-            }
-        }
-        for insertion in xcmdInsertions {
-            mutation.insert(insertion.event, chunk: insertion.chunk)
-        }
-        for write in ordinaryWrites {
-            mutation.insert(write.event, chunk: write.chunk)
+            guard removals[chunk].allSatisfy({
+                mutation.state.file.chunks[chunk].events.indices.contains($0)
+            }) else { return false }
+            mutation.apply(removing: Array(removals[chunk]), inserting: insertions[chunk],
+                           chunk: chunk)
         }
 
         let editedIDs = Set(edit.removeNotes.map(\.id))
@@ -199,16 +195,21 @@ extension SongDocument {
         }
         guard resolveCollisions(spans: spans, editedIDs: editedIDs,
                                 reference: before, mutation: &mutation) else { return false }
+        var noteInsertions = Array(repeating: [MidiEvent](),
+                                   count: mutation.state.file.chunks.count)
         for note in edit.addNotes {
             guard let chunk = expandedMap.tracks[note.track].midiChunk else { return false }
             let channel = expandedMap.tracks[note.track].channel
             let duration = max(note.duration, 1)
-            mutation.insert(.channel(tick: note.tick, status: 0x90 | channel,
-                                     data0: note.pitch,
-                                     data1: UInt8(min(max(Int(note.velocity), 1), 127)),
-                                     noteID: mintNoteID()), chunk: chunk)
-            mutation.insert(.channel(tick: note.tick + duration, status: 0x90 | channel,
-                                     data0: note.pitch), chunk: chunk)
+            noteInsertions[chunk].append(.channel(
+                tick: note.tick, status: 0x90 | channel, data0: note.pitch,
+                data1: UInt8(min(max(Int(note.velocity), 1), 127)),
+                noteID: mintNoteID()))
+            noteInsertions[chunk].append(.channel(
+                tick: note.tick + duration, status: 0x90 | channel, data0: note.pitch))
+        }
+        for chunk in noteInsertions.indices where !noteInsertions[chunk].isEmpty {
+            mutation.apply(removing: [], inserting: noteInsertions[chunk], chunk: chunk)
         }
         let removedTempoTicks = Set(edit.removeTempo.map(\.tick))
         mutation.setTempo(normalizedTempo(mutation.state.tempo.filter {
@@ -467,8 +468,9 @@ private extension SongDocument {
         var notes: [Note] = []
         for track in 0..<map.usedTrackCount where scope.coversTrack(track) {
             guard let chunk = map.tracks[track].midiChunk else { continue }
-            for note in Self.pair(events: file.chunks[chunk].events,
-                                  channel: map.tracks[track].channel, chunk: chunk, track: track) {
+            for note in NoteProjection.pair(events: file.chunks[chunk].events,
+                                            channel: map.tracks[track].channel,
+                                            chunk: chunk, track: track) {
                 guard selected[chunk][note.onIndex],
                       note.endIndex.map({ selected[chunk][$0] }) ?? true else { continue }
                 notes.append(note)
@@ -777,17 +779,15 @@ private extension SongDocument {
                     insertions.append(event)
                 }
             }
-            for index in removals.sorted(by: >) {
-                guard result.state.file.chunks[chunk].events.indices.contains(index) else {
-                    return nil
-                }
-                result.remove(chunk: chunk, offset: index)
-            }
             if let extra { insertions.append(contentsOf: extra[chunk]) }
-            for var event in insertions {
-                if event.isNoteOn && event.noteID == nil { event.noteID = mintNoteID() }
-                result.insert(event, chunk: chunk)
+            for index in insertions.indices where insertions[index].isNoteOn &&
+                insertions[index].noteID == nil {
+                insertions[index].noteID = mintNoteID()
             }
+            guard removals.allSatisfy({
+                result.state.file.chunks[chunk].events.indices.contains($0)
+            }) else { return nil }
+            result.apply(removing: Array(removals), inserting: insertions, chunk: chunk)
         }
         return result
     }
@@ -806,7 +806,7 @@ private extension SongDocument {
                 return false
             }
         }
-        let map = reference.file.engineTracks()
+        let referenceTracks = projection(for: reference).tracks
         var firstSpan = 0
         while firstSpan < ordered.count {
             let track = ordered[firstSpan].track
@@ -815,11 +815,8 @@ private extension SongDocument {
                 afterTrack += 1
             }
             defer { firstSpan = afterTrack }
-            guard track >= 0, track < map.usedTrackCount,
-                  let chunk = map.tracks[track].midiChunk else { continue }
-            let notes = Self.pair(events: reference.file.chunks[chunk].events,
-                                  channel: map.tracks[track].channel,
-                                  chunk: chunk, track: track)
+            guard referenceTracks.indices.contains(track) else { continue }
+            let notes = referenceTracks[track]
             for note in notes where !editedIDs.contains(note.id) {
                 guard let originalEnd = note.endTick, let endIndex = note.endIndex else { continue }
                 var start = note.tick
@@ -863,13 +860,10 @@ private extension SongDocument {
                 return false
             }
         }
-        let map = reference.file.engineTracks()
+        let referenceTracks = projection(for: reference).tracks
         for span in sorted {
-            guard span.track >= 0, span.track < map.usedTrackCount,
-                  let chunk = map.tracks[span.track].midiChunk else { continue }
-            let notes = Self.pair(events: reference.file.chunks[chunk].events,
-                                  channel: map.tracks[span.track].channel,
-                                  chunk: chunk, track: span.track)
+            guard referenceTracks.indices.contains(span.track) else { continue }
+            let notes = referenceTracks[span.track]
             for note in notes where note.pitch == span.pitch && !editedIDs.contains(note.id) {
                 guard let current = findNote(note.id, in: mutation.state),
                       let currentEnd = current.endTick, let endIndex = current.endIndex,
@@ -892,16 +886,7 @@ private extension SongDocument {
     }
 
     func findNote(_ id: NoteID, in song: SongState) -> Note? {
-        let map = song.file.engineTracks()
-        for track in 0..<map.usedTrackCount {
-            guard let chunk = map.tracks[track].midiChunk else { continue }
-            if let found = Self.pair(events: song.file.chunks[chunk].events,
-                                     channel: map.tracks[track].channel,
-                                     chunk: chunk, track: track).first(where: { $0.id == id }) {
-                return found
-            }
-        }
-        return nil
+        projection(for: song).index[id]
     }
 
     func removeNote(_ note: Note, from mutation: inout DocumentMutation) {

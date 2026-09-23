@@ -574,6 +574,8 @@ bool SongDocument::adoptSmf(SmfFile smf, const SongInfo &song, QString *error)
     Q_UNUSED(error);
     const auto before = trackMapState();
     m_smf = std::move(smf);
+    // A different file: nothing the note cache holds still describes it.
+    invalidateNoteCache();
     // NoteId tokens belong to one SongDocument. An in-memory SmfFile can
     // arrive from another document with stamped IDs, but adopting it is a
     // document boundary: remint every note-on from this document's
@@ -669,6 +671,13 @@ void SongDocument::rebuildTrackMap()
         m_engineToSmf.push_back(mapping.tracks[size_t(i)].smfTrack);
         m_engineChannel.push_back(mapping.tracks[size_t(i)].channel);
     }
+    // Every cached note names its engine track and channel, so a changed
+    // mapping invalidates the whole note cache; an unchanged one leaves it be.
+    if (m_noteCache.engineToSmf != m_engineToSmf || m_noteCache.engineChannel != m_engineChannel) {
+        invalidateNoteCache();
+        m_noteCache.engineToSmf = m_engineToSmf;
+        m_noteCache.engineChannel = m_engineChannel;
+    }
 }
 
 SongDocument::TrackMapState SongDocument::trackMapState() const
@@ -757,6 +766,7 @@ void SongDocument::mintNoteId(SmfEvent *event)
 
 void SongDocument::mintUnassignedNoteIds()
 {
+    invalidateNoteCache(); // rewrites note tokens, the cache's index key
     for (SmfTrack &track : m_smf.tracks) {
         for (SmfEvent &event : track.events)
             mintNoteId(&event);
@@ -786,56 +796,20 @@ int SongDocument::engineTrackForChunk(int chunk) const
     return -1;
 }
 
-bool SongDocument::noteAt(int engineTrack, size_t onIndex, DocNote *out) const
+namespace {
+// Pair one chunk's events as mid2agb does: the first same-channel same-key
+// note end after the note-on (several note-ons may legitimately share one
+// end). One backward pass keeps that exact rule in linear time: when the walk
+// reaches a note-on, endAt holds the smallest later end index for its
+// (channel, key) slot.
+// 256 key slots, not 128: the parse layer preserves out-of-range data bytes
+// (mid2agb parity), and pairing compares the raw key byte, so key 0x83 must
+// never pair with key 0x03.
+std::vector<DocNote> pairTrackNotes(const SmfTrack &track, int engineTrack, int smfTrack,
+                                    uint8_t channel)
 {
-    const int smfTrack = smfTrackFor(engineTrack);
-    if (smfTrack < 0)
-        return false;
-    const auto &events = m_smf.tracks[size_t(smfTrack)].events;
-    const uint8_t channel = channelFor(engineTrack);
-    if (onIndex >= events.size() || !events[onIndex].isNoteOn() ||
-        events[onIndex].channel() != channel)
-        return false;
-    const SmfEvent &on = events[onIndex];
-    DocNote note;
-    note.noteId = on.noteId;
-    note.engineTrack = engineTrack;
-    note.smfTrack = smfTrack;
-    note.onIndex = onIndex;
-    note.tick = on.tick;
-    note.key = on.data0;
-    note.velocity = on.data1;
-    note.channel = on.channel();
-    for (size_t index = onIndex + 1; index < events.size(); index++) {
-        const SmfEvent &end = events[index];
-        if (end.isChannel() && end.isNoteEnd() && end.channel() == channel &&
-            end.data0 == on.data0) {
-            note.endIndex = index;
-            note.duration = uint32_t(end.tick - on.tick);
-            break;
-        }
-    }
-    *out = note;
-    return true;
-}
-
-std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
-{
+    const auto &events = track.events;
     std::vector<DocNote> notes;
-    const int smfTrack = smfTrackFor(engineTrack);
-    if (smfTrack < 0)
-        return notes;
-    const auto &events = m_smf.tracks[size_t(smfTrack)].events;
-    const uint8_t channel = channelFor(engineTrack);
-
-    // Pair as mid2agb does: the first same-channel same-key note end after
-    // the note-on (several note-ons may legitimately share one end). One
-    // backward pass keeps that exact rule in linear time: when the walk
-    // reaches a note-on, endAt holds the smallest later end index for its
-    // (channel, key) slot.
-    // 256 key slots, not 128: the parse layer preserves out-of-range data
-    // bytes (mid2agb parity), and pairing compares the raw key byte, so key
-    // 0x83 must never pair with key 0x03.
     std::vector<size_t> endAt(16 * 256, SIZE_MAX);
     for (size_t index = events.size(); index-- > 0;) {
         const SmfEvent &event = events[index];
@@ -863,6 +837,97 @@ std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
     }
     std::reverse(notes.begin(), notes.end()); // restore note-on order
     return notes;
+}
+
+// The note cache's index value: the note's chunk in the high word, its
+// position in that chunk in the low word (both fit; a chunk holds < 2^32 notes).
+uint64_t noteCacheKey(int smfTrack, size_t position)
+{
+    return (uint64_t(uint32_t(smfTrack)) << 32) | uint64_t(uint32_t(position));
+}
+} // namespace
+
+std::vector<DocNote> SongDocument::notesForTrack(int engineTrack) const
+{
+    const int smfTrack = smfTrackFor(engineTrack);
+    if (smfTrack < 0)
+        return {};
+    ensureNoteCache();
+    return m_noteCache.notes[size_t(smfTrack)];
+}
+
+void SongDocument::invalidateNoteCache()
+{
+    m_noteCache.notes.assign(m_smf.tracks.size(), {});
+    m_noteCache.dirty.assign(m_smf.tracks.size(), true);
+    m_noteCache.byNoteId.clear();
+    m_noteCache.pending = m_noteCache.notes.size();
+}
+
+void SongDocument::invalidateNoteCache(int smfTrack)
+{
+    if (smfTrack < 0 || smfTrack >= int(m_noteCache.dirty.size())) {
+        invalidateNoteCache(); // never built, or a chunk the cache has no slot for
+        return;
+    }
+    if (!m_noteCache.dirty[size_t(smfTrack)]) {
+        m_noteCache.dirty[size_t(smfTrack)] = true;
+        m_noteCache.pending++;
+    }
+}
+
+void SongDocument::invalidateNoteCache(const EditOp &op)
+{
+    switch (op.type) {
+    case EditOp::InsertTrack:
+    case EditOp::RemoveTrack:
+    case EditOp::MoveTrack:
+        invalidateNoteCache(); // chunk indices shift: nothing cached by index survives
+        break;
+    default:
+        invalidateNoteCache(op.smfTrack);
+        break;
+    }
+}
+
+void SongDocument::ensureNoteCache() const
+{
+    NoteCache &cache = m_noteCache;
+    if (cache.notes.size() != m_smf.tracks.size() || cache.dirty.size() != m_smf.tracks.size()) {
+        cache.notes.assign(m_smf.tracks.size(), {});
+        cache.dirty.assign(m_smf.tracks.size(), true);
+        cache.byNoteId.clear();
+        cache.pending = cache.notes.size();
+    }
+    if (cache.pending == 0)
+        return;
+    for (size_t chunk = 0; chunk < cache.notes.size(); chunk++) {
+        if (!cache.dirty[chunk])
+            continue;
+        cache.dirty[chunk] = false;
+        cache.pending--;
+        const std::vector<DocNote> previous = std::move(cache.notes[chunk]);
+        const int engineTrack = engineTrackForChunk(int(chunk));
+        std::vector<DocNote> &notes = cache.notes[chunk];
+        if (engineTrack >= 0) {
+            notes = pairTrackNotes(m_smf.tracks[chunk], engineTrack, int(chunk),
+                                   channelFor(engineTrack));
+        }
+        for (size_t position = 0; position < notes.size(); position++)
+            cache.byNoteId[notes[position].noteId.token()] = noteCacheKey(int(chunk), position);
+        // Drop the entries of notes this pairing no longer has. Every
+        // surviving note was just re-pointed above, so an entry that still
+        // fails to validate is gone from the document: an edit that keeps
+        // its note set pays one probe per note and never erases.
+        for (const DocNote &gone : previous) {
+            const auto entry = cache.byNoteId.find(gone.noteId.token());
+            if (entry == cache.byNoteId.end() || (entry->second >> 32) != uint64_t(chunk))
+                continue;
+            const size_t position = size_t(entry->second & 0xFFFFFFFFull);
+            if (position >= notes.size() || notes[position].noteId.token() != entry->first)
+                cache.byNoteId.erase(entry);
+        }
+    }
 }
 std::vector<NoteId> SongDocument::insertedNoteIds(int engineTrack,
                                                   const std::vector<DocNote> &before) const
@@ -913,17 +978,14 @@ bool SongDocument::findNote(NoteId id, DocNote *out) const
 {
     if (!id.isAssigned())
         return false;
-    for (int smfTrack = 0; smfTrack < int(m_smf.tracks.size()); smfTrack++) {
-        const int engineTrack = engineTrackForChunk(smfTrack);
-        if (engineTrack < 0)
-            continue;
-        const auto &events = m_smf.tracks[size_t(smfTrack)].events;
-        for (size_t index = 0; index < events.size(); index++) {
-            if (events[index].isNoteOn() && events[index].noteId == id)
-                return noteAt(engineTrack, index, out);
-        }
-    }
-    return false;
+    ensureNoteCache();
+    const auto entry = m_noteCache.byNoteId.find(id.token());
+    if (entry == m_noteCache.byNoteId.end())
+        return false;
+    const size_t chunk = size_t(entry->second >> 32);
+    const size_t position = size_t(entry->second & 0xFFFFFFFFull);
+    *out = m_noteCache.notes[chunk][position];
+    return true;
 }
 
 bool SongDocument::laneEventMatches(const SmfEvent &ev, uint8_t cc) const
@@ -2295,6 +2357,9 @@ size_t SongDocument::insertEventIntoTrack(SmfTrack &track, const SmfEvent &event
 void SongDocument::applyOps(std::vector<EditOp> &ops)
 {
     for (EditOp &op : ops) {
+        // The note cache pairs one chunk at a time: an op dirties the chunk it
+        // touches, or the whole cache when it renumbers chunks.
+        invalidateNoteCache(op);
         switch (op.type) {
         case EditOp::InsertEvent: {
             Q_ASSERT(!isTempoMeta(op.event));
@@ -2370,6 +2435,9 @@ void SongDocument::revertOps(std::vector<EditOp> &ops)
 {
     for (auto it = ops.rbegin(); it != ops.rend(); ++it) {
         EditOp &op = *it;
+        // Same cache invalidation as applyOps: the reverse walk touches the
+        // same chunks.
+        invalidateNoteCache(op);
         switch (op.type) {
         case EditOp::InsertEvent: {
             SmfTrack &track = m_smf.tracks[op.smfTrack];

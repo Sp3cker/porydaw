@@ -151,6 +151,123 @@ public struct MidiChunk: Equatable, Sendable {
     }
 }
 
+extension MidiChunk {
+    internal struct ApplyResult {
+        let removals: [(offset: Int, event: MidiEvent)]
+        let insertions: [(offset: Int, event: MidiEvent)]
+    }
+
+    /// Drops `removalIndices` and merges `insertions`, producing exactly what descending
+    /// `remove(at:)` calls followed by one `insert(_:)` per insertion produce: removed events
+    /// disappear, the survivors keep their order, and every insertion lands inside its tick run
+    /// at the position the pin order gives it. Out-of-range and repeated indices are ignored.
+    /// `events` must be tick-sorted.
+    ///
+    /// One algorithm, no strategy bound: slide the survivors down over the removals, then insert
+    /// each event in caller order through its tick run. The run scan is amortized over its group,
+    /// and each placement is one shift - what one `insert(_:)` per event costs.
+    @discardableResult
+    internal mutating func apply(removing removalIndices: [Int], inserting insertions: [MidiEvent])
+        -> ApplyResult {
+        var doomed: [Int] = []
+        doomed.reserveCapacity(removalIndices.count)
+        for index in removalIndices.sorted()
+        where events.indices.contains(index) && doomed.last != index {
+            doomed.append(index)
+        }
+        let removed = doomed.reversed().map { (offset: $0, event: events[$0]) }
+        if !doomed.isEmpty {
+            var view = events.mutableSpan
+            var write = doomed[0]
+            var next = 0
+            var read = doomed[0] + 1
+            while next < doomed.count {
+                let limit = next + 1 < doomed.count ? doomed[next + 1] : view.count
+                var offset = 0
+                while read + offset < limit {
+                    view[write + offset] = view[read + offset]
+                    offset += 1
+                }
+                write += limit - read
+                read = limit + 1
+                next += 1
+            }
+            events.removeLast(doomed.count)
+        }
+        guard !insertions.isEmpty else {
+            return ApplyResult(removals: removed, insertions: [])
+        }
+        // Insertions land one at a time, in caller order, at the end of their tick run - or right
+        // after the last event they are not pinned before. The anchors of that rule are positions,
+        // so a whole batch costs one run scan plus a shift per insertion.
+        var order = Array(insertions.indices)
+        order.sort { (insertions[$0].tick, $0) < (insertions[$1].tick, $1) }
+        var tick: Tick?
+        var runStart = 0
+        var runEnd = 0
+        var lastNotNoteClass = -1
+        var lastNotNoteOn = -1
+        var inserted: [(offset: Int, event: MidiEvent)] = []
+        inserted.reserveCapacity(insertions.count)
+        for position in order {
+            let event = insertions[position]
+            if tick != event.tick {
+                tick = event.tick
+                runStart = min(runEnd, events.count)
+                while runStart < events.count, events[runStart].tick < event.tick { runStart += 1 }
+                runEnd = runStart
+                while runEnd < events.count, events[runEnd].tick == event.tick { runEnd += 1 }
+                lastNotNoteClass = -1
+                lastNotNoteOn = -1
+                var index = runEnd
+                while index > runStart {
+                    index -= 1
+                    let candidate = events[index]
+                    if lastNotNoteClass < 0, !(candidate.isChannel && candidate.typeNibble <= 0x9) {
+                        lastNotNoteClass = index
+                    }
+                    if lastNotNoteOn < 0, !candidate.isNoteOn { lastNotNoteOn = index }
+                    if lastNotNoteClass >= 0, lastNotNoteOn >= 0 { break }
+                }
+            }
+            let target: Int
+            if event.isChannel, event.typeNibble >= 0xB {
+                target = lastNotNoteClass >= runStart ? lastNotNoteClass + 1 : runStart
+            } else if event.isNoteEnd {
+                target = lastNotNoteOn >= runStart ? lastNotNoteOn + 1 : runStart
+            } else {
+                target = runEnd
+            }
+            events.insert(event, at: target)
+            inserted.append((offset: target, event: event))
+            if lastNotNoteClass >= target { lastNotNoteClass += 1 }
+            if lastNotNoteOn >= target { lastNotNoteOn += 1 }
+            runEnd += 1
+            if !(event.isChannel && event.typeNibble <= 0x9), target > lastNotNoteClass {
+                lastNotNoteClass = target
+            }
+            if !event.isNoteOn, target > lastNotNoteOn { lastNotNoteOn = target }
+        }
+        for event in insertions { endTick = max(endTick, event.tick) }
+        return ApplyResult(removals: removed, insertions: inserted)
+    }
+
+    /// Inserts `event` at the position the pin order gives it inside its tick run.
+    @discardableResult
+    internal mutating func insert(_ event: MidiEvent) -> Int {
+        apply(removing: [], inserting: [event]).insertions[0].offset
+    }
+}
+
+/// True when a sequential insertion puts `lhs` before `rhs` at the same tick: controllers and
+/// kind changes first, note ends before note ons. Not a strict weak order (`0xA` is unordered
+/// against both note classes), which is why `apply` merges with adjacent comparisons.
+internal func eventPinnedBefore(_ lhs: MidiEvent, _ rhs: MidiEvent) -> Bool {
+    guard lhs.isChannel, rhs.isChannel else { return false }
+    if lhs.typeNibble >= 0xB, rhs.typeNibble <= 0x9 { return true }
+    return lhs.isNoteEnd && rhs.isNoteOn
+}
+
 public struct EngineTrack: Equatable, Sendable {
     public var midiChunk: Int?
     public var channel: UInt8
@@ -410,18 +527,16 @@ private struct MidiByteReader {
     }
 
     mutating func readUInt16(or error: MidiCodecError) throws -> UInt16 {
-        do {
-            let data = try read(count: 2)
-            return UInt16(data[0]) << 8 | UInt16(data[1])
-        } catch { throw error }
+        guard canRead(2) else { throw error }
+        defer { position += 2 }
+        return UInt16(bytes[position]) << 8 | UInt16(bytes[position + 1])
     }
 
     mutating func readUInt32(or error: MidiCodecError) throws -> UInt32 {
-        do {
-            let data = try read(count: 4)
-            return UInt32(data[0]) << 24 | UInt32(data[1]) << 16 |
-                   UInt32(data[2]) << 8 | UInt32(data[3])
-        } catch { throw error }
+        guard canRead(4) else { throw error }
+        defer { position += 4 }
+        return UInt32(bytes[position]) << 24 | UInt32(bytes[position + 1]) << 16 |
+               UInt32(bytes[position + 2]) << 8 | UInt32(bytes[position + 3])
     }
 
     mutating func readVariableLength(through end: Int) throws -> UInt32 {
@@ -567,16 +682,16 @@ private extension Array where Element == UInt8 {
         if value < 0x80 {
             append(UInt8(value))
         } else if value < 0x4000 {
-            append(UInt8(value >> 7) | 0x80)
+            append(UInt8((value >> 7) & 0x7F) | 0x80)
             append(UInt8(value & 0x7F))
         } else if value < 0x20_0000 {
-            append(UInt8(value >> 14) | 0x80)
-            append(UInt8(value >> 7) | 0x80)
+            append(UInt8((value >> 14) & 0x7F) | 0x80)
+            append(UInt8((value >> 7) & 0x7F) | 0x80)
             append(UInt8(value & 0x7F))
         } else {
-            append(UInt8(value >> 21) | 0x80)
-            append(UInt8(value >> 14) | 0x80)
-            append(UInt8(value >> 7) | 0x80)
+            append(UInt8((value >> 21) & 0x7F) | 0x80)
+            append(UInt8((value >> 14) & 0x7F) | 0x80)
+            append(UInt8((value >> 7) & 0x7F) | 0x80)
             append(UInt8(value & 0x7F))
         }
     }

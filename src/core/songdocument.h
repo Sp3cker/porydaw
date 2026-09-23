@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <unordered_map>
 #include <vector>
 
 #include "core/noteid.h"
@@ -169,7 +170,9 @@ class SongDocument : public QObject
     }
 
     // Lookups. NoteId is the stable identity for note selection and velocity
-    // mutation; physical event locations remain document-owned details.
+    // mutation; physical event locations remain document-owned details. Both
+    // readers answer from the cached note projection, which every mutation
+    // choke point invalidates.
     std::vector<DocNote> notesForTrack(int engineTrack) const;
     // The ids of the track's current notes that were not in the before
     // snapshot — what an insert (draw commit or paste) added.
@@ -492,6 +495,34 @@ class SongDocument : public QObject
 
     void applyOps(std::vector<EditOp> &ops);
     void revertOps(std::vector<EditOp> &ops);
+
+    // The note projection behind notesForTrack/findNote(NoteId): one lazily
+    // built pairing per SMF chunk — a chunk's own event list is the only input
+    // to its pairing — plus a token -> (chunk, position) index over them, so
+    // both readers answer from one build and can never disagree. A mutation
+    // dirties the chunk it touched (a chunk insert/remove/move dirties every
+    // chunk); rebuildTrackMap dirties everything when the engine map changed,
+    // because every cached DocNote names its engine track. Writers that
+    // invalidate: applyOps, revertOps (per touched chunk), rebuildTrackMap,
+    // adoptSmf and mintUnassignedNoteIds (wholesale).
+    struct NoteCache {
+        std::vector<std::vector<DocNote>> notes; // per SMF chunk, note-on order
+        std::vector<bool> dirty;                 // per chunk; empty = not built
+        size_t pending = 0;                      // dirty chunks: the O(1) "is anything stale?"
+        // token -> (chunk << 32 | position of the note in that chunk).
+        std::unordered_map<uint64_t, uint64_t> byNoteId;
+        // Engine mapping the cached notes were projected under; a different
+        // mapping invalidates every cached engineTrack/smfTrack field.
+        std::vector<int> engineToSmf;
+        std::vector<uint8_t> engineChannel;
+    };
+    void invalidateNoteCache();
+    void invalidateNoteCache(int smfTrack);
+    // Storage touch of one applied/reverted op: per-chunk, or wholesale for an
+    // op that renumbers chunks.
+    void invalidateNoteCache(const EditOp &op);
+    void ensureNoteCache() const;
+    mutable NoteCache m_noteCache;
     // The one ordered-SMF insertion primitive: places event at its tick's
     // canonical position (upper_bound by tick; setup channel events ahead of
     // same-tick note events; note ends ahead of same-tick note-ons), inserts
@@ -511,7 +542,6 @@ class SongDocument : public QObject
     // The sole m_tempoPoints writer; its input must be normalized first.
     void replaceTempoPoints(std::vector<TempoPoint> normalized);
     void mintNoteId(SmfEvent *event);
-    bool noteAt(int engineTrack, size_t onIndex, DocNote *out) const;
     void mintUnassignedNoteIds();
 
     int engineTrackForChunk(int chunk) const; // -1 = no engine slot

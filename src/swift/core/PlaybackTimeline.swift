@@ -181,16 +181,15 @@ public struct PlaybackTimeline: Sendable {
     }
 
     public func sample(for tick: Tick) -> UInt64 {
-        sampleFromTempoMap(for: UInt64(tick), tempoMap: tempoMap,
-                           ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        let point = tempoMap[lastIndex(atOrBefore: Double(tick), in: tempoMap,
+                                       key: { Double($0.tick) })]
+        return sampleAssumingSegment(for: Double(tick), point: point,
+                                     ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
     }
 
     public func tick(for sample: UInt64) -> Double {
-        var point = tempoMap[0]
-        for candidate in tempoMap {
-            if candidate.sampleOrigin > Double(sample) { break }
-            point = candidate
-        }
+        let point = tempoMap[lastIndex(atOrBefore: Double(sample), in: tempoMap,
+                                       key: \.sampleOrigin)]
         let samplesPerTick = Double(point.microsecondsPerQuarterNote) /
             Double(ticksPerBeat) / 1_000_000.0 * sampleRate
         return Double(point.tick) + (Double(sample) - point.sampleOrigin) / samplesPerTick
@@ -302,7 +301,7 @@ private func buildTimeline(file: borrowing MidiFile, authoritativeTempo: [TempoP
                     trackNames[chunkIndex] = latin1(data.prefix(64)).trimmingCharacters(
                         in: .whitespacesAndNewlines)
                 } else if (0x01...0x07).contains(type) {
-                    let markerBytes = Array(data.prefix(32))
+                    let markerBytes = data.prefix(32)
                     if isExactLoopMarker(markerBytes, marker: 0x5B), loopStartTick == TimeDefaults.noTick {
                         loopStartTick = event.tick
                     } else if isExactLoopMarker(markerBytes, marker: 0x5D),
@@ -352,12 +351,13 @@ private func buildTimeline(file: borrowing MidiFile, authoritativeTempo: [TempoP
                                        count: TrackLimits.hardwareCapacity * 128)
     var scheduledEvents: [(event: PlaybackEvent, order: Int)] = []
     scheduledEvents.reserveCapacity(rawEvents.count)
+    var musicalTempo = TempoCursor()
     for raw in rawEvents {
         let engineTrack = chunkToEngine[raw.midiChunk]
         guard engineTrack >= 0 else { continue }
         let key = engineTrack * 128 + Int(raw.data0 & 0x7F)
-        var sample = sampleFromTempoMap(for: UInt64(raw.tick), tempoMap: tempoMap,
-                                        ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        var sample = musicalTempo.sample(for: UInt64(raw.tick), tempoMap: tempoMap,
+                                         ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
         if raw.type == 0x9 {
             activeNoteTicks[key] = raw.tick
         } else if raw.type == 0x8, let noteOnTick = activeNoteTicks[key],
@@ -404,21 +404,28 @@ private func buildTimeline(file: borrowing MidiFile, authoritativeTempo: [TempoP
     }
 
     let loopStartSample = loopStartTick == TimeDefaults.noTick ? UInt64.max :
-        sampleFromTempoMap(for: UInt64(loopStartTick), tempoMap: tempoMap,
-                           ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        sampleAssumingSegment(
+            for: Double(loopStartTick),
+            point: tempoMap[lastIndex(atOrBefore: Double(loopStartTick), in: tempoMap,
+                                      key: { Double($0.tick) })],
+            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
     let loopEndSample = loopEndTick == TimeDefaults.noTick ? UInt64.max :
-        sampleFromTempoMap(for: UInt64(loopEndTick), tempoMap: tempoMap,
-                           ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+        sampleAssumingSegment(
+            for: Double(loopEndTick),
+            point: tempoMap[lastIndex(atOrBefore: Double(loopEndTick), in: tempoMap,
+                                      key: { Double($0.tick) })],
+            ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
     if loopEndTick != TimeDefaults.noTick { lengthTicks = max(lengthTicks, loopEndTick) }
 
     var otherEvents: [PlaybackOtherEvent] = []
     otherEvents.reserveCapacity(rawOthers.count)
+    var otherTempo = TempoCursor()
     for raw in rawOthers {
         let track = chunkToEngine[raw.midiChunk]
         otherEvents.append(PlaybackOtherEvent(
             tick: raw.tick,
-            sample: sampleFromTempoMap(for: UInt64(raw.tick), tempoMap: tempoMap,
-                                       ticksPerBeat: ticksPerBeat, sampleRate: sampleRate),
+            sample: otherTempo.sample(for: UInt64(raw.tick), tempoMap: tempoMap,
+                                      ticksPerBeat: ticksPerBeat, sampleRate: sampleRate),
             track: track, label: raw.label))
         lengthTicks = max(lengthTicks, raw.tick)
     }
@@ -496,22 +503,41 @@ private func gateEndSample(noteOnTick: Tick, noteOffTick: Tick,
         extendedClocks: settings.extendedClocks, exactGate: settings.exactGate)
     let endTick = Double(noteOnTick) +
         Double(clocks) * Double(ticksPerBeat) / Double(clocksPerBeat)
-    var point = tempoMap[0]
-    for candidate in tempoMap {
-        if Double(candidate.tick) > endTick { break }
-        point = candidate
+    let point = tempoMap[lastIndex(atOrBefore: endTick, in: tempoMap,
+                                   key: { Double($0.tick) })]
+    return sampleAssumingSegment(for: endTick, point: point,
+                                 ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+}
+
+private func lastIndex(atOrBefore target: Double, in tempoMap: [PlaybackTempoPoint],
+                       key: (PlaybackTempoPoint) -> Double) -> Int {
+    var low = 0
+    var high = tempoMap.count - 1
+    while low < high {
+        let middle = (low + high + 1) / 2
+        if key(tempoMap[middle]) <= target { low = middle } else { high = middle - 1 }
     }
-    let segment = (endTick - Double(point.tick)) *
+    return low
+}
+
+private func sampleAssumingSegment(for tick: Double, point: PlaybackTempoPoint,
+                                   ticksPerBeat: UInt32, sampleRate: Double) -> UInt64 {
+    let segment = (tick - Double(point.tick)) *
         Double(point.microsecondsPerQuarterNote) / Double(ticksPerBeat) /
         1_000_000.0 * sampleRate
     return UInt64(point.sampleOrigin + segment + 0.5)
 }
 
-private func sampleFromTempoMap(for tick: UInt64, tempoMap: [PlaybackTempoPoint],
-                                ticksPerBeat: UInt32, sampleRate: Double) -> UInt64 {
-    tempoMap.withUnsafeBufferPointer {
-        playbackSample(for: tick, segments: PlaybackTempoPointView($0),
-                       ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
+private struct TempoCursor {
+    var index = 0
+
+    mutating func sample(for tick: UInt64, tempoMap: [PlaybackTempoPoint],
+                         ticksPerBeat: UInt32, sampleRate: Double) -> UInt64 {
+        while index + 1 < tempoMap.count && UInt64(tempoMap[index + 1].tick) <= tick {
+            index += 1
+        }
+        return sampleAssumingSegment(for: Double(tick), point: tempoMap[index],
+                                     ticksPerBeat: ticksPerBeat, sampleRate: sampleRate)
     }
 }
 
@@ -534,12 +560,11 @@ private func mergeTempoFirst(_ tempos: [PlaybackEvent], _ events: [PlaybackEvent
     return result
 }
 
-private func isExactLoopMarker(_ bytes: [UInt8], marker: UInt8) -> Bool {
-    var start = 0
-    var end = bytes.count
-    while start < end && isASCIIWhitespace(bytes[start]) { start += 1 }
-    while end > start && isASCIIWhitespace(bytes[end - 1]) { end -= 1 }
-    return end - start == 1 && bytes[start] == marker
+private func isExactLoopMarker(_ bytes: ArraySlice<UInt8>, marker: UInt8) -> Bool {
+    var slice = bytes
+    while let first = slice.first, isASCIIWhitespace(first) { slice = slice.dropFirst() }
+    while let last = slice.last, isASCIIWhitespace(last) { slice = slice.dropLast() }
+    return slice.count == 1 && slice.first == marker
 }
 
 private func isASCIIWhitespace(_ byte: UInt8) -> Bool {
@@ -547,5 +572,5 @@ private func isASCIIWhitespace(_ byte: UInt8) -> Bool {
 }
 
 private func latin1<S: Sequence>(_ bytes: S) -> String where S.Element == UInt8 {
-    String(data: Data(Array(bytes)), encoding: .isoLatin1) ?? ""
+    String(bytes: bytes, encoding: .isoLatin1) ?? ""
 }

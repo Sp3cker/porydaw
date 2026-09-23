@@ -16,6 +16,10 @@ class NoteId
     friend constexpr auto operator<=>(NoteId, NoteId) = default;
 
     constexpr bool isAssigned() const { return m_token != 0; }
+    // The raw token: two ids are equal exactly when their tokens are equal, so
+    // the token is what the document's note index (and any other id-keyed
+    // lookup) is keyed on.
+    constexpr uint64_t token() const { return m_token; }
 
   private:
     uint64_t m_token = 0;
