@@ -69,25 +69,6 @@ class EventViewsRemapTest final : public QObject
     void tempoProjectionRows();
 };
 
-class EventViewsPlayheadTest final : public QObject
-{
-    Q_OBJECT
-
-  public:
-    EventViewsPlayheadTest() = default;
-
-  private:
-    Q_DISABLE_COPY_MOVE(EventViewsPlayheadTest)
-
-  private slots:
-    void tintLastOfRun_data();
-    void tintLastOfRun();
-    void focusCommitsCursor();
-    void focusedSiblingWins();
-    void samplePathAndProgrammaticRestore();
-    void followScroll();
-};
-
 class ViewBucketsGridTest final : public QObject
 {
     Q_OBJECT

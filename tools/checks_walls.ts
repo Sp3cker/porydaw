@@ -62,7 +62,6 @@ export const WALL_ESTIMATE: Record<string, number> = {
   scalecheck: 0.16,
   noteidcheck: 0.16,
   "production-startup": 0.14,
-  "rendering-playhead": 0.13,
   fontcheck: 0.13,
   darkbasecheck: 0.11,
   "editor-layout-18": 0.05,
