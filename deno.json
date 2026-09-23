@@ -7,6 +7,7 @@
     "setup": "deno run --allow-read --allow-write --allow-run --allow-env tools/setup.ts",
     "verify": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify",
     "verify:qml": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:qml",
+    "verify:shell": "deno run --allow-read --allow-write --allow-run --allow-env=ASAN_OPTIONS,DISPLAY,HOME,LLVM_PROFILE_FILE,PORYDAW_SAMPLE_CORPUS tools/cli.ts verify:shell",
     "format": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format",
     "format:check": "deno run --allow-read --allow-write --allow-run --allow-env=CLANG_FORMAT tools/cli.ts format --check",
     "coverage": "deno run --allow-read --allow-write --allow-run --allow-env=CI,PORYDAW_COVERAGE_IN_CI tools/coverage.ts",

@@ -117,6 +117,7 @@ if(APPLE)
         polyphony/polyphonyengine.swift
         playback/tst_xcmd.swift
         keyboard/tst_velocitymodel.swift
+        keyboard/KeybindingRegistryChecks.swift
         editcheck/tst_songdocument_songraw.swift
         editcheck/tst_songdocument_runner.swift
         editcheck/tst_songdocument_songranges.swift
@@ -340,4 +341,43 @@ if(APPLE)
     )
     # run_checks.ts refuses to start without mid2agb beside the build root.
     add_dependencies(editor_qml_tests mid2agb)
+    # Separate @main QML lane exercises the production Swift window with the
+    # same installed Qt paths and original qrc resources as the editor lane.
+    add_library(shell_qml_lane STATIC
+        editorqml/ShellQmlTests.swift
+        keyboard/KeybindingRegistryChecks.swift
+        "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
+    )
+    set_target_properties(shell_qml_lane PROPERTIES
+        Swift_MODULE_NAME ShellQmlCheck
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_compile_options(shell_qml_lane PRIVATE
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+    )
+    target_link_libraries(shell_qml_lane PRIVATE QtBridge PorydawApp)
+
+    add_executable(shell_qml_tests
+        editorqml/EditorQmlPaths.swift.in
+        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
+    )
+    set_target_properties(shell_qml_tests PROPERTIES
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC ON
+        LINKER_LANGUAGE CXX
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    )
+    target_link_libraries(shell_qml_tests PRIVATE
+        shell_qml_lane
+        QtBridge
+        PorydawApp
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        Qt6::QuickTest
+    )
+    add_dependencies(shell_qml_tests mid2agb)
 endif()

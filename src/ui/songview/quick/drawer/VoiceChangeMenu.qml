@@ -1,5 +1,6 @@
 // Captured command policy stays in Swift; original shared rows render the menu.
 import QtQuick
+import QtQuick.Controls
 import ".." as Shared
 
 pragma ComponentBehavior: Bound
@@ -16,6 +17,8 @@ FocusScope {
     visible: showing
     enabled: showing
     readonly property real baseFontPx: model ? model.baseFontPx : 13
+    readonly property font bodyFont: ApplicationWindow.window
+        ? ApplicationWindow.window.font : Application.font
     readonly property point anchor: pageItem && parent
         ? pageItem.mapToItem(parent, model ? model.menuX : 0, model ? model.menuY : 0)
         : Qt.point(model ? model.menuX : 0, model ? model.menuY : 0)
@@ -69,7 +72,7 @@ FocusScope {
             hoverBackground: "#2A2724", hoverText: "#F4F4F4",
             pressedBackground: "#57514C", pressedText: "#F4F4F4",
             disabledText: "#8C857F", separator: "#8C857F",
-            font: Qt.font({pixelSize: Math.round(menuRoot.baseFontPx), family: "Atkinson Hyperlegible Next"})
+            font: menuRoot.bodyFont
         })
     }
 }

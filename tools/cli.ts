@@ -6,6 +6,7 @@
 // deno task build:render [--release] -> Debug porydaw_render_cli; --release opts into Release
 // deno task verify [--verbose] [--filter <name>] [-- <run_checks args>]
 // deno task verify:qml [verify options] -> build editor_qml_tests + mid2agb, run that lane
+// deno task verify:shell [verify options] -> build shell_qml_tests + mid2agb, run that lane
 // deno task format [--check] [files...]
 
 import { join } from "node:path";
@@ -30,6 +31,7 @@ type Subcommand =
   | "build:render"
   | "verify"
   | "verify:qml"
+  | "verify:shell"
   | "format";
 
 function help(command?: Subcommand): string {
@@ -39,6 +41,11 @@ function help(command?: Subcommand): string {
     case "verify:qml":
       // Same runner options; only the build targets and harness binary differ.
       return VERIFY_HELP.replaceAll("deno task verify", "deno task verify:qml");
+    case "verify:shell":
+      return VERIFY_HELP.replaceAll(
+        "deno task verify",
+        "deno task verify:shell",
+      );
     case "build:app":
     case "build:checks":
     case "build:render":
@@ -73,6 +80,7 @@ Examples:
   build:render  build the Swift-backed offline renderer
   verify        build and run checks
   verify:qml    build and run the QML drawer lane
+  verify:shell  build and run the production QML shell lane
   format        format sources (or --check)
 help: deno task <command> --help`;
   }
@@ -241,7 +249,7 @@ async function runBuild(
 // One verify lane = the build targets it needs plus the harness it runs through
 // tools/run_checks.ts. Options, filters and the --qt payload are identical.
 interface VerifyLane {
-  readonly command: "verify" | "verify:qml";
+  readonly command: "verify" | "verify:qml" | "verify:shell";
   /** Harness executable name inside the build directory. */
   readonly binary: string;
   buildTargets(options: CheckOptions): string[];
@@ -260,7 +268,10 @@ function verifyBuildTargets(options: CheckOptions): string[] {
   ];
 }
 
-const VERIFY_LANES: Record<"verify" | "verify:qml", VerifyLane> = {
+const VERIFY_LANES: Record<
+  "verify" | "verify:qml" | "verify:shell",
+  VerifyLane
+> = {
   "verify": {
     command: "verify",
     binary: "porydaw_checks",
@@ -272,6 +283,11 @@ const VERIFY_LANES: Record<"verify" | "verify:qml", VerifyLane> = {
     command: "verify:qml",
     binary: "editor_qml_tests",
     buildTargets: () => ["editor_qml_tests", "mid2agb"],
+  },
+  "verify:shell": {
+    command: "verify:shell",
+    binary: "shell_qml_tests",
+    buildTargets: () => ["shell_qml_tests", "mid2agb"],
   },
 };
 
@@ -434,6 +450,7 @@ if (sub === "build-app") sub = "build:app";
 if (sub === "build-checks" || sub === "build:check") sub = "build:checks";
 if (sub === "build-render") sub = "build:render";
 if (sub === "verify-qml") sub = "verify:qml";
+if (sub === "verify-shell") sub = "verify:shell";
 const normalized = sub as Subcommand;
 switch (normalized) {
   case "build:app":
@@ -458,6 +475,9 @@ switch (normalized) {
     break;
   case "verify:qml":
     await runVerify(rest, VERIFY_LANES["verify:qml"]);
+    break;
+  case "verify:shell":
+    await runVerify(rest, VERIFY_LANES["verify:shell"]);
     break;
   case "format":
     await runFormat(rest);

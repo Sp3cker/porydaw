@@ -6,6 +6,32 @@ Item {
     id: root
 
     required property QtObject controller
+    property font applicationFont: Application.font
+    property var shellRouter: null
+    signal contextMenuAt(real x, real y)
+    function focusOwnsLocalKeys() {
+        if (closeDialog.visible)
+            return true
+        const window = Window.window
+        let focus = window ? window.activeFocusItem : null
+        if (!focus)
+            return false
+        while (focus) {
+            if (focus.objectName === "swiftRollInput")
+                return false
+            if (focus === root)
+                return false
+            if (focus.activeFocusOnTab || focus.modal || focus.text !== undefined)
+                return true
+            focus = focus.parent
+        }
+        return true
+    }
+    Keys.onPressed: event => {
+        if (root.shellRouter && !root.focusOwnsLocalKeys())
+            event.accepted = root.shellRouter.routeEditorKey(event.key, event.modifiers,
+                                                              event.isAutoRepeat)
+    }
     // One physical pixel at any device ratio: the strip separator and every
     // control border draw this same hairline.
     readonly property real hairline: 1 / Screen.devicePixelRatio
@@ -25,18 +51,18 @@ Item {
     }
 
     // Production layout.cpp spacing and Fusion's fixed style metrics.
-    readonly property int tabMargin: Math.max(1, Math.round(Application.font.pixelSize * 0.125))
-    readonly property int tabPadding: Math.max(1, Math.round(Application.font.pixelSize * 0.5))
+    readonly property int tabMargin: Math.max(1, Math.round(root.applicationFont.pixelSize * 0.125))
+    readonly property int tabPadding: Math.max(1, Math.round(root.applicationFont.pixelSize * 0.5))
     readonly property int closeExtent: 20
     readonly property int scrollExtent: 16
     readonly property int tabHeight: Math.max(closeExtent, Math.round(bodyMetrics.height)) + 3 * tabMargin + 2
     readonly property font bodyFont: Qt.font({
-        family: Application.font.family, pixelSize: Application.font.pixelSize,
+        family: root.applicationFont.family, pixelSize: root.applicationFont.pixelSize,
         weight: Font.Normal, styleName: "", hintingPreference: Font.PreferNoHinting,
         features: { "tnum": 1 }
     })
     readonly property font tabFont: Qt.font({
-        family: Application.font.family, pixelSize: Application.font.pixelSize,
+        family: root.applicationFont.family, pixelSize: root.applicationFont.pixelSize,
         weight: Font.DemiBold, styleName: "", hintingPreference: Font.PreferNoHinting,
         features: { "tnum": 1 }
     })
@@ -64,12 +90,12 @@ Item {
 
     component StripButton: Button {
         id: button
-        font: Application.font
+        font: root.applicationFont
         focusPolicy: Qt.NoFocus
         palette.button: down ? root.controller.palette.tabPressedBackground : hovered ? root.controller.palette.tabHoverBackground : root.controller.palette.chromeBackground
         implicitWidth: caption.implicitWidth + leftPadding + rightPadding
-        implicitHeight: Math.round(Application.font.pixelSize * 2)
-        padding: Math.round(Application.font.pixelSize * 0.5)
+        implicitHeight: Math.round(root.applicationFont.pixelSize * 2)
+        padding: Math.round(root.applicationFont.pixelSize * 0.5)
         contentItem: Text {
             id: caption
             text: button.text
@@ -282,6 +308,9 @@ Item {
                 objectName: "songTab_" + model.display.tabId
                 anchors.fill: parent
                 session: model.display
+                applicationFont: root.applicationFont
+                shellRouter: root.shellRouter
+                onContextMenuAt: (x, y) => root.contextMenuAt(x, y)
                 controller: root.controller
                 visible: model.display === root.controller.selectedPage
                 enabled: visible
@@ -293,10 +322,11 @@ Item {
 
     Dialog {
         id: closeDialog
+        objectName: "songTabCloseDialog"
         parent: Overlay.overlay
         anchors.centerIn: parent
         title: qsTr("Unsaved Changes")
-        font: Application.font
+        font: root.applicationFont
         modal: true
         focus: true
         visible: root.controller.pendingCloseId >= 0
@@ -304,7 +334,7 @@ Item {
         onRejected: root.controller.cancelClose()
         Label {
             text: qsTr("%1 has unsaved changes. Save them?").arg(root.pendingCloseTitle)
-            font: Application.font
+            font: root.applicationFont
         }
         footer: DialogButtonBox {
             StripButton {

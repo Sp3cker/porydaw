@@ -32,6 +32,7 @@ add_library(PorydawApp STATIC
     timeline/TimelineSnapPolicy.swift
     commands/EditCommands.swift
     commands/EditKeyArbiter.swift
+    commands/KeybindingRegistry.swift
     commands/Clipboard.swift
     drawer/EditorDrawer.swift
     drawer/PromptAppearance.swift
@@ -75,6 +76,8 @@ add_library(PorydawApp STATIC
     headers/TrackActivity.swift
     headers/TrackHeadersGeometry.swift
     headers/TrackHeadersInput.swift
+    shell/ShellPresenter.swift
+    shell/ShellAppearance.swift
 )
 
 # Generated like the playback module map: the service header lives at the
@@ -87,6 +90,26 @@ configure_file(
 configure_file(
     audio/module.modulemap.in
     "${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap"
+    @ONLY
+)
+
+# Resolve the actual imported QtGui headers rather than assuming a framework
+# layout; the generated Clang module must name an existing qkeysequence.h.
+get_target_property(qt_gui_includes Qt6::Gui INTERFACE_INCLUDE_DIRECTORIES)
+set(QT_GUI_HEADERS "")
+foreach(qt_include IN LISTS qt_gui_includes)
+    if(EXISTS "${qt_include}/qkeysequence.h")
+        set(QT_GUI_HEADERS "${qt_include}")
+        break()
+    endif()
+endforeach()
+if(NOT QT_GUI_HEADERS)
+    message(FATAL_ERROR "Qt6::Gui does not expose qkeysequence.h for Swift keybindings")
+endif()
+file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/commands")
+configure_file(
+    commands/QtKeybindings.modulemap.in
+    "${CMAKE_CURRENT_BINARY_DIR}/commands/QtKeybindings.modulemap"
     @ONLY
 )
 set_target_properties(PorydawApp PROPERTIES
@@ -115,8 +138,9 @@ target_compile_options(PorydawApp PUBLIC
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/audio/module.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${SWIFT_GRID_NATIVE_DIR}/module.modulemap>"
+    "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_BINARY_DIR}/commands/QtKeybindings.modulemap>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${SWIFT_GRID_NATIVE_DIR}>"
     "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
 )
 
-target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback QtBridge)
+target_link_libraries(PorydawApp PUBLIC PorydawCore PorydawPlayback QtBridge Qt6::Gui)

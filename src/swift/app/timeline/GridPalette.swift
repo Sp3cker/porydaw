@@ -79,12 +79,13 @@ enum PaletteMath {
         return hex(r: base.r, g: base.g, b: base.b, a: a)
     }
 
-    static func noteFill(track: Int, velocity: Int) -> String {
-        let identity = trackIdentityOklab(track)
-        let zero = oklab(r: 0x8B, g: 0x84, b: 0x7E)
+    static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
         let v = min(127, max(0, velocity))
-        if v == 0 { return hex(zero) }
+        if v == 0 { return zeroColor }
+        let identity = trackIdentityOklab(track)
         if v == 127 { return hex(identity) }
+        let zeroChannels = channels(zeroColor)
+        let zero = oklab(r: zeroChannels.r, g: zeroChannels.g, b: zeroChannels.b)
         return hex(mixTowardOklab(identity, zero, 1.0 - Double(v) / 127.0))
     }
 
@@ -133,6 +134,11 @@ public final class GridPalette {
     public var buttonText: String = "#302C29"
     public var buttonPressedBackground: String = "#F5B61C"
     public var buttonPressedText: String = "#302C29"
+    public var buttonHoverBackground: String = "#ECE7E1"
+    public var menuBackground: String = "#D2D0CA"
+    public var menuHoverBackground: String = "#E7E2DC"
+    public var disabledText: String = "#8B847E"
+    public var selectionText: String = "#302C29"
 
     /// The tab strip's chrome: the window chrome one step lighter per state, the
     /// active tab's accent, the pressed (dropping) fill, and the strip's own

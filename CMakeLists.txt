@@ -346,14 +346,34 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(porydaw_app PRIVATE Threads::Threads ${CMAKE_DL_LIBS})
 endif()
 
-qt_add_executable(porydaw
-    src/main.cpp
-    resources/fonts.qrc
-)
-target_link_libraries(porydaw PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>")
 if(APPLE)
-    # Link native LTO objects with the same C++ toolchain that compiled them.
+    # The Swift shell owns the only entry point on Swift-enabled platforms.
+    add_library(porydaw_shell_entry STATIC src/swift/app/shell/PorydawShellApp.swift)
+    set_target_properties(porydaw_shell_entry PROPERTIES
+        Swift_MODULE_NAME PorydawShellEntry
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_link_libraries(porydaw_shell_entry PRIVATE QtBridge PorydawApp)
+
+    set(shell_qml
+        src/ui/shell/PorydawApplication.qml
+        src/ui/shell/ShellWindow.qml
+    )
+    set_source_files_properties(${shell_qml} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    qt_add_executable(porydaw ${shell_qml} resources/fonts.qrc)
+    # Retain Swift @main and the original editor qrc from their archives
+    # while linking native LTO objects with the C++ driver.
     set_target_properties(porydaw PROPERTIES LINKER_LANGUAGE CXX)
+    target_link_libraries(porydaw PRIVATE
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_shell_entry>"
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+    )
+else()
+    qt_add_executable(porydaw src/main.cpp resources/fonts.qrc)
+    target_link_libraries(porydaw PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>")
 endif()
 
 if(PORYDAW_BUILD_CHECKS)
