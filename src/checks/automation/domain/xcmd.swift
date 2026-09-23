@@ -258,4 +258,121 @@ func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
                        what: "sweep replaces the lane span with both projected points")
     report.expect(sweep.undoToRoot() && sweep.snapshot.bytes == beforeSweep.bytes,
                   cppID: sweepID, message: "undoing sweep and fixture edits restores original MIDI bytes")
+
+    let occurrencesID = "automation-domain/AutomationDomainTest::xcmdOccurrencesAndOpaqueProtection"
+    let occurrences = XcmdDomainFixture()
+    let volumeLane = Lane.controller(Xcmd.echoVolumeLane)
+    let volume34: [(UInt8, UInt8)] = [
+        (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 34),
+    ]
+    let volume35: [(UInt8, UInt8)] = [
+        (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 35),
+    ]
+    let volume36: [(UInt8, UInt8)] = [
+        (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 36),
+    ]
+    occurrences.setLane(Xcmd.echoVolumeLane, [(96, 34), (192, 35)])
+    report.expectEqual(2, occurrences.document.lanePoints(track: 0, lane: volumeLane).count,
+                       cppID: occurrencesID, what: "two volume occurrences project")
+    report.expect(occurrences.xcmdBytes(at: 96).elementsEqual(volume34, by: { $0 == $1 }),
+                  cppID: occurrencesID, message: "first occurrence encodes the ordered volume pair")
+    report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
+                  cppID: occurrencesID, message: "second occurrence encodes the ordered volume pair")
+    if let front = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
+        occurrences.document.deleteLanePoints(track: 0, lane: volumeLane, points: [front])
+        report.expectEqual(["192:35"], occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
+                           what: "deleting the first occurrence preserves the second")
+        report.expect(occurrences.xcmdBytes(at: 96).isEmpty, cppID: occurrencesID,
+                      message: "deleting the first occurrence removes its bytes")
+        report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
+                      cppID: occurrencesID, message: "deleting the first occurrence preserves second bytes")
+        if let remaining = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
+            occurrences.document.deleteLanePoints(track: 0, lane: volumeLane, points: [remaining])
+            report.expectEqual([String](), occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
+                               what: "deleting both occurrences empties the volume lane")
+            report.expect(occurrences.xcmdBytes().isEmpty, cppID: occurrencesID,
+                          message: "deleting both occurrences empties XCMD traffic")
+        } else {
+            report.fail(occurrencesID, "remaining volume occurrence has no identity to delete")
+        }
+    } else {
+        report.fail(occurrencesID, "first volume occurrence has no identity to delete")
+    }
+
+    occurrences.setLane(Xcmd.echoVolumeLane, [(96, 34), (192, 35)])
+    if let front = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
+        occurrences.document.moveLanePoints(
+            track: 0, lane: volumeLane, moves: [LanePointMove(point: front, tick: 384, value: 36)])
+        report.expectEqual(["192:35", "384:36"], occurrences.points(Xcmd.echoVolumeLane),
+                           cppID: occurrencesID, what: "moving the first occurrence preserves the second")
+        report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(volume35, by: { $0 == $1 }),
+                      cppID: occurrencesID, message: "unmoved occurrence keeps its bytes at tick 192")
+        report.expect(occurrences.xcmdBytes(at: 384).elementsEqual(volume36, by: { $0 == $1 }),
+                      cppID: occurrencesID, message: "moved occurrence encodes at tick 384")
+    } else {
+        report.fail(occurrencesID, "re-added volume occurrence has no identity to move")
+    }
+
+    occurrences.clearXcmd()
+    occurrences.setLane(Xcmd.echoVolumeLane, [(96, 34)])
+    occurrences.setLane(Xcmd.echoLengthLane, [(96, 17), (192, 18)])
+    if let volume = occurrences.document.lanePoints(track: 0, lane: volumeLane).first {
+        occurrences.document.moveLanePoints(
+            track: 0, lane: volumeLane, moves: [LanePointMove(point: volume, tick: 160, value: 36)])
+        report.expectEqual(["160:36"], occurrences.points(Xcmd.echoVolumeLane), cppID: occurrencesID,
+                           what: "moving volume away from a shared tick projects only the moved volume")
+        let length17: [(UInt8, UInt8)] = [
+            (Xcmd.selectorController, 0x09), (Xcmd.payloadController, 17),
+        ]
+        let length18: [(UInt8, UInt8)] = [
+            (Xcmd.selectorController, 0x09), (Xcmd.payloadController, 18),
+        ]
+        report.expect(occurrences.xcmdBytes(at: 96).elementsEqual(length17, by: { $0 == $1 }),
+                      cppID: occurrencesID, message: "the shared tick retains only length bytes")
+        report.expect(occurrences.xcmdBytes(at: 160).elementsEqual(volume36, by: { $0 == $1 }),
+                      cppID: occurrencesID, message: "moved volume encodes at tick 160")
+        report.expect(occurrences.xcmdBytes(at: 192).elementsEqual(length18, by: { $0 == $1 }),
+                      cppID: occurrencesID, message: "other length occurrence retains its bytes")
+    } else {
+        report.fail(occurrencesID, "shared-tick volume occurrence has no identity to move")
+    }
+
+    occurrences.clearXcmd()
+    occurrences.insertCc(0, Xcmd.selectorController, 0x01)
+    occurrences.insertCc(1, Xcmd.payloadController, 1)
+    occurrences.insertCc(2, Xcmd.payloadController, 2)
+    let opaqueBefore = occurrences.snapshot
+    occurrences.setLane(Xcmd.echoVolumeLane, [(1, 30)])
+    let opaqueAfter = occurrences.snapshot
+    report.expect(opaqueAfter.bytes == opaqueBefore.bytes &&
+                  opaqueAfter.revision == opaqueBefore.revision &&
+                  opaqueAfter.identity == opaqueBefore.identity,
+                  cppID: occurrencesID, message: "a write inside an opaque epoch changes neither bytes nor history")
+
+    _ = occurrences.undoToRoot()
+    occurrences.insertCc(4, Xcmd.selectorController, 0x01)
+    occurrences.insertCc(5, Xcmd.payloadController, 1)
+    occurrences.insertCc(6, Xcmd.payloadController, 2)
+    occurrences.insertCc(8, Xcmd.selectorController, 0x03)
+    occurrences.insertCc(9, Xcmd.payloadController, 99)
+    let malformedBefore = occurrences.snapshot
+    occurrences.setLane(Xcmd.echoVolumeLane, [(400, 30)])
+    report.expect(occurrences.oneEdit(malformedBefore), cppID: occurrencesID,
+                  message: "appending beyond malformed epochs changes revision and identity once")
+    let appendedBytes: [(UInt8, UInt8)] = [
+        (Xcmd.selectorController, 0x01), (Xcmd.payloadController, 1),
+        (Xcmd.payloadController, 2), (Xcmd.selectorController, 0x03),
+        (Xcmd.payloadController, 99), (Xcmd.selectorController, 0x08),
+        (Xcmd.payloadController, 30),
+    ]
+    report.expect(occurrences.xcmdBytes().elementsEqual(appendedBytes, by: { $0 == $1 }),
+                  cppID: occurrencesID, message: "appending preserves both malformed epochs and ordered bytes")
+    let rejectedBefore = occurrences.snapshot
+    occurrences.document.writeLane(track: 0, lane: volumeLane, from: 8, through: 8,
+                                   points: [LaneWrite(tick: 8, value: 30)])
+    let rejectedAfter = occurrences.snapshot
+    report.expect(rejectedAfter.bytes == rejectedBefore.bytes &&
+                  rejectedAfter.revision == rejectedBefore.revision &&
+                  rejectedAfter.identity == rejectedBefore.identity,
+                  cppID: occurrencesID, message: "a selector-tick write changes neither bytes nor history")
 }
