@@ -1048,100 +1048,100 @@ Original expression:
   QCOMPARE(redone.tick, notes.front().tick);
 
 A145 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:441
-Disposition: GAP
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Synthetic document staging plumbing has no Swift equivalent.
+Disposition: RETIRED-REPRESENTATION
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: The fallible C++ SyntheticDocument::stage disk/staging ingress is absent from the in-memory non-throwing SongDocument(file:) API; no Swift production ingress exposes that staging failure. The dedicated contract asserts the surviving original globals in A146.
 Original expression:
   QVERIFY(fixture);
 
 A146 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:461
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Typed-tempo extraction and raw-tempo removal are asserted ("valid conductor tempo becomes typed state", "typed tempo is removed from raw chunks"); the signature/loop/marker-count conjuncts are unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A146 directly evaluates the entire globalsOriginal conjunction on the literal original two-track fixture before edits: typed tempo/signature, loop boundaries, and all-chunk raw meta counts.
 Original expression:
   QVERIFY(globalsOriginal());
 
 A147 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:463
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: Swift guards duplicateTrack success with suite failure on nil; the nonnegative slot index itself is unasserted.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A147 guards duplicateTrack(0) success on the original globals fixture; the non-optional copy is a valid engine slot returned by the edit.
 Original expression:
   QVERIFY(copy >= 0);
 
 A148 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:464
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the duplicate's channel.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A148 asserts the duplicated track is assigned channel 2 on the original two-channel globals fixture.
 Original expression:
   QCOMPARE(document.channelFor(copy), uint8_t(2));
 
 A149 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:466
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the globals-stripped duplicate event count.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A149 directly asserts exactly three raw events in the original fixture clone, excluding any conductor or annotation metas.
 Original expression:
   QCOMPARE(events.size(), size_t(3));
 
 A150 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:467
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the duplicate's reminted program event.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A150 compares clone event zero with the exact channel-2 program-6 event at tick zero.
 Original expression:
   QCOMPARE(events[0], songdocument_test::channel(0xC2, 0, 6, 0));
 
 A151 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:468
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the duplicate's reminted note-on event.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A151 compares clone event one with the exact channel-2 note-on key 60 velocity 100 at tick zero.
 Original expression:
   QCOMPARE(events[1], songdocument_test::channel(0x92, 0, 60, 100));
 
 A152 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:469
-Disposition: GAP
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: No Swift predicate asserts the duplicate's reminted note-off event.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A152 compares clone event two with the exact channel-2 note-off key 60 velocity zero at tick 24.
 Original expression:
   QCOMPARE(events[2], songdocument_test::channel(0x82, 24, 60, 0));
 
 A153 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:470
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Same globals conjunct as A146; global preservation across duplication is unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A153 evaluates the complete original globalsOriginal conjunction immediately after duplicating the original fixture track.
 Original expression:
   QVERIFY(globalsOriginal());
 
 A154 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:471
-Disposition: PARTIAL
-Swift: src/checks/editcheck/EventChecks.swift :: trackEditing
-Mapping/reason: Swift reorders with survival predicates implying success; global preservation across the move here is unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A154 directly guards moveTrack(copy, to: 0) success on the original globals fixture before inspecting post-move globals.
 Original expression:
   QVERIFY(document.moveTrack(copy, 0));
 
 A155 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:472
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Same globals conjunct as A146; global preservation across the move is unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A155 evaluates the complete original globalsOriginal conjunction immediately after moving the duplicate to slot zero.
 Original expression:
   QVERIFY(globalsOriginal());
 
 A156 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:474
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: adoptionAndPairing
-Mapping/reason: Same globals conjunct as A146; global preservation across the delete is unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A156 evaluates the complete original globalsOriginal conjunction immediately after deleting the moved duplicate.
 Original expression:
   QVERIFY(globalsOriginal());
 
 A157 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:477
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
-Mapping/reason: History traversal restoring state is asserted on other paths; the globals conjunct per undo step here is unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A157 guards each of three undo successes and evaluates the complete original globalsOriginal conjunction independently after each step.
 Original expression:
   QVERIFY(globalsOriginal());
 
 A158 | EditCheckTest::documentGlobalMetadata | src/checks/editcheck/tst_songdocument_document.cpp:481
-Disposition: PARTIAL
-Swift: src/checks/editcheck/NoteChecks.swift :: gestureAndIdentityHistory
-Mapping/reason: History traversal restoring state is asserted on other paths; the globals conjunct per redo step here is unproved.
+Disposition: MATCHED
+Swift: src/checks/editcheck/DocumentTrackChecks.swift :: documentGlobalMetadataContract
+Mapping/reason: A158 guards each of three redo successes and evaluates the complete original globalsOriginal conjunction independently after each step.
 Original expression:
   QVERIFY(globalsOriginal());
 

@@ -15,6 +15,7 @@ func runEventEditsSuite(_ report: CheckReport) {
     trackMarkerNameContract(report)
     trackDeleteRescueContract(report)
     trackRenameContract(report)
+    documentTrackContracts(report)
     coreTrackCorpusChecks(report)
     songTimeSignatureContract(report)
     loopCfgUndoRedoContract(report)

@@ -31,9 +31,9 @@ the Task 9-11 site lists. In summary:
   `coreEditHistoryCountAtTip` predicates only — `revision` is never a
   depth proxy (spec §2.1); sites where the C++ itself asserted
   `document.revision()` (crossingIdentities A165/A171/A176/A181/A186/A187,
-  netZero A198-A200) cite the revision predicates; signal-spy sites
+  netZero A195/A199) cite the revision predicates; signal-spy sites
   (velocityAtomic A035/A036/A042/A052; remapsAndRaw A074-A090 via Task
-  11; duplicationOwnership A129-A135) cite
+  11; duplicationOwnership A129-A135; netZero A196/A200) cite
   `DocumentChange.trackRemap`/change-count predicates.
 - RETIRED-REPRESENTATION (with mapping-line evidence):
   staging sites A001/A010/A022/A053/A063/A073/A101/A109/A145(done)/

@@ -139,6 +139,7 @@ if(APPLE)
         editcheck/NoteChecks.swift
         editcheck/DocumentHistoryChecks.swift
         editcheck/DocumentEditChecks.swift
+        editcheck/DocumentTrackChecks.swift
         editcheck/EventChecks.swift
         editcheck/TrackCorpusChecks.swift
         editcheck/TimeChecks.swift
