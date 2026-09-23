@@ -83,6 +83,14 @@ public final class SongTabSession {
 
     public func playheadPresenter() -> SharedPlayheadPresenter { app.playheadPresenter() }
 
+    public func playheadGuidesPresenter() -> PlayheadGuidesPresenter {
+        app.playheadGuidesPresenter()
+    }
+
+    public func eventListPresenter() -> EventListPresenter {
+        app.eventListPresenter()
+    }
+
     public func mouseHintsPresenter() -> MouseHints { app.mouseHintsPresenter() }
 
     public func requestGridContextMenu(x: Double, y: Double) {

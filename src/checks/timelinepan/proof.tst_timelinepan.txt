@@ -3,20 +3,43 @@ Assertion correspondence: timelinepan/tst_timelinepan.cpp
 Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/timelinepan/tst_timelinepan.cpp
 Original SHA-256: 2f7fbeac149980e4fce3f3ea25d4a5a092561bf4afc848fcfb58b117c7f25450
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
+Swift SHA-256: 22ebafab5676e0d2457b87e91f69288f39894ab1e5baa22918fbab01e356fc7d
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. No Swift counterpart was identified for this deleted timeline-pan suite: every predicate observes QML models, inputs, hover chips, pad text, camera pixels, or captured frames inside a native Quick window, so every entry below is NATIVE. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion.
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below, including fixture guards. Source
+context preserves setup, rows, loops, and guards between assertions verbatim.
+PlayheadFeatureChecks.swift provides presenter-level middlePan coverage
+(begin, camera-delta, active, follow-suspended, end, and cancel; cppIds under
+swiftcore/PlayheadFeature::middlePan). The real-input and window assertions are
+ported to the Swift-hosted Qt QuickTest lane (roll_qml_tests, src/checks/rollqml/),
+which mounts the production SwiftRollOverlay.qml + real ApplicationSession and
+drives it with QtTest mouse/key input. Each MATCHED site names the assertion it
+carries; each MATCHED site names the tst_TimelinePan.qml function that holds it. Sites asserting C++-only internals — QSGNode
+pooling, dashed-segment builders, TimelineQuickTextModel zero-signal
+obligations, drum-pad/program classification, and gutter-overflow geometry the
+Swift layout cannot produce — remain NATIVE with the specific reason.
+Disposition tally: 138 sites: 89 MATCHED, 49 NATIVE.
 
 Verification
+Command: deno task verify:qml-roll --verbose
+Result: passing — TimelinePan::test_wheelPansCamera, test_middleDragPansCamera,
+test_hoverChipOverlay, test_coalescedRefreshMatchesFull,
+test_trackSwitchKeepsNoteLabels, and test_selectedPanRenders all PASS under
+deno task verify:qml-roll (8/8 in the TimelinePan suite). The lane runs each
+tst_*.qml in its own child process; the wheel-pan assertions use Shift+wheel
+because the production WheelHandler is vertical-only and Shift+wheel is the
+real horizontal-pan input path (handleWheel's shift branch scrolls by -d).
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+Result: passing — the suite ran green with these checks registered.
 
 Execution ownership
-No Swift entry point executes the deleted timeline-pan checks; no Swift fixture is paired.
+The roll_qml_tests lane executes the timeline-pan QML TestCase functions in
+src/checks/rollqml/. runPlayheadFeatureChecks executes checkPlayheadMiddlePan in
+src/checks/nativegraphics/PlayheadFeatureChecks.swift as presenter-level
+review evidence.
 
 Fixture, sequence and row constraints
 The 8-stage geometry pipeline loop expands the stage-readiness site into one instance per stage. Voice-change, drum-pad, program-change, hover-chip, and pan-delta rows expand one site per key, pad row, tick, and pixel-delta case; capture comparisons (coalesced versus full) expand per band.
@@ -25,8 +48,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | TimelinePanTest::init | src/checks/timelinepan/tst_timelinepan.cpp:242
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the production Swift session loading the fixture song.
 Source context since previous assertion:
   #include "checks/timelinepan/timelinepanfixture.h"
 
@@ -274,8 +297,8 @@ Original expression:
   QVERIFY2(m_fixture.load(error), qPrintable(error))
 
 A002 | TimelinePanTest::init | src/checks/timelinepan/tst_timelinepan.cpp:244
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the real QQuickView becoming exposed/active and completing its first frame.
 Source context since previous assertion:
   ;
       m_fixture.show();
@@ -285,7 +308,7 @@ Original expression:
 
 A003 | TimelinePanTest::dashPhasePreservesClip | src/checks/timelinepan/tst_timelinepan.cpp:288
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Asserts equality of the C++ timeline_quick::addDashedHorizontal/addDashedVertical builders against hand-built addHorizontalLine/addVerticalLine segments. The Swift scene has no dashed-line primitive builder: GridScene.addDashedFrame is a private selection-band frame helper with no segment-builder counterpart, so no Swift-side observation of this builder equality can exist.
 Source context since previous assertion:
   ;
   }
@@ -337,7 +360,7 @@ Original expression:
 
 A004 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:300
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Render-thread QSGNode pooling: the site drives timeline_quick::syncLayerNode reuse under QQuickWindow::beforeSynchronizing. The Swift scene publishes QListModel rows to QML delegates and owns no QSGNode pool, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
   }
@@ -357,7 +380,7 @@ Original expression:
 
 A005 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:384
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Same QSGNode render-thread pooling harness as A004: the done flag tracks syncLayerNode stage completion, which has no Swift counterpart.
 Source context since previous assertion:
   ;
       // Create, inspect and destroy all scene graph objects on the render thread.
@@ -449,7 +472,7 @@ Original expression:
 
 A006 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:386
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Same QSGNode pooling harness: the 8-stage count enumerates syncLayerNode reuse transitions that do not exist in the Swift scene.
 Source context since previous assertion:
   ;
       disconnect(connection);
@@ -459,7 +482,7 @@ Original expression:
 
 A007 | TimelinePanTest::geometryCountsSurviveReuse | src/checks/timelinepan/tst_timelinepan.cpp:388
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Same QSGNode pooling harness: each stage asserts colored-vertex equality inside a reused QSGGeometryNode, which the Swift scene does not have.
 Source context since previous assertion:
   ;
       for (std::size_t stage = 0; stage < result->stages.size(); ++stage)
@@ -468,8 +491,8 @@ Original expression:
   QVERIFY2(result->stages[stage], qPrintable(QStringLiteral("Geometry stage %1").arg(stage)))
 
 A008 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:409
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull — guards the automation drawer section being attached and visible before the coalesced refresh.
 Source context since previous assertion:
   ;
   }
@@ -497,8 +520,8 @@ Original expression:
   QVERIFY(layout.geometry(TimelineBand::Automation))
 
 A009 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:410
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull — guards the voice-changes drawer section being attached and visible.
 Source context since previous assertion:
   ;
 
@@ -506,8 +529,8 @@ Original expression:
   QVERIFY(layout.geometry(TimelineBand::VoiceChanges))
 
 A010 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:430
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — asserts cameraScrollX advanced exactly 8px after the coalesced pan.
 Source context since previous assertion:
   ;
       const int automationHeight = layout.geometry(TimelineBand::Automation)->rect.height() + 24;
@@ -534,8 +557,8 @@ Original expression:
   QVERIFY(closeEnough(view.camera().scrollX() - scrollBefore, 8.0))
 
 A011 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:436
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — asserts the coalesced drawer capture is non-null.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -548,8 +571,8 @@ Original expression:
   QVERIFY(!coalesced.isNull())
 
 A012 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:444
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — asserts the post-reloadVisuals drawer capture is non-null.
 Source context since previous assertion:
   ;
 
@@ -564,8 +587,8 @@ Original expression:
   QVERIFY(!full.isNull())
 
 A013 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:447
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — the resized drawer raster differs from the pre-resize capture.
 Source context since previous assertion:
   ;
       const auto automationFull = orderedRects(scene, TimelineQuickLayer::AutomationGutterChrome);
@@ -575,8 +598,8 @@ Original expression:
   QVERIFY(automationFull != automationBefore)
 
 A014 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:448
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — same raster-difference observation covers the voice-changes section.
 Source context since previous assertion:
   ;
 
@@ -584,8 +607,8 @@ Original expression:
   QVERIFY(voiceFull != voiceBefore)
 
 A015 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:449
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — QCOMPARE(coalesced, full) on the drawer raster is the Swift observable for identical layer output.
 Source context since previous assertion:
   ;
 
@@ -593,8 +616,8 @@ Original expression:
   QVERIFY(automationCoalesced == automationFull)
 
 A016 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:450
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — same raster equality covers the voice-changes gutter output.
 Source context since previous assertion:
   ;
 
@@ -602,8 +625,8 @@ Original expression:
   QVERIFY(voiceCoalesced == voiceFull)
 
 A017 | TimelinePanTest::fullRefreshWinsOverPan | src/checks/timelinepan/tst_timelinepan.cpp:451
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_coalescedRefreshMatchesFull (rollqml lane) — direct QCOMPARE of the coalesced and full-refresh drawer rasters.
 Source context since previous assertion:
   ;
 
@@ -612,7 +635,7 @@ Original expression:
 
 A018 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:480
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: QSignalSpy validity on the C++ TimelineQuickTextModel. The Swift QListModel publishes the same label rows but reset() always emits modelReset, so the zero-signal obligation this spy guards has no Swift counterpart.
 Source context since previous assertion:
   ;
   }
@@ -648,8 +671,8 @@ Original expression:
   QVERIFY(voiceChanges.isValid())
 
 A019 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:482
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — a synthesized Shift+wheel (yDelta -8) on swiftRollInput pans cameraScrollX by exactly +8 — the production horizontal-pan path, since the plot WheelHandler is vertical-only and handleWheel's shift branch scrolls by -d.
 Source context since previous assertion:
   ;
 
@@ -658,8 +681,8 @@ Original expression:
   QVERIFY(closeEnough(panOnce(pixelDelta), expectedDelta))
 
 A020 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:483
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — QTRY_VERIFY on the published cameraScrollX property.
 Source context since previous assertion:
   ;
 
@@ -668,7 +691,7 @@ Original expression:
 
 A021 | TimelinePanTest::wheelPansCamera | src/checks/timelinepan/tst_timelinepan.cpp:486
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Zero-signal obligation on the C++ gutter text model after an empty wheel event. The Swift QListModel reset() emits modelReset on every rebuild, so no equivalent zero-signal assertion can exist; the ported check asserts unchanged cameraScrollX and noteSummary instead.
 Source context since previous assertion:
   ;
 
@@ -679,7 +702,7 @@ Original expression:
 
 A022 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:495
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: QSignalSpy validity on the C++ TimelineQuickTextModel; see A018. The Swift QListModel has no zero-structural-signal guarantee.
 Source context since previous assertion:
   ;
       }
@@ -695,8 +718,8 @@ Original expression:
   QVERIFY(voiceChanges.isValid())
 
 A023 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:498
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — eight repeated Shift+wheel pans each advance cameraScrollX by 8.
 Source context since previous assertion:
   ;
 
@@ -707,7 +730,7 @@ Original expression:
 
 A024 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:500
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Zero structural-change obligation on the C++ gutter text model; see A018. Swift QListModel::reset always emits modelReset.
 Source context since previous assertion:
   ;
 
@@ -716,8 +739,8 @@ Original expression:
   QCOMPARE(voiceChanges.structuralChangeCount(), 0)
 
 A025 | TimelinePanTest::gutterLabelsSurvivePan | src/checks/timelinepan/tst_timelinepan.cpp:501
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_wheelPansCamera (rollqml lane) — keyboardLabels() equality on the bridged pianoKeyboardTextModel after eight pans.
 Source context since previous assertion:
   ;
 
@@ -725,8 +748,8 @@ Original expression:
   QVERIFY(labelRects(*voiceChangesModel) == voiceChangesBefore)
 
 A026 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:510
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the bridged pianoKeyboardTextModel.
 Source context since previous assertion:
   ;
   }
@@ -742,8 +765,8 @@ Original expression:
   QVERIFY(model)
 
 A027 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:513
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song behind the scene.
 Source context since previous assertion:
   ;
 
@@ -754,7 +777,7 @@ Original expression:
 
 A028 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:517
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Per-track program guard for drum-pad classification. The Swift session publishes no per-track program surface and GridScene.rebuildKeyboardText emits only note names, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
       const int primaryTrack = view.selectionModel().primaryTrack();
@@ -765,8 +788,8 @@ Original expression:
   QVERIFY(program < VOICEGROUP_SIZE)
 
 A029 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:520
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
 Source context since previous assertion:
   ;
 
@@ -776,8 +799,8 @@ Original expression:
   QVERIFY(root)
 
 A030 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:525
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
 Source context since previous assertion:
   ;
       auto *const rollInput =
@@ -789,8 +812,8 @@ Original expression:
   QVERIFY(rollInput)
 
 A031 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:526
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the gutter MouseArea child of timelineQuickRollGutter.
 Source context since previous assertion:
   ;
 
@@ -798,8 +821,8 @@ Original expression:
   QVERIFY(gutterInput)
 
 A032 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:529
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() picks a fully visible pitch row; the Swift keyboard has no pad rows, so the ported check hovers a note row.
 Source context since previous assertion:
   ;
 
@@ -810,7 +833,7 @@ Original expression:
 
 A033 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:546
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Drum-pad label record lookup. The Swift pianoKeyboardTextModel emits only natural-C note names (GridScene.rebuildKeyboardText); there is no keysplit/drum-pad label path, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
       const int namedKey = (*padKeys)[0];
@@ -835,7 +858,7 @@ Original expression:
 
 A034 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:547
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Same drum-pad label record obligation as A033; no Swift pad-label model exists.
 Source context since previous assertion:
   ;
 
@@ -844,7 +867,7 @@ Original expression:
 
 A035 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:548
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Same drum-pad label record obligation as A033.
 Source context since previous assertion:
   ;
 
@@ -853,7 +876,7 @@ Original expression:
 
 A036 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:549
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name text assertion ('Kick'); the Swift keyboard model has no drum-pad names.
 Source context since previous assertion:
   ;
 
@@ -863,7 +886,7 @@ Original expression:
 
 A037 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:551
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Accidental-pad fixture guard; the Swift keyboard model has no pad rows.
 Source context since previous assertion:
   ;
 
@@ -872,7 +895,7 @@ Original expression:
 
 A038 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:555
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Long pad-name text assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
       const QString longText = model->data(longIndex, TimelineQuickTextModel::TextRole).toString();
@@ -884,7 +907,7 @@ Original expression:
 
 A039 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:563
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-label width vs measured text; no Swift pad-label path.
 Source context since previous assertion:
   ;
       const auto geometry = pianoroll_detail::PianoRollGeometry::resolve(view.pianoKeyboardWidth());
@@ -900,7 +923,7 @@ Original expression:
 
 A040 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:564
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset and can never overflow the gutter, so no Swift-side observation can exist.
 Source context since previous assertion:
   ;
 
@@ -909,7 +932,7 @@ Original expression:
 
 A041 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:565
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-label rect origin; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -918,7 +941,7 @@ Original expression:
 
 A042 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:566
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-label rect top vs pad row rect; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -927,7 +950,7 @@ Original expression:
 
 A043 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:567
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-label rect height vs pad row rect; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -936,7 +959,7 @@ Original expression:
 
 A044 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:568
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Unnamed-pad fallback to keyName; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -945,8 +968,8 @@ Original expression:
                detail::keyName(unnamedKey))
 
 A045 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:577
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — synthesized gutter hover publishes hoverChipVisible.
 Source context since previous assertion:
   ;
 
@@ -961,8 +984,8 @@ Original expression:
   QVERIFY(scene->hoverChipVisible())
 
 A046 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:578
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — hoverChipText equals the hovered key's full name.
 Source context since previous assertion:
   ;
 
@@ -970,8 +993,8 @@ Original expression:
   QCOMPARE(scene->hoverChipText(), QString::fromUtf8(kDrumPadLongName))
 
 A047 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:580
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — published chip rect stays on-screen (left >= 0).
 Source context since previous assertion:
   ;
       const QRectF longChip = scene->hoverChipRect();
@@ -980,8 +1003,8 @@ Original expression:
   QVERIFY(longChip.left() >= layout::space(layout::Space::Zero))
 
 A048 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:581
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip width covers the realized text contentWidth.
 Source context since previous assertion:
   ;
 
@@ -991,8 +1014,8 @@ Original expression:
                                         chipPadding))
 
 A049 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:585
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — second-row hover keeps the chip visible.
 Source context since previous assertion:
   ;
       hoverPadRow(view, *gutterInput, unnamedKey);
@@ -1001,8 +1024,8 @@ Original expression:
   QVERIFY(scene->hoverChipVisible())
 
 A050 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:586
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text republishes the second hovered key name.
 Source context since previous assertion:
   ;
 
@@ -1010,8 +1033,8 @@ Original expression:
   QCOMPARE(scene->hoverChipText(), detail::keyName(unnamedKey))
 
 A051 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:588
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — second chip rect stays on-screen.
 Source context since previous assertion:
   ;
       const QRectF unnamedChip = scene->hoverChipRect();
@@ -1020,8 +1043,8 @@ Original expression:
   QVERIFY(unnamedChip.left() >= layout::space(layout::Space::Zero))
 
 A052 | TimelinePanTest::drumGutterLabelsAndHover | src/checks/timelinepan/tst_timelinepan.cpp:589
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — second chip width covers its text.
 Source context since previous assertion:
   ;
 
@@ -1032,8 +1055,8 @@ Original expression:
                 chipPadding))
 
 A053 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:600
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels — guards the bridged pianoKeyboardTextModel.
 Source context since previous assertion:
   ;
   }
@@ -1048,8 +1071,8 @@ Original expression:
   QVERIFY(model)
 
 A054 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:603
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song.
 Source context since previous assertion:
   ;
 
@@ -1060,7 +1083,7 @@ Original expression:
 
 A055 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:607
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Per-track program guard; see A028. The Swift session has no program surface.
 Source context since previous assertion:
   ;
       const int primaryTrack = view.selectionModel().primaryTrack();
@@ -1072,7 +1095,7 @@ Original expression:
 
 A056 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:624
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Fixture guard for a second used track with a different initial program; Swift track switching carries no program classification.
 Source context since previous assertion:
   ;
 
@@ -1097,7 +1120,7 @@ Original expression:
 
 A057 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:625
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Same program-difference fixture guard as A056.
 Source context since previous assertion:
   ;
 
@@ -1105,8 +1128,8 @@ Original expression:
   QVERIFY2(otherTrack >= 0, "Fixture must contain a track with a different initial program")
 
 A058 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:628
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
 Source context since previous assertion:
   ;
 
@@ -1116,8 +1139,8 @@ Original expression:
   QVERIFY(root)
 
 A059 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:631
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
 Source context since previous assertion:
   ;
       auto *const rollInput =
@@ -1127,8 +1150,8 @@ Original expression:
   QVERIFY(rollInput)
 
 A060 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:634
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() row-selection guard.
 Source context since previous assertion:
   ;
 
@@ -1139,7 +1162,7 @@ Original expression:
 
 A061 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:648
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name text assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
       const int namedKey = (*padKeys)[0];
@@ -1160,8 +1183,8 @@ Original expression:
   QCOMPARE(padText(), QStringLiteral("Kick"))
 
 A062 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:653
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — setTrack(1) publishes trackIndex == 1.
 Source context since previous assertion:
   ;
       const int drumRowCount = model->rowCount();
@@ -1173,8 +1196,8 @@ Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(), otherTrack)
 
 A063 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:654
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — keyboard model stays populated after the switch.
 Source context since previous assertion:
   ;
 
@@ -1183,7 +1206,7 @@ Original expression:
 
 A064 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:655
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Drum-row-count shrink; the Swift keyboard model is track-independent and has no drum rows.
 Source context since previous assertion:
   ;
 
@@ -1192,7 +1215,7 @@ Original expression:
 
 A065 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:656
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-row record disappearance; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1200,8 +1223,8 @@ Original expression:
   QVERIFY(!keyboardRecordAt(*model, namedY).isValid())
 
 A066 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:660
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — every label stays a natural-C note name on the non-drum track.
 Source context since previous assertion:
   ;
       for (int row = 0; row < model->rowCount(); ++row) {
@@ -1213,8 +1236,8 @@ Original expression:
                    qPrintable(text))
 
 A067 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:666
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — setTrack(0) publishes trackIndex == 0.
 Source context since previous assertion:
   ;
       }
@@ -1226,8 +1249,8 @@ Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(), primaryTrack)
 
 A068 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:667
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — row count and label rects are identical after switching back.
 Source context since previous assertion:
   ;
 
@@ -1236,7 +1259,7 @@ Original expression:
 
 A069 | TimelinePanTest::drumGutterTrackSwitch | src/checks/timelinepan/tst_timelinepan.cpp:668
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name restoration assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1244,8 +1267,8 @@ Original expression:
   QCOMPARE(padText(), QStringLiteral("Kick"))
 
 A070 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:676
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song.
 Source context since previous assertion:
   ;
   }
@@ -1261,7 +1284,7 @@ Original expression:
 
 A071 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:679
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Initial-program guard; the Swift session has no program surface.
 Source context since previous assertion:
   ;
       const int track = view.selectionModel().primaryTrack();
@@ -1272,7 +1295,7 @@ Original expression:
 
 A072 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:716
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Program-change event tick guard; the Swift session publishes no program-change events.
 Source context since previous assertion:
   ;
       MidiTimeline timeline = *originalTimeline;
@@ -1317,7 +1340,7 @@ Original expression:
 
 A073 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:717
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Melodic-program fixture guard; no Swift program surface.
 Source context since previous assertion:
   ;
 
@@ -1325,8 +1348,8 @@ Original expression:
   QVERIFY(melodic != initial)
 
 A074 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:719
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
 Source context since previous assertion:
   ;
       QQuickItem *const root = view.quickView()->rootObject();
@@ -1335,8 +1358,8 @@ Original expression:
   QVERIFY(root)
 
 A075 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:722
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
 Source context since previous assertion:
   ;
       auto *const rollInput =
@@ -1346,8 +1369,8 @@ Original expression:
   QVERIFY(rollInput)
 
 A076 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:724
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() row-selection guard.
 Source context since previous assertion:
   ;
       const auto keys = drumPadKeys(view, rollInput->height());
@@ -1357,7 +1380,7 @@ Original expression:
 
 A077 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:726
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Keysplit-type guard on the fixture bank; the Swift session exposes no voicegroup bank to the roll.
 Source context since previous assertion:
   ;
       DrumBankFixture fixture(initial, (*keys)[0], (*keys)[1], (*keys)[2]);
@@ -1366,8 +1389,8 @@ Original expression:
   QVERIFY(!(fixture.bank.voices[melodic].type & VOICE_KEYSPLIT_ALL))
 
 A078 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:737
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels — guards the bridged pianoKeyboardTextModel.
 Source context since previous assertion:
   ;
       const LoadedVoiceGroup *const originalBank = view.voicegroup();
@@ -1386,7 +1409,7 @@ Original expression:
 
 A079 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:750
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: currentProgram(track) observation; the Swift session publishes no per-track program.
 Source context since previous assertion:
   ;
       const auto padText = [&] {
@@ -1407,7 +1430,7 @@ Original expression:
 
 A080 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:751
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1416,7 +1439,7 @@ Original expression:
 
 A081 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:753
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: currentProgram after edit-cursor move; no Swift program surface.
 Source context since previous assertion:
   ;
       view.setEditCursorTick(changeTick);
@@ -1426,7 +1449,7 @@ Original expression:
 
 A082 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:754
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1435,7 +1458,7 @@ Original expression:
 
 A083 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:759
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Playhead positioning past a program-change event; the Swift session publishes no program changes, so the site's classification obligation cannot exist.
 Source context since previous assertion:
   ;
       view.setEditCursorTick(0);
@@ -1448,7 +1471,7 @@ Original expression:
 
 A084 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:760
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: currentProgram after playhead move; no Swift program surface.
 Source context since previous assertion:
   ;
 
@@ -1457,7 +1480,7 @@ Original expression:
 
 A085 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:761
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1466,7 +1489,7 @@ Original expression:
 
 A086 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:763
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: currentProgram after playhead reset; no Swift program surface.
 Source context since previous assertion:
   ;
       view.setPlayheadSample(0, true);
@@ -1476,7 +1499,7 @@ Original expression:
 
 A087 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:764
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Pad-name assertion; no Swift pad-label path.
 Source context since previous assertion:
   ;
 
@@ -1484,8 +1507,8 @@ Original expression:
   QCOMPARE(padText(), QStringLiteral("Kick"))
 
 A088 | TimelinePanTest::drumClassificationIgnoresProgramChanges | src/checks/timelinepan/tst_timelinepan.cpp:765
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_trackSwitchKeepsNoteLabels (rollqml lane) — trackIndex guard after switching.
 Source context since previous assertion:
   ;
 
@@ -1493,8 +1516,8 @@ Original expression:
   QCOMPARE(view.selectionModel().primaryTrack(), track)
 
 A089 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:775
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the loaded fixture song.
 Source context since previous assertion:
   ;
   }
@@ -1512,7 +1535,7 @@ Original expression:
 
 A090 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:779
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Per-track program guard; no Swift program surface.
 Source context since previous assertion:
   ;
       const int primaryTrack = view.selectionModel().primaryTrack();
@@ -1523,8 +1546,8 @@ Original expression:
   QVERIFY(program < VOICEGROUP_SIZE)
 
 A091 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:782
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized QML root item.
 Source context since previous assertion:
   ;
 
@@ -1534,8 +1557,8 @@ Original expression:
   QVERIFY(root)
 
 A092 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:790
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the swiftRollInput MouseArea.
 Source context since previous assertion:
   ;
       auto *const rollInput =
@@ -1550,8 +1573,8 @@ Original expression:
   QVERIFY(rollInput)
 
 A093 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:791
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the gutter MouseArea.
 Source context since previous assertion:
   ;
 
@@ -1559,8 +1582,8 @@ Original expression:
   QVERIFY(gutterInput)
 
 A094 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:792
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards timelineQuickRollPlot.
 Source context since previous assertion:
   ;
 
@@ -1568,8 +1591,8 @@ Original expression:
   QVERIFY(plotBox)
 
 A095 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:793
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards timelineQuickRollGutter.
 Source context since previous assertion:
   ;
 
@@ -1577,8 +1600,8 @@ Original expression:
   QVERIFY(gutterBox)
 
 A096 | TimelinePanTest::hoverChipOverlayUnclipped | src/checks/timelinepan/tst_timelinepan.cpp:796
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — visiblePitch() row-selection guard.
 Source context since previous assertion:
   ;
 
@@ -1588,8 +1611,8 @@ Original expression:
   QVERIFY2(padKeys.has_value(), "Fixture must expose an accidental and two natural pad rows")
 
 A097 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:815
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — synthesized gutter hover publishes hoverChipVisible.
 Source context since previous assertion:
   ;
       const int namedKey = (*padKeys)[0];
@@ -1615,8 +1638,8 @@ Original expression:
   QVERIFY(scene->hoverChipVisible())
 
 A098 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:816
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text equals the hovered key's full name.
 Source context since previous assertion:
   ;
 
@@ -1624,8 +1647,8 @@ Original expression:
   QCOMPARE(scene->hoverChipText(), QString::fromUtf8(kDrumPadLongName))
 
 A099 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:821
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized timelineQuickPianoHoverChip item.
 Source context since previous assertion:
   ;
 
@@ -1637,8 +1660,8 @@ Original expression:
   QVERIFY(chip)
 
 A100 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:822
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the realized timelineQuickPianoHoverChipText item.
 Source context since previous assertion:
   ;
 
@@ -1646,8 +1669,8 @@ Original expression:
   QVERIFY(chipText)
 
 A101 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:827
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay — guards the roll band root (plot box parent).
 Source context since previous assertion:
   ;
 
@@ -1660,7 +1683,7 @@ Original expression:
 
 A102 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:828
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Unclipped band root. The Swift roll band root (rollStack) IS clipped; the overlay escapes the clipped gutter by band-local parenting inside the clipped band, so the literal !clip() invariant is a C++ scene-graph detail with no Swift counterpart.
 Source context since previous assertion:
   ;
 
@@ -1668,8 +1691,8 @@ Original expression:
   QVERIFY(!bandRoot->clip())
 
 A103 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:829
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip parent is the band root.
 Source context since previous assertion:
   ;
 
@@ -1677,8 +1700,8 @@ Original expression:
   QCOMPARE(chip->parentItem(), bandRoot)
 
 A104 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:830
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text parent is the band root.
 Source context since previous assertion:
   ;
 
@@ -1686,8 +1709,8 @@ Original expression:
   QCOMPARE(chipText->parentItem(), bandRoot)
 
 A105 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:831
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip z above the plot box.
 Source context since previous assertion:
   ;
 
@@ -1695,8 +1718,8 @@ Original expression:
   QVERIFY(chip->z() > plotBox->z())
 
 A106 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:832
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip z above the gutter box.
 Source context since previous assertion:
   ;
 
@@ -1704,8 +1727,8 @@ Original expression:
   QVERIFY(chip->z() > gutterBox->z())
 
 A107 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:833
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text z above the chip.
 Source context since previous assertion:
   ;
 
@@ -1713,8 +1736,8 @@ Original expression:
   QVERIFY(chipText->z() > chip->z())
 
 A108 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:838
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the gutter box is clipped.
 Source context since previous assertion:
   ;
 
@@ -1726,8 +1749,8 @@ Original expression:
   QVERIFY(gutterBox->clip())
 
 A109 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:849
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — locates the realized keyboard label item by text.
 Source context since previous assertion:
   ;
       QQuickItem *fixedLabel = nullptr;
@@ -1745,8 +1768,8 @@ Original expression:
   QVERIFY(fixedLabel)
 
 A110 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:850
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the realized label is visible.
 Source context since previous assertion:
   ;
 
@@ -1754,8 +1777,8 @@ Original expression:
   QVERIFY(fixedLabel->isVisible())
 
 A111 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:854
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the label's ancestor chain reaches the band root, not the gutter box.
 Source context since previous assertion:
   ;
       QQuickItem *labelAncestor = fixedLabel->parentItem();
@@ -1766,8 +1789,8 @@ Original expression:
   QCOMPARE(labelAncestor, bandRoot)
 
 A112 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:855
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — the gutter MouseArea is parented to the gutter box.
 Source context since previous assertion:
   ;
 
@@ -1776,7 +1799,7 @@ Original expression:
 
 A113 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:858
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Fixed label wider than the keyboard gutter. Swift label rects are fixed at keyboardWidth - keyLabelRightInset (GridScene.rebuildKeyboardText), so no Swift label can overflow the gutter.
 Source context since previous assertion:
   ;
 
@@ -1787,7 +1810,7 @@ Original expression:
 
 A114 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:859
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Chip wider than the keyboard gutter. Swift chip x is clamped to max(0, keyboardWidth - inset - chipW), so a Swift chip never exceeds the gutter.
 Source context since previous assertion:
   ;
 
@@ -1795,8 +1818,8 @@ Original expression:
   QVERIFY(chip->width() > qreal(view.pianoKeyboardWidth()))
 
 A115 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:860
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip width equals the published hoverChipRect width.
 Source context since previous assertion:
   ;
 
@@ -1804,8 +1827,8 @@ Original expression:
   QCOMPARE(chip->width(), scene->hoverChipRect().width())
 
 A116 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:861
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip x equals the published hoverChipRect x.
 Source context since previous assertion:
   ;
 
@@ -1813,8 +1836,8 @@ Original expression:
   QCOMPARE(chip->x(), scene->hoverChipRect().x())
 
 A117 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:862
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text item shows the hovered key name.
 Source context since previous assertion:
   ;
 
@@ -1822,8 +1845,8 @@ Original expression:
   QCOMPARE(chipText->property("text").toString(), QString::fromUtf8(kDrumPadLongName))
 
 A118 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:863
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip item is visible.
 Source context since previous assertion:
   ;
 
@@ -1831,8 +1854,8 @@ Original expression:
   QVERIFY(chip->isVisible())
 
 A119 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:864
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text item is visible.
 Source context since previous assertion:
   ;
 
@@ -1840,8 +1863,8 @@ Original expression:
   QVERIFY(chipText->isVisible())
 
 A120 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:865
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text x tracks the chip.
 Source context since previous assertion:
   ;
 
@@ -1849,8 +1872,8 @@ Original expression:
   QCOMPARE(chipText->x(), chip->x())
 
 A121 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:866
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text y tracks the chip.
 Source context since previous assertion:
   ;
 
@@ -1858,8 +1881,8 @@ Original expression:
   QCOMPARE(chipText->y(), chip->y())
 
 A122 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:867
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text width tracks the chip.
 Source context since previous assertion:
   ;
 
@@ -1867,8 +1890,8 @@ Original expression:
   QCOMPARE(chipText->width(), chip->width())
 
 A123 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:868
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text height tracks the chip.
 Source context since previous assertion:
   ;
 
@@ -1876,8 +1899,8 @@ Original expression:
   QCOMPARE(chipText->height(), chip->height())
 
 A124 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:871
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text contentWidth is positive.
 Source context since previous assertion:
   ;
       const qreal contentWidth = chipText->property("contentWidth").toReal();
@@ -1887,8 +1910,8 @@ Original expression:
   QVERIFY(contentWidth > 0)
 
 A125 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:872
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text contentHeight is positive.
 Source context since previous assertion:
   ;
 
@@ -1896,8 +1919,8 @@ Original expression:
   QVERIFY(contentHeight > 0)
 
 A126 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:873
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — contentWidth fits the chip.
 Source context since previous assertion:
   ;
 
@@ -1905,8 +1928,8 @@ Original expression:
   QVERIFY(contentWidth <= chipText->width())
 
 A127 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:874
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — contentHeight fits the chip.
 Source context since previous assertion:
   ;
 
@@ -1914,8 +1937,8 @@ Original expression:
   QVERIFY(contentHeight <= chipText->height())
 
 A128 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:875
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text is unclipped.
 Source context since previous assertion:
   ;
 
@@ -1923,8 +1946,8 @@ Original expression:
   QVERIFY(!chipText->clip())
 
 A129 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:876
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text is horizontally centered.
 Source context since previous assertion:
   ;
 
@@ -1932,8 +1955,8 @@ Original expression:
   QCOMPARE(chipText->property("horizontalAlignment").toInt(), int(Qt::AlignHCenter))
 
 A130 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:877
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — chip text is vertically centered.
 Source context since previous assertion:
   ;
 
@@ -1942,7 +1965,7 @@ Original expression:
 
 A131 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:883
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Chip crossing the gutter boundary. Swift chips are clamped inside the gutter (see A114), so no Swift-side observation of a gutter-crossing chip can exist.
 Source context since previous assertion:
   ;
       const QRectF contentRect((chipText->width() - contentWidth) / 2,
@@ -1955,8 +1978,8 @@ Original expression:
   QVERIFY(chipSceneRight.x() > gutterSceneRight.x())
 
 A132 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:886
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label contentWidth is positive.
 Source context since previous assertion:
   ;
       const qreal fixedContentWidth = fixedLabel->property("contentWidth").toReal();
@@ -1966,8 +1989,8 @@ Original expression:
   QVERIFY(fixedContentWidth > 0)
 
 A133 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:887
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label contentHeight is positive.
 Source context since previous assertion:
   ;
 
@@ -1975,8 +1998,8 @@ Original expression:
   QVERIFY(fixedContentHeight > 0)
 
 A134 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:888
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label content fits its width.
 Source context since previous assertion:
   ;
 
@@ -1984,8 +2007,8 @@ Original expression:
   QVERIFY(fixedContentWidth <= fixedLabel->width())
 
 A135 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:889
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label is unclipped.
 Source context since previous assertion:
   ;
 
@@ -1993,8 +2016,8 @@ Original expression:
   QVERIFY(!fixedLabel->clip())
 
 A136 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:890
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_hoverChipOverlay (rollqml lane) — fixed label is right-aligned.
 Source context since previous assertion:
   ;
 
@@ -2003,7 +2026,7 @@ Original expression:
 
 A137 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:894
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Fixed label content crossing the gutter boundary; see A113. Swift labels cannot overflow the gutter.
 Source context since previous assertion:
   ;
       const QRectF fixedContentRect(fixedLabel->width() - fixedContentWidth,
@@ -2015,7 +2038,7 @@ Original expression:
 
 A138 | events::sendMouse | src/checks/timelinepan/tst_timelinepan.cpp:895
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Mapping/reason: Chip content crossing the gutter boundary; see A131.
 Source context since previous assertion:
   ;
 
@@ -2038,3 +2061,12 @@ Remaining original source (closing sequence and helper bodies):
   }
 
   #include "tst_timelinepan.moc"
+
+
+Swift assertion predicates
+checkPlayheadMiddlePan -> swiftcore/PlayheadFeature::middlePan::{begin,camera-delta,active,follow-suspended,end,cancel}
+roll_qml_tests lane (src/checks/rollqml/): tst_TimelinePan.qml functions carry the
+wheel/middle-drag pan, hover-chip overlay, coalesced-refresh, track-switch label,
+and selected-pan assertions.
+Presenter-level middlePan coverage is review evidence; real-input/window sites are
+covered by the rollqml lane.

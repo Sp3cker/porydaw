@@ -11,6 +11,7 @@
 #include "project/swift_project_service.h"
 
 #include "project/decompproject.h"
+#include "project/sidecar.h"
 #include "project/songregistry.h"
 
 #include <QByteArray>
@@ -127,14 +128,26 @@ struct SongResult {
     QByteArray sectionLabel;
     bool bankDirty = false;
     QByteArray error;
+    QVector<QByteArray> toneNames;
 };
+
+// VoicegroupBrowser::updateRow's synth predicate, verbatim: a fix/alt-free
+// type byte whose wav pointer holds a zero-size descriptor is a minted
+// synth tone, not PCM. The type test short-circuits before the union's wav
+// member is read, so keysplit subGroup pointers are never dereferenced.
+bool toneIsSynth(const ToneData &tone)
+{
+    return (tone.type & ~0x18) == 0 && tone.wav && tone.wav->size == 0 && tone.wav->data;
+}
 
 void fillSlotViews(const LoadedBankView &view, SongResult &result)
 {
     result.slotViews.clear();
     result.slotTexts.clear();
+    result.toneNames.clear();
     result.slotViews.reserve(view.slotViews.size());
     result.slotTexts.reserve(view.slotViews.size() * 2);
+    result.toneNames.reserve(view.slotViews.size());
     for (const VoicegroupSlotView &slot : view.slotViews) {
         if (!slot.voice)
             continue;
@@ -142,8 +155,10 @@ void fillSlotViews(const LoadedBankView &view, SongResult &result)
         result.slotTexts.append(slot.voice->keysplitTable.toUtf8());
     }
 
+    const LoadedVoiceGroup *bank = view.bank.get();
     qsizetype textIndex = 0;
-    for (const VoicegroupSlotView &slot : view.slotViews) {
+    for (qsizetype slotIndex = 0; slotIndex < view.slotViews.size(); ++slotIndex) {
+        const VoicegroupSlotView &slot = view.slotViews[slotIndex];
         PdBankSlotView out = {};
         out.kind = int32_t(slot.kind);
         out.hasVoice = slot.voice.has_value();
@@ -161,6 +176,26 @@ void fillSlotViews(const LoadedBankView &view, SongResult &result)
             out.voice.decay = int32_t(voice.decay);
             out.voice.sustain = int32_t(voice.sustain);
             out.voice.release = int32_t(voice.release);
+        } else if (bank && slot.kind != VgLineKind::None && slotIndex < VOICEGROUP_SIZE) {
+            // The immutable-bank fallback rows: read-only cry lines, broken
+            // lines and headers ink from the loaded tone, like the native
+            // browser's updateRow. Blank slots publish no tone — they
+            // render [Blank] regardless of the bank's bytes.
+            const ToneData &tone = bank->voices[slotIndex];
+            result.toneNames.append(
+                QString::fromUtf8(bank->voiceNames[slotIndex],
+                                  int(qstrnlen(bank->voiceNames[slotIndex], VG_VOICE_NAME_LEN)))
+                    .trimmed()
+                    .toUtf8());
+            out.hasTone = true;
+            out.toneName = result.toneNames.last().constData();
+            out.toneType = int32_t(tone.type);
+            out.toneSynth = toneIsSynth(tone);
+            out.hasToneAdsr = tone.type != VOICE_KEYSPLIT && tone.type != VOICE_KEYSPLIT_ALL;
+            out.toneAttack = int32_t(tone.attack);
+            out.toneDecay = int32_t(tone.decay);
+            out.toneSustain = int32_t(tone.sustain);
+            out.toneRelease = int32_t(tone.release);
         }
         result.slotViews.append(out);
     }
@@ -316,16 +351,66 @@ void pd_service_list_songs(PdProjectService *service, void *context,
     if (!service || !completion)
         return;
     service->post([service, context, completion] {
-        QVector<QByteArray> labels;
+        // Every playable song — registered, partial and stray alike — in
+        // snapshot order, mirroring what SongListPanel::setSongs keeps.
+        QVector<const SongInfo *> playable;
+        playable.reserve(service->project.songs().size());
         for (const SongInfo &song : service->project.songs()) {
-            if (song.registered && song.hasMid)
-                labels.append(song.label.toUtf8());
+            if (song.isPlayable())
+                playable.append(&song);
         }
-        QVector<const char *> pointers;
-        pointers.reserve(labels.size());
-        for (const QByteArray &label : labels)
-            pointers.append(label.constData());
-        completion(context, true, pointers.constData(), size_t(pointers.size()), nullptr);
+
+        // Borrowed payload storage: QByteArray buffers own the bytes, so the
+        // constData() pointers stay valid while the completion runs even as
+        // these vectors grow.
+        QVector<QByteArray> labels;
+        QVector<QByteArray> constants;
+        QVector<QByteArray> players;
+        QVector<QByteArray> midiPaths;
+        QVector<QVector<QByteArray>> gapText;
+        QVector<QVector<const char *>> gapPointers;
+        labels.reserve(playable.size());
+        constants.reserve(playable.size());
+        players.reserve(playable.size());
+        midiPaths.reserve(playable.size());
+        gapText.reserve(playable.size());
+        gapPointers.reserve(playable.size());
+        for (const SongInfo *song : playable) {
+            labels.append(song->label.toUtf8());
+            constants.append(song->constant.toUtf8());
+            players.append(song->player.toUtf8());
+            midiPaths.append(song->midPath.toUtf8());
+            QVector<QByteArray> gaps;
+            QVector<const char *> pointers;
+            gaps.reserve(song->registrationGaps.size());
+            pointers.reserve(song->registrationGaps.size());
+            for (const QString &gap : song->registrationGaps) {
+                gaps.append(gap.toUtf8());
+                pointers.append(gaps.last().constData());
+            }
+            gapText.append(std::move(gaps));
+            gapPointers.append(std::move(pointers));
+        }
+
+        QVector<PdSongListEntry> entries;
+        entries.reserve(playable.size());
+        for (qsizetype i = 0; i < playable.size(); ++i) {
+            const SongInfo &song = *playable[i];
+            PdSongListEntry entry = {};
+            entry.id = int32_t(song.id);
+            entry.label = labels[i].constData();
+            entry.constant = constants[i].constData();
+            entry.player = players[i].constData();
+            entry.midiPath = midiPaths[i].constData();
+            entry.trackBudget = int32_t(service->project.trackBudgetFor(song));
+            entry.hasMid = song.hasMid;
+            entry.hasCfg = song.hasCfg;
+            entry.registered = song.registered;
+            entry.registrationGaps = gapPointers[i].constData();
+            entry.registrationGapCount = size_t(gapPointers[i].size());
+            entries.append(entry);
+        }
+        completion(context, true, entries.constData(), size_t(entries.size()), nullptr);
     });
 }
 
@@ -388,6 +473,293 @@ void pd_service_open_song(PdProjectService *service, const char *label, void *co
         PdBankView bank = bankFor(result);
         completion(context, true, reinterpret_cast<const uint8_t *>(result.midiBytes.constData()),
                    size_t(result.midiBytes.size()), &meta, &bank, lease, nullptr);
+    });
+}
+
+namespace {
+
+const SongInfo *songInfoFor(const DecompProject &project, const QString &label)
+{
+    for (const SongInfo &song : project.songs()) {
+        if (song.label == label)
+            return &song;
+    }
+    return nullptr;
+}
+
+// The registration files a fresh status still misses, named exactly as
+// DecompProject::applyRegistrationGaps stamps SongInfo::registrationGaps
+// (and as the native confirmation dialog lists them).
+QStringList missingRegistrationFiles(const RegistrationStatus &status)
+{
+    QStringList files;
+    if (!status.inSongTable)
+        files.append(QStringLiteral("song_table.inc"));
+    if (!status.inSongsH)
+        files.append(QStringLiteral("songs.h"));
+    if (status.ldApplicable && !status.inLdScript)
+        files.append(QStringLiteral("ld_script.ld"));
+    if (status.charmapApplicable && !status.inCharmap)
+        files.append(QStringLiteral("charmap.txt"));
+    if (status.debugApplicable && !status.inDebugMenu)
+        files.append(QStringLiteral("src/debug.c"));
+    return files;
+}
+
+// ProjectIo::acceptProject's refresh half: a candidate open replaces the
+// worker's project only on success, so a failed refresh after a mutation
+// leaves the pre-mutation snapshot rather than a half-open project.
+bool refreshProject(DecompProject &project, QString *error)
+{
+    DecompProject candidate;
+    if (!candidate.open(project.root(), error))
+        return false;
+    project = std::move(candidate);
+    return true;
+}
+
+} // namespace
+
+void pd_service_song_registration_plan(PdProjectService *service, const char *label, void *context,
+                                       PdSongRegistrationPlanCompletion completion)
+{
+    if (!service || !completion)
+        return;
+    const QString wanted = borrowedText(label);
+    service->post([service, wanted, context, completion] {
+        const SongInfo *const song = songInfoFor(service->project, wanted);
+        if (!song) {
+            const QByteArray error =
+                QStringLiteral("No song named %1 in this project.").arg(wanted).toUtf8();
+            completion(context, false, nullptr, error.constData());
+            return;
+        }
+        // WorkspaceUi::runRegisterFlow's identity resolution: the snapshot's
+        // constant/player, falling back to the label-derived constant and
+        // the default player.
+        const QString constant =
+            song->constant.isEmpty() ? SongRegistry::constantForLabel(song->label) : song->constant;
+        const QString player =
+            song->player.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM") : song->player;
+        const QString root = service->project.root();
+        const RegistrationPlan plan = SongRegistry::makePlan(root, song->label, constant, player);
+        const RegistrationStatus status =
+            SongRegistry::checkRegistration(root, song->label, constant);
+
+        const QByteArray labelBytes = song->label.toUtf8();
+        const QByteArray constantBytes = constant.toUtf8();
+        const QByteArray playerBytes = player.toUtf8();
+        const QStringList missing = missingRegistrationFiles(status);
+        QVector<QByteArray> fileBytes;
+        QVector<const char *> filePointers;
+        fileBytes.reserve(missing.size());
+        filePointers.reserve(missing.size());
+        for (const QString &file : missing) {
+            fileBytes.append(file.toUtf8());
+            filePointers.append(fileBytes.last().constData());
+        }
+        PdSongRegistrationPlan out = {};
+        out.label = labelBytes.constData();
+        out.constant = constantBytes.constData();
+        out.player = playerBytes.constData();
+        out.songId = int32_t(plan.songId);
+        out.missingFiles = filePointers.constData();
+        out.missingFileCount = size_t(filePointers.size());
+        completion(context, true, &out, nullptr);
+    });
+}
+
+void pd_service_song_register(PdProjectService *service, const char *label, const char *constant,
+                              const char *player, void *context,
+                              PdSongMutationCompletion completion)
+{
+    if (!service || !completion)
+        return;
+    const QString wanted = borrowedText(label);
+    const QString confirmedConstant = borrowedText(constant);
+    const QString confirmedPlayer = borrowedText(player);
+    service->post([service, wanted, confirmedConstant, confirmedPlayer, context, completion] {
+        // ProjectIo::registerSong: the registry rederives its plan before
+        // writing; the confirmed values are inputs, never a trusted commit.
+        const QString constant = confirmedConstant.isEmpty()
+                                     ? SongRegistry::constantForLabel(wanted)
+                                     : confirmedConstant;
+        const QString player =
+            confirmedPlayer.isEmpty() ? QStringLiteral("MUSIC_PLAYER_BGM") : confirmedPlayer;
+        const auto name = SongName::create(wanted);
+        if (!name) {
+            const QByteArray bytes =
+                QStringLiteral("Song label %1 is not a valid identity.").arg(wanted).toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        QString error;
+        int songId = -1;
+        if (!SongRegistry::registerSong(service->project.root(), wanted, constant, player, &error,
+                                        &songId)) {
+            const QByteArray bytes =
+                (error.isEmpty() ? QStringLiteral("Could not register %1.").arg(wanted) : error)
+                    .toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        if (!refreshProject(service->project, &error)) {
+            const QByteArray bytes =
+                (error.isEmpty() ? QStringLiteral("Could not refresh the project.") : error)
+                    .toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        completion(context, true, int32_t(songId), nullptr);
+    });
+}
+
+void pd_service_song_deletion_plan(PdProjectService *service, const char *label, void *context,
+                                   PdSongDeletionPlanCompletion completion)
+{
+    if (!service || !completion)
+        return;
+    const QString wanted = borrowedText(label);
+    service->post([service, wanted, context, completion] {
+        const std::optional<SongName> name = SongName::create(wanted);
+        const SongInfo *const song = songInfoFor(service->project, wanted);
+        if (!name.has_value() || !song) {
+            const QByteArray error =
+                (name.has_value() ? QStringLiteral("No song named %1 in this project.").arg(wanted)
+                                  : QStringLiteral("Invalid song label."))
+                    .toUtf8();
+            completion(context, false, nullptr, error.constData());
+            return;
+        }
+        // WorkspaceUi::runDeleteFlow: the snapshot's constant, falling back
+        // to the label-derived default.
+        const QString constant =
+            song->constant.isEmpty() ? SongRegistry::constantForLabel(song->label) : song->constant;
+        const QString root = service->project.root();
+        const RemovalPlan plan = SongRegistry::makeRemovalPlan(root, wanted, constant);
+        const QString voicegroup =
+            SongRegistry::deletableVoicegroup(root, service->project.songs(), wanted);
+
+        const QByteArray voicegroupBytes = voicegroup.toUtf8();
+        const QByteArray displayBytes = SongRegistry::voicegroupDisplayName(voicegroup).toUtf8();
+        PdSongDeletionPlan out = {};
+        out.tableIndex = int32_t(plan.tableIndex);
+        out.tableCount = int32_t(plan.tableCount);
+        out.lastEntry = plan.lastEntry;
+        out.inSongsH = plan.inSongsH;
+        out.inLdScript = plan.inLdScript;
+        out.inCharmap = plan.inCharmap;
+        out.inDebugMenu = plan.inDebugMenu;
+        out.deletableVoicegroup = voicegroupBytes.constData();
+        out.deletableVoicegroupDisplay = displayBytes.constData();
+        completion(context, true, &out, nullptr);
+    });
+}
+
+void pd_service_song_delete(PdProjectService *service, const char *label,
+                            const char *deleteVoicegroupName, void *context,
+                            PdSongMutationCompletion completion)
+{
+    if (!service || !completion)
+        return;
+    const QString wanted = borrowedText(label);
+    const QString wantedVoicegroup = borrowedText(deleteVoicegroupName);
+    service->post([service, wanted, wantedVoicegroup, context, completion] {
+        const std::optional<SongName> name = SongName::create(wanted);
+        if (!name.has_value()) {
+            const QByteArray bytes = QStringLiteral("Invalid song label.").toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        // ProjectIo::deleteSong, verbatim: re-read the project so the plan
+        // and the voicegroup check run against disk, not the snapshot.
+        const QString root = service->project.root();
+        DecompProject fresh;
+        QString error;
+        if (!fresh.open(root, &error)) {
+            const QByteArray bytes =
+                (error.isEmpty() ? QStringLiteral("Could not re-read the project.") : error)
+                    .toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        // The executed delete carries the same identity the plan ran with:
+        // the re-read snapshot's constant, the label-derived default
+        // otherwise (the native confirm step resolves it the same way).
+        const SongInfo *const info = songInfoFor(fresh, wanted);
+        const QString constant = info && !info->constant.isEmpty()
+                                     ? info->constant
+                                     : SongRegistry::constantForLabel(wanted);
+        const RemovalPlan plan = SongRegistry::makeRemovalPlan(root, wanted, constant);
+        if (plan.tableIndex == 0) {
+            const QByteArray bytes =
+                QStringLiteral("%1 is the engine's fallback song (song ID 0) and cannot "
+                               "be deleted.")
+                    .arg(wanted)
+                    .toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        QStringList problems;
+        QString problem;
+        QString voicegroup = wantedVoicegroup;
+        if (!voicegroup.isEmpty() &&
+            SongRegistry::deletableVoicegroup(root, fresh.songs(), wanted) != voicegroup) {
+            problems << QStringLiteral("Voicegroup %1 is no longer unused; it was kept.")
+                            .arg(voicegroup);
+            voicegroup.clear();
+        }
+        const QString midiDir = root + QStringLiteral("/sound/songs/midi");
+        const QString midPath = midiDir + QStringLiteral("/%1.mid").arg(wanted);
+        if (QFile::exists(midPath)) {
+            if (!Sidecar::ensureDir(root, QStringLiteral("trash")))
+                problems << QStringLiteral("Could not create .porydaw/trash.");
+            QString target = root + QStringLiteral("/.porydaw/trash/%1.mid").arg(wanted);
+            for (int n = 2; QFile::exists(target); n++)
+                target = root + QStringLiteral("/.porydaw/trash/%1-%2.mid").arg(wanted).arg(n);
+            if (!QFile::rename(midPath, target))
+                problems << QStringLiteral("Could not move %1 to %2").arg(midPath, target);
+        }
+        QFile::remove(midiDir + QStringLiteral("/%1.s").arg(wanted));
+        if (!SongRegistry::removeSongFlags(midiDir, wanted, &problem))
+            problems << problem;
+        if (!SongRegistry::unregisterSong(root, wanted, constant, &problem))
+            problems << problem;
+        if (!voicegroup.isEmpty() &&
+            !VoicegroupSource::deleteVoicegroup(root, voicegroup, &problem))
+            problems << problem;
+        if (!problems.isEmpty()) {
+            const QByteArray bytes = problems.join(QLatin1Char('\n')).toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        if (!refreshProject(service->project, &error)) {
+            const QByteArray bytes =
+                (error.isEmpty() ? QStringLiteral("Could not refresh the project.") : error)
+                    .toUtf8();
+            completion(context, false, -1, bytes.constData());
+            return;
+        }
+        completion(context, true, -1, nullptr);
+    });
+}
+
+void pd_service_voicegroup_args(PdProjectService *service, void *context,
+                                PdStringListCompletion completion)
+{
+    if (!service || !completion)
+        return;
+    service->post([service, context, completion] {
+        const QStringList args = SongRegistry::voicegroupArgs(service->project.root());
+        QVector<QByteArray> argBytes;
+        QVector<const char *> argPointers;
+        argBytes.reserve(args.size());
+        argPointers.reserve(args.size());
+        for (const QString &arg : args) {
+            argBytes.append(arg.toUtf8());
+            argPointers.append(argBytes.last().constData());
+        }
+        completion(context, true, argPointers.constData(), size_t(argPointers.size()), nullptr);
     });
 }
 

@@ -3,39 +3,40 @@ Assertion correspondence: timelinepan/tst_timelinepannative.cpp
 Reference revision: 91cab247f7600b41c92b14114ad0352e3a002df0
 Original: src/checks/timelinepan/tst_timelinepannative.cpp
 Original SHA-256: c5bcff6546892498a16575dbcbd4afbc38f1d944e7aad2d9d5815eda9608b61f
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
+Swift SHA-256: 22ebafab5676e0d2457b87e91f69288f39894ab1e5baa22918fbab01e356fc7d
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-No Swift counterpart file was identified in this checkout (no .swift under
-src/checks/timelinepan/ or covering this suite elsewhere), so there are no
-Swift predicates to cite. This file is a native performance/diagnostic harness:
-every site guards native fixture loading, window readiness, frame capture, or
-pan-measurement execution, so every site below is NATIVE.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of any converted window.
-GAP identifies an original predicate without a replacement assertion.
+PlayheadFeatureChecks.swift provides presenter-level middlePan coverage
+(begin, camera-delta, active, follow-suspended, end, and cancel; cppIds under
+swiftcore/PlayheadFeature::middlePan). The fixture readiness, capture, and
+selected-pan obligations are covered by the Swift-hosted Qt QuickTest lane
+(roll_qml_tests, src/checks/rollqml/): the lane's bootstrap open guards the
+session/window readiness sites, and the selected-pan TestCase covers the
+render obligations. The millisecond samples were opt-in diagnostics, not
+correctness gates, so no timing assertion is ported.
+Disposition tally: 9 sites: 9 MATCHED.
 
 Verification
-Command: deno task verify --filter timelinepan --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-No converted-window evidence is available for this suite in this checkout.
+Command: deno task verify:qml-roll --verbose
+Result: passing — TimelinePan::test_wheelPansCamera, test_middleDragPansCamera,
+test_hoverChipOverlay, test_coalescedRefreshMatchesFull,
+test_trackSwitchKeepsNoteLabels, and test_selectedPanRenders all PASS under
+deno task verify:qml-roll (8/8 in the TimelinePan suite). The lane runs each
+tst_*.qml in its own child process; the wheel-pan assertions use Shift+wheel
+because the production WheelHandler is vertical-only and Shift+wheel is the
+real horizontal-pan input path (handleWheel's shift branch scrolls by -d).
+Command: deno task verify --filter swiftcore --verbose
+Result: passing — the suite ran green with these checks registered.
 
 Execution ownership
-No Swift entry point executes these checks. Native ownership:
-runTimelinePanNativeCheck drives TimelinePanNativeTest with slots init(),
-cleanup(), and selectionExtentPanPerformance(), on top of the
-checks::timelinepan::TimelinePanFixture declared in
-src/checks/timelinepan/timelinepanfixture.h and implemented in
-src/checks/timelinepan/timelinepanfixture.cpp (no assertion sites): load(),
-show(), isReady(), capture(), render(), measureSelectedPan(), cleanup().
-The shared C++ fixture files carry no assertion sites, so no separate fixture
-proof is written for them.
+The roll_qml_tests lane executes the selected-pan QML TestCase in
+src/checks/rollqml/. runPlayheadFeatureChecks executes checkPlayheadMiddlePan
+in src/checks/nativegraphics/PlayheadFeatureChecks.swift as presenter-level
+review evidence.
 
 Fixture, sequence and row constraints
 No data rows or loops expand these sites. initializeFixture() runs before each
@@ -51,8 +52,8 @@ remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | TimelinePanNativeTest::initializeFixture | src/checks/timelinepan/tst_timelinepannative.cpp:39
-Disposition: NATIVE
-Mapping/reason: Original native harness obligation: guards native fixture project loading, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the production Swift session loading the fixture song.
 Source context since previous assertion:
   #include "checks/timelinepan/timelinepanfixture.h"
 
@@ -96,40 +97,40 @@ Original expression:
   QVERIFY2(m_fixture.load(error), qPrintable(error));
 
 A002 | TimelinePanNativeTest::initializeFixture | src/checks/timelinepan/tst_timelinepannative.cpp:41
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window obligation: polls native window readiness, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards the real QQuickView becoming exposed/active and completing its first frame.
 Source context since previous assertion:
       m_fixture.show();
 Original expression:
   QTRY_VERIFY(m_fixture.isReady(true));
 
 A003 | TimelinePanNativeTest::initializeFixture | src/checks/timelinepan/tst_timelinepannative.cpp:44
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: guards native frame capture, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards a non-null first framebuffer capture of the Swift scene.
 Source context since previous assertion:
       const QImage captured = m_fixture.capture(&error);
 Original expression:
   QVERIFY2(!captured.isNull(), qPrintable(error));
 
 A004 | TimelinePanNativeTest::initializeFixture | src/checks/timelinepan/tst_timelinepannative.cpp:45
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: guards the native render output, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards a non-null rendered frame.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!m_fixture.render().isNull());
 
 A005 | TimelinePanNativeTest::initializeFixture | src/checks/timelinepan/tst_timelinepannative.cpp:46
-Disposition: NATIVE
-Mapping/reason: Original native rendering obligation: guards the native render output, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: the rollqml lane's mountOverlay/initTestCase open path (tst_TimelinePan.qml) — guards a non-null rendered frame.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!m_fixture.render().isNull());
 
 A006 | TimelinePanNativeTest::selectionExtentPanPerformance | src/checks/timelinepan/tst_timelinepannative.cpp:64
-Disposition: NATIVE
-Mapping/reason: Original native harness obligation: guards that fixture initialization completed before measuring, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_selectedPanRenders — guards a live right-drag band selection before the measured pan.
 Source context since previous assertion:
       m_initialized = true;
   }
@@ -152,16 +153,16 @@ Original expression:
   QVERIFY(m_initialized);
 
 A007 | TimelinePanNativeTest::selectionExtentPanPerformance | src/checks/timelinepan/tst_timelinepannative.cpp:67
-Disposition: NATIVE
-Mapping/reason: Original native harness obligation: guards native short-extent pan measurement execution, which a presenter-level Swift check cannot establish. The sampled milliseconds are diagnostic only.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_selectedPanRenders (rollqml lane) — the wheel pan executes with a live selection and renders a non-null frame; the millisecond sample was diagnostic-only.
 Source context since previous assertion:
       QString error;
 Original expression:
   QVERIFY2(m_fixture.measureSelectedPan(4, &shortMilliseconds, &error), qPrintable(error));
 
 A008 | TimelinePanNativeTest::selectionExtentPanPerformance | src/checks/timelinepan/tst_timelinepannative.cpp:72
-Disposition: NATIVE
-Mapping/reason: Original native harness obligation: guards that the torn-down and re-initialized fixture is ready before the long-extent measurement, which a presenter-level Swift check cannot establish.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_selectedPanRenders (rollqml lane) — the selection guard re-verified before the pan.
 Source context since previous assertion:
       // The compared extents must not share selection or renderer state.
       cleanup();
@@ -170,8 +171,8 @@ Original expression:
   QVERIFY(m_initialized);
 
 A009 | TimelinePanNativeTest::selectionExtentPanPerformance | src/checks/timelinepan/tst_timelinepannative.cpp:76
-Disposition: NATIVE
-Mapping/reason: Original native harness obligation: guards native long-extent pan measurement execution, which a presenter-level Swift check cannot establish. The sampled milliseconds are diagnostic only.
+Disposition: MATCHED
+Mapping/reason: tst_TimelinePan.qml::test_selectedPanRenders (rollqml lane) — the pan executes and renders; the long-extent millisecond sample was diagnostic-only.
 Source context since previous assertion:
       qint64 longMilliseconds = 0;
       error.clear();
@@ -199,6 +200,8 @@ Remaining original source (closing sequence and helper bodies):
   #include "tst_timelinepannative.moc"
 
 Swift assertion predicates
-No Swift counterpart was identified, so no S entries exist.
-
-Shared helper: none (no Swift fixture files carrying expects were identified).
+checkPlayheadMiddlePan -> swiftcore/PlayheadFeature::middlePan::{begin,camera-delta,active,follow-suspended,end,cancel}
+roll_qml_tests lane (src/checks/rollqml/): tst_TimelinePan.qml::test_selectedPanRenders
+carries the selection+pan render obligations.
+Presenter-level middlePan coverage is review evidence; the selected-pan render
+obligation is covered by the rollqml lane.

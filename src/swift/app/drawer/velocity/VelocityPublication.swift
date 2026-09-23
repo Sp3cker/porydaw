@@ -41,6 +41,25 @@ extension VelocityPage {
         publishTransient()
     }
 
+    /// Reprojects only the x-dependent scene primitives for a horizontal camera
+    /// scroll. The published value axis is unchanged, so avoid deriving it or
+    /// rebuilding its ruler rows on every pan tick.
+    @QtIgnored
+    public func refreshHorizontalProjection() {
+        guard session != nil else { return }
+        let input = sceneInput(reuseGeometry: true)
+        let projection = VelocityProjection(
+            camera: input.camera, geometry: input.geometry,
+            devicePixelRatio: input.devicePixelRatio, axis: axis)
+        let handles = VelocitySceneSnapshot.buildHandleRows(
+            input, axis: axis, previousHandles: handlesByID)
+        publishHandles(handles)
+        syncRects(gridLines, VelocityScene.grid(input))
+        syncRects(psgBands, VelocityScene.bands(
+            input, axis: axis, projection: projection))
+        publishTransient()
+    }
+
     /// Hover and detent changes republish the ruler and handle rows: a content
     /// rebuild hands its own build in, the hover-only paths derive the scoped
     /// axis, handle and ruler values those interactions actually change.

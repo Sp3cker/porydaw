@@ -97,6 +97,19 @@ extension VoiceChangesPage {
         publishTransient()
     }
 
+    /// Reprojects only the x-dependent voice scene primitives for a horizontal
+    /// camera scroll. Gutter text, readout and marker identities remain intact.
+    @QtIgnored
+    public func refreshHorizontalProjection() {
+        guard let session else { return }
+        let entries = markerEntries()
+        let input = sceneInput(session, entries: entries)
+        publishSpans(VoiceChangesScene.spans(input, entries: entries))
+        publishGrid(VoiceChangesScene.gridLines(input, palette: palette))
+        projectMarkers(entries, reuseGeometry: true)
+        publishTransient()
+    }
+
     /// The page's own facts for one scene build: the lane, the bank, the track,
     /// the body geometry and the live interaction, over the marker entries the
     /// caller already projected.
@@ -229,6 +242,25 @@ extension VoiceChangesPage {
             pad: fontPx(VoiceChangesPagePolicy.spaceOneFactor),
             plotWidth: plotWidth,
             plotHeight: plotHeight))
+    }
+    /// Re-publishes a retained context without resolving the voice lane again.
+    @QtIgnored
+    func publishReadout(forSlot slot: Int) {
+        let pad = fontPx(VoiceChangesPagePolicy.spaceOneFactor)
+        let slots = slotViews()
+        let view = slots.indices.contains(slot) ? slots[slot] : nil
+        publishReadout(VoiceReadoutValues(
+            slot: slot,
+            blank: view?.voice == nil,
+            symbol: view?.voice?.symbol ?? "",
+            text: {
+                let label = VoiceChangesScene.sceneContextLabel(slot: slot, slots: slots)
+                return label.isEmpty ? "No voice" : label
+            }(),
+            x: pad,
+            y: 0,
+            width: max(0, plotWidth - 2 * pad),
+            height: plotHeight))
     }
 
     /// Applies the scene's readout values: the effective context's label,

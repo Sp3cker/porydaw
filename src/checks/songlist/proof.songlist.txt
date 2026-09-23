@@ -1,0 +1,206 @@
+Assertion correspondence: SongListPanel observable contract
+
+Reference revision: cdac8c53d04f0bf72069353c09ebb40a8e288481
+Original: src/ui/songlistpanel.cpp (with header src/ui/songlistpanel.h)
+Original SHA-256: 182c8e69a452071152ed437ee6f599c54c7e4a2d353bbe459dcb5b7dde2def92
+Swift counterpart: src/swift/app/songlist/SongListPresenter.swift
+Swift SHA-256: e7495b4fccc2b72ef68e8be8bc7b22d9c27f5c0ee8b194b9c9447efdf9e3bcc6
+Oracle status: the native widget and its retired suites (src/checks/visual,
+src/checks/workspace session.cpp) are NOT compiled by the current root
+CMake. They are the behavioral oracle only; no native assertion was added
+and no native proof disposition is upgraded by this file.
+Swift checks: src/checks/songlist/songlist_checks.swift (model),
+              src/checks/songlist/songlist_service.swift (fixture-backed
+              service feed). Both are registered in
+              src/checks/workspace/SessionChecks.swift
+              (runSongListModelChecks / runSongListServiceChecks).
+
+Status and evidence
+This is a source-derived characterization of the panel's observable
+contract, not a count-based equivalence claim. MATCHED identifies a Swift
+predicate asserting the same observable outcome; NATIVE identifies an
+obligation only the widget surface can discharge (pixels, focus, key
+routing, menu exec); it does not establish coverage of the Swift model.
+GAP identifies an original behavior with no replacement assertion.
+
+No assertion sites: the B###/N### entries below are a source-derived
+behavior inventory of the panel's observable contract, not an inventory
+of C++ assertion-macro sites; each entry carries a Coverage label rather
+than an assertion-site Disposition.
+
+Coverage tally: 17 entries: 13 MATCHED, 4 NATIVE, 0 GAP.
+
+Verification
+Command: deno task verify --filter swiftcore
+Result: PASS — 1/24 harnesses selected, 23 skipped (9.91s);
+the swiftcore projectSession suite includes both song-list checks.
+
+Original behavior inventory and correspondence
+
+B001 | setSongs keeps playable only | songlistpanel.cpp:134-143
+Coverage: MATCHED
+Mapping: presenter.setSongs filters isPlayable (hasMid); check
+swiftcore/SongList::playableGateAndBadges asserts the mid-less entry drops
+while unregistered and partial entries list in snapshot order.
+
+B002 | Categories from shared prefixes | songlistpanel.cpp:216-252
+Coverage: MATCHED
+Mapping: prefix = label through first underscore; prefixes with >=2 songs
+become categories sorted count-desc then name; singletons and
+underscore-less labels pool into Other; friendly names mus_/se_/ph_;
+counts in the item text; previous selection kept when still present,
+pending restored category consumed once, missing category falls back to
+All. Checks: swiftcore/SongList::categories, ::restoreFilters.
+
+B003 | matchesFilters: category + per-word substring + fuzzy fallback |
+songlistpanel.cpp:254-275
+Coverage: MATCHED
+Mapping: Other excludes known prefixes; named category is a label prefix
+match; query is trimmed/lowercased, split on spaces, every word must
+substring-match label+constant; single-word queries fall back to
+subsequence over label or constant. Checks:
+swiftcore/SongList::categories, ::search.
+
+B004 | rebuildList ordering | songlistpanel.cpp:277-289
+Coverage: MATCHED
+Mapping: snapshot (ID) order by default; A-Z is case-insensitive label
+compare with an ID tie-break. Check: swiftcore/SongList::sort.
+
+B005 | Row badges and warning state | songlistpanel.cpp:292-310
+Coverage: MATCHED
+Mapping: unregistered rows append "  ⚠ not registered", partial rows
+"  ⚠ not fully registered"; both warn (amber foreground natively) and the
+tooltip lists registrationGaps joined by ", ". Check:
+swiftcore/SongList::playableGateAndBadges, ::serviceFeed.
+
+B006 | Count caption | songlistpanel.cpp:313-315
+Coverage: MATCHED
+Mapping: "%1 songs" unfiltered, "%1 of %2 songs" filtered. Checks:
+swiftcore/SongList::playableGateAndBadges, ::categories, ::search.
+
+B007 | Loaded-song selection across rebuilds | songlistpanel.cpp:317-326
+Coverage: MATCHED
+Mapping: currentSongId re-selects after every rebuild only while the
+search is empty; mid-search the selection clears so Enter takes the first
+match. Check: swiftcore/SongList::selectionAndActivation.
+
+B008 | setCurrentSong | songlistpanel.cpp:178-190
+Coverage: MATCHED (scroll-into-view is NATIVE, see N001)
+Mapping: selects the row when the id is visible, deselects otherwise;
+-1 deselects. Check: swiftcore/SongList::selectionAndActivation.
+
+B009 | Activation paths | songlistpanel.cpp:71-73, 329-333
+Coverage: MATCHED
+Mapping: item activation and search-Enter emit songActivated with the
+row's UserRole id; Enter prefers the current item, else the first row.
+Checks: swiftcore/SongList::selectionAndActivation (activateSong,
+activateSelection, invisible-id no-op).
+
+B010 | Context-menu actions | songlistpanel.cpp:96-117
+Coverage: MATCHED (menu presentation is NATIVE, see N002)
+Mapping: Open -> songActivated, Open in New Tab ->
+songOpenInNewTabRequested, Register Song -> songRegisterRequested enabled
+iff !registered || gaps nonempty, Delete Song -> songDeleteRequested; all
+carry the native song ID. The presenter emits the four requests only for
+visible rows (the native menu is built from the item under the cursor) and
+requestRegister additionally requires an incomplete registration, matching
+the native action's enablement. The register/delete transaction itself is
+a service operation pair (B012/B013). Checks:
+swiftcore/SongList::selectionAndActivation (invisible/ineligible no-ops),
+::playableGateAndBadges (canRegister), ::serviceFeed.
+
+B011 | Filter persistence surface | songlistpanel.cpp:145-170
+Coverage: MATCHED
+Mapping: searchText/sortIndex/categoryPrefix getters; restoreFilters
+queues the category as pending until songs arrive, applies sort only in
+range, sets the search text; categoryPrefix reports the pending value
+pre-project. Check: swiftcore/SongList::restoreFilters.
+
+B012 | Register Song transaction | songlistpanel.cpp:107-110,
+workspaceui_project.cpp (runRegisterFlow), projectio.cpp
+(registrationPlan/registerSong)
+Coverage: MATCHED (confirmation dialog is NATIVE, see N004)
+Mapping: the native flow is two-phase: RegistrationPlanInput resolves the
+identity and computes the plan, the shell confirms, RegisterSongInput
+writes. The service exposes the same split:
+pd_service_song_registration_plan (read-only: resolved label/constant/
+player, proposed song ID, missing registration files named exactly as
+SongInfo::registrationGaps) and pd_service_song_register (re-derives its
+plan on the worker before writing — the confirmed plan is never a trusted
+commit — writes song_table.inc/songs.h/ld_script/charmap/debug lines via
+SongRegistry::registerSong, then refreshes the project snapshot). Check:
+swiftcore/SongList::serviceMutations — a staged stray plans, registers,
+lists with its new ID and no gaps.
+
+B013 | Delete Song transaction | songlistpanel.cpp:112-117,
+workspaceui_project.cpp (runDeleteFlow/confirmDeletion), projectio.cpp
+(deletionPlan/deleteSong)
+Coverage: MATCHED (confirmation dialog is NATIVE, see N004)
+Mapping: pd_service_song_deletion_plan reports the RemovalPlan (table
+index/count, lastEntry, per-file in* flags) plus the deletable voicegroup
+(raw name + display form); pd_service_song_delete re-reads the project,
+refuses song ID 0 (the engine fallback), re-verifies the voicegroup is
+still unused, moves the .mid to .porydaw/trash, removes the .s and
+midi.cfg flags, unregisters, then refreshes the snapshot. Check:
+swiftcore/SongList::serviceMutations — the registered stray deletes, the
+.mid lands in .porydaw/trash, the refreshed listing drops it; the
+fallback-song delete refuses; unknown labels fail both plan halves.
+
+N001 | Scroll-into-view and focus proxy | songlistpanel.cpp:124-125,
+184-187, 172-176
+Coverage: NATIVE
+Mapping: scrollToItem(PositionAtCenter), setFocusProxy(list) and
+focusSearch's focus+selectAll are surface obligations. The presenter
+publishes revealRequest/revealSongId and searchFocusRequest counters for
+the shell to honor; no model predicate can prove pixels or focus.
+
+N002 | Context menu construction/exec | songlistpanel.cpp:95-117
+Coverage: NATIVE
+Mapping: QMenu assembly, itemAt hit-testing and exec are widget
+obligations. The presenter exposes the four request* actions and
+canRegister; the shell owns menu presentation.
+
+N003 | Key routing: Space passthrough and search arrows |
+songlistpanel.cpp:194-214
+Coverage: NATIVE
+Mapping: ShortcutOverride ignores bare Space so the window-level
+play/pause shortcut fires; Up/Down/PageUp/PageDown in the search box are
+forwarded to the list. These are event-routing obligations of the shell's
+input tier, not list-model state.
+
+N004 | Register/Delete confirmation dialogs | workspaceui_project.cpp
+(confirmRegistration/confirmDeletion)
+Coverage: NATIVE
+Mapping: the QMessageBox confirmations, projectBusy/dialogOps gating and
+the post-mutation tab refresh are application-shell obligations. The
+service owns the transaction (B012/B013); the shell presents the plan and
+calls the mutation.
+
+Remaining UI-only obligations for the shell slice
+- Render rows with the warning foreground and tooltips (N001/N002 cover
+  the data; the amber color and tooltip surface are presentation).
+- Honor revealRequest (scroll) and searchFocusRequest (focus+selectAll).
+- Route bare Space to the window play/pause action and arrows from the
+  search field to the list (N003).
+- Present the context menu and wire requestOpen/requestOpenInNewTab/
+  requestRegister/requestDelete plus canRegister (N002).
+- Present the register/delete confirmations from songRegistrationPlan/
+  songDeletionPlan, call registerSong/deleteSong, and refresh the list
+  after the mutation (N004).
+- Persist searchText/sortIndex/categoryPrefix across runs (the model
+  exposes the same getters/restoreFilters the native panel persisted via
+  QSettings).
+
+Migration notes
+- songLabels() widened with this slice: pd_service_list_songs now lists
+  every playable song (isPlayable == hasMid), where the committed op
+  filtered registered && hasMid. songLabels() therefore returns
+  unregistered strays too. The old dialog consumer
+  (ApplicationSession.replaceProject -> labels, the song-open picker)
+  now sees strays — intentional: the native panel's playable gate listed
+  them, and opening a stray is legitimate. Consumers needing
+  registered-only must filter SongListing.registered from songs().
+- Register/Delete are service operations, not presenter intents:
+  pd_service_song_registration_plan/_register/_deletion_plan/_delete
+  (B012/B013). The presenter still emits request* intents for the shell's
+  menu/dialog tier; the transaction itself lives behind the C ABI.

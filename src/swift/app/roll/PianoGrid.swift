@@ -25,6 +25,14 @@ private enum QtFact {
     static let controlModifier = 0x0400_0000
 }
 
+private enum GridCursorKind: Int {
+    case arrow = 0
+    case openHand = 1
+    case sizeVertical = 2
+    case sizeHorizontal = 3
+    case closedHand = 4
+}
+
 public enum QtScrollPhase: Int {
     case noScroll = 0
     case begin = 1
@@ -382,6 +390,34 @@ public final class PianoGrid {
         refreshNotes()
     }
 
+    public func beginPan(x: Double, y: Double) {
+        guard gesture == nil else { return }
+        gesture = .pan(GridGesture.Pan(pressX: x, pressY: y))
+        cursorKind = GridCursorKind.closedHand.rawValue
+        publishOutputs()
+    }
+
+    public func updatePan(x: Double, y: Double) {
+        guard let gesture, case .pan = gesture else { return }
+        let updated = gesture.updated(
+            x: x, y: y, metrics: metrics, camera: session.camera)
+        guard case .pan(let state) = updated else { return }
+        if state.deltaX != 0 || state.deltaY != 0 {
+            session.mutateCamera { camera in
+                _ = camera.scrollByPx(-state.deltaX)
+                _ = camera.scrollRollBy(-state.deltaY)
+            }
+        }
+        self.gesture = updated
+    }
+
+    public func endPan() {
+        guard case .pan = gesture else { return }
+        gesture = nil
+        cursorKind = GridCursorKind.arrow.rawValue
+        publishOutputs()
+    }
+
     public func updatePointer(x: Double, y: Double) {
         guard let gesture, !gesture.isRight else { return }
         self.gesture = gesture.updated(
@@ -506,6 +542,9 @@ public final class PianoGrid {
 
     @QtIgnored
     private func cancelInput() {
+        if case .pan = gesture {
+            cursorKind = GridCursorKind.arrow.rawValue
+        }
         if case .band = gesture {
             session.setSelectedNotes(selectionAtRightPress)
         }
@@ -555,7 +594,7 @@ public final class PianoGrid {
         case .resize(let state):
             session.document.resizeNotes(ids, edge: state.leading ? .leading : .trailing,
                                          byTicks: Int64(state.delta))
-        case .pendingMenu, .band:
+        case .pendingMenu, .band, .pan:
             break
         }
     }
@@ -814,6 +853,8 @@ public final class PianoGrid {
                 statusText = "\(notes.count) notes, \(session.selectedNotes.count) selected"
             case .band:
                 statusText = "Selecting \(session.selectedNotes.count) note(s)"
+            case .pan:
+                statusText = "Panning"
             }
         } else {
             statusText = "\(notes.count) notes, \(session.selectedNotes.count) selected"

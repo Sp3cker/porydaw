@@ -133,6 +133,33 @@ extension AutomationPage {
         syncRects(selectionRects, selectionBand(lane, projection: projection))
     }
 
+    /// Reprojects the active and pinned lanes for a horizontal camera scroll
+    /// without rebuilding the value axis or document-derived selector state.
+    @QtIgnored
+    public func refreshHorizontalProjection() {
+        guard let session, projection != nil else { return }
+        let facts = facts(parameter: activeParameter, modifiers: .init(), session: session)
+        let cameraProjection = makeProjection(facts: facts, camera: session.camera)
+        guard let lane = laneProjection(facts: facts, projection: cameraProjection) else {
+            return
+        }
+        projection = lane
+        publishGrid(session)
+        var runs: [SceneRect] = []
+        var segments: [AutomationRampHandle] = []
+        for ghost in ghostProjections(session) {
+            appendCurve(ghost, projection: cameraProjection, isGhost: true,
+                        into: &runs, ramps: &segments)
+        }
+        appendCurve(lane, projection: cameraProjection, isGhost: false,
+                    into: &runs, ramps: &segments)
+        syncRects(curveRuns, runs)
+        syncRamps(segments)
+        syncNodes(nodeHandles(lane, projection: cameraProjection))
+        syncRects(selectionRects, selectionBand(lane, projection: cameraProjection))
+        publishOverlays()
+    }
+
     /// The shared time grid: the roll's own subdivision, beat, fine-beat and bar
     /// lines, through the same grid metrics the roll and the sibling pages use.
     func publishGrid(_ session: DocumentSession) {

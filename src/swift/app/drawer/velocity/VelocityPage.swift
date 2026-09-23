@@ -410,14 +410,24 @@ public final class VelocityPage: EditorDrawerPage {
         }
         lastPresentedPublication = (resolvedTick, playing)
         playheadPresentationCount &+= 1
-        let effective = playing ? resolvedTick : session.editCursor
+        let playingChanged = self.playing != playing
+        self.playing = playing
         contextTick = resolvedTick
+        if playing && !playingChanged,
+           resolvedTick >= presentedContextTick,
+           resolvedTick < (resolvedContextValue.endTick ?? TimeDefaults.noTick)
+        {
+            presentedContextTick = resolvedTick
+            presentedPlaying = playing
+            publishReadout()
+            return
+        }
+
+        let effective = playing ? resolvedTick : session.editCursor
         let next = VelocityScene.contextKey(session, at: effective, playing: playing)
         presentedContextTick = resolvedTick
         presentedContextSlot = next.slot
         presentedPlaying = playing
-        let playingChanged = self.playing != playing
-        self.playing = playing
         if lastContextKey != next || playingChanged {
             rebuildContent()
         } else {

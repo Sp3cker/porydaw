@@ -3,6 +3,8 @@ set(SWIFT_GRID_NATIVE_DIR "${SWIFT_GRID_DIR}/native")
 
 add_library(PorydawApp STATIC
     ProjectService.swift
+    ProjectServiceCallbacks.swift
+    ServiceBankHistory.swift
     DocumentSession.swift
     DocumentWorkspace.swift
     NativeAudio.swift
@@ -16,6 +18,11 @@ add_library(PorydawApp STATIC
     audio/ResonanceSuppression.swift
     ApplicationSession.swift
     SongTabsController.swift
+    eventlist/EventListModel.swift
+    eventlist/EventListPresenter.swift
+    songlist/SongListPresenter.swift
+    voicelist/VoiceListSemantics.swift
+    voicelist/VoiceListController.swift
     MouseHints.swift
     QListModelSync.swift
     roll/PianoGrid.swift
@@ -24,6 +31,7 @@ add_library(PorydawApp STATIC
     roll/NoteCommands.swift
     timeline/EditorCamera.swift
     timeline/DocumentProjectionCache.swift
+    timeline/PlayheadGuides.swift
     timeline/SharedPlayhead.swift
     timeline/TimeAxis.swift
     timeline/GridGeometry.swift

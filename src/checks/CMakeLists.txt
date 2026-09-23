@@ -149,6 +149,13 @@ if(APPLE)
         editcheck/TimeCorpusChecks.swift
         rollcheck/static/camera.swift
         nativegraphics/tst_playhead_quick.swift
+        nativegraphics/PlayheadFeatureChecks.swift
+        eventviews/EventListPlayheadChecks.swift
+        songlist/songlist_checks.swift
+        songlist/songlist_service.swift
+        voicelist/VoiceListChecks.swift
+        voicelist/VoiceListIntentChecks.swift
+        voicelist/voicelist_session.swift
         trackheaders/headerfixture.swift
         trackheaders/headerinputfixture.swift
         trackheaders/tst_trackheadermodel.swift
@@ -340,4 +347,54 @@ if(APPLE)
     )
     # run_checks.ts refuses to start without mid2agb beside the build root.
     add_dependencies(editor_qml_tests mid2agb)
+    # The Swift roll window's own QML lane: the same Qt Quick Test host shape
+    # as the drawer lane, mounting the production SwiftRollOverlay composition
+    # against a real ApplicationSession. Its input directory is rollqml/, so
+    # the lane gets its own generated paths file and reuses the editor lane's
+    # generated Qt import/plugin paths.
+    set(ROLL_QML_TEST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/rollqml")
+    configure_file(
+        "${ROLL_QML_TEST_DIR}/RollQmlPaths.swift.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
+        @ONLY
+    )
+    add_library(roll_qml_lane STATIC
+        rollqml/RollQmlTests.swift
+        "${CMAKE_CURRENT_BINARY_DIR}/rollqml/RollQmlPaths.swift"
+        "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
+    )
+    set_target_properties(roll_qml_lane PROPERTIES
+        Swift_MODULE_NAME RollQmlCheck
+        Swift_LANGUAGE_VERSION 6
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC OFF
+    )
+    target_compile_options(roll_qml_lane PRIVATE
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -fmodule-map-file=${CMAKE_BINARY_DIR}/src/swift/app/module.modulemap>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_CURRENT_SOURCE_DIR}/support/corecheck>"
+        "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xcc -I${CMAKE_SOURCE_DIR}/src>"
+    )
+    target_link_libraries(roll_qml_lane PRIVATE QtBridge PorydawApp)
+
+    add_executable(roll_qml_tests
+        rollqml/RollQmlPaths.swift.in
+        "${PROJECT_SOURCE_DIR}/resources/fonts.qrc"
+    )
+    set_target_properties(roll_qml_tests PROPERTIES
+        AUTOMOC OFF
+        AUTOUIC OFF
+        AUTORCC ON
+        LINKER_LANGUAGE CXX
+        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+    )
+    target_link_libraries(roll_qml_tests PRIVATE
+        roll_qml_lane
+        QtBridge
+        PorydawApp
+        "$<LINK_LIBRARY:WHOLE_ARCHIVE,porydaw_app>"
+        Qt6::QuickTest
+    )
+    add_dependencies(roll_qml_tests mid2agb)
 endif()

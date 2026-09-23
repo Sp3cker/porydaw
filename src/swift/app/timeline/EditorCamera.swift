@@ -127,6 +127,46 @@ public struct EditorCamera: Sendable {
         public let viewportWidth: Double
         public let rollHeight: Double
     }
+    /// The camera fields that affect a publication route.
+    ///
+    /// `zoom` covers both the horizontal/time scale (`pixelsPerBeat`) and the
+    /// roll row-height scale (`keyHeight`); `geometry` covers the viewport,
+    /// bounds and pitch projection.
+    public struct Change: OptionSet, Sendable {
+        public let rawValue: UInt8
+
+        public init(rawValue: UInt8) {
+            self.rawValue = rawValue
+        }
+
+        public static let scrollX = Change(rawValue: 1 << 0)
+        public static let scrollY = Change(rawValue: 1 << 1)
+        public static let zoom = Change(rawValue: 1 << 2)
+        public static let geometry = Change(rawValue: 1 << 3)
+
+        public static func between(_ old: Snapshot, _ new: Snapshot,
+                                   projectionChanged: Bool = false) -> Change {
+            var result: Change = []
+            if old.scrollX != new.scrollX { result.insert(.scrollX) }
+            if old.scrollY != new.scrollY { result.insert(.scrollY) }
+            if old.pixelsPerBeat != new.pixelsPerBeat
+                || old.pixelsPerTick != new.pixelsPerTick
+                || old.keyHeight != new.keyHeight
+            {
+                result.insert(.zoom)
+            }
+            if old.viewportWidth != new.viewportWidth
+                || old.rollHeight != new.rollHeight
+                || old.minHScroll != new.minHScroll
+                || old.maxHScroll != new.maxHScroll
+                || old.maxVScroll != new.maxVScroll
+                || projectionChanged
+            {
+                result.insert(.geometry)
+            }
+            return result
+        }
+    }
 
     public struct ZoomResult: Equatable, Sendable {
         public let zoomChanged: Bool

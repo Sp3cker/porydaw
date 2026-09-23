@@ -224,10 +224,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     /// The presented context span's end tick: the boundary a later presentation
     /// has to cross to change the readout, or `TimeDefaults.noTick` when the
     /// span runs to the song's end.
-    @QtIgnored public var presentedContextEndTick: Tick {
-        VoiceLanePolicy.endTick(after: presentedContextTick, points: lanePoints())
-            ?? TimeDefaults.noTick
-    }
+    @QtIgnored public private(set) var presentedContextEndTick: Tick = TimeDefaults.noTick
+    @QtIgnored private var presentedContextStartTick: Tick = 0
 
     @QtIgnored weak var session: DocumentSession?
     @QtIgnored var palette = GridPalette()
@@ -287,6 +285,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
         pickerCache.refresh(slots: session.bankSlots)
         self.palette = palette
         contextTick = session.editCursor
+        presentedContextEndTick = TimeDefaults.noTick
+        presentedContextStartTick = 0
         rebuildContent()
     }
 
@@ -296,6 +296,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     public func detach() {
         cancelSectionInteraction()
         session = nil
+        presentedContextEndTick = TimeDefaults.noTick
+        presentedContextStartTick = 0
         let scene = VoiceChangesSceneSnapshot.detached
         publishMarkers([])
         publishSpans(scene.spans)
@@ -344,6 +346,8 @@ public final class VoiceChangesPage: EditorDrawerPage {
     @QtIgnored
     public func refreshFromDocument() {
         guard let session else { return }
+        presentedContextEndTick = TimeDefaults.noTick
+        presentedContextStartTick = 0
         pickerCache.refresh(slots: session.bankSlots)
         let track = session.selectedTrack ?? -1
         let revision = session.document.revision
@@ -404,17 +408,34 @@ public final class VoiceChangesPage: EditorDrawerPage {
         let playingChanged = self.playing != playing
         self.playing = playing
         contextTick = resolvedTick
-        let next = contextKey(at: effectiveContextTick())
+        if playing && !playingChanged,
+           resolvedTick >= presentedContextStartTick,
+           resolvedTick < presentedContextEndTick
+        {
+            presentedContextTick = resolvedTick
+            presentedPlaying = playing
+            publishReadout(forSlot: presentedContextSlot)
+            return
+        }
+
+        let effectiveTick = effectiveContextTick()
+        let points = lanePoints()
+        let next = VoiceChangesScene.contextKey(
+            tick: effectiveTick, firstProgram: firstProgram(),
+            points: points, playing: playing)
         let contextChanged = lastContextKey != next
         lastContextKey = next
         presentedContextTick = resolvedTick
         presentedContextSlot = next.slot
         presentedPlaying = playing
+        presentedContextStartTick = points.last { $0.tick <= effectiveTick }?.tick ?? 0
+        presentedContextEndTick = VoiceLanePolicy.endTick(after: effectiveTick, points: points)
+            ?? TimeDefaults.noTick
         if contextChanged || playingChanged {
             contextChangeCount &+= 1
             rebuildContent()
         } else {
-            publishReadout()
+            publishReadout(forSlot: next.slot)
         }
     }
 

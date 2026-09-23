@@ -115,6 +115,9 @@ public final class EditorDrawerPresenter {
     @QtTracked public var velocitySection: EditorDrawerSectionState = EditorDrawerSectionState()
     @QtTracked public var voiceChangesSection: EditorDrawerSectionState = EditorDrawerSectionState()
 
+    /// Swift-only hook for pages that were hidden during shared-playhead publication.
+    @QtIgnored public var onSectionVisibilityChanged: ((DrawerSectionKind, Bool) -> Void)?
+
     private var layout = EditorDrawerLayout()
     private let unresolvedSection = EditorDrawerSectionState()
 
@@ -231,11 +234,18 @@ public final class EditorDrawerPresenter {
 
     private func publish(_ change: EditorDrawerChangeSet) {
         guard !change.isEmpty else { return }
+        let visibilityChanges = change.sectionPreferences.compactMap { preference -> (DrawerSectionKind, Bool)? in
+            let current = section(kind: preference.kind.rawValue).visible
+            return current == preference.visible ? nil : (preference.kind, preference.visible)
+        }
         if change.published { apply(change.snapshot) }
         for preference in change.sectionPreferences {
             drawerSectionPreferenceChanged(kind: preference.kind.rawValue,
                                            visible: preference.visible,
                                            height: preference.storedBodyHeight ?? 0)
+        }
+        for (kind, visible) in visibilityChanges {
+            onSectionVisibilityChanged?(kind, visible)
         }
         if let page = change.activePagePreference {
             drawerActivePagePreferenceChanged(page: page.rawValue)

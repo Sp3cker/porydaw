@@ -44,16 +44,23 @@ public final class DocumentWorkspace {
 
     private unowned let audio: NativeAudio
     private unowned let playhead: SharedPlayheadPresenter
+    private unowned let playheadGuides: PlayheadGuidesPresenter
+    private unowned let eventList: EventListPresenter
     private let callbacks: Callbacks
+    private var lastPlayheadPresentation: SharedPlayheadPresentation?
     private var isActive = false
     private var isTornDown = false
 
     public init(session: DocumentSession, audio: NativeAudio,
-                playhead: SharedPlayheadPresenter, palette: GridPalette,
+                playhead: SharedPlayheadPresenter,
+                playheadGuides: PlayheadGuidesPresenter,
+                eventList: EventListPresenter, palette: GridPalette,
                 callbacks: Callbacks) {
         self.session = session
         self.audio = audio
         self.playhead = playhead
+        self.playheadGuides = playheadGuides
+        self.eventList = eventList
         self.callbacks = callbacks
 
         // The session owns the one palette the whole surface reads, so the roll
@@ -74,6 +81,10 @@ public final class DocumentWorkspace {
         let automationPage = AutomationPage(baseFontPx: grid.baseFontPx)
         automationPage.attach(session: session, palette: grid.palette)
         self.automationPage = automationPage
+        drawer.onSectionVisibilityChanged = { [weak self] kind, visible in
+            guard visible else { return }
+            self?.drawerSectionBecameVisible(kind)
+        }
 
         headers.onTrackSelected = { [weak grid] track in
             grid?.setTrack(index: track)
@@ -98,8 +109,8 @@ public final class DocumentWorkspace {
             grid?.lastVelocity = Int(velocity)
         }
 
-        session.onCameraChange = { [weak self] _ in
-            self?.cameraDidChange()
+        session.onCameraChangeDetailed = { [weak self] _, change in
+            self?.cameraDidChange(change)
         }
         installPlaybackPublication()
         session.onChange = { [weak self] change in
@@ -130,14 +141,34 @@ public final class DocumentWorkspace {
         playhead.onPresentation = { [weak self] presentation in
             self?.present(playhead: presentation)
         }
-        playhead.onPoll = { [weak self] elapsed, playing in
+        playhead.onPoll = { [weak self] elapsed, playing, presentationChanged in
             guard let self else { return }
-            self.trackHeaders.advanceActivity(levels: self.audio.consumeTrackActivityLevels(),
-                                               elapsedSeconds: elapsed, playing: playing)
+            // Audio telemetry is destructive-read state; drain it even when
+            // no presentation or meter publication needs the values.
+            let levels = self.audio.consumeTrackActivityLevels()
+            let hasLevels = levels.contains { $0.left != 0 || $0.right != 0 }
+            guard presentationChanged || hasLevels || self.trackHeaders.activityAnimating else {
+                return
+            }
+            _ = self.trackHeaders.advanceActivity(levels: levels,
+                                                  elapsedSeconds: elapsed, playing: playing)
         }
         drawer.attachSection(velocityPage)
         drawer.attachSection(voiceChangesPage)
         drawer.attachSection(automationPage)
+        playheadGuides.attach(session: session)
+        let engineTracks = session.document.engineTracks
+        let initialChunk: Int
+        if let track = session.selectedTrack,
+           (0..<engineTracks.usedTrackCount).contains(track),
+           engineTracks.tracks.indices.contains(track),
+           let chunk = engineTracks.tracks[track].midiChunk {
+            initialChunk = chunk
+        } else {
+            // The native controller starts on chunk zero when no track is selected.
+            initialChunk = 0
+        }
+        eventList.attach(session: session, chunkIndex: initialChunk)
         playhead.attach(session: session, audio: audio, grid: grid, drawer: drawer)
         playhead.startPolling()
     }
@@ -157,6 +188,7 @@ public final class DocumentWorkspace {
     /// the same closures.
     public func suspendCallbacks() {
         session.onCameraChange = nil
+        session.onCameraChangeDetailed = nil
         session.onChange = nil
         session.onPlayback = nil
     }
@@ -175,6 +207,9 @@ public final class DocumentWorkspace {
         isActive = false
         cancel(reason: GridCancelReason.hidden.rawValue)
         playhead.detach()
+        lastPlayheadPresentation = nil
+        playheadGuides.detach()
+        eventList.detach()
         drawer.detachSection(automationPage)
         drawer.detachSection(voiceChangesPage)
         drawer.detachSection(velocityPage)
@@ -194,8 +229,9 @@ public final class DocumentWorkspace {
         deactivate()
         session.onChange = nil
         session.onPlayback = nil
+        drawer.onSectionVisibilityChanged = nil
         session.onCameraChange = nil
-        automationPage.detach()
+        session.onCameraChangeDetailed = nil
         voiceChangesPage.detach()
         voiceChangesPage.onAuditionVoice = nil
         velocityPage.detach()
@@ -218,12 +254,25 @@ public final class DocumentWorkspace {
         }
     }
 
-    private func cameraDidChange() {
+    private func cameraDidChange(_ change: EditorCamera.Change) {
         grid.refreshCamera()
         playhead.refreshProjection()
-        velocityPage.refreshCamera()
-        voiceChangesPage.refreshCamera()
-        automationPage.refreshCamera()
+        playheadGuides.refreshProjection()
+
+        // Drawer pages project only through the horizontal camera. A vertical
+        // scroll or pitch-projection change therefore leaves them untouched;
+        // an x scroll uses their projection-only seams, while camera zoom still
+        // needs the existing full scene path.
+        guard change.contains(.scrollX) || change.contains(.zoom) else { return }
+        if change.contains(.zoom) {
+            velocityPage.refreshCamera()
+            voiceChangesPage.refreshCamera()
+            automationPage.refreshCamera()
+        } else {
+            velocityPage.refreshHorizontalProjection()
+            voiceChangesPage.refreshHorizontalProjection()
+            automationPage.refreshHorizontalProjection()
+        }
     }
 
     private func sessionDidChange(_ change: SessionChange) {
@@ -231,6 +280,8 @@ public final class DocumentWorkspace {
         let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank]
+        playheadGuides.sessionDidChange(change)
+        eventList.documentDidChange(change)
 
         if documentChanged {
             trackHeaders.documentDidChange(change)
@@ -264,9 +315,29 @@ public final class DocumentWorkspace {
     }
 
     private func present(playhead presentation: SharedPlayheadPresentation) {
-        velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
-        automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        lastPlayheadPresentation = presentation
+        if drawer.section(kind: DrawerSectionKind.velocity.rawValue).visible {
+            velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        }
+        if drawer.section(kind: DrawerSectionKind.voiceChanges.rawValue).visible {
+            voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        }
+        if drawer.section(kind: DrawerSectionKind.automation.rawValue).visible {
+            automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        }
         trackHeaders.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        eventList.setPlayheadTick(tick: presentation.tick, playing: presentation.playing)
+    }
+
+    private func drawerSectionBecameVisible(_ kind: DrawerSectionKind) {
+        guard let presentation = lastPlayheadPresentation else { return }
+        switch kind {
+        case .velocity:
+            velocityPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        case .voiceChanges:
+            voiceChangesPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        case .automation:
+            automationPage.refreshPlayhead(tick: presentation.tick, playing: presentation.playing)
+        }
     }
 }

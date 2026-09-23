@@ -51,6 +51,46 @@ public struct SharedPlayheadInteractions: Equatable, Sendable {
     /// Any of the three suspends follow; the aggregate never has tiers.
     public var suspendsFollow: Bool { gridActive || drawerActive || explicitSuspension }
 }
+// MARK: - Appearance policy
+
+/// Pure font-relative metrics for the shared playhead visual.
+public enum SharedPlayheadAppearance {
+    public static let seedBaseFontPx: Double = GridCameraPolicy.seedBaseFontPx
+    /// The platform compositor's logical one-pixel hairline.
+    public static let lineWidth: Double = 1.0
+    /// The roll always supplies the ruler band, so its triangle points down.
+    public static let trianglePointsUp: Bool = false
+
+    public static func glowRadius(baseFontPx: Double) -> Double {
+        fontPx(normalizedBaseFontPx(baseFontPx), 0.625)
+    }
+
+    public static func triangleHalfWidth(baseFontPx: Double) -> Double {
+        fontPx(normalizedBaseFontPx(baseFontPx), 0.25)
+    }
+
+    public static func triangleHeight(baseFontPx: Double) -> Double {
+        fontPx(normalizedBaseFontPx(baseFontPx), 0.5)
+    }
+
+    public static func glowLeftExtent(baseFontPx: Double, playing: Bool) -> Double {
+        let radius = glowRadius(baseFontPx: baseFontPx)
+        return playing ? radius - lineWidth : radius
+    }
+
+    public static func glowRightExtent(baseFontPx: Double, playing: Bool) -> Double {
+        playing ? lineWidth / 2.0 : glowRadius(baseFontPx: baseFontPx)
+    }
+
+    public static func peakAlpha(playing: Bool) -> Double {
+        playing ? 0.13 : 0.06
+    }
+
+    private static func normalizedBaseFontPx(_ baseFontPx: Double) -> Double {
+        baseFontPx.isFinite && baseFontPx > 0
+            ? baseFontPx : GridCameraPolicy.seedBaseFontPx
+    }
+}
 
 // MARK: - Published presentation
 
@@ -62,14 +102,40 @@ public struct SharedPlayheadPresentation: Equatable, Sendable {
     public var timelineAttached: Bool = false
     public var visible: Bool = false
     public var playing: Bool = false
+    public var glowLeft: Double =
+        SharedPlayheadAppearance.glowLeftExtent(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
+    public var glowRight: Double =
+        SharedPlayheadAppearance.glowRightExtent(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
+    public var peakAlpha: Double = SharedPlayheadAppearance.peakAlpha(playing: false)
+    public var lineWidthPx: Double = SharedPlayheadAppearance.lineWidth
+    public var triangleHalfWidthPx: Double =
+        SharedPlayheadAppearance.triangleHalfWidth(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx)
+    public var triangleHeightPx: Double =
+        SharedPlayheadAppearance.triangleHeight(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx)
+    public var trianglePointsUp: Bool = SharedPlayheadAppearance.trianglePointsUp
 
     public init(tick: Double = 0, contentX: Double = 0, timelineAttached: Bool = false,
-                visible: Bool = false, playing: Bool = false) {
+                visible: Bool = false, playing: Bool = false,
+                baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx) {
         self.tick = tick
         self.contentX = contentX
         self.timelineAttached = timelineAttached
         self.visible = visible
         self.playing = playing
+        glowLeft = SharedPlayheadAppearance.glowLeftExtent(
+            baseFontPx: baseFontPx, playing: playing)
+        glowRight = SharedPlayheadAppearance.glowRightExtent(
+            baseFontPx: baseFontPx, playing: playing)
+        peakAlpha = SharedPlayheadAppearance.peakAlpha(playing: playing)
+        lineWidthPx = SharedPlayheadAppearance.lineWidth
+        triangleHalfWidthPx = SharedPlayheadAppearance.triangleHalfWidth(
+            baseFontPx: baseFontPx)
+        triangleHeightPx = SharedPlayheadAppearance.triangleHeight(baseFontPx: baseFontPx)
+        trianglePointsUp = SharedPlayheadAppearance.trianglePointsUp
     }
 }
 
@@ -79,6 +145,7 @@ public struct SharedPlayheadPresentation: Equatable, Sendable {
 /// observation presents, and when follow moves the camera. Deterministic checks
 /// drive this layer directly with synthetic timelines and cameras.
 public enum SharedPlayheadPolicy {
+
     /// The transport raw value `ApplicationSession.playPause()` treats as playing.
     public static let playingTransport: Int32 = 2
     /// Follow re-enters once the projected x passes this fraction of the viewport
@@ -94,7 +161,9 @@ public enum SharedPlayheadPolicy {
     /// timeline exists; only a projected x inside the viewport renders.
     public static func presentation(tick: Double, transport: Int32,
                                     timelineAttached: Bool,
-                                    camera: EditorCamera) -> SharedPlayheadPresentation {
+                                    camera: EditorCamera,
+                                    baseFontPx: Double = SharedPlayheadAppearance.seedBaseFontPx)
+        -> SharedPlayheadPresentation {
         let x = camera.contentX(tick: tick)
         let width = camera.snapshot.viewportWidth
         return SharedPlayheadPresentation(
@@ -102,7 +171,8 @@ public enum SharedPlayheadPolicy {
             contentX: x,
             timelineAttached: timelineAttached,
             visible: timelineAttached && x >= 0 && x < width,
-            playing: isPlaying(transport: transport))
+            playing: isPlaying(transport: transport),
+            baseFontPx: baseFontPx)
     }
 
     /// The horizontal scroll follow asks for, or `nil` when the policy moves
@@ -139,6 +209,26 @@ public final class SharedPlayheadPresenter {
     public var visible: Bool = false
     /// The transport raw value `ApplicationSession.playPause()` calls playing.
     public var playing: Bool = false
+    /// Left bloom extent from the core to the outer edge.
+    @QtTracked public var glowLeft: Double =
+        SharedPlayheadAppearance.glowLeftExtent(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
+    /// Right bloom extent from the core to the outer edge.
+    @QtTracked public var glowRight: Double =
+        SharedPlayheadAppearance.glowRightExtent(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx, playing: false)
+    /// Peak opacity at the core-facing edge of each bloom.
+    @QtTracked public var peakAlpha: Double = SharedPlayheadAppearance.peakAlpha(playing: false)
+    /// One logical device pixel, matching layout::singlePixel().
+    @QtTracked public var lineWidthPx: Double = SharedPlayheadAppearance.lineWidth
+    @QtTracked public var triangleHalfWidthPx: Double =
+        SharedPlayheadAppearance.triangleHalfWidth(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx)
+    @QtTracked public var triangleHeightPx: Double =
+        SharedPlayheadAppearance.triangleHeight(
+            baseFontPx: GridCameraPolicy.seedBaseFontPx)
+    /// Retained for parity with the native overlay; the Swift roll points down.
+    @QtTracked public var trianglePointsUp: Bool = SharedPlayheadAppearance.trianglePointsUp
 
     /// Distinct published presentations, for coverage and performance checks.
     /// `UInt64` is not a bridge type, so this diagnostic stays Swift-only.
@@ -155,7 +245,9 @@ public final class SharedPlayheadPresenter {
     /// object. The QML-facing fields and signals below are unchanged, and this
     /// callback never changes what the presenter publishes.
     @QtIgnored public var onPresentation: ((SharedPlayheadPresentation) -> Void)?
-    @QtIgnored public var onPoll: ((Float, Bool) -> Void)?
+    /// Poll callback: elapsed seconds, transport state, and whether this poll
+    /// published a distinct playhead presentation.
+    @QtIgnored public var onPoll: ((Float, Bool, Bool) -> Void)?
 
     /// The polling lifecycle token: a new one per attach, and every observation
     /// carries the token of the generation that produced it. A task from a
@@ -229,12 +321,12 @@ public final class SharedPlayheadPresenter {
                     return
                 }
                 guard let self, self.lifecycleToken == token else { return }
-                self.observeCurrent(token: token)
+                let presentationChanged = self.observeCurrent(token: token)
                 let now = ContinuousClock.now
                 let elapsed = previous.duration(to: now).components
                 previous = now
                 self.onPoll?(Float(elapsed.seconds) + Float(elapsed.attoseconds) / 1e18,
-                             self.playing)
+                             self.playing, presentationChanged)
             }
         }
     }
@@ -253,7 +345,7 @@ public final class SharedPlayheadPresenter {
     /// timeline, and document transition.
     @QtIgnored
     public func refreshImmediate() {
-        observeCurrent(token: lifecycleToken)
+        _ = observeCurrent(token: lifecycleToken)
     }
 
     /// Re-projects the retained observation through the current timeline and
@@ -263,9 +355,9 @@ public final class SharedPlayheadPresenter {
     public func refreshProjection() {
         guard let session, let retained else { return }
         let tick = session.timeline.tick(for: retained.sample)
-        apply(SharedPlayheadPolicy.presentation(tick: tick, transport: retained.transport,
-                                                timelineAttached: true,
-                                                camera: session.camera))
+        apply(SharedPlayheadPolicy.presentation(
+            tick: tick, transport: retained.transport, timelineAttached: true,
+            camera: session.camera, baseFontPx: currentBaseFontPx))
     }
 
     /// Presents one injected observation for the current generation. This is the
@@ -298,7 +390,7 @@ public final class SharedPlayheadPresenter {
         }
         return apply(SharedPlayheadPolicy.presentation(
             tick: tick, transport: observation.transport, timelineAttached: true,
-            camera: session.camera))
+            camera: session.camera, baseFontPx: currentBaseFontPx))
     }
 
     /// Enables or disables follow. Default enabled; no QML command exists.
@@ -320,11 +412,16 @@ public final class SharedPlayheadPresenter {
                                    drawerActive: drawer?.interactionActive ?? false,
                                    explicitSuspension: explicitSuspension)
     }
+    @QtIgnored
+    private var currentBaseFontPx: Double {
+        grid?.baseFontPx ?? GridCameraPolicy.seedBaseFontPx
+    }
 
-    private func observeCurrent(token: UInt64) {
+    @discardableResult
+    private func observeCurrent(token: UInt64) -> Bool {
         let observation = SharedPlayheadObservation(sample: audio?.playheadSamples ?? 0,
                                                     transport: audio?.transport ?? 0)
-        observe(observation, token: token)
+        return observe(observation, token: token)
     }
 
     /// Publishes only a changed presentation, writing only the primitives that
@@ -341,6 +438,19 @@ public final class SharedPlayheadPresenter {
         }
         if visible != presentation.visible { visible = presentation.visible }
         if playing != presentation.playing { playing = presentation.playing }
+        if glowLeft != presentation.glowLeft { glowLeft = presentation.glowLeft }
+        if glowRight != presentation.glowRight { glowRight = presentation.glowRight }
+        if peakAlpha != presentation.peakAlpha { peakAlpha = presentation.peakAlpha }
+        if lineWidthPx != presentation.lineWidthPx { lineWidthPx = presentation.lineWidthPx }
+        if triangleHalfWidthPx != presentation.triangleHalfWidthPx {
+            triangleHalfWidthPx = presentation.triangleHalfWidthPx
+        }
+        if triangleHeightPx != presentation.triangleHeightPx {
+            triangleHeightPx = presentation.triangleHeightPx
+        }
+        if trianglePointsUp != presentation.trianglePointsUp {
+            trianglePointsUp = presentation.trianglePointsUp
+        }
         // The one Swift fan-out, after every QML-facing field is published so a
         // callback reads the presentation it was notified about.
         onPresentation?(presentation)

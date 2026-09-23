@@ -10,6 +10,7 @@ enum GridGesture {
     case resize(Resize)
     case pendingMenu(PendingMenu)
     case band(Band)
+    case pan(Pan)
 
     var isRight: Bool {
         switch self {
@@ -59,6 +60,13 @@ enum GridGesture {
         var pressY: Double
         var curX: Double
         var curY: Double
+    }
+
+    struct Pan {
+        var pressX: Double
+        var pressY: Double
+        var deltaX: Double = 0
+        var deltaY: Double = 0
     }
 
     static func move(pressTick: Double, pressKey: Int) -> GridGesture {
@@ -141,6 +149,12 @@ enum GridGesture {
             state.curX = x
             state.curY = y
             return .band(state)
+        case .pan(var state):
+            state.deltaX = x - state.pressX
+            state.deltaY = y - state.pressY
+            state.pressX = x
+            state.pressY = y
+            return .pan(state)
         }
     }
 }

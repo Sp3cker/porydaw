@@ -2,6 +2,9 @@ include_guard(GLOBAL)
 
 # Declare QtBridge's private Qt dependency in the host directory scope too,
 # where Qt finalizes the application and check executables.
+# QtBridge already opts out of this warning in its subdirectory; this
+# host-scope lookup needs the same acknowledgement of its private Qt dependency.
+set(QT_NO_PRIVATE_MODULE_WARNING ON)
 find_package(Qt6 6.10 REQUIRED COMPONENTS CorePrivate)
 
 include(FetchContent)

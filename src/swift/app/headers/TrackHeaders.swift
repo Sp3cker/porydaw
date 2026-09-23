@@ -70,6 +70,11 @@ public final class TrackHeadersPresenter {
     @QtIgnored var geometry = TrackHeadersGeometry()
     @QtIgnored var pointer = HeaderPointerState()
     @QtIgnored var snapshots: [TrackHeaderSnapshot] = []
+    @QtIgnored var resolvedPrograms: [Int] = []
+    /// Voice context bounds paired with `resolvedPrograms`; intra-span ticks do
+    /// not need to rescan the document lane.
+    @QtIgnored var resolvedProgramStarts: [Tick] = []
+    @QtIgnored var resolvedProgramEnds: [Tick] = []
     @QtIgnored var baseFontPx: Double
     @QtIgnored var viewportWidth: Double = 0
     @QtIgnored var devicePixelRatio: Double = 1
@@ -81,6 +86,7 @@ public final class TrackHeadersPresenter {
     @QtIgnored var structuralRevision: UInt64?
     @QtIgnored var playing = false
     @QtIgnored var playheadTick: Tick = 0
+    @QtIgnored public var activityAnimating: Bool { activity.isAnimating }
     @QtIgnored var activity = TrackActivity()
     @QtIgnored var activityPlaying = false
 
@@ -109,6 +115,9 @@ public final class TrackHeadersPresenter {
         appliedRevision = nil
         structuralRevision = nil
         pendingVoice = nil
+        resolvedPrograms.removeAll(keepingCapacity: false)
+        resolvedProgramStarts.removeAll(keepingCapacity: false)
+        resolvedProgramEnds.removeAll(keepingCapacity: false)
         playing = false
         activity.reset()
         activityPlaying = false
@@ -150,7 +159,20 @@ public final class TrackHeadersPresenter {
         if let target = pendingVoice, !target.matches(document) { pendingVoice = nil }
         var next: [TrackHeaderSnapshot] = []
         next.reserveCapacity(expectedCount)
-        for track in 0..<trackCount { next.append(makeSnapshot(track: track, session: session)) }
+        var nextPrograms: [Int] = []
+        var nextStarts: [Tick] = []
+        var nextEnds: [Tick] = []
+        nextPrograms.reserveCapacity(trackCount)
+        nextStarts.reserveCapacity(trackCount)
+        nextEnds.reserveCapacity(trackCount)
+        let contextTick = playing ? playheadTick : session.editCursor
+        for track in 0..<trackCount {
+            let span = resolvedProgramSpan(track: track, session: session, tick: contextTick)
+            nextPrograms.append(span.program)
+            nextStarts.append(span.start)
+            nextEnds.append(span.end)
+            next.append(makeSnapshot(track: track, session: session, program: span.program))
+        }
         if hasAdd { next.append(TrackHeaderSnapshot(isAddTrack: true, title: "+ Add track")) }
         if structural {
             snapshots = next
@@ -166,6 +188,9 @@ public final class TrackHeadersPresenter {
                 publishRow(next[index], at: index)
             }
         }
+        resolvedPrograms = nextPrograms
+        resolvedProgramStarts = nextStarts
+        resolvedProgramEnds = nextEnds
         appliedRevision = document.revision
         updateScrollGeometry()
         publishPointerVisuals()
@@ -176,10 +201,40 @@ public final class TrackHeadersPresenter {
         guard tick.isFinite else { return }
         let bounded = min(Double(TimeDefaults.maxTick), max(0, tick))
         let nextTick = Tick(bounded.rounded(.down))
-        guard self.playing != playing || (playing && playheadTick != nextTick) else { return }
+        let playingChanged = self.playing != playing
+        guard playingChanged || (playing && playheadTick != nextTick) else { return }
         self.playing = playing
         playheadTick = nextTick
-        refreshFromDocument()
+        guard let session, !session.isClosed else { return }
+
+        let trackCount = session.document.engineTracks.usedTrackCount
+        guard resolvedPrograms.count == trackCount,
+              resolvedProgramStarts.count == trackCount,
+              resolvedProgramEnds.count == trackCount,
+              snapshots.count >= trackCount else {
+            refreshFromDocument()
+            return
+        }
+        let contextTick = playing ? nextTick : session.editCursor
+        for track in 0..<trackCount {
+            if playing && !playingChanged,
+               contextTick >= resolvedProgramStarts[track],
+               contextTick < resolvedProgramEnds[track] {
+                continue
+            }
+            let span = resolvedProgramSpan(track: track, session: session, tick: contextTick)
+            resolvedProgramStarts[track] = span.start
+            resolvedProgramEnds[track] = span.end
+            guard resolvedPrograms[track] != span.program else { continue }
+            resolvedPrograms[track] = span.program
+            var row = makeSnapshot(track: track, session: session, program: span.program)
+            if row.title == snapshots[track].title,
+               row.titleBold == snapshots[track].titleBold {
+                row.selectedTitleOffset = snapshots[track].selectedTitleOffset
+            }
+            publishRow(row, at: track)
+        }
+
     }
 
     public func configureViewport(width: Double, height: Double, fontPx: Double, dpr: Double) {

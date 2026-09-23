@@ -197,7 +197,30 @@ extension TrackHeadersPresenter {
         scrollY = min(maximumScrollY, max(0, scrollY))
     }
 
-    func makeSnapshot(track: Int, session: DocumentSession) -> TrackHeaderSnapshot {
+    func resolvedProgramSpan(track: Int, session: DocumentSession, tick: Tick)
+        -> (program: Int, start: Tick, end: Tick) {
+        let first = session.timeline.tracks[track].firstProgram
+        var program = first
+        var start: Tick = 0
+        var end = TimeDefaults.noTick
+        for point in session.projectionCache.lanePoints(track: track, lane: .voice) {
+            if point.tick <= tick {
+                program = point.value
+                start = point.tick
+            } else {
+                end = point.tick
+                break
+            }
+        }
+        return (program, start, end)
+    }
+
+    func resolvedProgram(track: Int, session: DocumentSession, tick: Tick) -> Int {
+        resolvedProgramSpan(track: track, session: session, tick: tick).program
+    }
+
+    func makeSnapshot(track: Int, session: DocumentSession, program: Int? = nil)
+        -> TrackHeaderSnapshot {
         let name = session.document.trackName(track)
         let primary = session.selectedTrack == track
         let rects = geometry.textRects(width: viewportWidth, metrics: textMetrics)
@@ -216,10 +239,9 @@ extension TrackHeadersPresenter {
         row.subtitleColor = primary ? palette.windowText : palette.secondaryText
         row.muteChecked = session.mutedTracks.contains(track)
         row.soloChecked = session.soloedTracks.contains(track)
-        let first = session.timeline.tracks[track].firstProgram
-        let program = VoiceLanePolicy.slot(firstProgram: first,
-            tick: playing ? playheadTick : session.editCursor,
-            points: session.document.lanePoints(track: track, lane: .voice))
+        let program = program ?? resolvedProgram(
+            track: track, session: session,
+            tick: playing ? playheadTick : session.editCursor)
         if program < 0 { row.subtitle = "(no voice set)" }
         else if session.bankSlots.indices.contains(program), session.bankSlots[program].voice != nil {
             row.subtitle = VoiceLanePolicy.label(slot: program, view: session.bankSlots[program])

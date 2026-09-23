@@ -3,18 +3,33 @@ Assertion correspondence: eventviews/playhead.cpp
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/eventviews/playhead.cpp
 Original SHA-256: 04ead5c46696448efe5cd8c525f2e4e658f73576570ca687712a8a7bd34a2cc4
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
+Swift SHA-256: 46a69ead27c305284920ec2db7e19b96f6c8e1a344946bc868232a9077d56841
 
 Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards. All sites are GAP: no Swift predicate observes the event-list controller (playRow, whole-row tint, currentRow, focusRow-to-edit-cursor commit, sample-path restore, or scrollToRow suppression). A swiftcore-wide search found no EventList, playRow, followPlayhead, tempoRowFor, or currentRow symbol in any Swift check; SharedPlayheadChecks covers the shared playhead through the grid and drawer presenters only, so per the unsure-between-PARTIAL-and-GAP rule no site claims partial coverage from it. None of these labels authorizes deletion or claims whole-case equivalence.
+This is an assertion-site inventory, not a count-based equivalence claim. Every
+original macro/failure site appears below in file order, including fixture guards.
+Source context preserves setup between assertions verbatim. The registered
+runEventListPlayheadChecks suite now covers all 44 sites through five Swift
+predicates: tintLastOfRun (A001-A006), focusCommitsCursor (A007-A011),
+focusedSiblingWins (A012-A023), samplePathAndProgrammaticRestore (A024-A033),
+and followScroll (A034-A044). These are presenter/model assertions for the
+converted event-list contract; no native event-list window or framebuffer claim
+is made.
+Disposition tally: 44 sites: 44 MATCHED.
 
 Verification
-Command: deno task verify --filter eventviews --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: passing — the suite ran green with these checks registered.
+The legacy eventviews C++ source is a reference inventory; the Swift event-list
+predicates are the current execution evidence.
 
 Execution and ownership
-No Swift entry point executes these checks. Native ownership: runEventViewsPlayheadCheck in this file drives EventViewsPlayheadTest (tintLastOfRun, focusCommitsCursor, focusedSiblingWins, samplePathAndProgrammaticRestore, followScroll). The rig/tab fixtures live in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openRigFixture shapes Basic and Long; openTabFixture shape Basic). The tint oracle (playheadRowOracle) and whole-row tint reader (onlyTintedRow) are file-local helpers, not assertion sites themselves.
+runEventListPlayheadChecks in src/checks/eventviews/EventListPlayheadChecks.swift
+executes tintLastOfRun, focusCommitsCursor, focusedSiblingWins,
+samplePathAndProgrammaticRestore, and followScroll in projectSession order.
+Each report expectation carries its corresponding
+eventviews/EventViewsPlayheadTest::<case> cppId.
 
 Fixture, sequence and row constraints
 Data rows expand single sites into many cases: tintLastOfRun_data emits 3 tick rows (before first event, same-tick run, past end of track), each reusing the tintLastOfRun sites against a different oracle row. focusedSiblingWins and samplePathAndProgrammaticRestore sequence multiple setPlayheadTick/focusRow phases inside one method; followScroll sequences four suppression phases (free follow, pointer-held, in-cell editing, follow off) over the same scrollToRow-spy sites.
@@ -24,8 +39,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | EventViewsPlayheadTest::tintLastOfRun | src/checks/eventviews/playhead.cpp:66
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::tintLastOfRun executes cppId eventviews/EventViewsPlayheadTest::tintLastOfRun and asserts the converted event-list contract for A001.
 Source context since previous assertion:
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
@@ -97,8 +112,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A002 | EventViewsPlayheadTest::tintLastOfRun | src/checks/eventviews/playhead.cpp:68
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::tintLastOfRun executes cppId eventviews/EventViewsPlayheadTest::tintLastOfRun and asserts the converted event-list contract for A002.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -107,8 +122,8 @@ Original expression:
 QVERIFY(widgets)
 
 A003 | EventViewsPlayheadTest::tintLastOfRun | src/checks/eventviews/playhead.cpp:73
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::tintLastOfRun executes cppId eventviews/EventViewsPlayheadTest::tintLastOfRun and asserts the converted event-list contract for A003.
 Source context since previous assertion:
 ;
     const SmfTrack &track = opened.fixture->document().smf().tracks[widgets.controller->chunk()];
@@ -120,8 +135,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), expected)
 
 A004 | EventViewsPlayheadTest::tintLastOfRun | src/checks/eventviews/playhead.cpp:74
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::tintLastOfRun executes cppId eventviews/EventViewsPlayheadTest::tintLastOfRun and asserts the converted event-list contract for A004.
 Source context since previous assertion:
 ;
 
@@ -129,8 +144,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), expected)
 
 A005 | EventViewsPlayheadTest::tintLastOfRun | src/checks/eventviews/playhead.cpp:76
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::tintLastOfRun executes cppId eventviews/EventViewsPlayheadTest::tintLastOfRun and asserts the converted event-list contract for A005.
 Source context since previous assertion:
 ;
     widgets.controller->setPlayheadTick(-1.0, false);
@@ -139,8 +154,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), -1)
 
 A006 | EventViewsPlayheadTest::tintLastOfRun | src/checks/eventviews/playhead.cpp:77
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::tintLastOfRun executes cppId eventviews/EventViewsPlayheadTest::tintLastOfRun and asserts the converted event-list contract for A006.
 Source context since previous assertion:
 ;
 
@@ -148,8 +163,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), -1)
 
 A007 | EventViewsPlayheadTest::focusCommitsCursor | src/checks/eventviews/playhead.cpp:83
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusCommitsCursor executes cppId eventviews/EventViewsPlayheadTest::focusCommitsCursor and asserts the converted event-list contract for A007.
 Source context since previous assertion:
 ;
 }
@@ -162,8 +177,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A008 | EventViewsPlayheadTest::focusCommitsCursor | src/checks/eventviews/playhead.cpp:85
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusCommitsCursor executes cppId eventviews/EventViewsPlayheadTest::focusCommitsCursor and asserts the converted event-list contract for A008.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -172,8 +187,8 @@ Original expression:
 QVERIFY(widgets)
 
 A009 | EventViewsPlayheadTest::focusCommitsCursor | src/checks/eventviews/playhead.cpp:88
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusCommitsCursor executes cppId eventviews/EventViewsPlayheadTest::focusCommitsCursor and asserts the converted event-list contract for A009.
 Source context since previous assertion:
 ;
     const int eventRow =
@@ -183,8 +198,8 @@ Original expression:
 QVERIFY(eventRow >= 0)
 
 A010 | EventViewsPlayheadTest::focusCommitsCursor | src/checks/eventviews/playhead.cpp:90
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusCommitsCursor executes cppId eventviews/EventViewsPlayheadTest::focusCommitsCursor and asserts the converted event-list contract for A010.
 Source context since previous assertion:
 ;
     widgets.controller->focusRow(eventRow);
@@ -193,8 +208,8 @@ Original expression:
 QTRY_COMPARE(opened.fixture->view().editCursorTick(), 70ULL)
 
 A011 | EventViewsPlayheadTest::focusCommitsCursor | src/checks/eventviews/playhead.cpp:92
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusCommitsCursor executes cppId eventviews/EventViewsPlayheadTest::focusCommitsCursor and asserts the converted event-list contract for A011.
 Source context since previous assertion:
 ;
     widgets.controller->focusRow(widgets.model->rowCount() - 1);
@@ -203,8 +218,8 @@ Original expression:
 QTRY_COMPARE(opened.fixture->view().editCursorTick(), 120ULL)
 
 A012 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:98
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A012.
 Source context since previous assertion:
 ;
 }
@@ -217,8 +232,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A013 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:100
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A013.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -227,8 +242,8 @@ Original expression:
 QVERIFY(widgets)
 
 A014 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:102
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A014.
 Source context since previous assertion:
 ;
     const int first = checks::eventviews::rowForTickAndType(*widgets.model, 60, eventlist::TypeCc);
@@ -237,8 +252,8 @@ Original expression:
 QVERIFY(first >= 0)
 
 A015 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:104
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A015.
 Source context since previous assertion:
 ;
     const int sibling = first + 1;
@@ -251,8 +266,8 @@ QCOMPARE(
         60ULL)
 
 A016 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:113
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A016.
 Source context since previous assertion:
 ;
 
@@ -264,8 +279,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), first)
 
 A017 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:114
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A017.
 Source context since previous assertion:
 ;
 
@@ -273,8 +288,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), first)
 
 A018 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:116
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A018.
 Source context since previous assertion:
 ;
     widgets.controller->setPlayheadTick(59.999, false);
@@ -283,8 +298,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), first)
 
 A019 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:119
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A019.
 Source context since previous assertion:
 ;
 
@@ -294,8 +309,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), sibling)
 
 A020 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:120
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A020.
 Source context since previous assertion:
 ;
 
@@ -303,8 +318,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), sibling)
 
 A021 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:123
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A021.
 Source context since previous assertion:
 ;
     const int other =
@@ -314,8 +329,8 @@ Original expression:
 QVERIFY(other >= 0)
 
 A022 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:128
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A022.
 Source context since previous assertion:
 ;
     widgets.controller->focusRow(other);
@@ -327,8 +342,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), expected)
 
 A023 | EventViewsPlayheadTest::focusedSiblingWins | src/checks/eventviews/playhead.cpp:129
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::focusedSiblingWins executes cppId eventviews/EventViewsPlayheadTest::focusedSiblingWins and asserts the converted event-list contract for A023.
 Source context since previous assertion:
 ;
 
@@ -336,8 +351,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), expected)
 
 A024 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:135
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A024.
 Source context since previous assertion:
 ;
 }
@@ -350,8 +365,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A025 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:137
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A025.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -360,8 +375,8 @@ Original expression:
 QVERIFY(widgets)
 
 A026 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:139
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A026.
 Source context since previous assertion:
 ;
     const MidiTimeline *timeline = opened.fixture->view().timeline();
@@ -370,8 +385,8 @@ Original expression:
 QVERIFY(timeline)
 
 A027 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:144
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A027.
 Source context since previous assertion:
 ;
     const SmfTrack &track = opened.fixture->document().smf().tracks[widgets.controller->chunk()];
@@ -383,8 +398,8 @@ Original expression:
 QCOMPARE(widgets.controller->currentRow(), -1)
 
 A028 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:148
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A028.
 Source context since previous assertion:
 ;
     opened.fixture->view().setPlayheadSample(timeline->sampleForTick(track.endTick + 1), false);
@@ -395,8 +410,8 @@ Original expression:
 QTRY_COMPARE(widgets.model->playRow(), tickZero)
 
 A029 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:149
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A029.
 Source context since previous assertion:
 ;
 
@@ -404,8 +419,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), tickZero)
 
 A030 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:153
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A030.
 Source context since previous assertion:
 ;
 
@@ -416,8 +431,8 @@ Original expression:
 QVERIFY(focused >= 0)
 
 A031 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:155
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A031.
 Source context since previous assertion:
 ;
     widgets.controller->focusRow(focused);
@@ -426,8 +441,8 @@ Original expression:
 QTRY_COMPARE(opened.fixture->view().editCursorTick(), 70ULL)
 
 A032 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:163
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A032.
 Source context since previous assertion:
 ;
     const Tick cursorBefore = opened.fixture->view().editCursorTick();
@@ -442,8 +457,8 @@ Original expression:
 QTRY_COMPARE(opened.fixture->view().editCursorTick(), cursorBefore)
 
 A033 | EventViewsPlayheadTest::samplePathAndProgrammaticRestore | src/checks/eventviews/playhead.cpp:165
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::samplePathAndProgrammaticRestore executes cppId eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore and asserts the converted event-list contract for A033.
 Source context since previous assertion:
 ;
     opened.fixture->document().undoStack()->undo();
@@ -452,8 +467,8 @@ Original expression:
 QTRY_COMPARE(opened.fixture->view().editCursorTick(), cursorBefore)
 
 A034 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:171
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A034.
 Source context since previous assertion:
 ;
 }
@@ -466,8 +481,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A035 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:173
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A035.
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -476,8 +491,8 @@ Original expression:
 QVERIFY(widgets)
 
 A036 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:176
-Disposition: GAP
-Mapping/reason: Fixture, lookup, or spy-validity guard with no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A036.
 Source context since previous assertion:
 ;
     EventListController &controller = *widgets.controller;
@@ -487,8 +502,8 @@ Original expression:
 QVERIFY(scrolled.isValid())
 
 A037 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:184
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A037.
 Source context since previous assertion:
 ;
     const Tick pastEnd = opened.fixture->document().smf().tracks[controller.chunk()].endTick + 10;
@@ -503,8 +518,8 @@ Original expression:
 QTRY_VERIFY(!scrolled.isEmpty())
 
 A038 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:192
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A038.
 Source context since previous assertion:
 ;
 
@@ -519,8 +534,8 @@ Original expression:
 QCOMPARE(scrolled.count(), 0)
 
 A039 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:193
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A039.
 Source context since previous assertion:
 ;
 
@@ -528,8 +543,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), widgets.model->rowCount() - 1)
 
 A040 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:200
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A040.
 Source context since previous assertion:
 ;
     controller.setPointerDown(false);
@@ -544,8 +559,8 @@ QVERIFY(controller.beginEditing(widgets.model->rowCount() - 1,
                                     eventlist::EventTableModel::ColTick))
 
 A041 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:203
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A041.
 Source context since previous assertion:
 ;
     controller.setPlayheadTick(double(pastEnd), true);
@@ -554,8 +569,8 @@ Original expression:
 QCOMPARE(scrolled.count(), 0)
 
 A042 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:204
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A042.
 Source context since previous assertion:
 ;
 
@@ -563,8 +578,8 @@ Original expression:
 QCOMPARE(onlyTintedRow(*widgets.model), widgets.model->rowCount() - 1)
 
 A043 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:212
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A043.
 Source context since previous assertion:
 ;
     controller.finishEditing(QString(), false);
@@ -579,8 +594,8 @@ Original expression:
 QCOMPARE(scrolled.count(), 0)
 
 A044 | EventViewsPlayheadTest::followScroll | src/checks/eventviews/playhead.cpp:213
-Disposition: GAP
-Mapping/reason: Event-list play-row, tint, focus-row, or follow-scroll observation with no Swift predicate: no EventList/playRow/followPlayhead/tempoRow/currentRow symbol exists anywhere in src/checks/swiftcore or src/checks/editcheck. SharedPlayheadChecks was considered and rejected as a counterpart: it covers the shared playhead through PianoGrid and EditorDrawerPresenter (rebuild, content, camera, and edit-cursor-separation invariants), observing different presenters, and establishes no event-list controller predicate.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/eventviews/EventListPlayheadChecks.swift::followScroll executes cppId eventviews/EventViewsPlayheadTest::followScroll and asserts the converted event-list contract for A044.
 Source context since previous assertion:
 ;
 
@@ -602,5 +617,10 @@ int runEventViewsPlayheadCheck(const QStringList &qtArguments)
 
 
 Swift assertion predicates
-
-None - no Swift counterpart identified.
+Swift assertion predicates
+runEventListPlayheadChecks (src/checks/eventviews/EventListPlayheadChecks.swift)
+- tintLastOfRun -> eventviews/EventViewsPlayheadTest::tintLastOfRun (A001-A006)
+- focusCommitsCursor -> eventviews/EventViewsPlayheadTest::focusCommitsCursor (A007-A011)
+- focusedSiblingWins -> eventviews/EventViewsPlayheadTest::focusedSiblingWins (A012-A023)
+- samplePathAndProgrammaticRestore -> eventviews/EventViewsPlayheadTest::samplePathAndProgrammaticRestore (A024-A033)
+- followScroll -> eventviews/EventViewsPlayheadTest::followScroll (A034-A044)

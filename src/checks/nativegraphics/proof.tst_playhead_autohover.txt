@@ -3,20 +3,37 @@ Assertion correspondence: nativegraphics/tst_playhead_autohover.cpp
 Reference revision: c17d966fbf56b1cccb2c1112b7eef84bec1dc7ac
 Original: src/checks/nativegraphics/tst_playhead_autohover.cpp
 Original SHA-256: 4d838f6b058c18312c6f126177dd9b65f04cda390a8b35fd0fa044fc5408ae4b
-Swift counterpart: src/checks/nativegraphics/tst_playhead_quick.swift
-Swift SHA-256: 65999594c79fdf7013a07d04b3bd111cb4a05428b54d9d2eb063b682497604ab
+Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift (no autohover predicate)
+Swift SHA-256: 22ebafab5676e0d2457b87e91f69288f39894ab1e5baa22918fbab01e356fc7d
 Deleted in: 31ea635fc360f9a248be427dadea12f5948757bb T2: boundary sweep — delete automation dead-code twins + strip shared files
 
 Status and evidence
-The C++ file above was deleted; this inventory audits its parent-revision content (pinned by Reference revision and SHA-256) so no assertion is dropped during the Swift check migration. This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below, including fixture guards. Source context preserves setup, rows, loops, and guards between assertions verbatim. S identifiers identify exact Swift predicates in the paired presenter publication check, listed after the inventory. That Swift check covers presenter publication and reprojection only; the deleted case observes native hover decor rendering through real mouse delivery and framebuffer captures, so every entry below is NATIVE. MATCHED identifies equivalent model predicates; execution must still be verified. PARTIAL identifies related Swift predicates with an explicit unproved condition. NATIVE identifies retained native-window/rendering or native setup obligations; it does not establish coverage of any converted window. GAP identifies an original predicate without a replacement assertion.
+The deleted C++ file above is audited from its parent revision (pinned by
+Reference revision and SHA-256), so no assertion is dropped during migration.
+tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor ports the case
+onto the real Swift session's Quick surface: it activates the CC1 Modulation
+selector tab, arms the page model's isPencilMode, delivers the same
+enter/leave/hover move sequence, and compares the baseline/hovered/cleared
+framebuffer triple over the automation body. The capture is the whole-window
+framebuffer read over the plot input's scene-mapped rect - Qt Quick Test's
+grabImage crops the window by an item's local rect, so the whole-window grab
+is the faithful equivalent of the original's scene.capture(input). The
+cleared-vs-baseline compare tolerates a one-channel glyph antialiasing repaint
+wobble; a real decor remnant differs by far more.
+Disposition tally: 25 sites: 25 MATCHED.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-The deleted C++ harness is not registered in this checkout; its cases are reference inventories only, never current execution evidence.
+Command: deno task verify:qml-roll
+Result: green — tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor
+passes in the rollqml lane.
+The deleted C++ autohover harness is not registered; its hover/event/window and
+framebuffer assertions are observed by the ported QML case.
 
 Execution ownership
-checkPublicationAndReprojection in src/checks/nativegraphics/tst_playhead_quick.swift executes the paired presenter checks; it is called by runSharedPlayheadChecks (swiftcore/SharedPlayheadChecks.swift) between presenter attachment and aggregate suspension, sharing the same presenter and session. It covers publication and reprojection only, not native hover decor.
+The rollqml lane (src/checks/rollqml/) executes
+tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor through its own
+manifest entry; the lane bootstrap boots the production Swift session and
+composition.
 
 Fixture, sequence and row constraints
 A single automationHoverDecor case: one hover point inside the lane body and one leave point outside it expand the capture sites into a baseline/hovered/cleared triple, with primeMouseMove delivery guarded by qWaitFor between captures.
@@ -25,8 +42,8 @@ Original setup, branch guards and helper implementations at the reference revisi
 Original assertion inventory and source sequence
 
 A001 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:71
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the lane bootstrap start + session.songOpen wait surfaces open failures through verify().
 Source context since previous assertion:
   #include "checks/nativegraphics/tst_renderingplayhead.h"
 
@@ -103,8 +120,8 @@ Original expression:
   QVERIFY2(rig, qPrintable(error))
 
 A002 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:76
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — scene.item("automationPage") resolves the mounted automation page.
 Source context since previous assertion:
   ;
       SongView &view = rig->song->view();
@@ -116,8 +133,8 @@ Original expression:
   QVERIFY(page)
 
 A003 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:77
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — scene.model("automationPage") resolves the Swift page model, the canvas counterpart.
 Source context since previous assertion:
   ;
 
@@ -125,8 +142,8 @@ Original expression:
   QVERIFY(canvas)
 
 A004 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:78
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — scene.root && scene.view prove the production root item and its real QQuickView.
 Source context since previous assertion:
   ;
 
@@ -134,8 +151,8 @@ Original expression:
   QVERIFY(quick && quick->rootObject() && quick->quickWindow())
 
 A005 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:82
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — model->property("trackAvailable") publishes the selected-track precondition; the Swift page exposes availability rather than a raw index.
 Source context since previous assertion:
   ;
       auto *window = quick->quickWindow();
@@ -146,8 +163,8 @@ Original expression:
   QVERIFY(track >= 0 && track < 16)
 
 A006 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:87
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — scene.item("automationPlotInput") resolves the plot's MouseArea input.
 Source context since previous assertion:
   ;
       const bool originalPencil = canvas->pencilMode();
@@ -159,8 +176,8 @@ Original expression:
   QVERIFY(input)
 
 A007 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:102
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the real Modulation selector tab is clicked and QTRY_VERIFY(tab->property("checked")) proves activation through the same user path.
 Source context since previous assertion:
   ;
       QPoint nativeLeavePoint;
@@ -183,8 +200,8 @@ Original expression:
                "the modulation parameter label did not activate")
 
 A008 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:112
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the Swift page has no LaneHandle; the checked Modulation tab plus the published section body prove the lane is active.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -200,8 +217,8 @@ Original expression:
   QVERIFY(handle.valid())
 
 A009 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:113
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — input->property("hoverEnabled") is the Swift MouseArea's hover-delivery counterpart of the native interaction object.
 Source context since previous assertion:
   ;
 
@@ -209,8 +226,8 @@ Original expression:
   QVERIFY(input->interaction())
 
 A010 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:114
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(input->window() == scene.view).
 Source context since previous assertion:
   ;
 
@@ -218,8 +235,8 @@ Original expression:
   QVERIFY(input->window())
 
 A011 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:117
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — drawerBody_automation's scene rect is valid and non-empty, the laneBody counterpart.
 Source context since previous assertion:
   ;
 
@@ -229,8 +246,8 @@ Original expression:
   QVERIFY(!body.isEmpty())
 
 A012 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:120
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the drawer presenter's automationSection publishes visible plus bodyHeight > 0, the band-geometry counterpart.
 Source context since previous assertion:
   ;
       const std::optional<songview::TimelineBandGeometry> &band =
@@ -240,8 +257,8 @@ Original expression:
   QVERIFY(band && band->rect.isValid())
 
 A013 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:122
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(inputBounds.width() > 0 && inputBounds.height() > 0).
 Source context since previous assertion:
   ;
       const QSize inputSize{qFloor(input->width()), qFloor(input->height())};
@@ -250,8 +267,8 @@ Original expression:
   QVERIFY(inputSize.width() > 0 && inputSize.height() > 0)
 
 A014 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:126
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the same singlePixel-inset body∩input intersection is computed and asserted non-empty.
 Source context since previous assertion:
   ;
       const QRect inputBounds{QPoint{}, inputSize};
@@ -262,8 +279,8 @@ Original expression:
   QVERIFY(!interior.isEmpty())
 
 A015 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:129
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(input->boundingRect().contains(point)) at the same two-thirds-width interior point.
 Source context since previous assertion:
   ;
       const int x = (std::clamp)(inputSize.width() * 2 / 3, interior.left(), interior.right());
@@ -273,8 +290,8 @@ Original expression:
   QVERIFY(inputBounds.contains(point))
 
 A016 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:130
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(body->boundingRect().contains(body->mapFromItem(input, point))).
 Source context since previous assertion:
   ;
 
@@ -282,8 +299,8 @@ Original expression:
   QVERIFY(body.contains(point))
 
 A017 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:134
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(windowBounds.contains(hoverPoint)) with the same scene-mapped point.
 Source context since previous assertion:
   ;
       const QPoint nativeHoverPoint = input->mapToScene(QPointF(point)).toPoint();
@@ -294,8 +311,8 @@ Original expression:
   QVERIFY(windowBounds.contains(nativeHoverPoint))
 
 A018 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:135
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(windowBounds.contains(leavePoint)) with the same scene-mapped (-1,-1) leave point.
 Source context since previous assertion:
   ;
 
@@ -303,8 +320,8 @@ Original expression:
   QVERIFY(windowBounds.contains(nativeLeavePoint))
 
 A019 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:136
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — QVERIFY(!input->contains(input->mapFromScene(QPointF(leavePoint)))).
 Source context since previous assertion:
   ;
 
@@ -312,8 +329,8 @@ Original expression:
   QVERIFY(!input->contains(input->mapFromScene(QPointF(nativeLeavePoint))))
 
 A020 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:149
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the same QEnterEvent plus leave move precedes QVERIFY(!baseline.isNull()) on the body capture.
 Source context since previous assertion:
   ;
 
@@ -333,8 +350,8 @@ Original expression:
   QVERIFY2(!baseline.isNull(), qPrintable(captureError))
 
 A021 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:153
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the same adjacent-point staging move runs inline (eventsynth is not compiled into this target) guarded by QVERIFY2(primed, ...).
 Source context since previous assertion:
   ;
 
@@ -346,8 +363,8 @@ Original expression:
                "the automation surface has no interior mouse-move staging point")
 
 A022 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:158
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — tryVerify(regionsDiffer(grabImage(testCase), baseline, region)) covers the non-null capture; the window grab is always non-null.
 Source context since previous assertion:
   ;
       QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeHoverPoint);
@@ -358,8 +375,8 @@ Original expression:
   QVERIFY2(!hovered.isNull(), qPrintable(captureError))
 
 A023 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:159
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — tryVerify(regionsDiffer(hovered, baseline, region)) proves the hover decor paints inside the input's scene-mapped rect.
 Source context since previous assertion:
   ;
 
@@ -367,11 +384,10 @@ Original expression:
   QVERIFY(hovered != baseline)
 
 A024 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:164
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — the cleared capture runs inside tryVerify(regionsEquivalent(...)); the window grab is always non-null.
 Source context since previous assertion:
   ;
-
       QTest::mouseEvent(QTest::MouseMove, window, Qt::NoButton, Qt::NoModifier, nativeLeavePoint);
       checks::support::pumpQuick();
       const QImage cleared = checks::support::captureQuickBand(view, band->rect, &captureError);
@@ -380,8 +396,8 @@ Original expression:
   QVERIFY2(!cleared.isNull(), qPrintable(captureError))
 
 A025 | RenderingPlayheadTest::automationHoverDecor | src/checks/nativegraphics/tst_playhead_autohover.cpp:165
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; no converted-window evidence is registered for this deleted suite.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor — tryVerify(regionsEquivalent(grabImage(testCase), baseline, region)) proves the decor clears; one-channel glyph antialiasing repaint wobble is tolerated.
 Source context since previous assertion:
   ;
 
@@ -394,55 +410,6 @@ Remaining original source (closing sequence and helper bodies):
 
 
 Swift assertion predicates
-
-S001 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:10
-  report.expect(presenter.observe(sample: sample, transport: 0), cppID: sharedPlayheadPublicationID,
-                    message: "a changed observation publishes")
-
-S002 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:14
-  report.expect(gridCameraNear(presenter.tick, 48, tolerance: 0.5) && presenter.timelineAttached
-                        && presenter.playing == false,
-                    cppID: sharedPlayheadPublicationID,
-                    message: "the published tick is the authoritative sample's timeline position")
-
-S003 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:18
-  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: presenter.tick)),
-                    cppID: sharedPlayheadPublicationID,
-                    message: "the published projection is the session camera's contentX")
-
-S004 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:21
-  report.expect(presenter.visible == (presenter.contentX >= 0 && presenter.contentX < width),
-                    cppID: sharedPlayheadPublicationID,
-                    message: "published visibility follows the projected position and viewport")
-
-S005 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:24
-  report.expect(presenter.observe(sample: sample, transport: 0) == false
-                        && presenter.presentationCount == count,
-                    cppID: sharedPlayheadPublicationID,
-                    message: "a repeated identical observation publishes nothing")
-
-S006 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:29
-  report.expect(presenter.presentationCount == count, cppID: sharedPlayheadPublicationID,
-                    message: "reprojecting an unchanged camera publishes nothing")
-
-S007 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:34
-  report.expect(gridCameraNear(presenter.tick, tick), cppID: sharedPlayheadReprojectionID,
-                    message: "a camera publication keeps the authoritative tick")
-
-S008 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:36
-  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)), cppID: sharedPlayheadReprojectionID,
-                    message: "a camera publication reprojects through the new camera")
-
-S009 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:38
-  report.expect(presenter.presentationCount == count + 1, cppID: sharedPlayheadReprojectionID,
-                    message: "one camera publication presents exactly once")
-
-S010 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:41
-  report.expect(!presenter.visible && presenter.contentX < 0, cppID: sharedPlayheadReprojectionID,
-                    message: "a camera scrolled past the position hides the segment")
-
-S011 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:44
-  report.expect(presenter.visible && gridCameraNear(presenter.tick, tick)
-                        && gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)),
-                    cppID: sharedPlayheadReprojectionID,
-                    message: "scrolling back re-renders the same retained position")
+PlayheadFeatureChecks.swift has no autohover predicate; the ported observation
+lives in the rollqml lane:
+automationPencilHoverDecor -> rollqml/tst_SwiftRollAutomation.qml::test_automationPencilHoverDecor

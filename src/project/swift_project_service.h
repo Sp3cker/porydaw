@@ -55,11 +55,25 @@ typedef struct PdVoiceValue {
     int32_t release;
 } PdVoiceValue;
 
-// One published bank slot, mirroring VoicegroupSlotView.
+// One published bank slot, mirroring VoicegroupSlotView. The tone fields
+// publish the immutable loaded bank's ToneData/voiceNames for slots the
+// source model does not cover with a parsed voice (read-only cry lines,
+// broken lines, headers) — the same fallback VoicegroupBrowser::updateRow
+// inks from bank->voices[slot]. Editable and blank slots publish no tone:
+// the parsed voice / [Blank] rendering is authoritative there.
 typedef struct PdBankSlotView {
     int32_t kind; // VgLineKind ordinal
     bool hasVoice;
     PdVoiceValue voice; // valid when hasVoice is true
+    bool hasTone;
+    const char *toneName; // trimmed voiceNames[slot]; borrowed
+    int32_t toneType;     // raw ToneData.type byte
+    bool toneSynth;       // toneIsSynth: fix/alt type bits + 0-size wav descriptor
+    bool hasToneAdsr;     // false for keysplit/drumkit tones (no scalar envelope)
+    int32_t toneAttack;
+    int32_t toneDecay;
+    int32_t toneSustain;
+    int32_t toneRelease;
 } PdBankSlotView;
 
 // One published bank, mirroring LoadedBankView (identity strings borrowed).
@@ -86,8 +100,68 @@ typedef struct PdSongMeta {
 } PdSongMeta;
 
 typedef void (*PdOpenCompletion)(void *context, bool ok, const char *error);
-typedef void (*PdSongListCompletion)(void *context, bool ok, const char *const *labels,
-                                     size_t labelCount, const char *error);
+
+// One playable song's listing metadata (all strings borrowed until the
+// completion returns). `id` is the SongInfo identity: the numeric song ID
+// when registered, the project snapshot index for unregistered strays.
+// `registrationGaps` names the registration files still missing the entry;
+// empty when the registration is complete.
+typedef struct PdSongListEntry {
+    int32_t id;
+    const char *label;
+    const char *constant;
+    const char *player;
+    const char *midiPath;
+    int32_t trackBudget;
+    bool hasMid;
+    bool hasCfg;
+    bool registered;
+    const char *const *registrationGaps;
+    size_t registrationGapCount;
+} PdSongListEntry;
+
+typedef void (*PdSongListCompletion)(void *context, bool ok, const PdSongListEntry *songs,
+                                     size_t songCount, const char *error);
+
+// The registration plan behind the native Register Song confirmation
+// (RegistrationPlanResult): the resolved identity plus the registration
+// files still missing the entry, named exactly as SongInfo::registrationGaps
+// (and the native dialog) name them. All strings borrowed.
+typedef struct PdSongRegistrationPlan {
+    const char *label;
+    const char *constant;
+    const char *player;
+    int32_t songId; // proposed table index
+    const char *const *missingFiles;
+    size_t missingFileCount;
+} PdSongRegistrationPlan;
+
+// The removal plan behind the native Delete Song confirmation
+// (DeletionPlanResult): what unregisterSong would edit plus the voicegroup
+// that may be deleted with the song (raw -G arg and display name; empty when
+// none applies). All strings borrowed.
+typedef struct PdSongDeletionPlan {
+    int32_t tableIndex; // -1 = no table entry; 0 = engine fallback, undeletable
+    int32_t tableCount;
+    bool lastEntry; // true: the row is removed outright; false: it becomes a free slot
+    bool inSongsH;
+    bool inLdScript;
+    bool inCharmap;
+    bool inDebugMenu;
+    const char *deletableVoicegroup;
+    const char *deletableVoicegroupDisplay;
+} PdSongDeletionPlan;
+
+typedef void (*PdSongRegistrationPlanCompletion)(void *context, bool ok,
+                                                 const PdSongRegistrationPlan *plan,
+                                                 const char *error);
+typedef void (*PdSongDeletionPlanCompletion)(void *context, bool ok, const PdSongDeletionPlan *plan,
+                                             const char *error);
+// songId: the assigned table index after a successful register, -1 otherwise.
+typedef void (*PdSongMutationCompletion)(void *context, bool ok, int32_t songId, const char *error);
+typedef void (*PdStringListCompletion)(void *context, bool ok, const char *const *strings,
+                                       size_t stringCount, const char *error);
+
 typedef void (*PdSongCompletion)(void *context, bool ok, const uint8_t *midiBytes,
                                  size_t midiByteCount, const PdSongMeta *meta,
                                  const PdBankView *bank, PdBankLease *lease, const char *error);
@@ -138,10 +212,41 @@ void pd_service_destroy(PdProjectService *service);
 
 void pd_service_open(PdProjectService *service, const char *projectRoot, void *context,
                      PdOpenCompletion completion);
+// Lists every playable song (isPlayable == hasMid): registered, partially
+// registered and unregistered strays alike, in project snapshot order.
 void pd_service_list_songs(PdProjectService *service, void *context,
                            PdSongListCompletion completion);
 void pd_service_open_song(PdProjectService *service, const char *label, void *context,
                           PdSongCompletion completion);
+// The two-phase register/delete transaction behind the native context-menu
+// flows (WorkspaceUi::runRegisterFlow/runDeleteFlow). The plan calls are
+// read-only: they resolve the song's identity and compute what the
+// registration files would gain or lose, for the shell's confirmation. The
+// mutations re-derive their plan on the worker before writing — the
+// confirmed plan is never trusted as a commit — then refresh the project
+// snapshot, so a following pd_service_list_songs sees the result.
+void pd_service_song_registration_plan(PdProjectService *service, const char *label, void *context,
+                                       PdSongRegistrationPlanCompletion completion);
+// Registers the song with the confirmed constant/player; empty values fall
+// back to the label-derived constant and MUSIC_PLAYER_BGM, like the native
+// flow. songId carries the assigned table index.
+void pd_service_song_register(PdProjectService *service, const char *label, const char *constant,
+                              const char *player, void *context,
+                              PdSongMutationCompletion completion);
+void pd_service_song_deletion_plan(PdProjectService *service, const char *label, void *context,
+                                   PdSongDeletionPlanCompletion completion);
+// Deletes the song: its .mid moves to .porydaw/trash, its .s and midi.cfg
+// flags are removed, and its registration lines are unregistered.
+// deleteVoicegroupName names the confirmed plan's deletable voicegroup
+// (empty = keep it); the worker re-verifies it is still unused before
+// deleting. Song ID 0 (the engine fallback) refuses with an error.
+void pd_service_song_delete(PdProjectService *service, const char *label,
+                            const char *deleteVoicegroupName, void *context,
+                            PdSongMutationCompletion completion);
+// The project's -G voicegroup arguments (SongRegistry::voicegroupArgs /
+// catalog groupArgs), sorted — the voice-list selector's choice feed.
+void pd_service_voicegroup_args(PdProjectService *service, void *context,
+                                PdStringListCompletion completion);
 void pd_service_save(PdProjectService *service, const PdSaveRequest *request, void *context,
                      PdSaveCompletion completion);
 void pd_service_bank_apply(PdProjectService *service, PdBankLease *lease, const PdVoiceEdit *edit,

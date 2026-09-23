@@ -6,6 +6,7 @@ import PorydawCore
 internal func runTrackHeadersInputChecks(_ report: CheckReport, session: DocumentSession,
                                         service: ProjectService) {
     selectionAndVoiceRouteThroughHeaders(report, suite: session, service: service)
+    headerSelectionTargetsResolve(report, suite: session, service: service)
     trackHeaderScopeTransitions(report, suite: session, service: service)
     muteAndSoloHonorCancellationAndButtons(report, suite: session, service: service)
     scrollClampsAndRoutesKeyboardAndWheelInput(report, suite: session, service: service)

@@ -75,6 +75,39 @@ func selectionAndVoiceRouteThroughHeaders(
 }
 
 @MainActor
+func headerSelectionTargetsResolve(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let id = "swiftcore/TrackHeaders::headerSelectionTargetsResolve"
+    let fx = TrackHeadersFixture(suite: suite, service: service)
+    let h = fx.headers
+    let rows = (0..<h.rows.count).map { h.rows[$0] }
+    let trackRows = rows.filter { !$0.isAddTrack }
+    report.expectEqual(1, rows.count - trackRows.count, cppID: id,
+                       what: "exactly one add row follows the tracks")
+    report.expect(trackRows.allSatisfy { $0.track >= 0 }, cppID: id,
+                  message: "every track row resolves an engine track")
+    let selectedRow = trackRows.firstIndex { $0.titleBold }
+    report.expect(selectedRow != nil, cppID: id,
+                  message: "the session's selected track resolves to a row")
+    let targetRow = selectedRow == 0 ? 1 : 0
+    report.expect(targetRow < trackRows.count, cppID: id,
+                  message: "an alternate row exists beside the selection")
+    report.expect(trackRows[targetRow].track >= 0, cppID: id,
+                  message: "the alternate row resolves an engine track")
+    let titleRect = trackRows[targetRow].titleRect
+    report.expect((titleRect["width"] as? Double ?? 0) > 0
+                  && (titleRect["height"] as? Double ?? 0) > 0,
+                  cppID: id, message: "title rect is populated")
+    // Geometry stays populated after the band scrolls.
+    h.scrollY += Double(h.rowHeight)
+    let scrolledRect = trackRows[targetRow].titleRect
+    report.expect((scrolledRect["width"] as? Double ?? 0) > 0
+                  && (scrolledRect["height"] as? Double ?? 0) > 0,
+                  cppID: id, message: "title rect stays populated after scroll")
+}
+
+@MainActor
 func trackHeaderScopeTransitions(_ report: CheckReport, suite: DocumentSession,
                                  service: ProjectService) {
     let fx = TrackHeadersFixture(suite: suite, service: service)

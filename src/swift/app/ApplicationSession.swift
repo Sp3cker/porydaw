@@ -42,6 +42,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// to its own document while that workspace is active and detaches it before
     /// that workspace is deactivated or released.
     private let playhead: SharedPlayheadPresenter
+    private let playheadGuides: PlayheadGuidesPresenter
+    private let eventList: EventListPresenter
     private let mouseHints = MouseHints()
     /// The workspaces whose rows have left the strip and whose pages have not
     /// reported their destruction yet. The page holds the C++ proxy for every
@@ -64,6 +66,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         songTabs = SongTabsController(palette: palette)
         emptyDrawerPresenter = EditorDrawerPresenter()
         playhead = SharedPlayheadPresenter()
+        playheadGuides = PlayheadGuidesPresenter()
+        eventList = EventListPresenter()
         do {
             audio = try NativeAudio()
         } catch {
@@ -78,6 +82,12 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// it, so all of them follow the selection, and it is nil exactly while the
     /// strip is empty.
     private var workspace: DocumentWorkspace? { songTabs.selectedWorkspace }
+
+    /// The selected tab's document session, for Swift-side drivers that need
+    /// the document's own timeline and camera. Not bridged: QML reaches the
+    /// same state through the presenter accessors below.
+    @QtIgnored
+    public var selectedDocument: DocumentSession? { workspace?.session }
 
     public func isDocumentDirty() -> Bool { documentDirty }
     public func songCount() -> Int { labels.count }
@@ -137,6 +147,10 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// bound and returns to that empty presentation whenever the document is
     /// deactivated.
     public func playheadPresenter() -> SharedPlayheadPresenter { playhead }
+
+    public func playheadGuidesPresenter() -> PlayheadGuidesPresenter { playheadGuides }
+
+    public func eventListPresenter() -> EventListPresenter { eventList }
 
     public func mouseHintsPresenter() -> MouseHints { mouseHints }
 
@@ -511,7 +525,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
             let session = try await DocumentSession.open(
                 service: service, label: label, sampleRate: audio.sampleRate)
             let workspace = DocumentWorkspace(
-                session: session, audio: audio, playhead: playhead, palette: palette,
+                session: session, audio: audio, playhead: playhead,
+                playheadGuides: playheadGuides, eventList: eventList, palette: palette,
                 callbacks: makeCallbacks())
             workspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
                 self?.gridCommandAvailabilityChanged()

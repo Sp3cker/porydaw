@@ -30,6 +30,18 @@ public struct TrackActivity {
         resumeRemaining = 0.075
     }
 
+    /// True while an idle poll still needs to advance the meter envelope.
+    public var isAnimating: Bool {
+        switch phase {
+        case .playing:
+            return intensities.contains { $0.left > 0 || $0.right > 0 }
+        case .pausedFilling:
+            return intensities.contains { $0.left < 1 || $0.right < 1 }
+        case .resuming:
+            return true
+        }
+    }
+
     @discardableResult
     public mutating func advance(_ levels: [AudioActivityLevel], elapsedSeconds: Float,
                                  playing: Bool) -> Bool {

@@ -1,0 +1,11 @@
+// Generated from RollQmlPaths.swift.in by src/checks/CMakeLists.txt.
+//
+// The roll lane needs the repository directory that holds its QML files;
+// CMake substitutes it at configure time and the generated copy is what the
+// lane compiles. The Qt import and plugin paths come from the shared
+// EditorQmlPaths.swift the same configure generates.
+
+enum RollQmlPaths {
+    /// Holds `tst_SwiftRoll.qml`; also the lane's `setInputDir` value.
+    static let testDirectory = "@ROLL_QML_TEST_DIR@"
+}

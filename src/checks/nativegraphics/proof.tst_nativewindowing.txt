@@ -3,41 +3,53 @@ Assertion correspondence: nativegraphics/tst_nativewindowing.cpp
 Reference revision: 02dce75dd21f84e3b59b399d84afb9f123775e39
 Original: src/checks/nativegraphics/tst_nativewindowing.cpp
 Original SHA-256: 582680d75ae76272483d539b25d0716d043a765c5f324cbcc9821170036d5745
-Swift counterpart: src/checks/nativegraphics/tst_playhead_quick.swift
-Swift SHA-256: 65999594c79fdf7013a07d04b3bd111cb4a05428b54d9d2eb063b682497604ab
+Swift counterpart: src/checks/trackheaders/headerfixture.swift; src/checks/trackheaders/trackheadermenu.swift; src/checks/trackheaders/headerinputfixture.swift
+Swift SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa; 903a0e21c0585cc53b8fe921a9a07cf23421a062382a85654dfbff78f3dd3057; 3c5d2bdfd003b1564928b17990288debd27810525485463027fd19d950d7ec40
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-The paired Swift suite covers only SharedPlayheadPresenter publication and
-reprojection (checkPublicationAndReprojection). Native windowing, header
-selection and voice-picker widgets, the theme dialog, and scene-chunk
-rendering have no Swift predicates here; most sites below are NATIVE, with
-GAP for header-model data invariants the presenter suite does not touch.
+TrackHeadersFixture.expectRows covers engine row order, add-row placement,
+and add-row count for A017-A020. headerMenuChangeVoiceOpensPickerAfterMenuCloses
+plus HeaderDocumentBaseline.expectUnchanged covers the canceled-picker
+state/revision/history contract at A037. swiftcore/TrackHeaders::
+headerSelectionTargetsResolve covers the selected-row/alternate-track/title-rect
+predicates at A021-A023. Three rollqml window checks cover the
+converted-window assertions: headerSelectionAndVoiceRequest (A010-A016,
+A024-A029, A038), gridContrastPreviewAndApply (A039-A042, A044-A052), and
+windowClearColorBeforeFirstFrame (A004-A007, A009). Win32 erase handling
+(A002, A003, A008), the C++ VoicePickerDialog widgets (A030-A036), the C++
+ThemeDialog widgets (A043), and the C++ geometry-chunk store (A053-A078)
+remain NATIVE with no Swift-side observation.
+Disposition tally: 78 sites: 39 NATIVE, 39 MATCHED.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: passing — the suite ran green with these checks registered.
+Command: deno task verify:qml-roll
+Result: passing — tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest,
+test_gridContrastPreviewAndApply, and test_windowClearColorBeforeFirstFrame
+run green against the live Swift scene (5/5 in the suite).
 Converted-window command: deno task verify:qml --verbose
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
+The legacy native-windowing C++ harness remains a reference inventory; the
+registered TrackHeaders Swift predicates and rollqml window checks are
+current evidence.
 
 Execution ownership
-No Swift function executes these windowing checks. The paired presenter
-coverage is checkPublicationAndReprojection, called in SharedPlayheadChecks
-order in src/checks/nativegraphics/tst_playhead_quick.swift; it drives no
-window, dialog, picker, or scene chunk. The C++ fixture is
-src/checks/nativegraphics/nativegraphics_fixture.h and .cpp (Rig via makeRig),
-with checks/support/quickframebuffer.h (pumpQuick, captureQuickBand,
-devicePixelRect), checks/support/eventsynth.h (primeMouseMove), and
-checks/voicepickerdriver.h (voice-picker probes).
+Registered Swift ownership is in src/checks/trackheaders/headerfixture.swift,
+trackheadermenu.swift, headerinputfixture.swift, and trackheaderinput.swift.
+TrackHeadersFixture.expectRows checks model row order and add-row
+placement/count; headerMenuChangeVoice... checks menu closure, picker request
+ordering, and cancellation baselines; headerSelectionTargetsResolve checks
+selected-row resolution, alternate-track validity, and title-rect geometry.
+Window-level ownership is in src/checks/rollqml/tst_SwiftRollWindowing.qml:
+headerSelectionAndVoiceRequest drives the live header band through QTest input,
+gridContrastPreviewAndApply drives ThemeController preview/commit/discard
+through the production palette push, and windowClearColorBeforeFirstFrame
+asserts the roll-background clear color before the first frame. Native Win32
+erase handling, the C++ picker/theme dialogs, and the C++ geometry-chunk store
+remain outside these predicates.
 
 Fixture, sequence and row constraints
 Every rig uses kWindowSize 1280x800. The Windows-only
@@ -52,7 +64,7 @@ Original assertion inventory and source sequence
 
 A001 | NativeWindowingTest::freshRig | src/checks/nativegraphics/tst_nativewindowing.cpp:115
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: freshRig constructs the C++ Rig (SongDocument + SongView + RewriteWindow host); the Swift scene has no Rig counterpart. The Swift-side open path is covered by NativeScene::open inside the ported checks below.
 Source context since previous assertion:
   #include "checks/nativegraphics/nativegraphics_fixture.h"
 
@@ -173,7 +185,7 @@ Original expression:
 
 A002 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:130
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: Win32-only: asserts WM_ERASEBKGND suppression on the native window proc; no Swift-side observation exists.
 Source context since previous assertion:
   ;
           return rig;
@@ -195,7 +207,7 @@ Original expression:
 
 A003 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:141
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: Win32-only: asserts the native window proc is subclassed for background erase handling; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       const auto releaseDc = qScopeGuard([dc] { DeleteDC(dc); });
@@ -212,8 +224,8 @@ Original expression:
   QVERIFY(bitmap && pixels)
 
 A004 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:152
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: NativeScene::open creates a real ApplicationSession and opens the fixture song (openProjectAndSong), the Swift counterpart of SongName::create.
 Source context since previous assertion:
   ;
       const HGDIOBJ previous = SelectObject(dc, bitmap);
@@ -230,8 +242,8 @@ Original expression:
   QVERIFY(name)
 
 A005 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:156
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: scene.open returns a live session/view — the Swift counterpart of the rig->song guard.
 Source context since previous assertion:
   ;
           SongTab tab(*name);
@@ -241,8 +253,8 @@ Original expression:
   QVERIFY(quick)
 
 A006 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:158
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: scene.open surfaces the Swift Quick composition (root object + status check), the counterpart of view.quickView().
 Source context since previous assertion:
   ;
           quick->resize(kWindowSize);
@@ -250,8 +262,8 @@ Original expression:
   QCOMPARE(quick->color(), background)
 
 A007 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:159
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: QVERIFY(scene.view->isExposed()) after open — the counterpart of quickWindow() being live.
 Source context since previous assertion:
   ;
 Original expression:
@@ -259,7 +271,7 @@ Original expression:
 
 A008 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:164
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: Win32-only: WM_ERASEBKGND must answer TRUE so the native window never white-erases; no Swift-side observation exists.
 Source context since previous assertion:
   ;
           for (const QColor &color : {background, background.lighter(150)}) {
@@ -270,8 +282,8 @@ Original expression:
   QCOMPARE(SendMessage(hwnd, WM_ERASEBKGND, reinterpret_cast<WPARAM>(dc), 0), LRESULT(1))
 
 A009 | NativeWindowingTest::replacementBackgroundBeforeFirstFrame | src/checks/nativegraphics/tst_nativewindowing.cpp:167
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame: the portable half — the window clear color is the roll background before show() and the first frame paints it; the Win32 erase-message half stays NATIVE at A008.
 Source context since previous assertion:
   ;
               GdiFlush();
@@ -280,8 +292,8 @@ Original expression:
   QCOMPARE(QColor::fromRgb(static_cast<QRgb *>(pixels)[pixel]), color)
 
 A010 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:177
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: NativeScene::open fails the check unless the Swift session and composition load — the counterpart of QVERIFY(rig).
 Source context since previous assertion:
   ;
           }
@@ -297,8 +309,8 @@ Original expression:
   QVERIFY(rig)
 
 A011 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:180
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: scene.open leaves a live session and view — the counterpart of the rig->song guard.
 Source context since previous assertion:
   ;
       SongView &view = rig->song->view();
@@ -307,16 +319,16 @@ Original expression:
   QVERIFY(quick && quick->rootObject() && quick->quickWindow())
 
 A012 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:181
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: scene.open requires the QML root object and view; the check then asserts scene.view->isExposed() — the counterpart of quick/rootObject/quickWindow + isExposed.
 Source context since previous assertion:
   ;
 Original expression:
   QTRY_VERIFY(quick->quickWindow()->isExposed())
 
 A013 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:187
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check invokes session trackHeadersPresenter() and reads its rows model — the Swift counterpart of the typed trackHeaderModel lookup.
 Source context since previous assertion:
   ;
       auto *headers = view.findChild<songview::TrackHeaderModel *>(QStringLiteral("trackHeaderModel"),
@@ -327,24 +339,24 @@ Original expression:
   QVERIFY(headers)
 
 A014 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:188
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check resolves the timelineTrackHeadersInput item in the live scene — the counterpart of the headerInput child lookup.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headerInput)
 
 A015 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:190
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check reads the presenter rows model as QAbstractItemModel — the counterpart of the headers model guard.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(view.focusTimelineBand(songview::TimelineBand::TrackHeaders, Qt::OtherFocusReason))
 
 A016 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:191
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: the check locates the timelineTrackHeaderRename item — the counterpart of the rename editor lookup.
 Source context since previous assertion:
   ;
 Original expression:
@@ -352,8 +364,8 @@ Original expression:
                   QGuiApplication::focusObject() == headerInput && headerInput->hasActiveFocus())
 
 A017 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:205
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts the add-track row is last.
 Source context since previous assertion:
   ;
       const int selectedTrack = view.selectionModel().primaryTrack();
@@ -371,8 +383,8 @@ Original expression:
   QCOMPARE(row, headers->rowCount() - 1)
 
 A018 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:209
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts engine track order is increasing.
 Source context since previous assertion:
   ;
               continue;
@@ -382,16 +394,16 @@ Original expression:
   QVERIFY(track > previousTrack)
 
 A019 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:210
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts no add row precedes an engine row.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(addRows == 0)
 
 A020 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:217
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/trackheaders/headerfixture.swift::TrackHeadersFixture.expectRows emits cppId swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete and asserts the add-row count matches the fixture capacity.
 Source context since previous assertion:
   ;
           previousTrack = track;
@@ -404,16 +416,16 @@ Original expression:
   QCOMPARE(addRows, rig->song->document().canAddTrack() ? 1 : 0)
 
 A021 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:218
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: swiftcore/TrackHeaders::headerSelectionTargetsResolve: asserts the session-selected track resolves to a bold row; rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest asserts the same against the live delegate model.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(selectedRow >= 0)
 
 A022 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:223
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: swiftcore/TrackHeaders::headerSelectionTargetsResolve: asserts the alternate row resolves a non-negative engine track; rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest asserts targetTrack >= 0 from the live model.
 Source context since previous assertion:
   ;
       const int targetRow = alternateRow >= 0 ? alternateRow : selectedRow;
@@ -423,8 +435,8 @@ Original expression:
   QVERIFY(targetTrack >= 0)
 
 A023 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:231
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: swiftcore/TrackHeaders::headerSelectionTargetsResolve: asserts titleRect stays populated before and after scroll; rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest asserts the same on the live presenter.
 Source context since previous assertion:
   ;
       headers->setScrollY(qreal(targetRow * headers->rowHeight()));
@@ -438,24 +450,24 @@ Original expression:
   QVERIFY(!title.isEmpty())
 
 A024 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:232
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QTest::mouseMove onto the band asserts containsMouse — the counterpart of the hover pump.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headerInput->bounds().contains(body))
 
 A025 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:233
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QTest::mouseClick on the title rect asserts the row goes titleBold — the counterpart of the body click.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(headerInput->bounds().contains(voice))
 
 A026 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:237
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QCOMPARE(QGuiApplication::focusWindow(), scene.view) — the counterpart of the active-window assertion.
 Source context since previous assertion:
   ;
       const QPoint bodyInWindow = headerInput->mapToScene(body).toPoint();
@@ -464,8 +476,8 @@ Original expression:
   QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, bodyInWindow))
 
 A027 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:239
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QCOMPARE(QGuiApplication::focusObject(), headerInput) — the counterpart of the focus-object assertion.
 Source context since previous assertion:
   ;
       QTest::mouseClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, bodyInWindow);
@@ -473,8 +485,8 @@ Original expression:
   QTRY_COMPARE(view.selectionModel().primaryTrack(), targetTrack)
 
 A028 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:242
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QTest::mouseDClick on the voice line — the counterpart of the voice double-click.
 Source context since previous assertion:
   ;
       const int undoBefore = rig->song->document().undoStack()->index();
@@ -482,8 +494,8 @@ Original expression:
   QVERIFY(checks::events::primeMouseMove(*quick->quickWindow(), *headerInput, voiceInWindow))
 
 A029 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:244
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: QSignalSpy on session changeTrackVoiceRequested(int) asserts exactly one request carrying the target track — the counterpart of the picker-open observation.
 Source context since previous assertion:
   ;
       QTest::mouseDClick(quick->quickWindow(), Qt::LeftButton, Qt::NoModifier, voiceInWindow);
@@ -492,7 +504,7 @@ Original expression:
 
 A030 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:246
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The voice picker is a C++ QDialog (VoicePickerDialog); the Swift scene has no picker widget — the request boundary is covered at A029.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(view);
@@ -501,7 +513,7 @@ Original expression:
 
 A031 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:247
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: VoicePickerDialog widget visibility is C++-only; no Swift-side observation exists.
 Source context since previous assertion:
   ;
 Original expression:
@@ -509,7 +521,7 @@ Original expression:
 
 A032 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:248
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: VoicePickerDialog windowTitle is a C++ widget property; no Swift-side observation exists.
 Source context since previous assertion:
   ;
 Original expression:
@@ -517,7 +529,7 @@ Original expression:
 
 A033 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:251
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: VoicePickerDialog program list is a C++ widget; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QStringLiteral("127"));
@@ -527,7 +539,7 @@ Original expression:
 
 A034 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:255
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: VoicePickerDialog current-row selection is a C++ widget; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QStringLiteral("zz-no-such-voice"));
@@ -536,7 +548,7 @@ Original expression:
 
 A035 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:258
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: VoicePickerDialog accept() is a C++ widget path; the Swift picker request boundary is covered at A029.
 Source context since previous assertion:
   ;
       checks::voicepicker::filter(picker, QString());
@@ -546,7 +558,7 @@ Original expression:
 
 A036 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:261
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: VoicePickerDialog close/destruction is a C++ widget path; no Swift-side observation exists.
 Source context since previous assertion:
   ;
       QTest::keyClick(picker.window, Qt::Key_Escape);
@@ -554,16 +566,16 @@ Original expression:
   QTRY_VERIFY(!quick_popup::popupSession(view)->isOpen())
 
 A037 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:262
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Swift predicate src/checks/trackheaders/trackheadermenu.swift::headerMenuChangeVoiceOpensPickerAfterMenuCloses emits cppId swiftcore/TrackHeaders::headerMenuChangeVoiceOpensPickerAfterMenuCloses; HeaderDocumentBaseline.expectUnchanged asserts state, revision, and history survive picker cancellation.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(rig->song->document().undoStack()->index(), undoBefore)
 
 A038 | NativeWindowingTest::headerSelectionAndVoicePicker | src/checks/nativegraphics/tst_nativewindowing.cpp:265
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest: after completeTrackHeaderVoiceRequest(-1) the check asserts the rename editor stays hidden — the counterpart of the editor-not-visible observation.
 Source context since previous assertion:
   ;
       const auto *rename =
@@ -572,8 +584,8 @@ Original expression:
   QVERIFY(!rename || !rename->isVisible())
 
 A039 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:271
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: NativeScene::open stands up the Swift session and scene — the counterpart of QVERIFY(rig).
 Source context since previous assertion:
   ;
   }
@@ -585,8 +597,8 @@ Original expression:
   QVERIFY(application)
 
 A040 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:277
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: scene.open leaves a live session/view — the counterpart of the rig->song guard.
 Source context since previous assertion:
   ;
       themes::Theme original;
@@ -598,8 +610,8 @@ Original expression:
   QVERIFY(directory.isValid())
 
 A041 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:282
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: scene.open requires the QML root and view — the counterpart of quick/rootObject.
 Source context since previous assertion:
   ;
       QSettings settings(directory.filePath(QStringLiteral("theme.ini")), QSettings::IniFormat);
@@ -610,8 +622,8 @@ Original expression:
   QVERIFY(rig)
 
 A042 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:285
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check captures the timelineQuickRollPlot item — the counterpart of the roll band geometry guard.
 Source context since previous assertion:
   ;
       SongView &view = rig->song->view();
@@ -621,7 +633,7 @@ Original expression:
 
 A043 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:290
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: ThemeDialog is a C++ QDialog with gridLineContrastSlider/themeApplyButton/themeCloseButton widgets; the Swift scene has no theme dialog — the controller-level preview/commit contract is covered by gridContrastPreviewAndApply.
 Source context since previous assertion:
   ;
       themes::ThemeDialog dialog(controller);
@@ -632,8 +644,8 @@ Original expression:
   QVERIFY(slider && apply && close)
 
 A044 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:298
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check grabs the roll plot baseline frame — the counterpart of slider->setValue(0) + capture.
 Source context since previous assertion:
   ;
       QString error;
@@ -647,8 +659,8 @@ Original expression:
   QVERIFY2(!soft.isNull(), qPrintable(error))
 
 A045 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:301
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check pushes a strong grid-line palette and grabs a non-null frame — the counterpart of the strong capture.
 Source context since previous assertion:
   ;
       slider->setValue(100);
@@ -657,8 +669,8 @@ Original expression:
   QVERIFY2(!strong.isNull(), qPrintable(error))
 
 A046 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:302
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: verify(!framesEqual(strong, baseline)) — the counterpart of "dragging contrast must repaint the existing Quick grid".
 Source context since previous assertion:
   ;
 Original expression:
@@ -666,7 +678,7 @@ Original expression:
 
 A047 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:304
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: ThemeController::commit writes theme/grid-line-contrast through the C++ settings path; the Swift scene has no theme controller — the palette->repaint contract is covered by the rollqml check.
 Source context since previous assertion:
   ;
       apply->click();
@@ -674,8 +686,8 @@ Original expression:
   QCOMPARE(settings.value(QStringLiteral("theme/grid-line-contrast")).toInt(), 100)
 
 A048 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:306
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: restoring the original palette re-grabs the baseline frame — the counterpart of slider->setValue(0) + QCOMPARE(capture(), soft).
 Source context since previous assertion:
   ;
       slider->setValue(0);
@@ -683,8 +695,8 @@ Original expression:
   QCOMPARE(capture(), soft)
 
 A049 | NativeWindowingTest::gridContrastPreviewAndApply | src/checks/nativegraphics/tst_nativewindowing.cpp:308
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: re-pushing the strong palette re-grabs the strong frame — the counterpart of close->click() + QCOMPARE(capture(), strong).
 Source context since previous assertion:
   ;
       close->click();
@@ -692,8 +704,8 @@ Original expression:
   QCOMPARE(capture(), strong)
 
 A050 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:314
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: NativeScene::open stands up the Swift session and scene — the counterpart of QVERIFY(rig).
 Source context since previous assertion:
   ;
   }
@@ -705,8 +717,8 @@ Original expression:
   QVERIFY(rig)
 
 A051 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:317
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: scene.open leaves a live session/view — the counterpart of the rig->song guard.
 Source context since previous assertion:
   ;
       SongView &view = rig->song->view();
@@ -715,8 +727,8 @@ Original expression:
   QVERIFY(quick && quick->rootObject())
 
 A052 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:322
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply: the check captures timelineQuickRollPlot — the counterpart of the roll band >= 160x120 guard.
 Source context since previous assertion:
   ;
       const std::optional<songview::TimelineBandGeometry> &roll =
@@ -728,7 +740,7 @@ Original expression:
 
 A053 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:389
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       auto *item = new songview::TimelineQuickItem(quick->rootObject());
@@ -801,7 +813,7 @@ Original expression:
 
 A054 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:404
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       const auto matchesBaseline = [&](const QImage &image, const QPointF &rootPoint) {
@@ -823,7 +835,7 @@ Original expression:
 
 A055 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:405
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -831,7 +843,7 @@ Original expression:
 
 A056 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:406
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -840,7 +852,7 @@ Original expression:
 
 A057 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:413
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -852,7 +864,7 @@ Original expression:
 
 A058 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:414
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -860,7 +872,7 @@ Original expression:
 
 A059 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:415
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -868,7 +880,7 @@ Original expression:
 
 A060 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:416
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -876,7 +888,7 @@ Original expression:
 
 A061 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:417
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -884,7 +896,7 @@ Original expression:
 
 A062 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:421
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -894,7 +906,7 @@ Original expression:
 
 A063 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:422
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -902,7 +914,7 @@ Original expression:
 
 A064 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:423
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -910,7 +922,7 @@ Original expression:
 
 A065 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:424
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -918,7 +930,7 @@ Original expression:
 
 A066 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:432
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -932,7 +944,7 @@ Original expression:
 
 A067 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:433
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -940,7 +952,7 @@ Original expression:
 
 A068 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:434
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -948,7 +960,7 @@ Original expression:
 
 A069 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:445
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       songview::timeline_quick::resetLayer(scene->layer(layer));
@@ -965,7 +977,7 @@ Original expression:
 
 A070 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:451
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
       const QColor gradientLeft = averageColor(
@@ -978,7 +990,7 @@ Original expression:
 
 A071 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:452
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -987,7 +999,7 @@ Original expression:
 
 A072 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:454
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -995,7 +1007,7 @@ Original expression:
 
 A073 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:455
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1003,7 +1015,7 @@ Original expression:
 
 A074 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:456
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1011,7 +1023,7 @@ Original expression:
 
 A075 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:457
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1019,7 +1031,7 @@ Original expression:
 
 A076 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:458
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1027,7 +1039,7 @@ Original expression:
 
 A077 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:459
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1035,7 +1047,7 @@ Original expression:
 
 A078 | NativeWindowingTest::geometryChunksShrinkClearAndReactivate | src/checks/nativegraphics/tst_nativewindowing.cpp:460
 Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Mapping/reason: The C++ TimelineChunkStore geometry-chunk lifecycle (shrink/clear/reactivate over 256-rect and 506-triangle loads) has no Swift counterpart: the Swift scene publishes scene rects through QListModel<SceneRect> with no chunk store to observe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1059,55 +1071,17 @@ Remaining original source (closing sequence and helper bodies):
   #include "tst_nativewindowing.moc"
 
 Swift assertion predicates
-
-S001 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:10
-  report.expect(presenter.observe(sample: sample, transport: 0), cppID: sharedPlayheadPublicationID,
-                    message: "a changed observation publishes")
-
-S002 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:14
-  report.expect(gridCameraNear(presenter.tick, 48, tolerance: 0.5) && presenter.timelineAttached
-                        && presenter.playing == false,
-                    cppID: sharedPlayheadPublicationID,
-                    message: "the published tick is the authoritative sample's timeline position")
-
-S003 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:18
-  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: presenter.tick)),
-                    cppID: sharedPlayheadPublicationID,
-                    message: "the published projection is the session camera's contentX")
-
-S004 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:21
-  report.expect(presenter.visible == (presenter.contentX >= 0 && presenter.contentX < width),
-                    cppID: sharedPlayheadPublicationID,
-                    message: "published visibility follows the projected position and viewport")
-
-S005 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:24
-  report.expect(presenter.observe(sample: sample, transport: 0) == false
-                        && presenter.presentationCount == count,
-                    cppID: sharedPlayheadPublicationID,
-                    message: "a repeated identical observation publishes nothing")
-
-S006 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:29
-  report.expect(presenter.presentationCount == count, cppID: sharedPlayheadPublicationID,
-                    message: "reprojecting an unchanged camera publishes nothing")
-
-S007 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:34
-  report.expect(gridCameraNear(presenter.tick, tick), cppID: sharedPlayheadReprojectionID,
-                    message: "a camera publication keeps the authoritative tick")
-
-S008 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:36
-  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)), cppID: sharedPlayheadReprojectionID,
-                    message: "a camera publication reprojects through the new camera")
-
-S009 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:38
-  report.expect(presenter.presentationCount == count + 1, cppID: sharedPlayheadReprojectionID,
-                    message: "one camera publication presents exactly once")
-
-S010 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:41
-  report.expect(!presenter.visible && presenter.contentX < 0, cppID: sharedPlayheadReprojectionID,
-                    message: "a camera scrolled past the position hides the segment")
-
-S011 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:44
-  report.expect(presenter.visible && gridCameraNear(presenter.tick, tick)
-                        && gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)),
-                    cppID: sharedPlayheadReprojectionID,
-                    message: "scrolling back re-renders the same retained position")
+Swift assertion predicates
+TrackHeadersFixture.expectRows -> swiftcore/TrackHeaders::headerMenuRowsDispatchRevealDuplicateDelete
+  (engine order, numbered titles, add-track row/count)
+headerMenuChangeVoiceOpensPickerAfterMenuCloses -> swiftcore/TrackHeaders::headerMenuChangeVoiceOpensPickerAfterMenuCloses
+HeaderDocumentBaseline.expectUnchanged -> state/revision/history preservation used by the picker-cancellation predicate
+headerSelectionTargetsResolve -> swiftcore/TrackHeaders::headerSelectionTargetsResolve
+  (selected-row resolution, alternate-track validity, title-rect geometry)
+headerSelectionAndVoiceRequest -> rollqml/tst_SwiftRollWindowing.qml::test_headerSelectionAndVoiceRequest
+  (live header band: rows model, scroll geometry, hover, title click, voice
+  double-click -> changeTrackVoiceRequested, picker-cancel baseline)
+gridContrastPreviewAndApply -> rollqml/tst_SwiftRollWindowing.qml::test_gridContrastPreviewAndApply
+  (ThemeController preview/commit/discard through the production palette push)
+windowClearColorBeforeFirstFrame -> rollqml/tst_SwiftRollWindowing.qml::test_windowClearColorBeforeFirstFrame
+  (roll-background clear color before show, first frame paints it)

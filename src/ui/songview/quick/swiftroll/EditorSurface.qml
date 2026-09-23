@@ -153,7 +153,7 @@ Item {
                         id: rollInput
                         objectName: "swiftRollInput"
                         anchors.fill: parent
-                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                         preventStealing: true
                         hoverEnabled: true
                         // The drawer returns focus here when no section stays visible.
@@ -161,6 +161,7 @@ Item {
 
                         cursorShape: {
                             switch (root.gridModel.cursorKind) {
+                            case 4: return Qt.ClosedHandCursor
                             case 1: return Qt.OpenHandCursor
                             case 2:
                             case 3: return Qt.SizeHorCursor
@@ -169,7 +170,9 @@ Item {
                         }
 
                         onPressed: function(mouse) {
-                            if (mouse.button === Qt.RightButton)
+                            if (mouse.button === Qt.MiddleButton)
+                                root.gridModel.beginPan(mouse.x, mouse.y)
+                            else if (mouse.button === Qt.RightButton)
                                 root.gridModel.beginRightPointer(mouse.x, mouse.y)
                             else
                                 root.gridModel.beginPointer(mouse.x, mouse.y, mouse.modifiers)
@@ -181,15 +184,21 @@ Item {
                             mouse.accepted = true
                         }
                         onPositionChanged: function(mouse) {
-                            if (mouse.buttons & Qt.RightButton)
+                            if (mouse.buttons & Qt.MiddleButton)
+                                root.gridModel.updatePan(mouse.x, mouse.y)
+                            else if (mouse.buttons & Qt.RightButton)
                                 root.gridModel.updateRightPointer(mouse.x, mouse.y)
                             else if (mouse.buttons & Qt.LeftButton)
                                 root.gridModel.updatePointer(mouse.x, mouse.y)
-                            else
+                            else {
                                 root.gridModel.updateHover(mouse.x, mouse.y)
+                                root.applicationSession.playheadGuidesPresenter().updateHover(mouse.x)
+                            }
                         }
                         onReleased: function(mouse) {
-                            if (mouse.button === Qt.RightButton)
+                            if (mouse.button === Qt.MiddleButton)
+                                root.gridModel.endPan()
+                            else if (mouse.button === Qt.RightButton)
                                 root.gridModel.endRightPointer(mouse.x, mouse.y)
                             else
                                 root.gridModel.endPointer(mouse.x, mouse.y)
@@ -197,8 +206,10 @@ Item {
                         }
                         onCanceled: root.gridModel.inputCancelled(root.cancelReasonPointerUngrabbed)
                         onExited: {
-                            if (pressedButtons === Qt.NoButton)
+                            if (pressedButtons === Qt.NoButton) {
                                 root.gridModel.clearKeyboardHover()
+                                root.applicationSession.playheadGuidesPresenter().clearHover()
+                            }
                         }
                     }
                 }
@@ -251,6 +262,9 @@ Item {
         z: 3
 
         presenter: root.applicationSession.playheadPresenter()
+        guides: root.applicationSession.playheadGuidesPresenter()
+        hoverGuideColor: root.gridModel.palette.secondaryText
+        editGuideColor: root.gridModel.palette.editCursor
         playheadColor: root.gridModel.palette.playhead
         rollPlotRect: Qt.rect(rollStack.x + rollPlot.x, rollPlot.y,
                               rollPlot.width, rollPlot.height)

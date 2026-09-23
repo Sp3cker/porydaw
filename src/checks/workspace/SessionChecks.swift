@@ -17,6 +17,11 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
                     "missing --swiftcore fixture root")
         return
     }
+    runSongListModelChecks(report)
+    runSongListServiceChecks(report, fixtureRoot: fixtureRoot)
+    runVoiceListChecks(report)
+    runVoiceListSessionChecks(report)
+
 
     savedMidiCompilesAfterDocumentSave(report, fixtureRoot: fixtureRoot)
 
@@ -39,6 +44,8 @@ internal func runProjectSessionSuite(_ report: CheckReport) {
 
     runEditorGridCameraChecks(report, session: session)
     runSharedPlayheadChecks(report, session: session, service: service)
+    runPlayheadFeatureChecks(report, suite: session, service: service)
+    runEventListPlayheadChecks(report, session: session, service: service)
     runVelocityPageChecks(report, session: session, service: service)
     runVoiceChangesPageChecks(report, session: session, service: service)
     runAutomationPageChecks(report, session: session, service: service)

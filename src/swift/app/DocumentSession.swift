@@ -97,6 +97,9 @@ public final class DocumentSession {
     public var onPlayback: ((PlaybackTimeline) -> Void)?
     /// Presentation-only camera publication. The document workspace is the sole subscriber.
     public var onCameraChange: ((EditorCamera.Snapshot) -> Void)?
+    /// Camera publication with the field-level delta used by the workspace
+    /// to choose projection-only drawer updates.
+    public var onCameraChangeDetailed: ((EditorCamera.Snapshot, EditorCamera.Change) -> Void)?
 
     /// Borrowed from ApplicationSession, which owns the project service.
     private unowned let service: ProjectService
@@ -224,10 +227,15 @@ public final class DocumentSession {
         let oldSnapshot = camera.snapshot
         let oldProjection = camera.projection
         body(&camera)
-        guard camera.snapshot != oldSnapshot || camera.projection != oldProjection else {
+        let newSnapshot = camera.snapshot
+        let projectionChanged = camera.projection != oldProjection
+        guard newSnapshot != oldSnapshot || projectionChanged else {
             return false
         }
-        onCameraChange?(camera.snapshot)
+        let change = EditorCamera.Change.between(
+            oldSnapshot, newSnapshot, projectionChanged: projectionChanged)
+        onCameraChange?(newSnapshot)
+        onCameraChangeDetailed?(newSnapshot, change)
         return true
     }
 
@@ -344,6 +352,7 @@ public final class DocumentSession {
         onChange = nil
         onPlayback = nil
         onCameraChange = nil
+        onCameraChangeDetailed = nil
         document.onChange = nil
         isClosed = true
         return true

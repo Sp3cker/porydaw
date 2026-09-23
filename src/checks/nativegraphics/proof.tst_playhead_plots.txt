@@ -3,40 +3,34 @@ Assertion correspondence: nativegraphics/tst_playhead_plots.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/nativegraphics/tst_playhead_plots.cpp
 Original SHA-256: 11cf91c8f87eec13f4043a52579cef6af5e3b4d73ab8cd0c5c810e77e7782b8d
-Swift counterpart: src/checks/nativegraphics/tst_playhead_quick.swift
-Swift SHA-256: 65999594c79fdf7013a07d04b3bd111cb4a05428b54d9d2eb063b682497604ab
+Swift counterpart: src/checks/nativegraphics/PlayheadFeatureChecks.swift
+Swift SHA-256: 22ebafab5676e0d2457b87e91f69288f39894ab1e5baa22918fbab01e356fc7d
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
-S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-The paired Swift suite covers only SharedPlayheadPresenter publication and
-reprojection (checkPublicationAndReprojection). Roll-band geometry, resize,
-and Quick-window lifecycle have related presenter predicates at best; window,
-exposure, mask, and item-visibility observations below are NATIVE.
+tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle ports the full
+sequence onto the real Swift ApplicationSession plus production
+SwiftRollOverlay.qml in the Swift-hosted Qt QuickTest lane: the canonical
+band/plot rectangles come from the mounted drawer presenter's published
+height/plotOrigin/plotWidth and the hint strip, the same rectangles the shared
+playhead consumes. PlayheadFeatureChecks.swift::checkPlayheadGuides remains
+related presenter-level evidence (cppIds ::A028-::A031).
+Disposition tally: 23 sites: 23 MATCHED.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Converted-window command: deno task verify:qml --verbose
-The legacy header/camera/playhead harnesses are not registered in this checkout.
-Their C++ sources are reference inventories only, never current execution evidence.
+Command: deno task verify:qml-roll
+Result: green — tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle
+passes in the rollqml lane.
+The legacy plot C++ harness is a reference inventory; the Swift scene's band
+layout and Quick-window lifecycle are observed by the ported QML case.
 
 Execution ownership
-No Swift function executes these plot checks. The paired presenter coverage
-is checkPublicationAndReprojection, called in SharedPlayheadChecks order in
-src/checks/nativegraphics/tst_playhead_quick.swift; it drives no band
-layout, window, or lifecycle event. The C++ fixture is
-src/checks/nativegraphics/nativegraphics_fixture.h and .cpp (Rig via
-plotRig), with checks/support/quickframebuffer.h (pumpQuick),
-checks/support/songfixture.h, and
-checks/support/timelinequickcheck.h.
+The rollqml lane (src/checks/rollqml/) executes
+tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle through its own
+manifest entry; the lane bootstrap boots the production Swift session and
+composition.
 
 Fixture, sequence and row constraints
 The plot rig uses a fixed 1280x800 window with no data rows. The window is
@@ -47,8 +41,8 @@ events; the layout must equal the canonical snapshot afterwards.
 Original assertion inventory and source sequence
 
 A001 | plotRig | src/checks/nativegraphics/tst_playhead_plots.cpp:32
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — the lane bootstrap start + session.songOpen wait surfaces open failures through verify().
 Source context since previous assertion:
   #include "checks/nativegraphics/tst_renderingplayhead.h"
 
@@ -85,8 +79,8 @@ Original expression:
   QTest::qFail(qPrintable(error), __FILE__, __LINE__)
 
 A002 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:49
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QVERIFY2(scene.open(...)) proves the mounted Swift session and composition.
 Source context since previous assertion:
   ;
       return rig;
@@ -109,8 +103,8 @@ Original expression:
   QVERIFY(rig)
 
 A003 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:52
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QVERIFY(scene.root && scene.view) proves the production root item and its real QQuickView.
 Source context since previous assertion:
   ;
       SongView &view = rig->song->view();
@@ -119,8 +113,8 @@ Original expression:
   QVERIFY(quick && quick->rootObject() && quick->quickWindow())
 
 A004 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:58
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — scene.item("swiftRollBand") resolves the roll band item (the Swift counterpart of rollInput's grandparent band).
 Source context since previous assertion:
   ;
       QQuickItem *root = quick->rootObject();
@@ -132,8 +126,8 @@ Original expression:
   QVERIFY(rollBand)
 
 A005 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:63
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — the canonical roll geometry is the drawer presenter's published height/plotOrigin/plotWidth; QVERIFY(height > 0 && plotWidth > 0) stands in for the optional geometry lookup.
 Source context since previous assertion:
   ;
       const songview::TimelineBandLayout canonical = view.timelineBandLayout();
@@ -143,8 +137,8 @@ Original expression:
   QVERIFY(roll)
 
 A006 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:70
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QVERIFY(band->isVisible()).
 Source context since previous assertion:
   ;
       const auto quickRect = [root](const QQuickItem &item) {
@@ -157,32 +151,32 @@ Original expression:
   QVERIFY(rollBand->isVisible())
 
 A007 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:71
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QVERIFY(input->isVisible()) on swiftRollInput.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(rollInput->isVisible())
 
 A008 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:72
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(rootRect(band), canonical()) compares the band's root-mapped rect against the presenter-derived canonical band rect.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(quickRect(*rollBand), canonicalQuickRect(roll->rect)))
 
 A009 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:73
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(rootRect(input), canonicalPlot()) compares swiftRollInput's rect against the presenter's plotOrigin/plotWidth column.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(quickRect(*rollInput), canonicalQuickRect(roll->plotRect)))
 
 A010 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:75
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — the TestCase runs in a real shown window; the lane bootstrap already waited for the session open.
 Source context since previous assertion:
   ;
       QQuickWindow *window = quick->quickWindow();
@@ -190,8 +184,8 @@ Original expression:
   QVERIFY(window)
 
 A011 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:81
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QTRY_COMPARE(scene.view->size(), shrunkSize) after view->resize.
 Source context since previous assertion:
   ;
       const QSize originalSize = window->size();
@@ -203,8 +197,8 @@ Original expression:
   QCOMPARE(window->size(), shrunkSize)
 
 A012 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:84
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — canonical() is recomputed from the presenter after the shrink, the resized-geometry counterpart.
 Source context since previous assertion:
   ;
       const std::optional<songview::TimelineBandGeometry> &resizedRoll =
@@ -213,24 +207,24 @@ Original expression:
   QVERIFY(resizedRoll)
 
 A013 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:85
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(rootRect(band), canonical()) after the shrink.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(quickRect(*rollBand), QRectF(resizedRoll->rect)))
 
 A014 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:86
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(rootRect(input), canonicalPlot()) after the shrink.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(quickRect(*rollInput), QRectF(resizedRoll->plotRect)))
 
 A015 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:98
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — DevicePixelRatioChange event plus hide/show, then QTRY_VERIFY(scene.view->isExposed()).
 Source context since previous assertion:
   ;
       window->resize(originalSize);
@@ -248,8 +242,8 @@ Original expression:
   QTRY_VERIFY(window->isExposed())
 
 A016 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:101
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QCOMPARE(scene.view->size(), originalSize) plus the presenter-derived canonical rects re-verified after the lifecycle cycle.
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -257,8 +251,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout() == canonical)
 
 A017 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:104
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — canonical()/canonicalPlot() re-derived post-restore stand in for the live geometry lookup.
 Source context since previous assertion:
   ;
       const std::optional<songview::TimelineBandGeometry> &liveRoll =
@@ -267,8 +261,8 @@ Original expression:
   QVERIFY(liveRoll)
 
 A018 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:107
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — the Swift surface has no rollBandVisible property; band->isVisible() post-restore is the same observation.
 Source context since previous assertion:
   ;
       const QRectF expectedRoll = QRectF(liveRoll->rect);
@@ -277,40 +271,40 @@ Original expression:
   QCOMPARE(root->property("rollBandVisible").toBool(), true)
 
 A019 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:108
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — the Swift surface has no rollBandRect property; sameRect(rootRect(band), canonical()) post-restore is the same observation.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(root->property("rollBandRect").toRectF(), expectedRoll))
 
 A020 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:109
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(playhead->property("rollPlotRect").toRectF(), surfacePlot()) reads the published plot rect the shared playhead consumes.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(root->property("rollBandPlotRect").toRectF(), expectedPlot))
 
 A021 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:110
-Disposition: NATIVE
-Mapping/reason: Original native fixture/window/rendering obligation. A direct presenter check cannot establish this observation; see converted-window evidence below where available.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — QVERIFY(scene.view->mask().isEmpty()).
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(quick->quickWindow()->mask().isEmpty())
 
 A022 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:111
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(rootRect(band), canonical()) after the lifecycle cycle.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(sameRect(quickRect(*rollBand), expectedRoll))
 
 A023 | RenderingPlayheadTest::plotGeometryAndLifecycle | src/checks/nativegraphics/tst_playhead_plots.cpp:112
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011 in src/checks/nativegraphics/tst_playhead_quick.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle — sameRect(rootRect(input), canonicalPlot()) after the lifecycle cycle.
 Source context since previous assertion:
   ;
 Original expression:
@@ -321,55 +315,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-
-S001 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:10
-  report.expect(presenter.observe(sample: sample, transport: 0), cppID: sharedPlayheadPublicationID,
-                    message: "a changed observation publishes")
-
-S002 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:14
-  report.expect(gridCameraNear(presenter.tick, 48, tolerance: 0.5) && presenter.timelineAttached
-                        && presenter.playing == false,
-                    cppID: sharedPlayheadPublicationID,
-                    message: "the published tick is the authoritative sample's timeline position")
-
-S003 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:18
-  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: presenter.tick)),
-                    cppID: sharedPlayheadPublicationID,
-                    message: "the published projection is the session camera's contentX")
-
-S004 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:21
-  report.expect(presenter.visible == (presenter.contentX >= 0 && presenter.contentX < width),
-                    cppID: sharedPlayheadPublicationID,
-                    message: "published visibility follows the projected position and viewport")
-
-S005 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:24
-  report.expect(presenter.observe(sample: sample, transport: 0) == false
-                        && presenter.presentationCount == count,
-                    cppID: sharedPlayheadPublicationID,
-                    message: "a repeated identical observation publishes nothing")
-
-S006 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:29
-  report.expect(presenter.presentationCount == count, cppID: sharedPlayheadPublicationID,
-                    message: "reprojecting an unchanged camera publishes nothing")
-
-S007 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:34
-  report.expect(gridCameraNear(presenter.tick, tick), cppID: sharedPlayheadReprojectionID,
-                    message: "a camera publication keeps the authoritative tick")
-
-S008 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:36
-  report.expect(gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)), cppID: sharedPlayheadReprojectionID,
-                    message: "a camera publication reprojects through the new camera")
-
-S009 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:38
-  report.expect(presenter.presentationCount == count + 1, cppID: sharedPlayheadReprojectionID,
-                    message: "one camera publication presents exactly once")
-
-S010 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:41
-  report.expect(!presenter.visible && presenter.contentX < 0, cppID: sharedPlayheadReprojectionID,
-                    message: "a camera scrolled past the position hides the segment")
-
-S011 | checkPublicationAndReprojection | src/checks/nativegraphics/tst_playhead_quick.swift:44
-  report.expect(presenter.visible && gridCameraNear(presenter.tick, tick)
-                        && gridCameraNear(presenter.contentX, session.camera.contentX(tick: tick)),
-                    cppID: sharedPlayheadReprojectionID,
-                    message: "scrolling back re-renders the same retained position")
+checkPlayheadGuides -> swiftcore/PlayheadFeature::guidesResizeScrollAndOwnership::{A028,A029,A030,A031}
+rollBandGeometryAndLifecycle -> rollqml/tst_SwiftRollPlots.qml::test_rollBandGeometryAndLifecycle
+The presenter resize/reprojection predicates remain related evidence; the
+rollqml case observes the real scene's band geometry and lifecycle.
