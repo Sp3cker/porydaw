@@ -4,7 +4,23 @@ Reference revision: 39652ca375fc033fb930ad13291f551940a73581
 Original: src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp
 Original SHA-256: 5cff3396fa2e9a6835a0b390cc988163cc2131ae382b898cbd1f14b2fc762d13
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845
+Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
+Additional Swift counterpart: src/checks/workspace/bank_edits.swift
+Additional Swift SHA-256: 4f94c92dec40ec6fb3754697a01105667eb1e9448ada18bd5b40bcb3786be94d
+Additional Swift counterpart: src/checks/workspace/bank_history_probes.swift
+Additional Swift SHA-256: 6f8f2f6accb8c69a57320673d0570ed2d655daf784781074085adacec17d644a
+Additional Swift counterpart: src/checks/workspace/bank_saves.swift
+Additional Swift SHA-256: b83233dfefd801b44696eb43f1ea9d9e1b9ab299fa93f18849ffa512521bcc11
+Additional Swift counterpart: src/checks/workspace/bank_sharing.swift
+Additional Swift SHA-256: 8597d8d3bac66a1e581dd1abe6b9687ec85d4311db55cfaccb1dcb83925f79f0
+Additional Swift counterpart: src/checks/workspace/session_editor_semantics.swift
+Additional Swift SHA-256: 421e737799b9ec913dd08667f0867a96dbc089dc64157a21927105f9601ed2eb
+Additional Swift counterpart: src/checks/workspace/session_io.swift
+Additional Swift SHA-256: 2d67c3d8a2a13fb2686e7f7ef2c9d4b3fb12e5afa0cfd0b119f2e16a31b904d4
+Additional Swift counterpart: src/checks/workspace/session_playback.swift
+Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
+Additional Swift counterpart: src/checks/workspace/session_save.swift
+Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
 
 Status and evidence
 Four test methods, every one gated on the Cocoa WindowSystem backend (QSKIP otherwise): native menu/window shortcut routing, foreign-window key isolation with Insert Time popup protection, bound-view teardown unbinding, and the failed-project modal dialog preserving the live tab.
@@ -20,8 +36,8 @@ it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 Tally: MATCHED 0 / PARTIAL 7 / GAP 16 / NATIVE 57. No MATCHED site is claimed:
 no same-dir Swift counterpart exists for this suite, and none of the
-SessionChecks.swift predicates asserts the same Qt-routing observation.
-The Swift SHA-256 pins the worktree content inspected here, which is currently
+paired SessionChecks-suite predicates asserts the same Qt-routing observation.
+The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
 Verification
@@ -33,13 +49,27 @@ only in the native Qt check harness, never in that lane.
 
 Execution and ownership
 The paired Swift checks execute under runProjectSessionSuite and
-runBankHistorySuite in src/checks/workspace/SessionChecks.swift. Within
-runProjectSessionSuite, mouseHintOwnershipChecks owns the MouseHints model
-predicates (S002–S009); editorSelectionCommandChecks owns the router
-availability/execution predicates (S010–S025); the remaining
-runProjectSessionSuite predicates cover project open, snapshot, save/dirty,
-session state publication including mute/solo (S047–S051), and bank-history
-regressions; runBankHistorySuite owns the bank-history mutation predicates.
+runBankHistorySuite in src/checks/workspace/SessionChecks.swift; the
+predicates those suites own are split across the session_*.swift and
+bank_*.swift files. Within runProjectSessionSuite,
+mouseHintOwnershipChecks (session_editor_semantics.swift) owns the
+MouseHints model predicates (S002–S009); editorSelectionCommandChecks
+(session_editor_semantics.swift) owns the router availability/execution
+predicates (S010–S025); sessionOpenAndRecovery, sessionFailureStages,
+and sessionLifetime (session_io.swift) own the project-open, snapshot,
+failure-stage, and lifetime predicates;
+sessionPlaybackProjectionAndStatePublication (session_playback.swift)
+owns the session state publication predicates including mute/solo
+(S047–S051); and sessionSavePersistence (session_save.swift) owns the
+save/dirty predicates. Within runBankHistorySuite, the inline
+bank-mutation predicates remain in SessionChecks.swift;
+bankPreviewFailure, bankBlankMaterialization, bankMergeSealing,
+bankConflicts, and releaseEditorBankHistorySemantics live in
+bank_edits.swift; bankQueuedSave, bankCatalogOutage, and
+bankSaveRoundTrip live in bank_saves.swift;
+bankReleaseBoundsAndSharedBank and bankCoordinatorGate live in
+bank_sharing.swift; and historyTransitionRegressions lives in
+bank_history_probes.swift.
 Related-but-outside suites invoked by the same file — runEditorDrawerChecks
 (EditorDrawerChecks.swift), runTrackHeadersInputChecks
 (TrackHeadersInputChecks.swift), PlaybackChecks, and the camera/page suites —
@@ -277,7 +307,7 @@ Original expression:
 
 A020 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:108
 Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
 Source context since previous assertion:
         sendShortcut(shortcutTarget, soloBindings.front());
 Original expression:
@@ -293,7 +323,7 @@ Original expression:
 
 A022 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:111
 Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
 Source context since previous assertion:
         sendShortcut(shortcutTarget, soloBindings.front());
 Original expression:
@@ -318,7 +348,7 @@ Original expression:
 
 A025 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:117
 Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
 Source context since previous assertion:
         sendShortcut(*target, soloBindings.front());
 Original expression:
@@ -334,7 +364,7 @@ Original expression:
 
 A027 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:120
 Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
 Source context since previous assertion:
         sendShortcut(*target, soloBindings.front());
 Original expression:
@@ -350,7 +380,7 @@ Original expression:
 
 A029 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:124
 Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
 Source context since previous assertion:
         text.setFocus();
         sendShortcut(text, soloBindings.front());
@@ -549,7 +579,7 @@ Original expression:
 
 A046 | MainWindowRoutingNativeTest::nativeForeignWindowKeepsLocalKeys | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:214
 Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/SessionChecks.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
@@ -816,7 +846,7 @@ Original expression:
 
 A074 | MainWindowRoutingNativeTest::nativeFailedProjectDialogPreservesLiveTab | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:303
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/SessionChecks.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
+Mapping/reason: Related predicates S030, S057, S060, S061, S062, S063 in src/checks/workspace/session_io.swift and src/checks/workspace/session_save.swift (document dirty tracking across open/save/edit/undo/redo); unproved: Qt undo-stack and reload/teardown dirtiness wiring in this test.
 Source context since previous assertion:
         MainWindow &window = *session->window;
         SongTab *old = session->b;
@@ -909,219 +939,219 @@ int runMainWindowRoutingNativeCheck(const QString &projectRoot, const QString &s
 
 Swift assertion predicates
 
-S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/SessionChecks.swift:287
+S001 | savedMidiCompilesAfterDocumentSave | src/checks/workspace/session_save.swift:279
     report.expectEqual(Int32(1), compileResult, cppID: cppID,
                        what: "actual mid2agb exit result for the persisted edited MIDI and flags")
 
-S002 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:298
+S002 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:16
     report.expectEqual("", hints.text, cppID: id,
                        what: "inactive windows reject hint claims")
 
-S003 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:305
+S003 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:23
     report.expectEqual(nodeHint, hints.text, cppID: id,
                        what: "replaced source cannot clear an identical-profile new owner")
 
-S004 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:308
+S004 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:26
     report.expectEqual("", hints.text, cppID: id,
                        what: "empty profile replaces and clears prior visible hint")
 
-S005 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:312
+S005 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:30
     report.expect(hints.text != nodeHint, cppID: id,
                   message: "replacing the node profile changes the presented instructions")
 
-S006 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:315
+S006 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:33
     report.expectEqual("", hints.text, cppID: id,
                        what: "current source lifecycle clear removes hint")
 
-S007 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:319
+S007 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:37
     report.expectEqual("", hints.text, cppID: id,
                        what: "window deactivation clears an owned hint")
 
-S008 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:322
+S008 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:40
     report.expectEqual("", hints.text, cppID: id,
                        what: "reactivation never resurrects cached ownership")
 
-S009 | mouseHintOwnershipChecks | src/checks/workspace/SessionChecks.swift:326
+S009 | mouseHintOwnershipChecks | src/checks/workspace/session_editor_semantics.swift:44
     report.expectEqual("", hints.text, cppID: id,
                        what: "unknown profile clears rather than retaining unrelated instructions")
 
-S010 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:356
+S010 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:74
     report.expect(router.isAvailable(.delete) && router.isAvailable(.copy)
                   && router.isAvailable(.cut), cppID: id,
                   message: "automation range owns semantic edit availability")
 
-S011 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:359
+S011 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:77
     report.expectEqual(EditKeyDecision.execute.rawValue,
                        router.route(.delete, autoRepeat: true).rawValue,
                        cppID: id, what: "range Delete retains canonical repeat execution")
 
-S012 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:362
+S012 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:80
     report.expectEqual(revision, document.revision, cppID: id,
                        what: "availability and key arbitration never mutate the document")
 
-S013 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:364
+S013 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:82
     report.expectEqual(EditKeyDecision.consume.rawValue,
                        router.route(.transposeUp, autoRepeat: false).rawValue,
                        cppID: id, what: "lane-scoped transpose consumes without falling through to notes")
 
-S014 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:368
+S014 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:86
     report.expectEqual(revision, document.revision, cppID: id,
                        what: "lane transpose does not mutate a simultaneous note selection")
 
-S015 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:371
+S015 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:89
     report.expectEqual([Tick(72)], document.lanePoints(
         track: 0, lane: .controller(TimeDefaults.ccPan)).map(\.tick),
         cppID: id, what: "range Delete removes only points in the selected interval")
 
-S016 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:374
+S016 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:92
     report.expect(document.note(selectedNote.id) != nil, cppID: id,
                   message: "time selection deletion leaves simultaneously selected notes intact")
 
-S017 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:378
+S017 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:96
     report.expectEqual(afterDelete, document.revision, cppID: id,
                        what: "empty selected range deletion never falls through to notes")
 
-S018 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:380
+S018 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:98
     report.expect(document.note(selectedNote.id) != nil, cppID: id,
                   message: "empty range still owns the operation target")
 
-S019 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:383
+S019 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:101
     report.expect(page.selection == nil, cppID: id,
                   message: "canonical clear-selection command clears the automation range")
 
-S020 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:385
+S020 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:103
     report.expectEqual(EditKeyDecision.execute.rawValue,
                        router.route(.delete, autoRepeat: false).rawValue,
                        cppID: id, what: "note selection becomes the target after range clear")
 
-S021 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:389
+S021 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:107
     report.expect(document.note(selectedNote.id) == nil, cppID: id,
                   message: "shared note deletion remains reachable after range clear")
 
-S022 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:396
+S022 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:114
     report.expect(!document.notes(in: 0).contains(where: { $0.tick == 48 })
                   && document.lanePoints(track: 0, lane: .controller(TimeDefaults.ccPan)).isEmpty,
                   cppID: id, message: "track range deletes both its notes and automation points")
 
-S023 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:399
+S023 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:117
     report.expect(document.notes(in: 0).contains(where: { $0.tick == 96 }), cppID: id,
                   message: "track range leaves outside notes intact")
 
-S024 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:410
+S024 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:128
     report.expectEqual(EditKeyDecision.consume.rawValue,
                        router.route(.delete, autoRepeat: false).rawValue,
                        cppID: id, what: "a live pointer gesture consumes semantic deletion")
 
-S025 | editorSelectionCommandChecks | src/checks/workspace/SessionChecks.swift:414
+S025 | editorSelectionCommandChecks | src/checks/workspace/session_editor_semantics.swift:132
     report.expectEqual(beforeGestureCommand, document.revision, cppID: id,
                        what: "direct activation cannot bypass pointer gesture arbitration")
 
-S026 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:450
+S026 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift:24
         report.expectEqual("mus_session_test", detached.source.label,
                            cppID: "project-io-flow/ProjectIoFlowTest::openPublishesSnapshotDetached",
                            what: "published project snapshot survives source registry replacement")
 
-S027 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:471
+S027 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift:45
             report.expectEqual("mus_session_test", retained.source.label,
                                cppID: "project-io-flow/ProjectIoFlowTest::failedOpenKeepsWorkerProject",
                                what: "failed replacement open retains the worker's prior project")
 
-S028 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:489
+S028 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift:63
         report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
                       cppID: "vgbankcheck/VoicegroupBankTest::playableSongResolvesOnlyPlayableLabels",
                       message: "unknown label reaches the native playable-song rejection")
 
-S029 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:500
+S029 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift:74
         report.expectEqual("mus_session_test", session.document.source.label,
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[open]",
                            what: "DocumentSession adopts the requested song source")
 
-S030 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:509
+S030 | sessionOpenAndRecovery | src/checks/workspace/session_io.swift:83
     report.expectEqual(false, session.document.isDirty,
                        cppID: "project-identity/ProjectIdentityTest::songHistory_startsClean",
                        what: "opened session starts clean")
 
-S031 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:516
+S031 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:14
     report.expectEqual(initialExpectedTimeline.sample(for: 24), session.timeline.sample(for: 24),
                        cppID: "swiftcore/DocumentSession::initialPlaybackProjection",
                        what: "initial timeline matches canonical state factory projection")
 
-S032 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:529
+S032 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:27
     report.expect(chunkMetasStripped,
                   cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                   message: "adoption stripped tempo meta events from file chunks into authoritative state.tempo")
 
-S033 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:532
+S033 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:30
     report.expectEqual(1, session.document.state.tempo.count,
                        cppID: "swiftcore/DocumentSession::authoritativeTempoAdoption",
                        what: "authoritative tempo point count in state")
 
-S034 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:538
+S034 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:36
     report.expectEqual(UInt64(24_000), initialSampleAt24,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::semanticSaveBareAndWithRecipe",
                        what: "initial tempo 120 BPM schedules exactly 24000 samples at tick 24")
 
-S035 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:563
+S035 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:61
     report.expect(publishedChangeCount > 0,
                   cppID: "projectworkspacecheck/ProjectWorkspaceTest::planEventsForwardKeyed",
                   message: "document mutation invokes session presenter callback")
 
-S036 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:566
+S036 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:64
     report.expect(lastPublishedTimeline != nil,
                   cppID: "project-io-flow/ProjectIoFlowTest::voicegroupLoadAndPreviewPaths",
                   message: "immutable playback publication callback received updated timeline")
 
-S037 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:572
+S037 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:70
     report.expectEqual(UInt64(19_200), editedSampleAt24,
                        cppID: "project-io-flow/ProjectIoFlowTest::fifoDeliversInSubmissionOrder",
                        what: "state factory projection computes exact 19200 samples for edited tempo")
 
-S038 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:583
+S038 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:81
     report.expectEqual(UInt64(48_000), noteOffSample(extendedTimeline, key: 64),
                        cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
                        what: "48-clock conversion quantizes the 13-tick gate to 12 ticks")
 
-S039 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:586
+S039 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:84
     report.expect(defaultClock64 != noteOffSample(extendedTimeline, key: 64),
                   cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
                   message: "extended clocks change an observable note-release sample")
 
-S040 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:595
+S040 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:93
     report.expectEqual(UInt64(20_000), configuredGate60,
                        cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                        what: "exact gate preserves the 25-tick release instead of LUT bucket 24")
 
-S041 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:598
+S041 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:96
     report.expect(defaultGate60 != configuredGate60,
                   cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                   message: "exact gate changes an observable note-release sample")
 
-S042 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:607
+S042 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:105
         report.expectEqual(defaultGate60, noteOffSample(session.timeline, key: 60),
                            cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
                            what: "undo config restores default gate release scheduling")
 
-S043 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:610
+S043 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:108
         report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
                            cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
                            what: "timeline remains at 150 BPM prior to tempo undo")
 
-S044 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:617
+S044 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:115
         report.expectEqual(UInt64(24_000), session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::savedRecipe_selectionFallbacks",
                            what: "undo tempo restores initial 120 BPM timing")
 
-S045 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:624
+S045 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:122
         report.expectEqual(UInt64(19_200), session.timeline.sample(for: 24),
                            cppID: "project-identity/ProjectIdentityTest::savedRecipe_legacySingleLabelAndEmpty",
                            what: "redo tempo restores 150 BPM timing")
 
-S046 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:630
+S046 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:128
         report.expectEqual(configuredGate60, noteOffSample(session.timeline, key: 60),
                            cppID: "swiftcore/DocumentSession::configurationUndoRedoPlayback",
                            what: "redo config reproduces exact-gate event timing")
 
-S047 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:649
+S047 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:147
     report.expect(
         publishedChangeCount == publicationStart + 1
             && publishedChanges.last?.domains == [.cursor]
@@ -1130,36 +1160,36 @@ S047 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:649
         cppID: statePublicationID,
         message: "cursor-only mutation publishes exactly the cursor domain")
 
-S048 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:658
+S048 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:156
     report.expectEqual(publicationStart, publishedChangeCount,
                        cppID: statePublicationID,
                        what: "equal cursor assignment publishes nothing")
 
-S049 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:664
+S049 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:162
     report.expect(
         publishedChangeCount == publicationStart + 1
             && publishedChanges.last?.domains == [.mixState],
         cppID: statePublicationID,
         message: "mute mutation publishes exactly the mix-state domain")
 
-S050 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:671
+S050 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:169
     report.expect(
         publishedChangeCount == publicationStart + 1
             && publishedChanges.last?.domains == [.mixState],
         cppID: statePublicationID,
         message: "solo mutation publishes exactly the mix-state domain")
 
-S051 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:679
+S051 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:177
     report.expectEqual(publicationStart, publishedChangeCount,
                        cppID: statePublicationID,
                        what: "equal mute and solo assignments publish nothing")
 
-S052 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:708
+S052 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:206
     report.expect(publishedChangeCount == publicationStart + 1 && observedCompletedBatch,
                   cppID: statePublicationID,
                   message: "nested throwing batch publishes completed state exactly once")
 
-S053 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:713
+S053 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:211
     report.expect(
         session.document.revision == preRevision
             && session.document.isDirty == preDirty
@@ -1170,678 +1200,678 @@ S053 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:713
         cppID: statePublicationID,
         message: "session-only changes preserve revision, dirty/history, and playback publication")
 
-S054 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:728
+S054 | sessionPlaybackProjectionAndStatePublication | src/checks/workspace/session_playback.swift:226
         report.expectEqual(false, session.selectedNotes.contains(note1),
                            cppID: "swiftcore/DocumentSession::selectionPrunesDeletedNotes",
                            what: "selection reconciler prunes dead note IDs when notes are deleted")
 
-S055 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:737
+S055 | sessionSavePersistence | src/checks/workspace/session_save.swift:16
     report.expect(otherSongCfgBefore != nil,
                   cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                   message: "fixture exposes the other song's midi.cfg line")
 
-S056 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:747
+S056 | sessionSavePersistence | src/checks/workspace/session_save.swift:26
     report.expectEqual(Tick(72), preSaveLoopStart,
                        cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                        what: "the loop-start edit is present before save")
 
-S057 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:756
+S057 | sessionSavePersistence | src/checks/workspace/session_save.swift:35
         report.expectEqual(false, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "edited song save confirms clean state")
 
-S058 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:763
+S058 | sessionSavePersistence | src/checks/workspace/session_save.swift:42
     report.expectEqual(
         otherSongCfgBefore, configLineBytes(at: midiCfgPath, label: "mus_session_test2"),
         cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
         what: "save preserves the other song's complete midi.cfg line bytes")
 
-S059 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:772
+S059 | sessionSavePersistence | src/checks/workspace/session_save.swift:51
     report.expect(legacyContent?.contains("\"protected\": true") == true,
                   cppID: "project-io-mutations/ProjectIoMutationsTest::legacyJsonUntouchedBySaveAndReload",
                   message: "save leaves legacy sidecar JSON untouched")
 
-S060 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:783
+S060 | sessionSavePersistence | src/checks/workspace/session_save.swift:62
         report.expectEqual(true, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "edit after save is dirty")
 
-S061 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:787
+S061 | sessionSavePersistence | src/checks/workspace/session_save.swift:66
         report.expectEqual(false, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "undo to the saved state is clean")
 
-S062 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:791
+S062 | sessionSavePersistence | src/checks/workspace/session_save.swift:70
         report.expectEqual(true, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "redo away from the saved state is dirty")
 
-S063 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:795
+S063 | sessionSavePersistence | src/checks/workspace/session_save.swift:74
         report.expectEqual(false, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "cleanup undo returns to the saved state")
 
-S064 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:811
+S064 | sessionSavePersistence | src/checks/workspace/session_save.swift:90
         report.expectEqual(UInt64(19_200), reopened.timeline.sample(for: 24),
                            cppID: "project-io-mutations/ProjectIoMutationsTest::previewCleanupPrivateResult",
                            what: "reopen reproduces saved authoritative 150 BPM timing")
 
-S065 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:814
+S065 | sessionSavePersistence | src/checks/workspace/session_save.swift:93
         report.expectEqual(preSaveGate60, noteOffSample(reopened.timeline, key: 60),
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                            what: "reopen reproduces settings-sensitive note-release timing")
 
-S066 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:817
+S066 | sessionSavePersistence | src/checks/workspace/session_save.swift:96
         report.expectEqual(preSaveFile, reopened.document.state.file,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "note and non-tempo metadata streams survive save/reopen")
 
-S067 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:820
+S067 | sessionSavePersistence | src/checks/workspace/session_save.swift:99
         report.expectEqual(preSaveLoopStart, reopened.timeline.loopStartTick,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "loop-start marker survives save/reopen")
 
-S068 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:823
+S068 | sessionSavePersistence | src/checks/workspace/session_save.swift:102
         report.expectEqual(preSaveLoopEnd, reopened.timeline.loopEndTick,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "loop-end marker survives save/reopen")
 
-S069 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:827
+S069 | sessionSavePersistence | src/checks/workspace/session_save.swift:106
         report.expectEqual(preSaveConfig.rawFlags, reopenedConfig.rawFlags,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "raw config flags survive save/reopen")
 
-S070 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:830
+S070 | sessionSavePersistence | src/checks/workspace/session_save.swift:109
         report.expectEqual(preSaveConfig.voicegroupArgument, reopenedConfig.voicegroupArgument,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "voicegroup argument survives save/reopen")
 
-S071 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:833
+S071 | sessionSavePersistence | src/checks/workspace/session_save.swift:112
         report.expectEqual(preSaveConfig.masterVolume, reopenedConfig.masterVolume,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "master volume survives save/reopen")
 
-S072 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:836
+S072 | sessionSavePersistence | src/checks/workspace/session_save.swift:115
         report.expectEqual(preSaveConfig.reverb, reopenedConfig.reverb,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "reverb survives save/reopen")
 
-S073 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:839
+S073 | sessionSavePersistence | src/checks/workspace/session_save.swift:118
         report.expectEqual(preSaveConfig.priority, reopenedConfig.priority,
                            cppID: "savecheck/ProjectSaveTest::saveReloadsNoteLoopAndCfg_preservesOtherCfgBytes",
                            what: "priority survives save/reopen")
 
-S074 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:842
+S074 | sessionSavePersistence | src/checks/workspace/session_save.swift:121
         report.expectEqual(preSaveConfig.exactGate, reopenedConfig.exactGate,
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[reload]",
                            what: "exact-gate setting survives save/reopen")
 
-S075 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:845
+S075 | sessionSavePersistence | src/checks/workspace/session_save.swift:124
         report.expectEqual(preSaveConfig.extendedClocks, reopenedConfig.extendedClocks,
                            cppID: "project-io-flow/ProjectIoFlowTest::songChains_openReloadStageTag[private-load]",
                            what: "extended-clock setting survives save/reopen")
 
-S076 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:854
+S076 | sessionSavePersistence | src/checks/workspace/session_save.swift:133
         report.expectEqual(false, reopenedHasTempoMeta,
                            cppID: "project-io-mutations/ProjectIoMutationsTest::creationCollisionRefusesLeavingStray",
                            what: "tempo metas remain stripped while authoritative timing persists")
 
-S077 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:873
+S077 | sessionSavePersistence | src/checks/workspace/session_save.swift:152
         report.expectEqual(true, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "stale snapshot completion leaves the newer document dirty")
 
-S078 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:877
+S078 | sessionSavePersistence | src/checks/workspace/session_save.swift:156
         report.expectEqual(true, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "undoing only the newer edit remains dirty")
 
-S079 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:881
+S079 | sessionSavePersistence | src/checks/workspace/session_save.swift:160
         report.expectEqual(false, session.document.isDirty,
                            cppID: "savecheck/ProjectSaveTest::savedIdentityUndoRedoAndStaleSnapshot",
                            what: "undoing both post-save edits returns to the saved state")
 
-S080 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:897
+S080 | sessionSavePersistence | src/checks/workspace/session_save.swift:176
         report.expect(song1.bank.bankToken != 0,
                       cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                       message: "opened song has non-zero bank token")
 
-S081 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:900
+S081 | sessionSavePersistence | src/checks/workspace/session_save.swift:179
         report.expectEqual(song1.bank.bankToken, song2.bank.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::bankLeaseIsReusedAcrossSharedVoicegroup",
                            what: "songs sharing the same voicegroup reuse the native bank lease")
 
-S082 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:933
+S082 | sessionFailureStages | src/checks/workspace/session_io.swift:117
         report.expectEqual(midiBeforeFailures, bytes(at: midiPath), cppID: cppID,
                            what: "failed stage preserves MIDI file bytes")
 
-S083 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:935
+S083 | sessionFailureStages | src/checks/workspace/session_io.swift:119
         report.expectEqual(bankBeforeFailures, bytes(at: bankPath), cppID: cppID,
                            what: "failed stage preserves voicegroup file bytes")
 
-S084 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:937
+S084 | sessionFailureStages | src/checks/workspace/session_io.swift:121
         report.expectEqual(true, session.document.isDirty, cppID: cppID,
                            what: "failed stage leaves document dirty")
 
-S085 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:939
+S085 | sessionFailureStages | src/checks/workspace/session_io.swift:123
         report.expectEqual(true, session.bankDirty, cppID: cppID,
                            what: "failed stage leaves bank dirty")
 
-S086 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:950
+S086 | sessionFailureStages | src/checks/workspace/session_io.swift:134
         report.expect(operationFailureMessage(error)?.contains("No playable song") == true,
                       cppID: reconcileID,
                       message: "reconcile stage reports the native playable-song failure")
 
-S087 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:968
+S087 | sessionFailureStages | src/checks/workspace/session_io.swift:152
             report.expect(operationFailureMessage(error)?.contains("Cannot read") == true,
                           cppID: midiID,
                           message: "MIDI stage reports its missing source file")
 
-S088 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:989
+S088 | sessionFailureStages | src/checks/workspace/session_io.swift:173
             report.expect(operationFailureMessage(error)?.contains("voicegroup") == true,
                           cppID: voicegroupID,
                           message: "voicegroup stage reports its missing source file")
 
-S089 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1013
+S089 | sessionFailureStages | src/checks/workspace/session_io.swift:197
         report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
                       cppID: saveID,
                       message: "save stage reports the unwritable destination")
 
-S090 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1029
+S090 | sessionFailureStages | src/checks/workspace/session_io.swift:213
             report.expect(
                 operationFailureMessage(error)?.lowercased().contains("voicegroup") == true,
                 cppID: cppID,
                 message: "playable label reaches native voicegroup resolution and is rejected")
 
-S091 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1039
+S091 | sessionFailureStages | src/checks/workspace/session_io.swift:223
         report.expectEqual("sound/voicegroups/test_vg.inc", normalized.bank.sourcePath,
                            cppID: "project-identity/ProjectIdentityTest::voicegroupId_normalizationAndSectionHash",
                            what: "native service publishes a project-relative normalized bank identity")
 
-S092 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1042
+S092 | sessionFailureStages | src/checks/workspace/session_io.swift:226
         report.expectEqual("mus_session_test", normalized.source.label,
                            cppID: "project-identity/ProjectIdentityTest::songName_acceptRejectRoundtripHash",
                            what: "native service round-trips the accepted playable song label")
 
-S093 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1065
+S093 | sessionLifetime | src/checks/workspace/session_io.swift:244
         report.expectEqual(true, firstDocumentClosed,
                            cppID: lifetimeID,
                            what: "first document closes cleanly")
 
-S094 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1071
+S094 | sessionLifetime | src/checks/workspace/session_io.swift:250
     report.expectEqual(true, session.isClosed,
                        cppID: lifetimeID,
                        what: "first document marks isClosed without closing its project service")
 
-S095 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1079
+S095 | sessionLifetime | src/checks/workspace/session_io.swift:258
         report.expect(labels.contains("mus_session_test") &&
                       labels.contains("mus_session_test2"),
                       cppID: lifetimeID,
                       message: "project song labels remain available after document close")
 
-S096 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1096
+S096 | sessionLifetime | src/checks/workspace/session_io.swift:275
         report.expectEqual("mus_session_test2", secondLabel,
                            cppID: lifetimeID,
                            what: "same project service opens a second document without reopening")
 
-S097 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1099
+S097 | sessionLifetime | src/checks/workspace/session_io.swift:278
         report.expectEqual(true, secondDocumentClosed,
                            cppID: lifetimeID,
                            what: "second document closes cleanly")
 
-S098 | runProjectSessionSuite | src/checks/workspace/SessionChecks.swift:1120
+S098 | sessionLifetime | src/checks/workspace/session_io.swift:299
         report.expectEqual(ProjectServiceError.serviceClosed, error,
                            cppID: lifetimeID,
                            what: "explicit project service close owns worker shutdown")
 
-S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1165
+S099 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:89
     report.expect(session.bankSlots.count >= 4,
                   cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                   message: "published bank has slot views")
 
-S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1168
+S100 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:92
     report.expectEqual(BankSlotKind.editable, session.bankSlots[0].kind,
                        cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                        what: "slot 0 is editable square 1")
 
-S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1171
+S101 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:95
     report.expectEqual(BankSlotKind.none, session.bankSlots[3].kind,
                        cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                        what: "slot 3 is initially blank")
 
-S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1195
+S102 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:119
         report.expectEqual(true, session.bankDirty,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "bank edit dirties bank")
 
-S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1198
+S103 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:122
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "scalar edit changes the requested voice and preserves every other slot")
 
-S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1201
+S104 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:125
         report.expect(result.lease.bankToken != oldToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                       message: "applied bank edit mints a fresh lease")
 
-S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1204
+S105 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:128
         report.expectEqual(oldToken, oldLease.bankToken,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "superseded lease retains its bank token and stays valid")
 
-S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1207
+S106 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:131
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank edit publishes bank, dirty, and history exactly once")
 
-S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1218
+S107 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:142
         report.expectEqual(originalSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "undo restores the complete original bank view")
 
-S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1221
+S108 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:145
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank undo publishes bank, dirty, and history exactly once")
 
-S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1232
+S109 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:156
         report.expectEqual(scalarEditedSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "redo restores the scalar edit without changing other slots")
 
-S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1235
+S110 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:159
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "bank redo publishes bank, dirty, and history exactly once")
 
-S111 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1269
+S111 | bankPreviewFailure | src/checks/workspace/bank_edits.swift:35
             report.expect(operationFailureMessage(error) != nil,
                           cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                           message: "preview filesystem failure reaches the public service error type")
 
-S112 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1277
+S112 | bankPreviewFailure | src/checks/workspace/bank_edits.swift:43
     report.expectEqual(previewSlots, session.bankSlots,
                        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                        what: "preview failure preserves every visible bank slot")
 
-S113 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1280
+S113 | bankPreviewFailure | src/checks/workspace/bank_edits.swift:46
     report.expectEqual(previewDirty, session.bankDirty,
                        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                        what: "preview failure preserves visible dirty state")
 
-S114 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1283
+S114 | bankPreviewFailure | src/checks/workspace/bank_edits.swift:49
     report.expectEqual(previewSourceBytes, bytes(at: previewSourcePath),
                        cppID: "vgbankcheck/VoicegroupBankTest::previewFailureRollsBackCandidate",
                        what: "preview failure leaves source file bytes unchanged")
 
-S115 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1298
+S115 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift:66
         report.expect(materialized.materializationToken != nil,
                       cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                       message: "blank slot materialization issues a single-shot token")
 
-S116 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1301
+S116 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift:69
         report.expectEqual(materializedSlots, session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "blank materialization publishes the requested voice and preserves other slots")
 
-S117 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1309
+S117 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift:77
         report.expectEqual(beforeMaterializationSlots, session.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::blankMaterializationRevertAndSpentToken",
                            what: "undo restores the complete pre-materialization bank view")
 
-S118 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1317
+S118 | bankBlankMaterialization | src/checks/workspace/bank_edits.swift:85
         report.expectEqual(materializedSlots, session.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::blankTemplateMaterializesUndoably",
                            what: "redo rematerializes the voice without changing other slots")
 
-S119 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1339
+S119 | bankMergeSealing | src/checks/workspace/bank_edits.swift:110
         report.expectEqual(Int32(25), session.bankSlots[0].voice?.pan,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
                            what: "second pan edit applied")
 
-S120 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1347
+S120 | bankMergeSealing | src/checks/workspace/bank_edits.swift:118
         report.expectEqual(Int32(15), session.bankSlots[0].voice?.pan,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
                            what: "undo reverts merged pan edits to origin in one step")
 
-S121 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1366
+S121 | bankMergeSealing | src/checks/workspace/bank_edits.swift:137
         report.expect(reachedPreceding && session.bankSlots[3].kind == BankSlotKind.none,
                       cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
                       message: "real-service pan A-to-B-to-A removes its entry so undo reaches the preceding materialization")
 
-S122 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1388
+S122 | bankConflicts | src/checks/workspace/bank_edits.swift:162
         report.expectEqual(ProjectServiceError.bankConflict, error,
                            cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                            what: "stale expected voice triggers bankConflict")
 
-S123 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1395
+S123 | bankConflicts | src/checks/workspace/bank_edits.swift:169
     report.expectEqual(undoBeforeInitialConflict, session.document.history.canUndo,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                        what: "initial conflict leaves canUndo unchanged")
 
-S124 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1398
+S124 | bankConflicts | src/checks/workspace/bank_edits.swift:172
     report.expectEqual(redoBeforeInitialConflict, session.document.history.canRedo,
                        cppID: "project-io-mutations/ProjectIoMutationsTest::editConflictVsApplied",
                        what: "initial conflict leaves canRedo unchanged")
 
-S125 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1411
+S125 | bankConflicts | src/checks/workspace/bank_edits.swift:185
         report.expectEqual(ProjectServiceError.bankConflict, error,
                            cppID: "projectworkspacecheck/ProjectWorkspaceTest::editConflict_appliedReceipt_hardFailure[expected-blank-conflict]",
                            what: "materializing occupied slot triggers bankConflict")
 
-S126 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1427
+S126 | bankConflicts | src/checks/workspace/bank_edits.swift:201
         report.expectEqual(ProjectServiceError.bankConflict, error,
                            cppID: "vgbankcheck/VoicegroupBankTest::staleBlankAndOutOfRangeEditsConflictWithoutMutation",
                            what: "unknown token triggers bankConflict")
 
-S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1453
+S127 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:191
         report.expectEqual(false, session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the song clean")
 
-S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1456
+S128 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:194
         report.expectEqual(false, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "unified save marks the bank clean")
 
-S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1459
+S129 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:197
         report.expect(
             bankPublications.count == 1
                 && bankPublications[0].domains == [.bank, .dirty, .history],
             cppID: "swiftcore/DocumentSession::bankPublicationDomains",
             message: "unified bank save publishes bank, dirty, and history exactly once")
 
-S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1464
+S130 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:202
         report.expect(bytes(at: unifiedMidiPath) != midiBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted MIDI bytes")
 
-S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1467
+S131 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:205
         report.expect(bytes(at: unifiedBankPath) != bankBeforeUnifiedSave,
                       cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                       message: "unified save changes persisted bank bytes")
 
-S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1478
+S132 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:216
         report.expectEqual(expectedUnifiedFile, reopened.document.state.file,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified song edit from disk")
 
-S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1481
+S133 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:219
         report.expectEqual(expectedUnifiedSlots, reopened.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::unifiedSavePersistsSongAndBank",
                            what: "fresh reopen reads the unified bank edits and preserved slots from disk")
 
-S134 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1525
+S134 | bankQueuedSave | src/checks/workspace/bank_saves.swift:47
             report.expectEqual(Optional(Data(staleSnapshot.bytes)),
                                bytes(at: session.document.source.midiPath),
                                cppID: queuedSaveID,
                                what: "queued save writes the captured stale MIDI snapshot")
 
-S135 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1529
+S135 | bankQueuedSave | src/checks/workspace/bank_saves.swift:51
             report.expectEqual(newerIdentity, session.document.history.currentIdentity,
                                cppID: queuedSaveID,
                                what: "save completion preserves the newer document identity")
 
-S136 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1532
+S136 | bankQueuedSave | src/checks/workspace/bank_saves.swift:54
             report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
                                what: "stale save completion cannot clean the newer edit")
 
-S137 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1534
+S137 | bankQueuedSave | src/checks/workspace/bank_saves.swift:56
             report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
                                what: "queued native bank write publishes its clean receipt")
 
-S138 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1536
+S138 | bankQueuedSave | src/checks/workspace/bank_saves.swift:58
             report.expectEqual(savedVoice, session.bankSlots[0].voice,
                                cppID: queuedSaveID,
                                what: "queued bank save preserves the edited bank voice")
 
-S139 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1545
+S139 | bankQueuedSave | src/checks/workspace/bank_saves.swift:67
             report.expectEqual(Optional(Data(newerSnapshot.bytes)),
                                bytes(at: session.document.source.midiPath),
                                cppID: queuedSaveID,
                                what: "retry writes the newer MIDI snapshot")
 
-S140 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1549
+S140 | bankQueuedSave | src/checks/workspace/bank_saves.swift:71
             report.expectEqual(false, session.document.isDirty, cppID: queuedSaveID,
                                what: "newer-state retry marks the document clean")
 
-S141 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1553
+S141 | bankQueuedSave | src/checks/workspace/bank_saves.swift:75
             report.expect(undidNewer && session.document.note(newerNote) == nil
                 && session.document.note(staleNote) != nil,
                 cppID: queuedSaveID,
                 message: "first undo removes only the newer note")
 
-S142 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1558
+S142 | bankQueuedSave | src/checks/workspace/bank_saves.swift:80
             report.expect(undidStale && session.document.note(staleNote) == nil,
                           cppID: queuedSaveID,
                           message: "second undo removes the stale note")
 
-S143 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1561
+S143 | bankQueuedSave | src/checks/workspace/bank_saves.swift:83
             report.expectEqual(true, session.document.isDirty, cppID: queuedSaveID,
                                what: "undoing past the retry save point is dirty")
 
-S144 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1563
+S144 | bankQueuedSave | src/checks/workspace/bank_saves.swift:85
             report.expectEqual(false, session.bankDirty, cppID: queuedSaveID,
                                what: "note undos leave the saved bank clean")
 
-S145 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1565
+S145 | bankQueuedSave | src/checks/workspace/bank_saves.swift:87
             report.expectEqual(savedVoice, session.bankSlots[0].voice,
                                cppID: queuedSaveID,
                                what: "note undos leave the saved bank edit applied")
 
-S146 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1568
+S146 | bankQueuedSave | src/checks/workspace/bank_saves.swift:90
             report.expectEqual(savedBankBytes, bytes(at: bankPath), cppID: queuedSaveID,
                                what: "note undos leave saved bank bytes intact")
 
-S147 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1586
+S147 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:23
         report.expectEqual(adjacent.release, session.bankSlots[0].voice?.release,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
                            what: "adjacent release edit reaches the production bank view")
 
-S148 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1589
+S148 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:26
         report.expectEqual(true, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
                            what: "adjacent release edit dirties the bank")
 
-S149 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1592
+S149 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:29
         report.expectEqual(documentWasDirty, session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[adjacent]",
                            what: "adjacent release edit does not dirty the document")
 
-S150 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1602
+S150 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:39
         report.expectEqual(Int32(0), session.bankSlots[0].voice?.release,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                            what: "lower release bound reaches the production bank view")
 
-S151 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1605
+S151 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:42
         report.expectEqual(true, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                            what: "lower-bound bank edit dirties the bank")
 
-S152 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1608
+S152 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:45
         report.expectEqual(documentWasDirty, session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[lower-bound]",
                            what: "lower-bound bank edit does not dirty the document")
 
-S153 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1617
+S153 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:54
         report.expectEqual(Int32(255), session.bankSlots[0].voice?.release,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                            what: "upper release bound reaches the production bank view")
 
-S154 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1620
+S154 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:57
         report.expectEqual(true, session.bankDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                            what: "upper-bound bank edit dirties the bank")
 
-S155 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1623
+S155 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:60
         report.expectEqual(documentWasDirty, session.document.isDirty,
                            cppID: "vgsavecheck/VoicegroupSaveTest::releaseEditDirtiesOnlyBank[upper-bound]",
                            what: "upper-bound bank edit does not dirty the document")
 
-S156 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1630
+S156 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:67
         report.expectEqual(session.bankLease.bankToken, switched.bank.bankToken,
                            cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
                            what: "opening another song reuses the unsaved shared-bank record")
 
-S157 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1633
+S157 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:70
         report.expectEqual(Int32(255), switched.bankSlots[0].voice?.release,
                            cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
                            what: "another song publishes the unsaved shared-bank edit")
 
-S158 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1636
+S158 | bankReleaseBoundsAndSharedBank | src/checks/workspace/bank_sharing.swift:73
         report.expectEqual(true, switched.bankDirty,
                            cppID: "swiftcore/ProjectService::sharedBankRecordAcrossSongOpen",
                            what: "another song preserves shared-bank dirty state")
 
-S159 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1665
+S159 | bankCatalogOutage | src/checks/workspace/bank_saves.swift:117
             report.expect(operationFailureMessage(error) != nil,
                           cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
                           message: "catalog outage reaches the native service error boundary")
 
-S160 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1673
+S160 | bankCatalogOutage | src/checks/workspace/bank_saves.swift:125
     report.expectEqual(retainedToken, session.bankLease.bankToken,
                        cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
                        what: "catalog outage retains the last valid bank lease")
 
-S161 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1676
+S161 | bankCatalogOutage | src/checks/workspace/bank_saves.swift:128
     report.expectEqual(retainedSlots, session.bankSlots,
                        cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
                        what: "catalog outage retains the last valid bank slots")
 
-S162 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1679
+S162 | bankCatalogOutage | src/checks/workspace/bank_saves.swift:131
     report.expectEqual(retainedDirty, session.bankDirty,
                        cppID: "vgsavecheck/VoicegroupSaveTest::catalogOutageRetainsLastValid",
                        what: "catalog outage retains bank dirty state")
 
-S163 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1706
+S163 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:161
         report.expectEqual(editedSlots, roundtripSession.bankSlots,
                            cppID: "vgbankcheck/VoicegroupBankTest::appliedScalarEditReplacesBankAndPreservesOldLease",
                            what: "round-trip scalar edit preserves every other bank slot")
 
-S164 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1714
+S164 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:169
         report.expect(roundtripSession.bankLease.bankToken != preSaveToken,
                       cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
                       message: "successful bank save publishes a refreshed native bank")
 
-S165 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1717
+S165 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:172
         report.expectEqual(false, roundtripSession.bankDirty,
                            cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
                            what: "successful bank save publishes a clean record")
 
-S166 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1720
+S166 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:175
         report.expect(editedBytes != originalBytes,
                       cppID: "vgbankcheck/VoicegroupBankTest::saveRefreshesBankAndFailedSynthSaveLeavesRecordDirty",
                       message: "successful bank save changes persisted bank bytes")
 
-S167 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1727
+S167 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:182
         report.expectEqual(originalSlots, roundtripSession.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
                            what: "undo after save restores the complete original bank")
 
-S168 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1733
+S168 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:188
         report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
                            what: "saving the undo restores original voicegroup bytes")
 
-S169 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1740
+S169 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:195
         report.expectEqual(editedSlots, roundtripSession.bankSlots,
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
                            what: "redo after saving the undo restores the edited bank and other slots")
 
-S170 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1746
+S170 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:201
         report.expectEqual(editedBytes, bytes(at: roundtripBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
                            what: "saving the redo reproduces edited voicegroup bytes")
 
-S171 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1756
+S171 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:211
         report.expectEqual(originalBytes, bytes(at: roundtripBankPath),
                            cppID: "vgsavecheck/VoicegroupSaveTest::undoSaveRoundTripsBankBytes",
                            what: "final undo/save restores original voicegroup bytes")
 
-S172 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1785
+S172 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:240
             report.expect(operationFailureMessage(error)?.contains("Cannot write") == true,
                           cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                           message: "failed bank save reports its unwritable source")
 
-S173 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1788
+S173 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:243
             report.expectEqual(true, roundtripSession.bankDirty,
                                cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                                what: "failed bank save retains the dirty bank record")
 
-S174 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1791
+S174 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:246
             report.expectEqual(true, roundtripSession.document.isDirty,
                                cppID: "swiftcore/DocumentSession::failedBankFileSaveStaysDirty",
                                what: "failed ordered save retains the dirty document record")
 
-S175 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1819
+S175 | bankSaveRoundTrip | src/checks/workspace/bank_saves.swift:274
             report.expect(operationFailureMessage(error)?.contains("not loaded") == true,
                           cppID: "vgbankcheck/VoicegroupBankTest::unknownIdentityIsHardError",
                           message: "unknown identity is reported as a hard native error")
 
-S176 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1862
+S176 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift:123
         report.expectEqual(
             ProjectServiceError.operationFailed("A bank transition is already in progress."),
             result.1,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             what: "session gate refuses a second transition while the first is pending")
 
-S177 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1867
+S177 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift:128
         report.expectEqual(firstVoice, coordinatorSession.bankSlots[0].voice,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                            what: "coordinator publishes only the applied transition")
 
-S178 | runBankHistorySuite | src/checks/workspace/SessionChecks.swift:1870
+S178 | bankCoordinatorGate | src/checks/workspace/bank_sharing.swift:131
         report.expectEqual(result.0.lease.bankToken, coordinatorSession.bankLease.bankToken,
                            cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
                            what: "coordinator adopts the applied transition lease")
 
-S179 | releaseEditorBankHistorySemantics | src/checks/workspace/SessionChecks.swift:1933
+S179 | releaseEditorBankHistorySemantics | src/checks/workspace/bank_edits.swift:264
             report.expect(appliedThroughBankPipeline && undone
                 && session.bankSlots[0].voice?.release == original.release
                 && !session.document.isDirty,
                 cppID: cppID,
                 message: "the production bank pipeline publishes release \(target) and one undo restores the original without dirtying the song")
 
-S180 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2044
+S180 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift:109
         report.expect(result.0 && !result.1 && result.2 == 1 && result.3 == 1 && !result.4,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "pending bank undo gates mutation; the next admitted document edit undoes cleanly")
 
-S181 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2075
+S181 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift:140
         report.expect(result.0 && !result.1 && result.2 == 2 && result.3 == 2 && !result.4,
             cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::coordinatorRoutesTransitionsAndGates",
             message: "pending bank redo cannot admit a newer document edit, replay twice, or dirty")
 
-S182 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2093
+S182 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift:158
     report.expect(staleRedoRemoved && !staleRedoDocument.history.canRedo &&
         staleRedoDocument.state.config.priority == 6,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
         message: "stale bank redo entry is removed without mutating document state")
 
-S183 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2108
+S183 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift:173
     report.expect(staleRemoved && staleUndoDocument.state.config.priority == 0,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
         message: "stale bank undo entry is removed so the next undo reaches document history")
 
-S184 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2120
+S184 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift:185
     report.expect(hardAction.calls == 2 && hardDocument.state.config.priority == 4 &&
         hardDocument.history.canUndo,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::historyLifecycleAndStaleTransitions",
         message: "hard bank failure keeps the entry available and does not cross it")
 
-S185 | historyTransitionRegressions | src/checks/workspace/SessionChecks.swift:2132
+S185 | historyTransitionRegressions | src/checks/workspace/bank_history_probes.swift:197
     report.expect(cancelling.state.config.priority == 0,
         cppID: "voicegroupviewcachecheck/VoicegroupViewCacheTest::mergeRules",
         message: "self-cancelling bank merge is removed so undo reaches the preceding document edit")
 
 No shared Swift fixture files carrying report.expect predicates are part of this
-counterpart: the SessionChecks.swift staging helpers (makeMidiFixture,
-stageTestProject, bytes/configLineBytes readers) assert nothing and are not
-inventoried. Predicates from related suites invoked by runProjectSessionSuite
+counterpart: the session_fixtures.swift/session_support.swift staging helpers
+(makeMidiFixture, stageTestProject, bytes/configLineBytes readers) assert
+nothing and are not inventoried. Predicates from related suites invoked by runProjectSessionSuite
 live in their own files and are likewise outside this inventory.

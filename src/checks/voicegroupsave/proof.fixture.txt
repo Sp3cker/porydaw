@@ -408,9 +408,10 @@ exists and no Swift check covers the voicegroup browser/save suite, so no
 report.expect*/expectEqual predicates pair with these sites. There are no S
 entries and no shared-helper expects for this file.
 
-Swift sources inspected (SHA-256)
+Related Swift source scope
 No file src/checks/voicegroupsave/fixture.swift exists. A repo-wide search
 for Swift voicegroup-browser coverage finds only project-io voicegroup
-references in src/checks/workspace/SessionChecks.swift
-(SHA-256 ea14e1cd08fad4e15084e38c0db0e6e8784211bfddfb4a5a75d35d9a196b1845), which exercise project open/save plumbing,
+references in the workspace session suite (dispatched by
+src/checks/workspace/SessionChecks.swift and implemented in sibling scenario
+files), which exercise project open/save plumbing,
 not the browser/editor/picker/save flows inventoried here.

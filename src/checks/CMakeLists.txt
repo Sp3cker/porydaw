@@ -185,6 +185,16 @@ if(APPLE)
         trackheaders/TrackHeadersChecks.swift
         trackheaders/TrackHeadersInputChecks.swift
         workspace/SessionChecks.swift
+        workspace/session_support.swift
+        workspace/session_fixtures.swift
+        workspace/session_editor_semantics.swift
+        workspace/session_io.swift
+        workspace/session_playback.swift
+        workspace/session_save.swift
+        workspace/bank_history_probes.swift
+        workspace/bank_edits.swift
+        workspace/bank_saves.swift
+        workspace/bank_sharing.swift
     )
     set_target_properties(swift_core_check PROPERTIES
         Swift_MODULE_NAME SwiftCoreCheck
