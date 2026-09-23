@@ -395,16 +395,23 @@ Two populations:
   duplicate sites live in an uncompiled file and the live native coverage
   remains in the registered `scalecheck` lane (`proof.tst_scale.txt`).
   No dependency on any scale decision.
-- **A025-A060** — `NoteIdentityCheckTest`: 6 MATCHED (adoption assertions
-  in `NoteChecks.swift :: adoptionAndPairing`), 9 RETIRED-REPRESENTATION
-  (A025-A027 temp-file write plumbing; A041 non-throwing `adoptSmf`→
-  `SongDocument(file:)` construction has no failure branch; §2.1 rules),
-  1 MATCHED via throwing decode (A028 `readFile` success →
-  `try MidiFile.decode` of the same bytes, failure asserted by catch),
-  20 BEHAVIOR-GAP closeable with existing APIs: raw chunk/event
-  classification on decode (A029-A033, A036), re-adoption reminting
-  (A042-A049), `NoteID` equality blindness in `MidiEvent.==` and encoding
-  (A051-A055), `PlaybackTimeline` note-ID transport (A056-A060).
+- **A025-A060** — `NoteIdentityCheckTest`: existing assigned/pairwise
+  assertions in `NoteChecks.swift :: adoptionAndPairing` survive only
+  under the same `cppID` and original observable. RETIRED-REPRESENTATION
+  covers A025-A027 temporary-file plumbing, A037/A056 nullable C++
+  `MidiTimeline` construction (Swift's build is non-optional), A041
+  fallible initial `adoptSmf`, and A046/A049 same-document re-adoption
+  and cross-generation NoteID freshness. Swift `SongDocument(file:)`
+  mints IDs starting at 1 for EVERY new document
+  (`SongDocument.swift:285-310,443-454`) and exposes no public operation
+  that re-adopts MIDI into the same instance: no cross-instance numeric
+  disjointness assertion can MATCH A049. A028 MATCHED via throwing
+  `MidiFile.decode` with a real catch failure path. Genuine behavior gaps
+  closeable with public APIs: decoded raw note-on/note-end identities
+  (A029-A036), unstamped/stamped playback event IDs (A038-A040,
+  A057-A060), assigned and pairwise-distinct IDs WITHIN each new
+  document and its added note (A042-A045/A047-A048/A050), and
+  `MidiEvent.==`/serialization identity blindness (A051-A055).
 
 ## 6. What must remain native
 

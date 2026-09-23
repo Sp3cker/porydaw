@@ -41,10 +41,17 @@ literals:
   sampleRate: 48_000)` — assert what production actually guarantees for
   unstamped note-ons (read `PlaybackTimeline.swift` first) and assert
   exactly that.
-- `adoptedSmfRemintsForeignIds` (A042-A049): capture pre-adoption IDs;
-  re-adopt via `SongDocument(file: document.state.file, …)`; `addNotes`
-  one note; assert all IDs assigned, note count grew by one, new IDs
-  distinct from the captured set, all pairwise distinct.
+- `adoptedSmfRemintsForeignIds` (A042-A050): capture assigned,
+  pairwise-distinct IDs from the first document; construct a second
+  `SongDocument(file: first.state.file, …)`, add one note, and assert
+  three assigned, pairwise-distinct IDs in that second document.
+  Do not require numeric IDs across two document instances to differ:
+  construction restarts `mintAllNoteIDs` at 1 and no public API re-adopts
+  MIDI into the SAME document. A046 (fallible same-instance re-adoption)
+  and A049 (fresh IDs relative to that instance's previous generation)
+  are RETIRED-REPRESENTATION with the §7 no-ingress explanation; A047,
+  A048 and A050 assert the surviving three-note cardinality, assignedness
+  and intra-document uniqueness.
 - `identityDoesNotAffectEqualityOrSerialization` (A051-A055): two events
   stamped `NoteID(1)`/`NoteID(2)`; both assigned and unequal; events
   equal under `==` (production `MidiEvent.==` ignores `noteID`);
@@ -59,13 +66,17 @@ Proof dispositions:
   `tst_scale.cpp` sites inside an uncompiled file; live native coverage
   remains in the registered scalecheck lane per `proof.tst_scale.txt`;
   no Swift parity exists or is planned for this duplicate).
-- A025-A027 (temp-file write plumbing) and A041 (non-throwing
-  `adoptSmf`→`SongDocument(file:)` construction — no failure branch):
-  RETIRED-REPRESENTATION with the §2.1/§7 proof.
+- A025-A027 (temp-file write plumbing), A037/A056 (nullable C++
+  `MidiTimeline` construction), A041 (non-throwing
+  `adoptSmf`→`SongDocument(file:)` construction — no failure branch),
+  and A046/A049 (same-document re-adoption and numeric ID freshness
+  across that re-adoption — no Swift ingress): RETIRED-REPRESENTATION
+  with the §2.1/§7 proof.
 - A028 (`readFile` succeeds): MATCHED via the throwing
   `try MidiFile.decode(<same bytes>)` whose failure branch the do/catch
   actually reports.
-- 6 existing MATCHED unchanged; the 20 new closures MATCHED.
+- Existing MATCHED remain only where the original observable and
+  `cppID` are preserved; new closures require direct executing predicates.
 
 ## Implementation steps
 

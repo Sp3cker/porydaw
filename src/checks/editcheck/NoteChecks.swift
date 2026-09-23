@@ -7,6 +7,7 @@ private let noteEditsBasicID = "editcheck/EditCheckTest::noteEditingBasic"
 @MainActor
 func runNoteEditsSuite(_ report: CheckReport) {
     adoptionAndPairing(report)
+    noteIdentityContracts(report)
     insertionAndCollision(report)
     movementAndResize(report)
     velocityEditing(report)

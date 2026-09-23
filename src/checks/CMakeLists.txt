@@ -137,6 +137,7 @@ if(APPLE)
         audio/AudioAuditionChecks.swift
         playback/ResonanceSuppressionChecks.swift
         editcheck/NoteChecks.swift
+        editcheck/NoteIdentityChecks.swift
         editcheck/DocumentHistoryChecks.swift
         editcheck/DocumentEditChecks.swift
         editcheck/DocumentTrackChecks.swift
