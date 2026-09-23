@@ -72,11 +72,11 @@ files; the execution loop owns staging/diff packaging):
   `xcmd.swift` → authorizes Task 6's certificate (final SHA refresh) and
   frees the proof for terminal tally.
 - **C3 — final handoff** (after 6, 7 accepted): full
-  `deno task verify --verbose` + `deno task proof list --area
-  automation/domain` — all 24 registered native, Swift and QML harnesses
-  pass; three terminal certificates, zero PARTIAL/GAP/NATIVE-SETUP. No
-  empty checkpoints; serial same-file tasks never force extra commits
-  between C1-C3.
+  `deno task verify --verbose` and terminal proof tallies at that
+  milestone. The later approved completed-ledger cleanup may remove
+  `proof.xcmd.txt` after its 62 `MATCHED` sites have executed in Swift;
+  the two mixed/representation certificates remain. No empty checkpoints;
+  serial same-file tasks never force extra commits between C1-C3.
 
 ## Global constraints (once — briefs carry deltas only)
 

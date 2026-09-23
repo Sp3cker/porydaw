@@ -17,7 +17,7 @@ Read-only oracles: the C++ check and its frozen proof inventory, the existing ba
 
 # Prerequisites
 
-Task 12 and its settled SwiftCore/service check boundary. Task 16 may start only after this task's runtime assertions pass; Task 17 source retirement waits Task 16 as well as Tasks 13 and 14.
+The existing compiled `ProjectService`/`DocumentSession` bank worker and settled ownership of this brief's six-file history seam. Serialize with task 5 and any other edits to `DocumentSession.swift` or `SessionChecks.swift`; this task does not depend on task 12's sample editor or on QML. Task 16 may start only after this task's runtime assertions pass; task 17 waits for task 16 and tasks 13–14.
 
 # Interface contract
 

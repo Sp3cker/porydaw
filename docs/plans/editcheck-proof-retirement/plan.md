@@ -68,10 +68,11 @@ files; the execution loop owns staging/diff packaging):
   retired. Commits Task 10's `NoteChecks.swift` wiring → authorizes
   Task 13's reuse of it (and frees the CMake chain).
 - **C4 — final handoff** (after 13, 15 accepted): full
-  `deno task verify` + `deno task proof list --area editcheck` (seven
-  retired proofs terminal; scale accounted per spec §5.1). No empty
-  checkpoints; serial same-file tasks never force extra commits between
-  C1-C4 beyond these boundaries.
+  `deno task verify` and terminal proof tallies at that milestone.
+  Subsequent completed-ledger cleanup may remove the wholly `MATCHED`
+  certificates, leaving only non-MATCHED inventories in `proof list`.
+  No empty checkpoints; serial same-file tasks never force extra commits
+  between C1-C4 beyond these boundaries.
 
 ## Global constraints (once — briefs carry deltas only)
 
@@ -97,8 +98,12 @@ files; the execution loop owns staging/diff packaging):
   code. When in doubt between MATCHED and RETIRED-REPRESENTATION, the
   honest weaker label wins; a site may stay GAP and the file stay
   unretired rather than be forced green.
-- Preserve the four retired certificates (songmoves/songnotes/songranges/
-  songraw) byte-for-byte — do not edit them at all.
+- The earlier four retired certificates (songmoves/songnotes/songranges/
+  songraw) were immutable during this migration plan. Once their mapped
+  Swift predicates have executed successfully and every site is `MATCHED`,
+  the approved proof-retirement policy deletes the finished ledgers; the
+  historical versions are recoverable at Git revision
+  `4c52acd8c1193d27167c301002c67f18165938b8`.
 - The controller commits the accepted prior migration work before plan
   execution; tasks start from that clean baseline checkpoint (pushed per
   AGENTS Git synchronization). If concurrent work reappears in shared

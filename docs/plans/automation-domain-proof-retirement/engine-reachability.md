@@ -1,5 +1,10 @@
 # Automation domain engine reachability after check retirement
 
+This report records the pre-cleanup proof tally. The 62-site
+`proof.xcmd.txt` ledger was subsequently retired after all sites were
+`MATCHED` and its Swift predicates passed; recover it from Git revision
+`4c52acd8c1193d27167c301002c67f18165938b8`.
+
 ## Retired check family
 
 Before deleting `src/checks/automation/domain/tst_automationdomain.h`, the scoped harness search

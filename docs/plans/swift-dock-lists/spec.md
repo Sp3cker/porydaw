@@ -53,11 +53,11 @@ completes project/editor lifecycle parity using that contract.
 
 The old samplecheck C++ suites are not compiled by
 `src/checks/CMakeLists.txt` or registered in `src/checks/checkcatalog.cpp`.
-Their seven retained proof inventories contain 418 GAP and 75 NATIVE
-sites. Tasks 11 and 12 add the runnable Swift/backend parity; task 14 maps
-each sample site; task 17 retires only the named uncompiled C++ check
-sources. Do not describe a `samplecheck` C++ test target or treat a filter
-for it as proof.
+Their seven proof inventories now contain 408 GAP, 71 NATIVE, and 14
+MATCHED sites. Tasks 11 and 12 add runnable Swift/backend parity; task 14
+maps each sample site; task 17 retires the named uncompiled C++ check
+sources and wholly `MATCHED` proof ledgers. Do not describe a `samplecheck`
+C++ test target or treat a filter as evidence for an uncompiled suite.
 
 Frozen visual source oracles already exist under
 `src/checks/fixtures/visual/macos-dpr2-font12/` and
@@ -334,8 +334,10 @@ Task 13 updates per-assertion correspondence in all seven
 historical browser proof, `src/checks/visual/proof.browsers.txt`, to named
 runnable QML/visual predicates.
 
-Task 14 updates per-assertion correspondence in the seven samplecheck
-inventories, which currently record 418 GAP + 75 NATIVE sites:
+Task 14 completes per-assertion correspondence in the seven samplecheck
+inventories. After the already-green headless audition tranche, they record
+408 GAP + 71 NATIVE + 14 MATCHED sites; the remaining sites stay open until
+their actual backend or QML predicates run:
 
 | Inventory | Source suite |
 |---|---|
@@ -403,18 +405,18 @@ boundaries.
 Task 16 updates every A001–A070 record in
 `src/checks/voicegroup/proof.tst_voicegroupviewcache.txt` to the exact
 runnable Swift predicate or a justified non-behavior rationale. No
-unjustified `GAP` may remain. Preserve the original source context,
-assertion identity, reference revision, and SHA-256 fields.
+unjustified `GAP` may remain. Until its retirement decision, preserve the
+original source context, assertion identity, reference revision, and
+SHA-256 fields.
 
 The correspondence check is **STRUCTURE ONLY**. It verifies ledger grammar
 and site coverage, not parity or runtime behavior. Runtime proof comes from
-the named Swift/QML predicates and visual lanes. For every ledger, preserve
-its `Reference revision`, `Original SHA-256`, original source context, and
-assertion identity while updating disposition/mapping/evidence.
-
-Keep `src/checks/voicegroup/proof.tst_voicegroupviewcache.txt` as a
-historical source-oracle inventory. Keep `src/checks/visual/proof.dialogs.txt`
-as well; unrelated dialog proof sites remain outside this plan.
+the named Swift/QML predicates and visual lanes. Retire a proof ledger only
+when every original site is `MATCHED` to executed Swift/QML behavior; leave
+mixed/blocked inventories intact. The deleted ledger and original C++
+oracle remain recoverable from Git and their pinned reference revision/hash.
+Keep `src/checks/visual/proof.dialogs.txt` while its unrelated dialog sites
+remain open.
 
 ## 7. Task 17 source retirement
 
@@ -436,10 +438,13 @@ sources:
   `src/checks/samplecheck_fixtures.h` (the latter is included only by the
   retiring decoder check).
 
-Do not remove any `proof.*.txt` inventory, frozen fixture, or retained
-visual baseline. Keep the production modules
+At source retirement, remove each `proof.*.txt` inventory for a retired
+check surface whose every original site is `MATCHED` to observed Swift/QML
+predicates. Keep inventories of still-active native checks and ledgers with
+any other disposition, all frozen fixtures and retained visual baselines,
+and the production modules
 `src/audio/{sampleimport,sampledsp,sampledoc,samplewav}.*` and
-`src/project/samplereg.*`; they implement behavior reused by the port.
+`src/project/samplereg.*`; these implement behavior reused by the port.
 `src/ui/voicetypeicons.*`, `src/checks/visual/chrome.cpp`, unrelated
 dialog sources, and the wider dead shell (`workspaceui*`, `mainwindow.*`)
 are not in this retirement list. No build target should be added for the

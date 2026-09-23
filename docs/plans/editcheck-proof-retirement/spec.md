@@ -164,7 +164,12 @@ deno task lsp:swift                                     # after Swift edits (AGE
 `--qt` forwards a Qt argument payload to exactly one selected harness
 (`tools/checks_options.ts:19-20`, `tools/run_checks.ts:403-406,514-529`).
 
-## 3. Deletion certificate format (canonical: proof.tst_songdocument_songraw.txt)
+## 3. Historical deletion certificate format
+
+The former canonical example, `proof.tst_songdocument_songraw.txt`, is
+recoverable at Git revision `4c52acd8c1193d27167c301002c67f18165938b8`.
+Completed ledgers are temporary evidence: once every site is `MATCHED`
+to executed Swift checks, the approved retirement policy removes them.
 
 Preamble fields, in order:
 

@@ -2,6 +2,13 @@
 
 The three shared check files `src/checks/editcheck/tst_songdocument.h`, `tst_songdocument_support.cpp`, and `tst_songdocument_support.h` were removed. Before removal, a source-only search found only `tst_songdocument_support.cpp:1` including the support header; no surviving code included the shared check header or support header. After removal, the harness search for `tst_songdocument\.h|tst_songdocument_support` over `src/**/*.cpp`, `src/**/*.h`, `src/**/*.hpp`, `src/**/*.swift`, `src/**/*.qml`, and `src/**/CMakeLists.txt` returned **no matches**. Historical excerpts in proof certificates are not code includers. LSP references to `EditCheckTest`/`SyntheticDocument` still reported previously deleted originals (for example `tst_songdocument_metadata.cpp` and `tst_songdocument_runner.cpp`); these are stale index entries, not on-disk consumers. LSP diagnostics on the three removed file paths returned OK, but cannot establish a post-deletion parse of absent files.
 
+The certificate tally below records the pre-cleanup snapshot. The five
+wholly `MATCHED` song-document ledgers (songmoves, songnotes, songranges,
+songraw, songtime) were subsequently retired under the approved policy;
+their originals remain at Git revision
+`4c52acd8c1193d27167c301002c67f18165938b8`. Mixed and active-native
+inventories were not part of that cleanup.
+
 ## Certificate and build gates
 
 Fresh `deno task proof list --area editcheck` parsed 12/12 proofs. All eleven song-document proofs (the seven originals retired by this plan plus the four pre-existing retired originals) are terminal: document 210 MATCHED + 40 RETIRED-REPRESENTATION; logic 28 + 32; metadata 108 + 17; runner 3 + 1; songmoves 138 MATCHED; songnotes 111; songranges 79; songraw 43; songtime 56; songtracks 87 + 2; timerange 192 + 1. `proof.tst_scale.txt` remains 24 GAP, not terminal; `src/checks/CMakeLists.txt:55-60` still lists `tst_scale.cpp`, `tst_scale.h`, and `porydaw_scale.cpp/.h`, and `src/checks/checkcatalog.cpp:113-115` still registers `scalecheck`. No active native or QML check was changed.

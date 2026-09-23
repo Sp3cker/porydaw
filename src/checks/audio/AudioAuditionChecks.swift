@@ -216,6 +216,9 @@ private func checkSampleAuditionSlots(_ report: CheckReport) {
     for _ in 0..<5 { if publish(-20, 65) { accepted += 1 } }
     report.expectEqual(4, accepted, cppID: id, what: "full retirement frees every slot")
     m4a_engine_all_sound_off(engine.preview)
+    let reinitialized = pdc_playback_engine_reinitialize(engine.previewHandle, 32_768) != 0
+    report.expect(reinitialized, cppID: id, message: "cold-reset audition engine reinitializes")
+    guard reinitialized else { return }
     audition.reset()
     report.expect(publish(10, 60), cppID: id, message: "cold reset retires every slot")
     engine.apply()

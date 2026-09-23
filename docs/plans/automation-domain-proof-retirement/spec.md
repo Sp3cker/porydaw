@@ -172,8 +172,14 @@ emitted by `xcmd.swift:55-88`.
 
 ## 3. Deletion certificate format
 
-Canonical shape: `src/checks/editcheck/proof.tst_songdocument_songraw.txt`
-(editcheck spec §3). Preamble fields, in order:
+The former canonical example,
+`src/checks/editcheck/proof.tst_songdocument_songraw.txt` (editcheck spec
+§3), is recoverable at Git revision
+`4c52acd8c1193d27167c301002c67f18165938b8`.
+Wholly `MATCHED` ledgers with executed Swift parity may be retired after
+completion; mixed or blocked ledgers remain.
+
+Preamble fields, in order:
 
 1. `Assertion correspondence: automation/domain/<name>.cpp`
 2. `Verification: post-deletion deno task verify --filter swiftcore

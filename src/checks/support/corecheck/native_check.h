@@ -35,6 +35,8 @@ int32_t pdc_check_compile_saved_midi(const char *projectRoot, const char *songLa
 typedef struct PdcPlaybackEngine PdcPlaybackEngine;
 
 PdcPlaybackEngine *pdc_playback_engine_create(double sampleRate);
+// Recreate the engine in place while preserving fixture-handle ownership.
+int32_t pdc_playback_engine_reinitialize(PdcPlaybackEngine *engine, double sampleRate);
 void pdc_playback_engine_destroy(PdcPlaybackEngine *engine);
 void *pdc_playback_engine_pointer(PdcPlaybackEngine *engine);
 

@@ -34,7 +34,7 @@ a named runnable Swift/QML counterpart before its source is retired.
 | 14 | Per-assertion correspondence for seven samplecheck ledgers plus sample-specific visual proof | SDD / `sdd-implementer` | Separate proof package for sample backend and editor visuals | `deno task proof check` (structure only) |
 | 15 | Swift history/viewcache parity for 70 legacy sites; split document-save and bank-merge sealing in `src/swift/core/SongHistory.swift`, and seal a clean-bank edit boundary in `src/swift/app/DocumentSession.swift` | SDD / `sdd-implementer` | Completes behavior coverage; existing workspace predicates are partial starting points only | `swiftcore` |
 | 16 | Per-assertion correspondence for the 70-site viewcache proof inventory | SDD / `sdd-implementer` | Maps every retired viewcache assertion to its named runnable Swift predicate | `deno task proof check` (structure only) |
-| 17 | Direct retirement of the exact uncompiled C++ widget/check sources in spec §7 | **Direct** (inline below) | Mechanical allowlisted deletion after parity and proof gates | `deno task proof check` (structure only) |
+| 17 | Direct retirement of the exact uncompiled C++ widget/check sources in spec §7 and their fully proved proof ledgers | **Direct** (inline below) | Mechanical allowlisted deletion after parity and proof gates | `deno task proof check` (surviving ledgers only) |
 
 ## Order and shared-file boundaries
 
@@ -49,10 +49,21 @@ task 12 depends on both tasks 10 and 11. Tasks 6–10 successively extend
 the same controller/QML surface. Task 7 and task 8 capture only scoped
 visual scenarios; the full voicegroup vanilla/dark pin waits for task 10.
 
-After task 12, tasks 13, 14, and 15 may start; serialize any edits to
-shared check/build registration files. Tasks 13 and 14 own disjoint proof
-inventories. Task 16 depends on task 15. Task 17 starts only after tasks
-13, 14, and 16, with all behavior and visual gates green.
+Tasks 13 and 14 complete only after task 12's runtime gates. Task 15 may
+start earlier once task 5's bank-service boundary and its shared
+`DocumentSession.swift` / `SessionChecks.swift` ownership have settled; it
+does not consume sample-editor or QML behavior. Task 11's headless processing
+work may likewise move earlier when its shared app/check build files are
+available, while still preceding task 10. Serialize every shared-file edit.
+Task 16 depends on task 15. Task 17 starts only after tasks 13, 14, and 16,
+with all behavior and visual gates green.
+
+Already-green headless predicates may have their individual proof sites
+reconciled early: preserve source IDs/hashes, name the executed assertion,
+and leave every uncovered site as `GAP`. This is progress within the
+inventory, not completion of tasks 13, 14, or 16. Their final acceptance
+and task 17 retirement still require all named SwiftCore, SwiftRollGated,
+and visual counterparts; a matching `cppID` alone never proves a site.
 
 Tasks 13 and 14 deliberately exceed the three-file WBS package size as
 bounded mechanical exceptions: each is one source-oracle reconciliation
@@ -66,19 +77,23 @@ files, and their shared suite dispatcher.
 
 ## Direct task 17 — legacy source retirement
 
-- **Target:** only the source files listed in spec §7. That closed list
-  includes the uncompiled samplecheck suites and their C++-only headers;
-  it excludes all proof ledgers, frozen fixtures, and production sample
-  processing/registration modules.
-- **Change:** remove exactly the allowlisted legacy C++ widget/check
-  sources. Do not add or edit build targets: these sources are already
-  excluded from the application/check builds. Do not remove
-  `proof.*.txt`, the historical browser/cache inventories, or any frozen
-  visual baseline.
+- **Target:** only the source files listed in spec §7 and proof ledgers whose
+  every original assertion site is `MATCHED` to an executed Swift/QML
+  predicate. The closed source list includes uncompiled samplecheck suites
+  and C++-only headers; it excludes frozen fixtures, visual baselines, and
+  production sample processing/registration modules.
+- **Change:** remove exactly the allowlisted legacy C++ widget/check sources
+  and the fully proved `proof.*.txt` ledgers. Keep ledgers with `GAP`,
+  `PARTIAL`, `NATIVE`, or another non-MATCHED site; never reclassify a site
+  merely to make its ledger deletable. Do not edit build targets: the
+  retired sources are already excluded from application/check builds.
+  Keep frozen fixtures and visual baselines.
 - **Acceptance:** tasks 1–15 behavior and visual gates are green; tasks 13,
-  14, and 16 leave no unjustified GAP and every retired assertion has a
-  named runnable predicate; `deno task proof check` succeeds as a ledger
-  structure check only. Review the deletion diff against spec §7; a
+  14, and 16 have reconciled every source site against a runnable predicate.
+  Confirm each ledger selected for deletion was wholly `MATCHED` and its
+  Swift/QML execution succeeded before deletion. `deno task proof check`
+  succeeds on the remaining ledgers (structure only). Review the source
+  deletion diff against spec §7 and the exact selected ledger list; a
   structural proof-check pass is not runtime parity evidence.
 
 ## Global constraints
@@ -138,6 +153,15 @@ files, and their shared suite dispatcher.
   `Task-specific constraints`. Keep global policy/checkpoint rules here,
   not repeated in every brief.
 
+- **Proof retirement:** `proof.*.txt` files are temporary correspondence
+  workpapers, not permanent checks. Retire a ledger once every site is
+  `MATCHED` to executed Swift/QML behavior and its historical oracle is
+  recoverable from the pinned Git revision/hash. Keep any mixed, blocked,
+  unproved, or still-active native-implementation inventory. The underlying
+  Swift checks, fixtures, and visual baselines remain. Before deleting a
+  proof file, inspect its exact tally and relevant runtime result; the
+  structural `deno task proof check` cannot establish semantic parity.
+
 ## Checkpoints
 
 - **M0 — existing song baseline** (before task 2): `swiftcore/SongList::serviceFeed`
@@ -150,6 +174,7 @@ files, and their shared suite dispatcher.
   both 2x visual lanes are green. Task 10 alone is not the complete sample
   behavior gate.
 - **M3 — proof and retirement** (after task 17): task 15 viewcache
-  predicates and task 13, 14, and 16 correspondence packages are green,
-  source deletion matches the closed list, and the structural proof check
-  succeeds without deleting any inventory or fixture.
+  predicates and task 13, 14, and 16 correspondence packages are green;
+  source deletion matches the closed list, eligible wholly proved ledgers
+  have been retired, and `deno task proof check` succeeds on survivors without
+  deleting any fixture or visual baseline.

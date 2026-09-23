@@ -2,7 +2,7 @@
 
 Reconcile the seven samplecheck assertion inventories and the sample-editor slice of the historical dialog visual inventory against the runnable Swift/QML behavior delivered by tasks 10–12. Task 11 owns processing predicates; task 12 owns project/editor lifecycle predicates; task 10 owns the production QML editor and its frozen visual pins. Task 17 consumes these correspondence records before retiring the allowlisted uncompiled C++ sources. Task 13 is the separate voicegroupsave/browser proof package and is not part of this write set.
 
-The seven samplecheck inventories currently contain 493 sites (418 GAP, 75 NATIVE): 229 processing sites across 30 methods and 264 lifecycle sites across 32 methods. They are historical source oracles, not an executable C++ suite: do not create, enable, or invoke a `samplecheck` target. Map only `src/checks/visual/proof.dialogs.txt` sites A010–A015; its unrelated dialog sites remain outside this task.
+The seven samplecheck inventories contain 493 sites. The early headless audition tranche has already matched 14 `proof.analysis.txt` sites, leaving 408 GAP and 71 NATIVE across the family. They are historical source oracles, not an executable C++ suite: do not create, enable, or invoke a `samplecheck` target. Map only `src/checks/visual/proof.dialogs.txt` sites A010–A015; its unrelated dialog sites remain outside this task.
 
 # Exact write set
 
@@ -19,7 +19,7 @@ This is a closed write set. Do not edit source, check implementation, build regi
 
 # Prerequisites
 
-Tasks 10, 11, and 12 must have delivered their contracts and already passed their named SwiftCore, SwiftRollGated, and visual checks; task 14 consumes those results rather than rerunning them. Consume the exact sample-processing method predicates and `cppID` contract in task 11; the exact sample lifecycle method predicates and `cppID` contract in task 12; and task 10's production QML editor visual comparisons for `sample-editor/dialog-vanilla` and `sample-editor/dialog-darkneutralhigh`. Task 10 must explicitly assert in the visual slots that `preparedSampleWav` imports through task 11's processing path before capture; A010/A013 mapping depends on that assertion passing. Task 10's visual command requires a native desktop and connected 2x display. Tasks 13 and 14 are disjoint proof packages after task 12. Task 15 owns the history/viewcache behavior predicates; task 16 proof depends on task 15. Task 17 waits for tasks 13, 14, and 16 and all behavior/visual gates.
+Final task acceptance requires tasks 10–12's named SwiftCore, SwiftRollGated, and visual checks to have passed; this task consumes their results rather than rerunning them. Earlier headless site-specific mapping is allowed only when its exact SwiftCore predicate has already passed; preserve `GAP` for every uncovered site and do not claim task completion. Task 10's production sample-editor visual slots must explicitly assert that the prepared WAV imports through task 11's processing path before capture; A010/A013 depend on that assertion. The visual run requires a native desktop and connected 2x display. Task 17 waits for all final correspondence and behavior gates.
 
 # Interface contract
 
@@ -27,7 +27,7 @@ Tasks 10, 11, and 12 must have delivered their contracts and already passed thei
 
   | Inventory | Original source | Reference revision | Original SHA-256 | Sites / current tally |
   |---|---|---|---|---|
-  | `proof.analysis.txt` | `src/checks/samplecheck/analysis.cpp` | `a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea` | `da34a411ca0833f4ad3ed01404c49b8e8eee735abc4a5b49b321088e08fbb582` | 35 / 31 GAP, 4 NATIVE |
+  | `proof.analysis.txt` | `src/checks/samplecheck/analysis.cpp` | `a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea` | `da34a411ca0833f4ad3ed01404c49b8e8eee735abc4a5b49b321088e08fbb582` | 35 / 21 GAP, 14 MATCHED (audition A022–A035) |
   | `proof.decoder.txt` | `src/checks/samplecheck/decoder.cpp` | `5af4355e8fc1337f38da60c545da4af246160bcf` | `567e1efd7c3739345c23cadd4fd8ebbc5b9c422c74e6fd252454472f5f1e0d03` | 93 / 93 GAP |
   | `proof.dsp.txt` | `src/checks/samplecheck/dsp.cpp` | `1f9f8a5faa78069bf86c0ed9997c04c07f1f37d7` | `54d949e10083ce459182fa650cae3eb9d601769ab5fa6a052286cfe0924b6b7d` | 67 / 61 GAP, 6 NATIVE |
   | `proof.editor.txt` | `src/checks/samplecheck/editor.cpp` | `a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea` | `1ae310e3a37396448c692a91dbd51cac6ed6681ebf0b55e352ee2c488545f99b` | 130 / 80 GAP, 50 NATIVE |
@@ -63,7 +63,7 @@ Tasks 10, 11, and 12 must have delivered their contracts and already passed thei
 
 # Implementation steps
 
-1. Confirm tasks 10–12's exact check registrations and already-green results before mapping. Use task 12's fixed split of 18 SwiftCore predicates and 14 SwiftRollGated predicates; specifically, `engineLoop` is SwiftCore while `pipelinePrefillCollision` and `pipelineRateCommit` are SwiftRollGated. Verify the remaining method assignments against task 12's corrected brief and landed results, and consume passed evidence without rerunning predecessor commands.
+1. For final reconciliation, confirm tasks 10–12's exact check registrations and already-green results. The early `proof.analysis.txt` A022–A035 mapping uses the existing `runAudioAuditionChecks` predicate and its verified real-engine cold reset; retain it only while its source hash and behavior remain valid. Use task 12's fixed split of 18 SwiftCore and 14 SwiftRollGated predicates (`engineLoop` Core, `pipelinePrefillCollision` / `pipelineRateCommit` RollGated); verify other method assignments against landed results.
 2. For each of the 493 existing samplecheck `A###` entries, compare its original expression and source context with the named predicate above. Update that site only with a truthful disposition and mapping/evidence. Preserve all site identities, order, reference metadata, hashes, source context, branch and row constraints, and optional-corpus semantics. Replace stale native-runner verification/ownership claims with the real Swift check ownership and observed results.
 3. Map only visual/dialogs A010–A015 to the matching task 10 visual predicates and their exact pins. Keep the other 21 visual dialog entries unchanged; update only the aggregate summary needed to reflect the changed six site dispositions.
 4. Audit that all 493 samplecheck records and all six targeted visual records remain represented, mappings name actually registered predicates/fixtures, counts reconcile, and all eight proof files remain present. If any behavior site is not covered, preserve the truthful GAP and report its exact ledger/site and owning predecessor; do not waive it to satisfy the tally.
@@ -81,5 +81,5 @@ Tasks 10, 11, and 12 must have delivered their contracts and already passed thei
 # Task-specific constraints
 
 - Read-only source oracles are the original `src/checks/samplecheck/*.cpp`, `src/checks/samplecheck/fixtures.*`, task 10 QML/visual sources, and the task 11/12 check implementations. Do not add tests or test registrations in this correspondence-only task.
-- Keep every `proof.*.txt` inventory and frozen fixture/baseline after reconciliation. No source retirement belongs here; task 17 consumes the completed evidence separately.
+- Keep all `proof.*.txt` inventories and frozen fixtures/baselines during this correspondence task; no source retirement belongs here. Task 17 consumes the completed evidence, then deletes only ledgers with every site `MATCHED` to executed Swift/QML behavior and retains all others.
 - Task 12's lane split is fixed by its corrected brief: 18 named SwiftCore predicates and 14 named SwiftRollGated predicates; `engineLoop` is SwiftCore, while `pipelinePrefillCollision` and `pipelineRateCommit` are SwiftRollGated. Confirm all methods against landed registrations and prerequisite results; if they disagree, report the exact predicate and owner rather than reassigning a lane or rerunning task 12.

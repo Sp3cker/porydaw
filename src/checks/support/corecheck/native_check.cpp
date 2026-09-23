@@ -84,6 +84,16 @@ struct PdcPlaybackEngine {
             m4a_engine_set_voicegroup(&engine, bank.voices);
     }
 
+    bool reinitialize(double sampleRate)
+    {
+        if (initialized)
+            m4a_engine_destroy(&engine);
+        initialized = m4a_engine_init(&engine, float(sampleRate));
+        if (initialized)
+            m4a_engine_set_voicegroup(&engine, bank.voices);
+        return initialized;
+    }
+
     ~PdcPlaybackEngine()
     {
         if (initialized)
@@ -194,6 +204,11 @@ extern "C" PdcPlaybackEngine *pdc_playback_engine_create(double sampleRate)
     if (!engine->initialized)
         return nullptr;
     return engine.release();
+}
+
+extern "C" int32_t pdc_playback_engine_reinitialize(PdcPlaybackEngine *engine, double sampleRate)
+{
+    return engine && engine->reinitialize(sampleRate);
 }
 
 extern "C" void pdc_playback_engine_destroy(PdcPlaybackEngine *engine)
