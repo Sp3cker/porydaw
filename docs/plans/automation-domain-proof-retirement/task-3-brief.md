@@ -98,8 +98,8 @@ Behavior (cppID `"automation-domain/AutomationDomainTest::<slot>"`):
 
 ## Acceptance predicate
 
-- NAMED CHECKS (controller): `deno task verify --filter swiftcore --qt
-  projectSession --verbose` PASS with the new cppIds
+- NAMED CHECKS (controller): `deno task verify --filter swiftcore --verbose
+  --qt projectSession` PASS with the new cppIds
   `automation-domain/AutomationDomainTest::xcmdCanonicalEdits` and
   `::xcmdSweepPreservesNotes` present in the PASS lines; then `deno task
   lsp:swift`. Implementer: `deno task proof show automation/domain/

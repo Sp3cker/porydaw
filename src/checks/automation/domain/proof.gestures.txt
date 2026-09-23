@@ -1,4 +1,5 @@
 Assertion correspondence: automation/domain/gestures.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 harnesses selected, 23 skipped (build 10.46s; run 9.70s).
 
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/domain/gestures.cpp
@@ -6,27 +7,14 @@ Original SHA-256: edb8678ec7f2c28b8ad7bac746f6b858670708add290c079be186657d069e3
 Swift counterpart: src/checks/automation/domain/gestures.swift
 Swift SHA-256: ed769eeedca873b5a9d77d5b20399840f5f4357643468157e10c7520bd6c2f31
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Covered native implementation: src/ui/editordrawer/nodelane/nodelane.{h,cpp} :: NodeLane/NodeLaneEdit; src/ui/editordrawer/nodelane/gesture.h :: PointDragGesture/SweepGesture; src/ui/editordrawer/nodelane/pencilgesture.h :: AutomationPencilGesture.
+Native engine status: Legacy C++ engine sources remain on disk but are not compiled into current CMake targets; no active native bridge or live native run is claimed. The engine reachability audit is recorded separately by Task 7.
 
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+Retirement: 67 original assertion sites, 66 MATCHED and 1 RETIRED-REPRESENTATION; deleted C++ check recoverable from Reference revision and Original SHA-256. The constructor-injected empty-lane lead-in at A052 has no public Swift ingress; its held-span completion behavior survives through the production Swift pencil transaction.
 
-Verification evidence
-deno task verify --filter swiftcore --filter clickcheck --verbose: PASS 2/2,
-including projectSession and every paired function in runAutomationPageChecks.
-The core gesture seam functions also ran through eventEdits. Root will pin
-the final whole-tree evidence and shared-source hashes after combined review.
+Fixture and execution: Five original slots cover sweep stepping and ramp finish, trailing held-value restoration, Pan neutral snap, node drag and phantom outcomes, and point-range/pencil replacements. Inline Swift fixtures exercise a 24-tick division lattice, point and held-span replacements, a production empty Modulation lane with engine-default lead-in 0, and a past-last-point lane with a real held value 20. The source-pinned inventory below preserves the original loops, fixture values, and assertion order.
+History caveat: Swift exercises document undo/redo through public history APIs and asserts restored observable state; no test-only history accessors or C++ undo-stack index correspondence is claimed.
+Registered run path: src/checks/automation/AutomationPageChecks.swift:361-365 :: runAutomationPageChecks → runProjectSessionSuite → projectSession (swiftcore suite 10 via pdcSuiteRun); gesture core seams also run in eventEdits (suite 6). The Swift counterpart is compiled in src/checks/CMakeLists.txt :: swift_core_check.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -485,52 +473,53 @@ Original expression:
   QVERIFY(hasPoint(restored.points[1], 48, 60))
 
 A048 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:221
-Disposition: PARTIAL
-Mapping/reason: Swift's empty-lane pencil starts with the Modulation default 0, not the original explicitly injected lead-in 20. Its start guard covers a related path, but does not prove the original arbitrary-lead-in constructor succeeds.
+Disposition: MATCHED
+Mapping/reason: src/checks/automation/domain/gestures.swift:623-631 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID; the empty-lane AutomationPencilTransaction guard reports failure and returns if start fails (same accepted guard pattern as A053). Start success does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
 Swift counterpart expression:
   report.fail(drawerAutomationPointRangeID, "the pencil stroke did not start on an empty lane")
 Original expression:
   QVERIFY(emptyLaneGesture.has_value())
 
 A049 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:223
-Disposition: PARTIAL
-Mapping/reason: leadInCompletion checks a direct held-span replacement with lead-in 20; the original asserts the completion of an empty-lane pencil gesture whose constructor received lead-in 20. Swift's actual empty-lane pencil uses default 0.
+Disposition: MATCHED
+Mapping/reason: src/checks/automation/domain/gestures.swift:637-638 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts !stroke.completion().unchanged on the production empty-lane pencil. Whether completion changed does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0.
 Swift counterpart expression:
-  report.expect(!leadInCompletion.unchanged, cppID: drawerAutomationPointRangeID,
-                    message: "the original implicit lead-in replacement changes the lane")
+  report.expect(!stroke.completion().unchanged, cppID: drawerAutomationPointRangeID,
+                message: "an empty lane's first stroke is a change")
 Original expression:
   QVERIFY(!emptyCompletion.unchanged)
 
 A050 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:224
-Disposition: PARTIAL
-Mapping/reason: Swift's held-span primitive produces two points for a supplied lead-in 20, but this does not prove the original two-point result through the empty-lane pencil gesture.
+Disposition: MATCHED
+Mapping/reason: src/checks/automation/domain/gestures.swift:632-634 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing exactly two ordered points. Point count does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
 Swift counterpart expression:
-  report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
-                          AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the original implicit lead-in is restored at the two-point span end")
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
+                     cppID: drawerAutomationPointRangeID,
+                     what: "the stroke writes its point and restores the lane's held value")
 Original expression:
   QCOMPARE(emptyCompletion.points.size(), std::size_t{2})
 
 A051 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:225
-Disposition: PARTIAL
-Mapping/reason: The first point matches in the related held-span result, but Swift has not checked this predicate for an empty-lane pencil gesture with the original explicit lead-in 20.
+Disposition: MATCHED
+Mapping/reason: src/checks/automation/domain/gestures.swift:632-634 :: drawerAutomationPointRangeAndPencilReplacements under drawerAutomationPointRangeID asserts the exact production pencil completion array [24:80, 48:0], establishing that its first point is 24:80. That first point does not read the original constructor-injected lead-in 20; the production lane uses its engine-default lead-in 0 (exact-array rule, spec §2.1).
 Swift counterpart expression:
-  report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
-                          AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the original implicit lead-in is restored at the two-point span end")
+  report.expectEqual(["24:80", "48:0"], emptyLane.laneValues(stroke.completion().points),
+                     cppID: drawerAutomationPointRangeID,
+                     what: "the stroke writes its point and restores the lane's held value")
 Original expression:
   QVERIFY(hasPoint(emptyCompletion.points[0], 24, 80))
 
 A052 | AutomationDomainTest::pointRangeAndPencilReplacements | src/checks/automation/domain/gestures.cpp:226
-Disposition: PARTIAL
-Mapping/reason: The held-span primitive restores 20 at tick 48, while the production empty-lane pencil restores its Modulation default 0. The original empty-lane pencil's explicit 20 lead-in has no exact Swift check.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: No public Swift ingress exists for the arbitrary NodePoint{0,20} lead-in injected by C++ AutomationPencilGesture::start at gestures.cpp:219-220 into an empty lane: AutomationPencilTransaction.init?(facts:firstSample:firstCell:clockTicks:) (AutomationDrawingTransactions.swift:196-204) takes no lead-in argument; AutomationFrozenFacts.freeze(includingLeadIn:) (AutomationTransactions.swift:182-190) reads snapshot.leadInValue, derived from metadata.defaultValue (AutomationLaneProjection.swift:162-165). Inventing empty-lane metadata with defaultValue 20 is synthetic-only and prohibited (spec §2.1). The surviving 48:20 held-span completion behavior is asserted via production AutomationPencilTransaction.completion() -> AutomationLaneReplacement.heldSpan (AutomationDrawingTransactions.swift:395-399) by gestures.swift:652-654 on a real past-last lane, and gestures.swift:540-547 asserts the held-span freeze [24:80,48:20] directly under drawerAutomationPointRangeID. This site's injected empty-lane representation, not its held-span behavior, is retired.
 Swift counterpart expression:
+  report.expectEqual(["24:80", "48:20"], pastLast.laneValues(pastLastStroke.completion().points),
+                     cppID: drawerAutomationPointRangeID,
+                     what: "a stroke past the last point re-anchors that point's value")
   report.expectEqual([AutomationLanePoint(tick: 24, value: 80),
-                          AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
-                         cppID: drawerAutomationPointRangeID,
-                         what: "the original implicit lead-in is restored at the two-point span end")
+                      AutomationLanePoint(tick: 48, value: 20)], leadInCompletion.points,
+                     cppID: drawerAutomationPointRangeID,
+                     what: "the original implicit lead-in is restored at the two-point span end")
 Original expression:
   QVERIFY(hasPoint(emptyCompletion.points[1], 48, 20))
 

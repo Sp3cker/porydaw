@@ -158,6 +158,7 @@ if(APPLE)
         automation/domain/tst_automationdomain.swift
         automation/domain/gestures.swift
         automation/domain/xcmd.swift
+        automation/domain/xcmdRanges.swift
         automation/presentation/painting.swift
         automation/presentation/tst_automationpresentation.swift
         automation/automationcanvaslayout.swift

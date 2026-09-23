@@ -98,13 +98,15 @@ Behavior (cppIDs per slot; fixture values spec §5.3 rows 3, 5-7):
 
 1. Create `xcmdRanges.swift` with fixture + entry + four sections; add
    the TimeChecks wiring line and the CMake source line.
-2. On A050/A054 order mismatch stop and report the §5.3 equal-tick
-   finding with the observed chain.
+2. On A050/A054 order mismatch, report the §5.3 equal-tick finding
+   with the observed chain. If the test reproduces the original scenario
+   and the gap is in production, use the scoped source correction below;
+   never weaken or relabel the expectation.
 
 ## Acceptance predicate
 
-- NAMED CHECKS (controller): `deno task verify --filter swiftcore --qt
-  timeEdits --verbose` PASS with the four new cppIds present in the PASS
+- NAMED CHECKS (controller): `deno task verify --filter swiftcore --verbose
+  --qt timeEdits` PASS with the four new cppIds present in the PASS
   lines (this also exercises the CMake addition — a missing source line
   fails the build); then `deno task lsp:swift`. Implementer: `deno task
   proof show automation/domain/xcmd.cpp` still parses with `GAP 62`.
@@ -120,3 +122,33 @@ Behavior (cppIDs per slot; fixture values spec §5.3 rows 3, 5-7):
 - The ccChain helper admits controllers 7, 10 and the three Xcmd
   controllers only (`xcmd.cpp:57-73` contract) — no other CC traffic
   exists in these fixtures.
+
+## Scoped source correction discovered during execution (Task 5a)
+
+The first timeEdits run passed A049-A052 and A056 but failed A053-A055:
+the rightward move returned false; the unchanged volume pair remained at
+tick 96, rather than following the length pair at tick 192. This fixture
+matches `xcmd.cpp:317-365`. Swift `TimeEditing.moveRange` passed every
+XCMD payload to `Xcmd.reconcile`, whose destination-epoch protection
+correctly rejects that raw-byte relocation. Native
+`SongDocument::moveRange` instead projects known descriptor points and
+uses `xcmd::rewritePoints` for their logical move
+(`songdocument_range.cpp:251-304`), leaving opaque relocations under
+`reconcileRaw`. No relaxation of `Xcmd.reconcile` is valid.
+
+Scoped write set: `src/swift/core/TimeEditing.swift` plus one
+consumer-visible mixed-controller regression in Task 5's
+`xcmdRanges.swift`. In `moveRange`'s `materialize` pass, classify
+projected known payloads into per-chunk `Xcmd.PointWrite` and removal
+identities, apply one `Xcmd.rewrite` patch atomically alongside
+ordinary event actions; leave raw/opaque actions in `Xcmd.reconcile`.
+Reject overlapping patches rather than double-removing a byte.
+Native `moveRange` emits logical XCMD patch bytes before moved raw CC
+bytes (`songdocument_range.cpp:324-336`); a supplemental fixture moves
+volume and CC7 onto an occupied length tick, asserting their exact
+same-tick order and undo bytes. Do not add a production hook or alter
+the A001-A062 assertions. Acceptance: the corrected timeEdits command
+above passes A049-A056 and the mixed-controller ordering regression,
+projectSession and full swiftcore pass, then `deno task lsp:swift`;
+review source byte ordering, opaque preservation, and mixed-move
+atomicity before C1.

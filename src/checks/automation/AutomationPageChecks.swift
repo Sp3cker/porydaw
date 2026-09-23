@@ -364,6 +364,7 @@ internal func runAutomationPageChecks(_ report: CheckReport, session: DocumentSe
     drawerAutomationNodeDragAndPhantomOutcomes(report, suite: session, service: service)
     drawerAutomationPointRangeAndPencilReplacements(report, suite: session, service: service)
     drawerAutomationXcmdParity(report, suite: session, service: service)
+    drawerAutomationXcmdLaneEdits(report)
     drawerAutomationTapTempoCadenceAndCommit(report, suite: session, service: service)
     drawerAutomationQtModifierMapping(report, suite: session, service: service)
     drawerAutomationRestoredInteractionContracts(report, suite: session, service: service)

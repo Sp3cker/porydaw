@@ -261,7 +261,8 @@ extension SongDocument {
         }
         guard planCollisionActions(spans: spans, editedIDs: editedIDs,
                                    reference: before, actions: &actions),
-              var mutation = materialize(actions: actions, from: before) else { return false }
+              var mutation = materialize(actions: actions, from: before,
+                                         logicalLaneMoves: true) else { return false }
         normalizeMovedLaneDestinations(points: points, delta: delta,
                                        reference: before.file, mutation: &mutation)
         let movingTempo = Set(tempo.map(\.tick))
@@ -722,7 +723,7 @@ private extension SongDocument {
     }
 
     func materialize(actions: TimeActions, from state: SongState,
-                     extra: [[MidiEvent]]? = nil) -> DocumentMutation? {
+                     extra: [[MidiEvent]]? = nil, logicalLaneMoves: Bool = false) -> DocumentMutation? {
         var result = DocumentMutation(state)
         let file = state.file
         let map = file.engineTracks()
@@ -730,14 +731,21 @@ private extension SongDocument {
             let originals = file.chunks[chunk].events
             let stream = streamIndex(for: chunk, map: map)
             let traffic = Xcmd.traffic(in: file.chunks[chunk], stream: stream)
-            let consumed = Set(Xcmd.project(traffic).consumed.compactMap {
+            let projection = Xcmd.project(traffic)
+            let consumed = Set(projection.consumed.compactMap {
                 $0 <= UInt64(Int.max) ? Int($0) : nil
             })
+            let knownByIndex = logicalLaneMoves
+                ? Dictionary(uniqueKeysWithValues: projection.points.map { (Int($0.index), $0) })
+                : [:]
+            var knownRemovals: [UInt64] = []
+            var knownWrites: [Xcmd.PointWrite] = []
             var removeIDs: [UInt64] = []
             var moves: [Xcmd.Relocation] = []
             var copies: [Xcmd.Relocation] = []
             var removals = Set<Int>()
             var insertions: [MidiEvent] = []
+            var directInsertions: [MidiEvent] = []
             for index in originals.indices {
                 switch actions.values[chunk][index] {
                 case .keep: break
@@ -745,7 +753,12 @@ private extension SongDocument {
                     if consumed.contains(index) { removeIDs.append(UInt64(index)) }
                     else { removals.insert(index) }
                 case let .move(tick, preserve):
-                    if consumed.contains(index) {
+                    if let point = knownByIndex[index] {
+                        knownRemovals.append(UInt64(index))
+                        knownWrites.append(Xcmd.PointWrite(tick: tick, lane: point.lane,
+                                                           value: Int(point.value), stream: point.stream,
+                                                           channel: originals[index].channel))
+                    } else if consumed.contains(index) {
                         moves.append(Xcmd.Relocation(index: UInt64(index), tick: tick,
                                                      channel: originals[index].channel))
                     } else {
@@ -753,7 +766,8 @@ private extension SongDocument {
                         var event = originals[index]
                         event.tick = tick
                         if event.isNoteOn && !preserve { event.noteID = nil }
-                        insertions.append(event)
+                        if logicalLaneMoves { directInsertions.append(event) }
+                        else { insertions.append(event) }
                     }
                 case let .copy(tick):
                     if consumed.contains(index) {
@@ -763,15 +777,32 @@ private extension SongDocument {
                         var event = originals[index]
                         event.tick = tick
                         if event.isNoteOn { event.noteID = nil }
-                        insertions.append(event)
+                        if logicalLaneMoves { directInsertions.append(event) }
+                        else { insertions.append(event) }
                     }
                 }
             }
-            if !removeIDs.isEmpty || !moves.isEmpty || !copies.isEmpty {
-                guard let patch = Xcmd.reconcile(traffic, removing: removeIDs,
-                                                 moving: moves, copying: copies) else { return nil }
+            if !knownRemovals.isEmpty {
+                guard let patch = Xcmd.rewrite(traffic, removing: knownRemovals,
+                                               writing: knownWrites) else { return nil }
                 for identity in patch.removeEvents {
                     guard identity <= UInt64(Int.max) else { return nil }
+                    removals.insert(Int(identity))
+                }
+                for emission in patch.inserts {
+                    guard let event = emittedEvent(emission, originals: originals) else { return nil }
+                    insertions.append(event)
+                }
+            }
+            // Native range moves emit logical lane pairs before shifted raw events.
+            insertions.append(contentsOf: directInsertions)
+            if !removeIDs.isEmpty || !moves.isEmpty || !copies.isEmpty {
+                guard let patch = Xcmd.reconcile(traffic, removing: removeIDs,
+                                                 moving: moves, copying: copies),
+                      patch.removeEvents.allSatisfy({
+                          $0 <= UInt64(Int.max) && !removals.contains(Int($0))
+                      }) else { return nil }
+                for identity in patch.removeEvents {
                     removals.insert(Int(identity))
                 }
                 for emission in patch.inserts {

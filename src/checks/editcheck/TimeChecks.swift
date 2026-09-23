@@ -14,6 +14,7 @@ func runTimeEditsSuite(_ report: CheckReport) {
     insertionAndBoundaries(report)
     duplicationAndGlobals(report)
     coreTimeXcmdTimeTraffic(report)
+    coreTimeXcmdRangeEdits(report)
     runClipboardEditingSuite(report)
     runClipboardCodecSuite(report)
 }

@@ -76,8 +76,8 @@ literal, no invention):
 
 ## Acceptance predicate
 
-- NAMED CHECKS (controller): `deno task verify --filter swiftcore --qt
-  projectSession --verbose` PASS with cppId
+- NAMED CHECKS (controller): `deno task verify --filter swiftcore --verbose
+  --qt projectSession` PASS with cppId
   `automation-domain/AutomationDomainTest::
   xcmdOccurrencesAndOpaqueProtection` present in the PASS lines; then
   `deno task lsp:swift`. Implementer: `deno task proof show

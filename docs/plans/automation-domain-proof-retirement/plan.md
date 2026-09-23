@@ -49,7 +49,8 @@ one of this plan's files, re-read before editing and do not revert them.
 | 3 | xcmd lane CRUD: fixture + helpers + `xcmdCanonicalEdits` (A001-A009) + `xcmdSweepPreservesNotes` (A040-A042) | task-3-brief.md | `xcmd.swift` (append), `AutomationPageChecks.swift` (1 line) | — | `--qt projectSession` |
 | 4 | xcmd opaque epochs: `xcmdOccurrencesAndOpaqueProtection` (A010-A028) | task-4-brief.md | `xcmd.swift` (append, inside Task 3's entry function) | 3 + C1 | `--qt projectSession` |
 | 5 | xcmd range family: new `xcmdRanges.swift` — cuts (A029-A039), removeOnly (A043-A048), rangeMoves (A049-A056), expansion (A057-A062) | task-5-brief.md | new `xcmdRanges.swift`, `TimeChecks.swift` (1 line), `src/checks/CMakeLists.txt` (1 line) | editcheck plan complete | `--qt timeEdits` |
-| 6 | xcmd certificate: reclassify all 62 GAP→MATCHED, preamble, delete | task-6-brief.md | `proof.xcmd.txt`, delete `xcmd.cpp` | 3, 4, 5 + C2 | full swiftcore |
+| 5a | Swift logical XCMD range-move source correction (A053-A055 observed failure + mixed-controller tie order) | task-5-brief.md §Scoped source correction | `src/swift/core/TimeEditing.swift`, supplementary `xcmdRanges.swift` predicate | 5 test landed | `--qt timeEdits`, full swiftcore |
+| 6 | xcmd certificate: reclassify all 62 GAP→MATCHED, preamble, delete | task-6-brief.md | `proof.xcmd.txt`, delete `xcmd.cpp` | 3, 4, 5, 5a + C2 | full swiftcore |
 | 7 | Shared header deletion + engine reachability gate (spec §7-§8) | task-7-brief.md | delete `tst_automationdomain.h`, new `engine-reachability.md` (plan folder) | 1 + 6 | full `deno task verify --verbose` |
 
 ## Parallel waves and file-reuse checkpoints
@@ -62,8 +63,9 @@ First parallel wave (disjoint write sets): **1, 2, 3, 5** — proofs/
 Checkpoint milestones (authorize later reuse of an accepted writer's
 files; the execution loop owns staging/diff packaging):
 
-- **C1 — first certificates** (after 1, 2, 3, 5 accepted): gestures and
-  tst_automationdomain retired; xcmd lane-CRUD and range families landed.
+- **C1 — first certificates** (after 1, 2, 3, 5, 5a accepted): gestures and
+  tst_automationdomain retired; xcmd lane-CRUD and range families landed,
+  with the focused Swift logical XCMD move correction verified.
   Commits Task 3's `xcmd.swift` state → authorizes Task 4's append into
   it; freezes Task 5's counterpart files at the SHAs Task 6 will cite.
 - **C2 — xcmd predicates complete** (after 4 accepted): commits the final
@@ -97,8 +99,10 @@ files; the execution loop owns staging/diff packaging):
 - Never relabel a site without an executing Swift predicate under the
   original observable or the named no-ingress proof (spec §2.1/§7). The
   honest weaker label wins; a site stays GAP and the file stays unretired
-  rather than being forced green. Report — never code around — the two
-  §5.3 behavioral risks if they fire.
+  rather than being forced green. Report §5.3 behavioral risks before any
+  source correction; do not modify checks to bypass a failing contract.
+  Task 5a is the narrow root-cause repair for the observed A053-A055
+  failure, not a relaxation of opaque-epoch safety.
 - `xcmd.swift` edits are append-only (line anchors in `proof.xcmd.txt`,
   `automationgesturecheck/proof.contract.txt` S015-S019,
   `proof.crosslane.txt` S006-S008). `gestures.swift` and

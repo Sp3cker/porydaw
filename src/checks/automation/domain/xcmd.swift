@@ -88,3 +88,174 @@ func coreTimeXcmdTimeTraffic(_ report: CheckReport) {
         cppID: "automation-domain/AutomationDomainTest::xcmdExpansionPaste",
         message: "track expansion builds descriptor traffic through the canonical planner")
 }
+
+@MainActor
+private struct XcmdDomainFixture {
+    let document = SongDocument(file: MidiFile(division: 24, chunks: [
+        MidiChunk(events: [.channel(status: 0xC0, data0: 0)], endTick: 9216),
+    ]))
+
+    struct Snapshot {
+        let bytes: [UInt8]
+        let revision: UInt64
+        let identity: DocumentIdentity
+    }
+
+    var snapshot: Snapshot {
+        Snapshot(bytes: try! document.captureSave().bytes, revision: document.revision,
+                 identity: document.history.currentIdentity)
+    }
+
+    func oneEdit(_ before: Snapshot) -> Bool {
+        document.revision == before.revision + 1 && document.history.currentIdentity != before.identity
+    }
+
+    func setLane(_ controller: UInt8, _ points: [(Tick, Int)]) {
+        document.writeLane(track: 0, lane: .controller(controller), from: 0,
+                           through: TimeDefaults.noTick,
+                           points: points.map { LaneWrite(tick: $0.0, value: $0.1) })
+    }
+
+    func insertCc(_ tick: Tick, _ controller: UInt8, _ value: UInt8) {
+        document.insertRawEvent(chunk: 0, event: .channel(tick: tick, status: 0xB0,
+                                                         data0: controller, data1: value))
+    }
+
+    func clearXcmd() {
+        setLane(Xcmd.echoVolumeLane, [])
+        setLane(Xcmd.echoLengthLane, [])
+    }
+
+    func seedBaseline() {
+        setLane(10, [(0, 80), (384, 110)])
+        setLane(7, [(0, 64), (288, 48)])
+    }
+
+    func points(_ controller: UInt8) -> [String] {
+        document.lanePoints(track: 0, lane: .controller(controller))
+            .map { "\($0.tick):\($0.value)" }
+    }
+
+    func xcmdBytes(at tick: Tick) -> [(UInt8, UInt8)] {
+        document.rawChunks[0].events.compactMap { event in
+            guard event.tick == tick,
+                  case let .channel(status, controller, value) = event.payload,
+                  status >> 4 == 0xB,
+                  controller == Xcmd.selectorController ||
+                    controller == Xcmd.payloadController ||
+                    controller == Xcmd.alternatePayloadController else { return nil }
+            return (controller, value)
+        }
+    }
+
+    func xcmdBytes() -> [(UInt8, UInt8)] {
+        document.rawChunks[0].events.compactMap { event in
+            guard case let .channel(status, controller, value) = event.payload,
+                  status >> 4 == 0xB,
+                  controller == Xcmd.selectorController ||
+                    controller == Xcmd.payloadController ||
+                    controller == Xcmd.alternatePayloadController else { return nil }
+            return (controller, value)
+        }
+    }
+
+    func ccChain() -> [(Tick, UInt8, UInt8)] {
+        document.rawChunks[0].events.compactMap { event in
+            guard case let .channel(status, controller, value) = event.payload,
+                  status >> 4 == 0xB,
+                  controller == 7 || controller == 10 ||
+                    controller == Xcmd.selectorController ||
+                    controller == Xcmd.payloadController ||
+                    controller == Xcmd.alternatePayloadController else { return nil }
+            return (event.tick, controller, value)
+        }
+    }
+
+    func notes() -> [(Tick, UInt8, UInt8, UInt8)] {
+        document.notes(in: 0).flatMap { note -> [(Tick, UInt8, UInt8, UInt8)] in
+            let events = document.rawChunks[note.chunk].events
+            return [note.onIndex, note.endIndex].compactMap { index in
+                guard let index,
+                      case let .channel(status, key, velocity) = events[index].payload else { return nil }
+                return (events[index].tick, status & 0xF0, key, velocity)
+            }
+        }
+    }
+
+    func undoToRoot() -> Bool {
+        var undid = false
+        while document.history.undoDocument() { undid = true }
+        return undid && !document.history.canUndo
+    }
+}
+
+@MainActor
+func drawerAutomationXcmdLaneEdits(_ report: CheckReport) {
+    let canonicalID = "automation-domain/AutomationDomainTest::xcmdCanonicalEdits"
+    let canonical = XcmdDomainFixture()
+    let before = canonical.snapshot
+    canonical.setLane(Xcmd.echoVolumeLane, [(96, 34)])
+    canonical.setLane(Xcmd.echoLengthLane, [(96, 17)])
+    report.expectEqual(["96:34"], canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
+                       what: "volume lane projects the canonical point")
+    report.expectEqual(["96:17"], canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
+                       what: "length lane projects the canonical point")
+    let bytesAt96: [(UInt8, UInt8)] = [
+        (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 34),
+        (Xcmd.selectorController, 0x09), (Xcmd.payloadController, 17),
+    ]
+    report.expect(canonical.xcmdBytes(at: 96).elementsEqual(bytesAt96, by: { $0 == $1 }),
+                  cppID: canonicalID, message: "canonical lanes encode ordered bytes at tick 96")
+
+    let moveBefore = canonical.snapshot
+    if let volume = canonical.document.lanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane)).first {
+        canonical.document.moveLanePoints(track: 0, lane: .controller(Xcmd.echoVolumeLane),
+                                          moves: [LanePointMove(point: volume, tick: 192, value: 35)])
+        report.expect(canonical.oneEdit(moveBefore), cppID: canonicalID,
+                      message: "moving the volume point commits one edit")
+        report.expectEqual(["192:35"], canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
+                           what: "moved volume point projects at tick 192")
+        let bytesAt192: [(UInt8, UInt8)] = [
+            (Xcmd.selectorController, 0x08), (Xcmd.payloadController, 35),
+        ]
+        report.expect(canonical.xcmdBytes(at: 192).elementsEqual(bytesAt192, by: { $0 == $1 }),
+                      cppID: canonicalID, message: "moved point encodes ordered bytes at tick 192")
+    } else {
+        report.fail(canonicalID, "canonical volume lane has no point identity to move")
+    }
+    report.expect(canonical.undoToRoot() && canonical.snapshot.bytes == before.bytes,
+                  cppID: canonicalID, message: "undoing every edit restores pre-edit MIDI bytes")
+    report.expectEqual([String](), canonical.points(Xcmd.echoVolumeLane), cppID: canonicalID,
+                       what: "undo leaves volume lane empty")
+    report.expectEqual([String](), canonical.points(Xcmd.echoLengthLane), cppID: canonicalID,
+                       what: "undo leaves length lane empty")
+
+    let sweepID = "automation-domain/AutomationDomainTest::xcmdSweepPreservesNotes"
+    let sweep = XcmdDomainFixture()
+    let beforeSweep = sweep.snapshot
+    sweep.document.insertRawEvent(chunk: 0, event: .channel(tick: 8772, status: 0x90,
+                                                            data0: 60, data1: 100))
+    sweep.document.insertRawEvent(chunk: 0, event: .channel(tick: 8808, status: 0x80,
+                                                            data0: 60, data1: 0))
+    sweep.setLane(Xcmd.echoVolumeLane, [(8844, 48)])
+    let notesBeforeSweep = sweep.notes()
+    let expectedNotes: [(Tick, UInt8, UInt8, UInt8)] = [(8772, 0x90, 60, 100), (8808, 0x80, 60, 0)]
+    report.expect(notesBeforeSweep.elementsEqual(expectedNotes, by: { $0 == $1 }),
+                  cppID: sweepID, message: "sweep fixture contains the original note-on and note-off")
+    let parameter = AutomationParameter.controlChange(track: 0, controller: Xcmd.echoVolumeLane)
+    let lane = AutomationLaneSnapshot(parameter: parameter, in: sweep.document, songEndTick: 9216)
+    let freeze = AutomationLaneFreeze(
+        parameter: parameter, revision: lane.revision, metadata: lane.metadata, songEndTick: 9216,
+        original: lane.displaySeries.map { AutomationLanePoint(tick: $0.tick, value: $0.value) })
+    let sweepEdit = AutomationLaneReplacement.heldSpan(
+        freeze, begin: 8736, end: 8844,
+        points: [AutomationLanePoint(tick: 8736, value: 32),
+                 AutomationLanePoint(tick: 8844, value: 48)])
+    _ = AutomationCommit.apply(sweepEdit, in: sweep.document)
+    report.expect(sweep.notes().elementsEqual(notesBeforeSweep, by: { $0 == $1 }),
+                  cppID: sweepID, message: "lane sweep preserves the original note events")
+    report.expectEqual(["8736:32", "8844:48"], sweep.points(Xcmd.echoVolumeLane), cppID: sweepID,
+                       what: "sweep replaces the lane span with both projected points")
+    report.expect(sweep.undoToRoot() && sweep.snapshot.bytes == beforeSweep.bytes,
+                  cppID: sweepID, message: "undoing sweep and fixture edits restores original MIDI bytes")
+}

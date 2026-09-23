@@ -1,4 +1,5 @@
 Assertion correspondence: automation/domain/tst_automationdomain.cpp
+Verification: post-deletion deno task verify --filter swiftcore --verbose — PASS 1/24 harnesses selected, 23 skipped (build 10.46s; run 9.70s).
 
 Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/domain/tst_automationdomain.cpp
@@ -6,31 +7,14 @@ Original SHA-256: 50413de58668643dee1e9aab4d4bfba348242b94a351706d1236916a8f825b
 Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 
-Purpose and status
-Each A entry is one original assertion or failure site, including helper and setup sites.
-Repeated rows and loops execute a site more than once. The source SHA pins the entire
-original sequence; the context inventory below records its rows, loops and fixtures.
-MATCHED requires identified equivalent predicates and execution evidence; PARTIAL means
-a specific related scenario differs; GAP means exact assertion correspondence is not
-established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
-A method name or related Swift case alone never establishes an assertion match.
-This inventory does not authorize removing native checks. Unresolved entries remain work.
+Covered native implementation: src/core/songdocument*.cpp :: SongDocument lane/tempo editing and adoptSmf; src/ui/editordrawer/nodelane/* :: CCLaneAdapter and NodeLane.
+Native engine status: The deleted C++ check was uncompiled and unregistered. Legacy native implementations remain on disk; the active application and this registered check exercise Swift PorydawCore, not a native bridge.
 
-Execution and ownership
-The original swiftcore suite entrypoints invoke these paired functions in their original
-order. Shared setup remains in the owner-prefixed AutomationPageChecks.swift,
-VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.swift.
-Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
+Retirement: 107 original assertion sites, 106 MATCHED and 1 RETIRED-REPRESENTATION (Qt adoptSmf bool/error-string setup guard); deleted C++ original recoverable from Reference revision and Original SHA-256. No live native run or differential comparison is claimed.
 
-Verification evidence
-deno task verify --filter swiftcore --filter clickcheck --filter transportcheck
---filter resonancecheck --filter audiocheck --verbose: projectSession PASS.
-All 107 source sites, including controller-domain clamp assertion510, passed in
-projectSession. The overall run was 6/7 suites: swiftcore's separate newly added
-range-collision case failed and remains under the core owner's correction.
-The two raw-occurrence assertions379/420 and MODT clamp assertion510 were observed
-failing before their responsible production fixes and pass unchanged afterward.
-Whole-tree final source hashes and final gate results are recorded by root.
+Fixture and execution: runAutomationPageChecks executes the original legacy resolver, metadata, default-promotion, span and delete-transaction scenarios on inline division-24, one-program-track, end-9216 MIDI; the tempo and CC11 adapter data rows and original fixture/loop inventory below remain indexed. No external corpus or staged file is required.
+History caveat: Swift verifies consumer-visible document/lane state and public history traversal; the retired native Qt setup error string is not a Swift result and no test-only accessor is added.
+Registered run path: src/checks/automation/AutomationPageChecks.swift :: runAutomationPageChecks -> src/checks/workspace/SessionChecks.swift :: runProjectSessionSuite -> projectSession (swiftcore suite 10); counterpart compiled in src/checks/CMakeLists.txt :: swift_core_check. The deleted original is absent from native CMake/checkcatalog.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -78,8 +62,8 @@ src/checks/automation/domain/tst_automationdomain.cpp:509 | setLane(doc, kTrack,
 Original assertion inventory
 
 A001 | AutomationDomainTest::init | src/checks/automation/domain/tst_automationdomain.cpp:48
-Disposition: NATIVE-SETUP
-Mapping/reason: The original Qt adoptSmf bool/error-string guard is retained native fixture setup. Swift constructs the same valid division-24, one-program-track, end-9216 MIDI fixture through SongDocument(file:); its initializer has no failure result. The following two original postconditions are asserted explicitly by legacyMetadataRows. This retires only the Qt setup return representation, not song parsing or document validation coverage.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The C++ adoptSmf bool/error-string guard has no Swift ingress: the deleted, uncompiled C++ original was the only caller here, while SongDocument(file:) non-throwingly constructs the matching division-24, one-program-track, end-9216 fixture without a failure result. Construction alone does not MATCH this setup site. The actual postconditions remain asserted by legacyMetadataRows (A002/A003); this retires only the Qt setup-return representation, not document behavior.
 Original expression:
   QVERIFY2(m_document->adoptSmf(std::move(smf), song, &error), qPrintable(error))
 

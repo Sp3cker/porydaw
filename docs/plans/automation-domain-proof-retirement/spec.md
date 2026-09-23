@@ -41,8 +41,11 @@ Success criteria:
 Non-goals: retiring any other automation proof (the parent
 `src/checks/automation/`, `hover/`, `presentation/` ledgers stay as they
 are); porting the dormant widget UI; touching native/QML lanes anywhere
-(they remain necessary blockers); editing production Swift beyond exercising
-existing public API from checks.
+(they remain necessary blockers); broad production Swift changes. One
+scoped root-cause correction to the Swift logical XCMD range-move path
+was required by the observed A053-A055 failures (Task 5a, plan.md):
+the original C++ move uses logical `rewritePoints` for known payloads,
+whereas Swift used the raw `reconcile` path and rejected a legal move.
 
 ## 2. Ground rules
 
@@ -467,5 +470,8 @@ Deleting around blockers (stub headers, dead-code bypasses) is forbidden
   refresh no Swift SHAs. If a task observes drift, it re-reads, re-pins per
   §2.2, and reports.
 - The two §5.3 behavioral risks (equal-tick order, opaque-epoch rejection)
-  are the only places this plan could surface a production gap; both are
-  report-and-stop conditions for the task, not check-side workarounds.
+  require reporting the observed chain, not weakening the check. The
+  A053-A055 rightward move exposed a distinct production gap: Swift routed
+  a known logical lane payload through raw-byte reconciliation. Task 5a
+  corrects only that path. A025/A028 opaque-epoch rejection still remains
+  a report-and-stop condition, never a check-side workaround.
