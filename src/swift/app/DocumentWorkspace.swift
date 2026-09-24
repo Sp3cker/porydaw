@@ -41,6 +41,7 @@ public final class DocumentWorkspace {
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
     public let automationPage: AutomationPage
+    public let rulerMenu: RulerMenuPresenter
     /// Drawer chrome belongs to the document: this workspace owns the presenter
     /// and the three section slots its own pages occupy.
     public let drawer = EditorDrawerPresenter()
@@ -84,6 +85,7 @@ public final class DocumentWorkspace {
         let automationPage = AutomationPage(baseFontPx: grid.baseFontPx)
         automationPage.attach(session: session, palette: grid.palette)
         self.automationPage = automationPage
+        rulerMenu = RulerMenuPresenter(session: session, grid: grid, automation: automationPage)
         drawer.onSectionVisibilityChanged = { [weak self] kind, visible in
             guard visible else { return }
             self?.drawerSectionBecameVisible(kind)
@@ -208,6 +210,8 @@ public final class DocumentWorkspace {
     public func deactivate() {
         guard isActive else { return }
         isActive = false
+        rulerMenu.close()
+        rulerMenu.cancelInsertTimePrompt()
         cancel(reason: GridCancelReason.hidden.rawValue)
         playhead.detach()
         lastPlayheadPresentation = nil
@@ -229,6 +233,8 @@ public final class DocumentWorkspace {
     public func teardown() {
         guard !isTornDown else { return }
         isTornDown = true
+        rulerMenu.close()
+        rulerMenu.cancelInsertTimePrompt()
         deactivate()
         session.onChange = nil
         session.onPlayback = nil

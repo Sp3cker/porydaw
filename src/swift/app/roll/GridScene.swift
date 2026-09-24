@@ -490,6 +490,18 @@ public final class GridScene {
             lastLabelRight = labelX + labelW
         }
 
+        func appendLoopMarker(_ tick: Tick, glyph: String, name: String) {
+            guard tick != TimeDefaults.noTick && tick >= range.begin && tick < range.end else { return }
+            let x = camera.displayX(tick: Double(tick), origin: 0, dpr: m.dpr)
+            marks.append(SceneRect(x: x - 0.5, y: 0, width: 1,
+                                   height: markerHeight - 1, fillColor: p.primaryText,
+                                   primitiveName: name))
+            labels.append(SceneText(
+                rect: (x + m.spaceHalf, 0, t.signatureAdvance(glyph), markerHeight),
+                text: glyph, color: p.primaryText, font: input.fontSpec(.bold)))
+        }
+        appendLoopMarker(m.timeAxis.loopStartTick, glyph: "[", name: "loopStartMarker")
+        appendLoopMarker(m.timeAxis.loopEndTick, glyph: "]", name: "loopEndMarker")
         func appendSignature(at tick: Tick, next: Tick) {
             guard tick >= range.begin && tick < range.end else { return }
             let signature = m.timeAxis.signatureAt(tick)

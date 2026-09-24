@@ -83,6 +83,7 @@ public final class SongTabSession {
     public func voiceChangesPage() -> VoiceChangesPage { workspace.voiceChangesPage }
 
     public func automationPage() -> AutomationPage { workspace.automationPage }
+    public func rulerMenuPresenter() -> RulerMenuPresenter { workspace.rulerMenu }
 
     public func cancelGridInput(reason: Int) { workspace.cancel(reason: reason) }
 
