@@ -18,6 +18,7 @@ enum PdcSuite {
     PDC_SUITE_TIME_EDITS = 9,
     PDC_SUITE_PROJECT_SESSION = 10,
     PDC_SUITE_BANK_HISTORY = 11,
+    PDC_SUITE_THEME_COLOR = 12
 };
 
 typedef void (*PdcCheckReport)(void *context, int failed, const char *cppId, const char *message);

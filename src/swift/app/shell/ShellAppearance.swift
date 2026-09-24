@@ -6,7 +6,7 @@ import CoreFoundation
 /// grid contrast and derived colors follow `themeresolver.cpp` and
 /// `RewriteWindow::applyGridPalette`, respectively.
 @MainActor
-enum ShellAppearance {
+public enum ShellAppearance {
     private struct Colors {
         let window: String
         let text: String
@@ -56,14 +56,14 @@ enum ShellAppearance {
         grid: "#54030606", roll: "#3C3F46", accidental: "#282B32",
         keyboardSeparator: "#9A9A9A", keyboardLabel: "#1A1A1A")
 
-    static func mode(_ stored: String) -> String {
+    public static func mode(_ stored: String) -> String {
         switch stored {
         case "vanilla", "dark-neutral-high", "immaterial": stored
         default: "vanilla"
         }
     }
 
-    static func contrast(_ stored: String) -> Int {
+    public static func contrast(_ stored: String) -> Int {
         // QSettings::QVariant::toInt(&valid) accepts surrounding whitespace and
         // falls back to the native default on invalid/overflowing values.
         guard let value = Int(stored.trimmingCharacters(in: .whitespacesAndNewlines)) else {
@@ -93,7 +93,7 @@ enum ShellAppearance {
         _ = CFPreferencesAppSynchronize(applicationID)
     }
 
-    static func apply(to palette: GridPalette, mode: String, contrast: Int) {
+    public static func apply(to palette: GridPalette, mode: String, contrast: Int) {
         let colors: Colors
         switch mode {
         case "dark-neutral-high": colors = darkNeutralHigh
@@ -186,13 +186,8 @@ enum ShellAppearance {
                                    b: mix(original.b, backdrop.b, weight),
                                    a: (original.a * contrast + 25) / 50)
         }
-        let luminance = { (r: Int, g: Int, b: Int) -> Double in
-            0.2126 * PaletteMath.srgbToLinear(Double(r) / 255) +
-            0.7152 * PaletteMath.srgbToLinear(Double(g) / 255) +
-            0.0722 * PaletteMath.srgbToLinear(Double(b) / 255)
-        }
-        let endpoint = luminance(original.r, original.g, original.b)
-            <= luminance(backdrop.r, backdrop.g, backdrop.b) ? 0 : 255
+        let endpoint = PaletteMath.relativeLuminance(r: original.r, g: original.g, b: original.b)
+            <= PaletteMath.relativeLuminance(r: backdrop.r, g: backdrop.g, b: backdrop.b) ? 0 : 255
         let weight = Double(contrast - 50) / 50
         return PaletteMath.hex(r: mix(endpoint, original.r, weight),
                                g: mix(endpoint, original.g, weight),

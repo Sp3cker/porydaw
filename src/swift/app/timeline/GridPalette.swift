@@ -2,15 +2,15 @@
 import Foundation
 import QtBridge
 
-enum PaletteMath {
+public enum PaletteMath {
 
-    struct Oklab {
-        var lightness: Double
-        var a: Double
-        var b: Double
+    public struct Oklab {
+        public var lightness: Double
+        public var a: Double
+        public var b: Double
     }
 
-    static func srgbToLinear(_ channel: Double) -> Double {
+    public static func srgbToLinear(_ channel: Double) -> Double {
         channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
     }
 
@@ -19,7 +19,7 @@ enum PaletteMath {
                              : 1.055 * pow(max(0.0, channel), 1.0 / 2.4) - 0.055
     }
 
-    static func oklab(r: Int, g: Int, b: Int) -> Oklab {
+    public static func oklab(r: Int, g: Int, b: Int) -> Oklab {
         let red = srgbToLinear(Double(r) / 255.0)
         let green = srgbToLinear(Double(g) / 255.0)
         let blue = srgbToLinear(Double(b) / 255.0)
@@ -36,7 +36,7 @@ enum PaletteMath {
         return Int(floor(scaled + 0.5))
     }
 
-    static func rgb(_ lab: Oklab) -> (r: Int, g: Int, b: Int) {
+    public static func rgb(_ lab: Oklab) -> (r: Int, g: Int, b: Int) {
         let l = lab.lightness + 0.3963377774 * lab.a + 0.2158037573 * lab.b
         let m = lab.lightness - 0.1055613458 * lab.a - 0.0638541728 * lab.b
         let s = lab.lightness - 0.0894841775 * lab.a - 1.2914855480 * lab.b
@@ -46,24 +46,24 @@ enum PaletteMath {
                 gammaChannel(-0.0041960863 * l3 - 0.7034186147 * m3 + 1.7076147010 * s3))
     }
 
-    static func mixTowardOklab(_ from: Oklab, _ to: Oklab, _ t: Double) -> Oklab {
+    public static func mixTowardOklab(_ from: Oklab, _ to: Oklab, _ t: Double) -> Oklab {
         Oklab(lightness: from.lightness + (to.lightness - from.lightness) * t,
               a: from.a + (to.a - from.a) * t,
               b: from.b + (to.b - from.b) * t)
     }
 
-    static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
+    public static func hex(r: Int, g: Int, b: Int, a: Int = 255) -> String {
         a == 255
             ? String(format: "#%02X%02X%02X", r, g, b)
             : String(format: "#%02X%02X%02X%02X", a, r, g, b)
     }
 
-    static func hex(_ lab: Oklab, alpha: Int = 255) -> String {
+    public static func hex(_ lab: Oklab, alpha: Int = 255) -> String {
         let c = rgb(lab)
         return hex(r: c.r, g: c.g, b: c.b, a: alpha)
     }
 
-    static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
+    public static func channels(_ hex: String) -> (r: Int, g: Int, b: Int, a: Int) {
         var value: UInt64 = 0
         Scanner(string: String(hex.dropFirst())).scanHexInt64(&value)
         if hex.count == 9 {
@@ -73,13 +73,33 @@ enum PaletteMath {
         return (Int((value >> 16) & 0xFF), Int((value >> 8) & 0xFF), Int(value & 0xFF), 255)
     }
 
-    static func gridLineColor(_ alpha: Int = 255) -> String {
+    public static func relativeLuminance(r: Int, g: Int, b: Int) -> Double {
+        0.2126 * srgbToLinear(Double(r) / 255.0)
+            + 0.7152 * srgbToLinear(Double(g) / 255.0)
+            + 0.0722 * srgbToLinear(Double(b) / 255.0)
+    }
+
+    /// WCAG relative luminance of an sRGB hex color. Alpha is ignored, matching
+    /// themes::relativeLuminance (color_math.cpp), which reads QColor rgb only.
+    public static func relativeLuminance(_ hex: String) -> Double {
+        let c = channels(hex)
+        return relativeLuminance(r: c.r, g: c.g, b: c.b)
+    }
+
+    /// WCAG contrast ratio between two sRGB hex colors, matching
+    /// themes::contrastRatio (color_math.cpp).
+    public static func contrastRatio(_ first: String, _ second: String) -> Double {
+        let lighter = max(relativeLuminance(first), relativeLuminance(second))
+        let darker = min(relativeLuminance(first), relativeLuminance(second))
+        return (lighter + 0.05) / (darker + 0.05)
+    }
+
+    public static func gridLineColor(_ alpha: Int = 255) -> String {
         let base = channels("#3F040000")
         let a = (base.a * alpha + 127) / 255
         return hex(r: base.r, g: base.g, b: base.b, a: a)
     }
-
-    static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
+    public static func noteFill(track: Int, velocity: Int, zeroColor: String) -> String {
         let v = min(127, max(0, velocity))
         if v == 0 { return zeroColor }
         let identity = trackIdentityOklab(track)
@@ -102,17 +122,17 @@ enum PaletteMath {
                          b: background.b + (identity.b - background.b) * weight))
     }
 
-    static func trackIdentityIndex(_ track: Int) -> Int {
+    public static func trackIdentityIndex(_ track: Int) -> Int {
         ((track % trackIdentityFills.count) + trackIdentityFills.count)
             % trackIdentityFills.count
     }
 
-    static func trackIdentityOklab(_ track: Int) -> Oklab {
+    public static func trackIdentityOklab(_ track: Int) -> Oklab {
         let c = channels(trackIdentityFills[trackIdentityIndex(track)])
         return oklab(r: c.r, g: c.g, b: c.b)
     }
 
-    static let trackIdentityFills = [
+    public static let trackIdentityFills = [
         "#CD5454", "#54CD77", "#9B54CD", "#CDBD54", "#54B9CD", "#CD5497",
         "#73CD54", "#5854CD", "#CD7D54", "#54CD9F", "#C354CD", "#B5CD54",
         "#5491CD", "#CD546F", "#54CD5E", "#8154CD",

@@ -141,6 +141,11 @@ public func pdcSuiteRun(_ suite: UInt32, _ callback: PdcCheckCallback?,
         MainActor.assumeIsolated {
             runBankHistorySuite(boxedBank.report)
         }
+    case 12:
+        let boxedTheme = ReportBox(report)
+        MainActor.assumeIsolated {
+            runThemeColorChecks(boxedTheme.report)
+        }
     default:
         report.fail("swiftcore/suite-selection", "unknown suite \(suite)")
     }
