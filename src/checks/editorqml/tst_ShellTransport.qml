@@ -6,6 +6,7 @@ import ShellQmlCheck 1.0
 import "../../ui/shell"
 
 TestCase {
+    id: testCase
     name: "ShellTransport"
     when: windowShown
     width: 1100
@@ -13,16 +14,25 @@ TestCase {
     visible: true
 
     property var shell: null
+    property var settings: null
     ShellQmlBootstrap { id: bootstrap }
     function initTestCase() {
         Qt.application.name = bootstrap.settingsApplicationName
         Qt.application.organization = "sp3cker"
         Qt.application.domain = ""
+        settings = settingsComponent.createObject(testCase)
+        verify(settings !== null, "genuine QtCore.Settings is available")
     }
     function cleanupTestCase() {
+        if (settings) {
+            settings.destroy()
+            settings = null
+            wait(0)
+        }
         verify(bootstrap.clearSettings(), "transport settings stay isolated from user preferences")
     }
     Component { id: shellComponent; ShellWindow { width: 1100; height: 700; visible: true } }
+    Component { id: settingsComponent; Settings {} }
 
     function waitForNative(predicate, timeoutMs) {
         var deadline = Date.now() + timeoutMs
@@ -34,6 +44,9 @@ TestCase {
     }
 
     function openShell() {
+        // Every explicit-open test starts without a stale startup recipe.
+        settings.setValue("lastProjectDir", "")
+        settings.sync()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "production ShellWindow instantiates")
         shell.requestActivate()
