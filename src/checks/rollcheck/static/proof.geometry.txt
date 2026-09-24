@@ -6,7 +6,11 @@ Original SHA-256: 9c3dcb0a9fdbab901eaeac2d1271951e0d6c7b648564b15a53175d989e4659
 Swift counterpart: src/checks/rollcheck/static/camera.swift
 Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/static/geometry.swift
-Additional Swift SHA-256: bd885d4f3cee03f29a4d0864a9b32d6b0c807e191a0e16cad72fd6160f1dcc82
+Additional Swift SHA-256: 9e7a6c1d3dec6fb682d93d17aaa4f0d3e61cc001116f9f37b96b488e8c635259
+Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
+Additional Swift counterpart: src/checks/rollcheck/time_signature_prompt.swift
+Additional Swift SHA-256: 9d3f191f01c4cf2be84411e15545eaa20743af72c7ad98566c11f014b9b97aa2
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -14,23 +18,38 @@ original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact Swift predicates, listed after the inventory.
 MATCHED identifies equivalent model predicates exercised green in projectSession.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
+PARTIAL identifies related Swift predicates with an explicit unproved condition;
+every PARTIAL site below names the exact related or nearest executed predicate with
+its file:line and states the condition that remains unproved.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-The fallback lead-pad/home camera numerics remain PARTIAL against related
-Swift transform/bound predicates. Geometry S062-S066 executed green in
-projectSession and match five EditorCamera model sites. The remaining 18 GAP
-sites have no equivalent replacement predicate in the public check lane:
-fallback grid lines, TimeAxis segments, and tick-ceiling traversal
-require internal app types; A004's unbound view and A048's bound ruler transition
-also remain unproved. Window backing, raster captures, and every pixel-derived
-observation remain NATIVE.
+This reconciliation leaves five MATCHED sites, eighteen PARTIAL sites, three GAP
+sites, and twenty-eight NATIVE sites. S062-S066
+(src/checks/rollcheck/static/geometry.swift) execute green in projectSession and
+match five EditorCamera model sites. The fallback lead-pad/home numerics and the
+bind-preserves-geometry sites stay PARTIAL against related executed predicates:
+S045/S005 for the fallback camera, S062/S064 for the default zoom,
+EditorGridCameraChecks.swift:275-282 for the published grid time marks,
+time_signature_prompt.swift:54-57 for GridSegment fields, and S066 for bind
+content geometry. Three sites stay GAP because no executed predicate observes
+them: the maximum-tick ceiling traversal (A018, A019) and the 3/4-bound ruler
+height transition (A048). TimeAxis is public and a check constructs one, but the
+production grid publishes only derived strides (PianoGrid visibleGridTicks and
+snapTicks), so those observables still have no executing assertion. Window
+backing, raster captures, and every pixel-derived observation remain NATIVE.
 
 Verification
-Command: deno task verify --filter swiftcore --qt projectSession
-Result: green post-refactor controller run; SwiftCoreTest::projectSession 3 passed, 0 failed.
-Converted-window command: deno task verify:qml-roll (green controller run)
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS; 1/14 ok (controller run recorded before this ledger edit; the edit changes no Swift source).
+Command: deno task verify:qml-roll --verbose
+Result: PASS; 1/1 ok (controller run recorded before this ledger edit; the edit changes no QML source).
+Command: deno task verify:shell --verbose
+Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
+Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808 (camera.swift)
+Verified additional Swift SHA-256: 9e7a6c1d3dec6fb682d93d17aaa4f0d3e61cc001116f9f37b96b488e8c635259 (geometry.swift)
+Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
+Converted-window case cited: src/checks/rollqml/tst_SwiftRollPlots.qml (sha256 4b6f582c6bf9e4ee8b15166f6e631167171421b1a454b413198c398531aef519).
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
@@ -179,7 +198,7 @@ Original expression:
 
 A002 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:121
 Disposition: PARTIAL
-Mapping/reason: Related predicates S005, S015 in src/checks/rollcheck/static/camera.swift; the Swift pre-roll/lead-pad predicates use synthetic EditorCamera inputs, so they do not establish the native fallback-camera lead pad below.
+Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift:232-234) observes the same fallback-camera lead-pad home over the 1280/1000/1500 width rows under synthetic EditorCamera limits, with S005 (:33-34) covering the pre-roll floor. Unproved: the native BareView fallback camera reports a positive leadPadPx with no song bound.
 Source context since previous assertion:
   ;
       fixture.view.quickView()->quickWindow()->resize(QSize(width, 800));
@@ -190,7 +209,7 @@ Original expression:
 
 A003 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:122
 Disposition: PARTIAL
-Mapping/reason: Related predicates S002, S004 in src/checks/rollcheck/static/camera.swift; the Swift tick/content and display-projection predicates use synthetic inputs, so they do not establish the native tick-zero lead-pad home below.
+Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift:232-234) asserts contentX(tick: 0) equals the lead pad under synthetic limits, and S002 (:26-27) the tick/content round-trip. Unproved: the native fallback camera tick-zero content position sits within 0.5px of its lead pad.
 Source context since previous assertion:
   ;
 Original expression:
@@ -198,8 +217,8 @@ Original expression:
                "fresh view camera is not at the pre-roll home")
 
 A004 | PianoRollStaticTest::fallbackCamera | src/checks/rollcheck/static/geometry.cpp:124
-Disposition: GAP
-Mapping/reason: No public unbound SongView geometry path exercises this width-dependent default zoom; the site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S062 (src/checks/rollcheck/static/geometry.swift:30-31) observes the default beat zoom retained across a 24-TPB bind and S064 (:46-47) across a 48-TPB bind under EditorCamera.Limits defaults. Unproved condition: the unbound native BareView default pxPerBeat equals the default ViewState zoom.
 Source context since previous assertion:
   ;
 Original expression:
@@ -248,8 +267,8 @@ Original expression:
   QCOMPARE(window->color(), background)
 
 A009 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:155
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate counts these fallback lines, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks stay inside one culling window and cover the visible plot (suite 10). Unproved condition: the unsignatured grid publishes exactly 16 lines over 0..96 ticks.
 Source context since previous assertion:
   ;
   }
@@ -272,8 +291,8 @@ Original expression:
   QCOMPARE(lines.size(), size_t(16))
 
 A010 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:158
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks fallback tick cadence, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: each fallback line sits at index * kTicksPerBeat (24).
 Source context since previous assertion:
   ;
       for (int index = 0; index < 16; ++index) {
@@ -282,32 +301,32 @@ Original expression:
   QCOMPARE(line.tick, uint64_t(index) * kTicksPerBeat)
 
 A011 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:159
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks fallback bar positions, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: every fourth fallback line is a bar line.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(line.bar, index % 4 == 0)
 
 A012 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:160
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks fallback bar numbers, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: fallback bar numbers are index / 4 + 1.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(line.barNumber, index / 4 + 1)
 
 A013 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:161
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks fallback beat numbers, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:275-282 asserts the published grid time marks positions (suite 10). Unproved condition: fallback beat numbers are index % 4 + 1.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(line.beatNumber, index % 4 + 1)
 
 A014 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:164
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks the opening segment, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the unsignatured fallback segment at tick 0 starts at 0.
 Source context since previous assertion:
   ;
       }
@@ -316,24 +335,24 @@ Original expression:
   QCOMPARE(segment.start, uint64_t(0))
 
 A015 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:165
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks the no-successor sentinel, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the unsignatured fallback segment next is the kNoTick sentinel.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.next, CoreTimeDefaults::kNoTick)
 
 A016 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:166
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks fallback beat ticks, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatTicks is 24.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.beatTicks, kTicksPerBeat)
 
 A017 | PianoRollStaticTest::fallbackGrid | src/checks/rollcheck/static/geometry.cpp:167
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks fallback beats per bar, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the unsignatured fallback segment beatsPerBar is 4.
 Source context since previous assertion:
   ;
 Original expression:
@@ -341,7 +360,7 @@ Original expression:
 
 A018 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:177
 Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate walks beats at the maximum tick, so this site remains open.
+Mapping/reason: GAP; no executing predicate walks grid lines at the tick ceiling. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift:275-282) culls generated marks inside one viewport and never approaches CoreTimeDefaults kMaxTick, so the ceiling traversal stays unproved.
 Source context since previous assertion:
   ;
   }
@@ -358,7 +377,7 @@ Original expression:
 
 A019 | PianoRollStaticTest::tickCeilingDoesNotWrap | src/checks/rollcheck/static/geometry.cpp:178
 Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate excludes a wrapped ceiling beat, so this site remains open.
+Mapping/reason: GAP; no executing predicate excludes a wrapped ceiling beat. The nearest executed grid-mark predicate (src/checks/rollcheck/EditorGridCameraChecks.swift:275-282) never approaches CoreTimeDefaults kMaxTick, so the wrap exclusion stays unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -527,7 +546,7 @@ Original expression:
 
 A032 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:270
 Disposition: MATCHED
-Mapping/reason: Executed S062 in geometry.swift observes EditorCamera retaining its initial default beat zoom after binding a 24-TPB timeline; projectSession green.
+Mapping/reason: Executed S062 (src/checks/rollcheck/static/geometry.swift:30-31) observes EditorCamera retaining its initial default beat zoom after binding a 24-TPB timeline; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -572,7 +591,7 @@ Original expression:
 
 A035 | PianoRollStaticTest::defaultBindKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:280
 Disposition: MATCHED
-Mapping/reason: Executed S063 in geometry.swift compares six EditorCamera bar content positions before and after 24-TPB binding; projectSession green.
+Mapping/reason: Executed S063 (src/checks/rollcheck/static/geometry.swift:33-35) compares six EditorCamera bar content positions (bar * 4 * 24) before and after 24-TPB binding within 1e-9; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
 Original expression:
@@ -598,7 +617,7 @@ Original expression:
 
 A037 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:312
 Disposition: MATCHED
-Mapping/reason: Executed S064 in geometry.swift observes EditorCamera retaining its initial default beat zoom after binding a 48-TPB timeline; projectSession green.
+Mapping/reason: Executed S064 (src/checks/rollcheck/static/geometry.swift:46-47) observes EditorCamera retaining its initial default beat zoom after binding a 48-TPB timeline; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -635,7 +654,7 @@ Original expression:
 
 A039 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:318
 Disposition: MATCHED
-Mapping/reason: Executed S065 in geometry.swift compares three EditorCamera display columns across the 24-to-48 TPB binding within one pixel; projectSession green.
+Mapping/reason: Executed S065 (src/checks/rollcheck/static/geometry.swift:49-51) compares three EditorCamera display columns (beat * 48, origin 0, dpr 1) across the 24-to-48 TPB binding within one pixel; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       for (int beat = 1; beat <= 3; ++beat) {
@@ -670,7 +689,7 @@ Original expression:
 
 A042 | PianoRollStaticTest::ticksPerBeatKeepsGeometry | src/checks/rollcheck/static/geometry.cpp:331
 Disposition: MATCHED
-Mapping/reason: Executed S066 in geometry.swift compares eight EditorCamera beat content positions across the 24-to-48 TPB binding within 1e-6; projectSession green.
+Mapping/reason: Executed S066 (src/checks/rollcheck/static/geometry.swift:54-55) compares eight EditorCamera beat content positions (beat * 48) across the 24-to-48 TPB binding within 1e-6; projectSession green in the Verification run.
 Source context since previous assertion:
   ;
       }
@@ -696,8 +715,8 @@ Original expression:
   QVERIFY(before.valid())
 
 A044 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:359
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks the 3/4 segment start, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start on a 7/8 axis built from the rebuilt timeline (suite 10). Unproved condition: the 3/4-bound view segment at tick 0 starts at 0.
 Source context since previous assertion:
   ;
       const qreal offset = rulerPlotOffset(fixture.view);
@@ -721,24 +740,24 @@ Original expression:
   QCOMPARE(segment.start, uint64_t(0))
 
 A045 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:360
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks the 3/4 no-successor sentinel, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.start/beatsPerBar/beatTicks on a 7/8 axis (suite 10); it does not assert the next boundary. Unproved condition: the 3/4-bound segment next is the kNoTick sentinel.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.next, CoreTimeDefaults::kNoTick)
 
 A046 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:361
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks the 3/4 beat tick width, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatTicks on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatTicks is 24.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(segment.beatTicks, kTicksPerBeat)
 
 A047 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:362
-Disposition: GAP
-Mapping/reason: TimeAxis is internal to the app; no check-lane predicate checks the 3/4 beat grouping, so this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate: src/checks/rollcheck/time_signature_prompt.swift:54-57 asserts GridSegment.beatsPerBar on a 7/8 axis (suite 10). Unproved condition: the 3/4-bound segment beatsPerBar is 3.
 Source context since previous assertion:
   ;
 Original expression:
@@ -746,7 +765,7 @@ Original expression:
 
 A048 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:363
 Disposition: GAP
-Mapping/reason: No Swift predicate exercises the 3/4-bound view's ruler height; the original transition remains open.
+Mapping/reason: GAP; the mounted cases consume gridModel.rulerHeight only as a layout input (src/checks/rollqml/tst_SwiftRollPlots.qml:182-184) and none compares the bound view's ruler height across a 3/4 bind, so the transition stays unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -754,15 +773,15 @@ Original expression:
 
 A049 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:364
 Disposition: PARTIAL
-Mapping/reason: Related predicate S015 in src/checks/rollcheck/static/camera.swift; the Swift unbound-home predicate uses synthetic inputs, so it does not establish the 3/4-bound native lead pad below.
+Mapping/reason: Related predicate S045 (src/checks/rollcheck/static/camera.swift:232-234) asserts a positive lead pad under synthetic limits, and S015 (:93-94) the unbound home. Unproved: the 3/4-bound native view reports a positive leadPadPx.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fixture.view.camera().leadPadPx() > 0.0)
 
 A050 | PianoRollStaticTest::signatureGroupingKeepsBeatsAndMovesBars | src/checks/rollcheck/static/geometry.cpp:366
-Disposition: GAP
-Mapping/reason: No check-lane predicate exercises the 3/4-bound view's beat geometry; this site remains open.
+Disposition: PARTIAL
+Mapping/reason: Related predicate S066 (src/checks/rollcheck/static/geometry.swift:54-55) asserts beat content positions preserved across a 48-TPB bind. Unproved condition: the 3/4 signature bind preserves the view's beat content positions within 1e-6.
 Source context since previous assertion:
   ;
       for (int beat = 1; beat <= 8; ++beat)

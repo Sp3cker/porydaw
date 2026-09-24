@@ -5,6 +5,16 @@ Original: src/checks/rollcheck/static/camera.cpp
 Original SHA-256: cd54f262cc3b30c64e2b1ff8ee7bc1b843c4cad469b58b5aea08c7ac4644fe78
 Swift counterpart: src/checks/rollcheck/static/camera.swift
 Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
+Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
+Additional Swift counterpart: src/checks/rollcheck/keyboard.swift
+Additional Swift SHA-256: 6db4784f8cd68510a8e4791ad0d6f772db480fde64718efdd0d174baab9220cd
+Additional Swift counterpart: src/checks/rollcheck/note_commands.swift
+Additional Swift SHA-256: 5cacc138997ef46d430435cf9547c9fadda41b30ebe25898f6a3d804300dc4f4
+Additional Swift counterpart: src/checks/rollcheck/pencil.swift
+Additional Swift SHA-256: 9fdd7a587866d35457c75e107100cc7bac92e9d405986b3b31d565ef44eacaa1
+Additional Swift counterpart: src/checks/workspace/session_playback.swift
+Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -12,32 +22,45 @@ original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact Swift predicates, listed after the inventory.
 MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
+PARTIAL identifies related Swift predicates with an explicit unproved condition;
+every PARTIAL site below names the exact related or nearest executed predicate with
+its file:line and states the condition that remains unproved.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
+This mapping-sharpening pass keeps the 64 PARTIAL sites PARTIAL and promotes nothing
+to MATCHED: none of their observables has a whole-predicate equivalent in the
+executing lane. Each PARTIAL line now names its exact related or nearest executed
+predicate with file:line and the condition that remains unproved.
 
 Verification
-Command: deno task verify --filter swiftcore --qt projectSession
-Result: PASS, SwiftCoreTest::projectSession 3 passed, 0 failed (controller run).
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS; 1/14 ok (controller run recorded before this ledger edit; the edit changes no Swift source).
+Command: deno task verify:qml-roll --verbose
+Result: PASS; 1/1 ok (controller run recorded before this ledger edit; the edit changes no QML source).
+Command: deno task verify:shell --verbose
+Result: PASS; 11/11 ok (controller run recorded before this ledger edit; the edit changes no shell source).
 Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
-Converted-window command: deno task verify:qml-roll
-Converted-window result: PASS, 1/1 (controller run).
-Verified QML SHA-256: cd60f69c80030deeefa46358a8131bcc38de8e5fe112042e37155521faf1e1e0
+Verified QML SHA-256: 7a11ea7ca9a6f0450bdc2db5ef318ffedd325c4d527d488a4dded0349dfd5397 (src/checks/rollqml/tst_TimelinePan.qml); 4b6f582c6bf9e4ee8b15166f6e631167171421b1a454b413198c398531aef519 (src/checks/rollqml/tst_SwiftRollPlots.qml)
+Narrow form used while iterating: deno task verify --filter swiftcore --qt projectSession.
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
 Execution ownership
 runEditorCameraChecks is called in its previous suite position. checkGridCameraWheel
 is called between checkViewport and checkProjection by EditorGridCameraChecks;
-it shares the existing session, grid, and publication counters.
+it shares the existing session, grid, and publication counters. Cross-file
+predicates cited in the mappings execute from the same swiftcore suite:
+EditorGridCameraChecks checkViewport/checkIsolation/checkDrawLatchAndCancel
+(lines 255-259, 547-549, 947-950), the keyboard, note_commands, and pencil
+scenarios, and workspace/session_playback.swift via SessionChecks.swift:40.
 Tally: MATCHED 37, PARTIAL 64, GAP 0, NATIVE 8
 
 Original assertion inventory and source sequence
 
 A001 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:70
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(NaN, 100.0) returns an empty window.
 Source context since previous assertion:
   #include "checks/rollcheck/static/tst_pianorollstatic.h"
 
@@ -113,7 +136,7 @@ Original expression:
 
 A002 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:71
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0.0, NaN) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -121,7 +144,7 @@ Original expression:
 
 A003 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:72
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(+infinity, 100.0) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -129,7 +152,7 @@ Original expression:
 
 A004 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:73
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0.0, -infinity) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -137,7 +160,7 @@ Original expression:
 
 A005 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:74
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(-64.0, -1.0) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -145,7 +168,7 @@ Original expression:
 
 A006 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:75
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(48.0, 48.0) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -153,7 +176,7 @@ Original expression:
 
 A007 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:76
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(64.0, 32.0) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -161,7 +184,7 @@ Original expression:
 
 A008 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:77
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(1.0, 0x1p64) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -169,7 +192,7 @@ Original expression:
 
 A009 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:78
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0x1p64, 0x1p64 + 4096.0) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -177,7 +200,7 @@ Original expression:
 
 A010 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:79
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(1.0, DBL_MAX) returns an empty window.
 Source context since previous assertion:
   ;
 Original expression:
@@ -185,7 +208,7 @@ Original expression:
 
 A011 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:81
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(-24.0, 72.5).begin == 0.
 Source context since previous assertion:
   ;
       const songview::detail::TickRange clipped = tickRange(-24.0, 72.5);
@@ -194,7 +217,7 @@ Original expression:
 
 A012 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:82
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(-24.0, 72.5).end == 72.
 Source context since previous assertion:
   ;
 Original expression:
@@ -202,7 +225,7 @@ Original expression:
 
 A013 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:84
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(96.75, 289.25).begin == 96.
 Source context since previous assertion:
   ;
       const songview::detail::TickRange fractional = tickRange(96.75, 289.25);
@@ -211,7 +234,7 @@ Original expression:
 
 A014 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:85
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(96.75, 289.25).end == 289.
 Source context since previous assertion:
   ;
 Original expression:
@@ -219,7 +242,7 @@ Original expression:
 
 A015 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:87
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(0.0, nextafter(kNoTick, 0.0)).end == Tick(largestBelowCeiling).
 Source context since previous assertion:
   ;
       const double largestBelowCeiling = std::nextafter(double(CoreTimeDefaults::kNoTick), 0.0);
@@ -228,7 +251,7 @@ Original expression:
 
 A016 | PianoRollStaticTest::tickRangeRejectsInvalidBounds | src/checks/rollcheck/static/camera.cpp:88
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane observes songview::detail::tickRange; the Swift grid consumes already-clamped Tick ranges (GridGeometry.forEachSubdivision, src/swift/app/timeline/GridGeometry.swift:121-142), and the nearest executed predicates S005 (src/checks/rollcheck/static/camera.swift:33-34) and S006 (:36-37) assert EditorCamera scroll bounds only. Unproved: tickRange(kMaxTick - 2048.0, kMaxTick - 1024.0).begin == kMaxTick - 2048.
 Source context since previous assertion:
   ;
 Original expression:
@@ -253,7 +276,7 @@ Original expression:
 
 A018 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:106
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: at pxPerBeat 384 the automatic-grid segment at tick 96 starts at or before 96.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -268,7 +291,7 @@ Original expression:
 
 A019 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:107
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: that segment next boundary is at or beyond 289.
 Source context since previous assertion:
   ;
 Original expression:
@@ -276,7 +299,7 @@ Original expression:
 
 A020 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:109
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the segment lattice stride is positive.
 Source context since previous assertion:
   ;
       const Tick lattice = view.grid().gridTicksAt(96);
@@ -285,7 +308,7 @@ Original expression:
 
 A021 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:110
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the lattice stride stays below the segment beat width.
 Source context since previous assertion:
   ;
 Original expression:
@@ -293,7 +316,7 @@ Original expression:
 
 A022 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:129
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the fractional walk over 96.75..289.25 equals the independent membership expectation for 96..289.
 Source context since previous assertion:
   ;
       const auto walk = [&view](double begin, double end) {
@@ -319,7 +342,7 @@ Original expression:
 
 A023 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:130
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the walk over a NaN begin is empty.
 Source context since previous assertion:
   ;
 Original expression:
@@ -327,7 +350,7 @@ Original expression:
 
 A024 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:138
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the musical-16 coarse lattice stride exceeds one tick.
 Source context since previous assertion:
   ;
       // A coarser lattice keeps both drawn and snap strides above the clock floor.
@@ -342,7 +365,7 @@ Original expression:
 
 A025 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:139
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the coarse lattice stride stays below the segment beat width.
 Source context since previous assertion:
   ;
 Original expression:
@@ -350,7 +373,7 @@ Original expression:
 
 A026 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:140
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: tick 96 is a multiple of the coarse lattice stride.
 Source context since previous assertion:
   ;
 Original expression:
@@ -358,7 +381,7 @@ Original expression:
 
 A027 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:141
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the coarse snap stride is at least three ticks.
 Source context since previous assertion:
   ;
 Original expression:
@@ -366,7 +389,7 @@ Original expression:
 
 A028 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:142
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the segment beat width is a multiple of the coarse snap stride.
 Source context since previous assertion:
   ;
 Original expression:
@@ -374,7 +397,7 @@ Original expression:
 
 A029 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:144
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the coarse lattice steps at least twice below the segment end.
 Source context since previous assertion:
   ;
       // Aligned and interior ticks advance to the same next subdivision.
@@ -384,7 +407,7 @@ Original expression:
 
 A030 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:146
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: nextSubdivisionTickAfter(96) is 96 plus latticeG.
 Source context since previous assertion:
   ;
 Original expression:
@@ -392,7 +415,7 @@ Original expression:
 
 A031 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:147
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: nextSubdivisionTickAfter(97) is 96 plus latticeG.
 Source context since previous assertion:
   ;
 Original expression:
@@ -400,7 +423,7 @@ Original expression:
 
 A032 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:151
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: a walk starting one tick after the last aligned candidate is empty.
 Source context since previous assertion:
   ;
       // The first ceiling-aligned candidate (96 + latticeG) already lies at
@@ -411,7 +434,7 @@ Original expression:
 
 A033 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:154
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the walk over 95..110 equals its membership expectation.
 Source context since previous assertion:
   ;
       // The first candidate is the beat line at 96: only its callback is
@@ -421,7 +444,7 @@ Original expression:
 
 A034 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:157
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTick at the exact midpoint 96 + snapG/2 returns 96 (lower candidate wins the tie).
 Source context since previous assertion:
   ;
       // Fractional nearest tie on either side of the midpoint: the lower
@@ -431,7 +454,7 @@ Original expression:
 
 A035 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:158
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTick a quarter tick below the midpoint returns 96.
 Source context since previous assertion:
   ;
 Original expression:
@@ -439,7 +462,7 @@ Original expression:
 
 A036 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:159
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTick a quarter tick above the midpoint returns 96 + snapG.
 Source context since previous assertion:
   ;
 Original expression:
@@ -447,7 +470,7 @@ Original expression:
 
 A037 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:160
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTickDown a quarter tick above the midpoint returns 96.
 Source context since previous assertion:
   ;
 Original expression:
@@ -455,7 +478,7 @@ Original expression:
 
 A038 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:161
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTickUp a quarter tick below the midpoint returns 96 + snapG.
 Source context since previous assertion:
   ;
 Original expression:
@@ -463,7 +486,7 @@ Original expression:
 
 A039 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:167
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the mid-cell 3/4 signature at tick 102 re-anchors segmentAt(102).start to 102.
 Source context since previous assertion:
   ;
       // A mid-cell signature change re-anchors the lattice: the first
@@ -476,7 +499,7 @@ Original expression:
 
 A040 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:168
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: segmentAt(101).next is 102 at the signature seam.
 Source context since previous assertion:
   ;
 Original expression:
@@ -484,7 +507,7 @@ Original expression:
 
 A041 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:169
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the walk over 95..130 after the signature change equals its membership expectation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -492,7 +515,7 @@ Original expression:
 
 A042 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:170
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: the walk over 100..110 after the signature change equals its membership expectation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -500,7 +523,7 @@ Original expression:
 
 A043 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:171
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTickDown(103.5) returns 102 on the post-seam lattice.
 Source context since previous assertion:
   ;
 Original expression:
@@ -508,7 +531,7 @@ Original expression:
 
 A044 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:172
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTickUp(101.5) returns 102 on the post-seam lattice.
 Source context since previous assertion:
   ;
 Original expression:
@@ -516,7 +539,7 @@ Original expression:
 
 A045 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:175
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: nextSubdivisionTickAfter(101) stops at the signature seam 102.
 Source context since previous assertion:
   ;
       // Stop at the signature seam, then restart on its new lattice.
@@ -526,7 +549,7 @@ Original expression:
 
 A046 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:176
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: nextSubdivisionTickAfter(102) restarts at 102 plus latticeSeam.
 Source context since previous assertion:
   ;
 Original expression:
@@ -534,7 +557,7 @@ Original expression:
 
 A047 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:177
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTick(103.5) returns 102.
 Source context since previous assertion:
   ;
 Original expression:
@@ -542,7 +565,7 @@ Original expression:
 
 A048 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:178
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: snapTick(103.5 + snapG) returns 102 + snapG.
 Source context since previous assertion:
   ;
 Original expression:
@@ -550,7 +573,7 @@ Original expression:
 
 A049 | PianoRollStaticTest::tickRangeWalksFractionalLattice | src/checks/rollcheck/static/camera.cpp:180
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane enumerates TimeAxis segments or the sub-grid lattice; the nearest executed lattice predicates assert derived strides instead - keyboard.swift:115-118 (Right nudges one snap cell), note_commands.swift:218-220 (split commits three grid-length fragments), and the snapTickDown guard inside the pencil fixture (pencil.swift:63-64) - while the mounted grid is repainted for the palette case only (src/checks/rollqml/tst_SwiftRollWindowing.qml:321-375). Unproved: deleting the 3/4 signature restores segmentAt(102).start to the original segment start.
 Source context since previous assertion:
   ;
       fixture.tab()->document().deleteTimeSig(102);
@@ -961,7 +984,7 @@ Original expression:
 
 A083 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:352
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate S044 (src/checks/rollcheck/static/camera.swift:217-218) asserts the display-projection half of this pair over the same three affine fixture rows; the snapped-tick inverse half is not asserted. Unproved: snapTick(tickAtContentX(displayed - origin)) == tick for each origin/DPR pair.
 Source context since previous assertion:
   ;
 Original expression:
@@ -970,7 +993,7 @@ Original expression:
 
 A084 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:358
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate S043 (:209-211) asserts the fractional tick/content round-trip inside the same walk; no executed predicate asserts forward progress of the walk. Unproved: every snapped candidate strictly exceeds the previous tick.
 Source context since previous assertion:
   ;
                   }
@@ -982,7 +1005,7 @@ Original expression:
 
 A085 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:361
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane counts the visible ticks; S044 (:217-218) enumerates the same display projections without counting. Unproved: at least two ticks land inside the visible plot width.
 Source context since previous assertion:
   ;
           tick = next;
@@ -1050,7 +1073,7 @@ Original expression:
 
 A091 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:385
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: the executing lane observes the edit cursor through grid.editCursorTick (src/checks/rollcheck/EditorGridCameraChecks.swift:547-549) and cursor publication (src/checks/workspace/session_playback.swift:146-153); neither drives SongView::goToStart. Unproved: goToStart leaves the edit cursor at tick 0.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1058,7 +1081,7 @@ Original expression:
 
 A092 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:391
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: the mounted roll band lifecycle and canonical rect are asserted by src/checks/rollqml/tst_SwiftRollPlots.qml:207-253; no Swift predicate observes view.timelineBandLayout().geometry(Roll). Unproved: the roll band layout exists for the pre-roll-bound view.
 Source context since previous assertion:
   ;
       state.scrollPx = 0.0;
@@ -1080,7 +1103,7 @@ Original expression:
 
 A094 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:395
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane reads the raster device pixel ratio; the band raster capture itself is NATIVE (A093). Unproved: the captured roll-band raster reports a positive device pixel ratio.
 Source context since previous assertion:
   ;
       const qreal dpr = raster.devicePixelRatio();
@@ -1089,7 +1112,7 @@ Original expression:
 
 A095 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:417
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane probes raster key rows; the row/pitch projection is exercised by S019 (src/checks/rollcheck/static/camera.swift:116-118) and S020 (:119-124). Unproved: a natural key row lies fully inside the roll band for the raster probe.
 Source context since previous assertion:
   ;
       const auto isBlackKey = [](int key) {
@@ -1118,7 +1141,7 @@ Original expression:
 
 A096 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:418
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: none in the executing lane probes raster key rows; the row/pitch projection is exercised by S019 (src/checks/rollcheck/static/camera.swift:116-118) and S020 (:119-124). Unproved: an accidental key row lies fully inside the roll band for the raster probe.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1126,7 +1149,7 @@ Original expression:
 
 A097 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:426
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: the mounted pre-roll pad is observed by src/checks/rollqml/tst_TimelinePan.qml:466-471 (positive pad, tick-zero home); no predicate compares pad pixels across key rows. Unproved: the pre-roll pad paints natural and accidental rows identically.
 Source context since previous assertion:
   ;
       const qreal plotOffset = rollBand->plotRect.x() - rollBand->rect.x();
@@ -1141,7 +1164,7 @@ Original expression:
 
 A098 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:427
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: the mounted pre-roll pad position is observed by src/checks/rollqml/tst_TimelinePan.qml:466-471; no predicate compares pre-roll pad pixels with plot pixels. Unproved: the pre-roll pad pixel differs from the plain plot pixel.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1149,7 +1172,7 @@ Original expression:
 
 A099 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:431
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate S063 (src/checks/rollcheck/static/camera.swift:534-536) asserts the same 8px horizontal pixel-wheel pan through grid.handleWheel from the 23.625 fixture offset; the bound-view fixture from scrollPx 0 is not driven. Unproved: the wheel leaves scrollX at -8 on this fixture.
 Source context since previous assertion:
   ;
       state.scrollPx = 0.0;
@@ -1160,7 +1183,7 @@ Original expression:
 
 A100 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:434
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate S003 (:28-29) asserts fractional camera scroll restoration; no executed predicate reads the production view-state scrollPx field. Unproved: viewState().scrollPx equals -pad/2 after the apply.
 Source context since previous assertion:
   ;
       state.scrollPx = -pad / 2.0;
@@ -1185,7 +1208,7 @@ Original expression:
 
 A102 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:465
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: timeline extent growth is asserted by src/checks/rollcheck/EditorGridCameraChecks.swift:255-259 (a far addNotes grows lengthTicks; deletion shrinks and reclamps) and the draw commit by :947-950; neither drives the double-click scratch draw. Unproved: the drawn tick lands at or beyond the pre-draw timeline length.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -1215,7 +1238,7 @@ Original expression:
 
 A103 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:466
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: the scratch draw commit is asserted at src/checks/rollcheck/EditorGridCameraChecks.swift:947-950 (revision advance and latched velocity); note existence at the drawn cell is not asserted. Unproved: the drawn key resolves at the drawn tick in the document.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1223,7 +1246,7 @@ Original expression:
 
 A104 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:467
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: src/checks/rollcheck/EditorGridCameraChecks.swift:255-259 asserts grow-then-shrink extent through addNotes/deleteNotes; the scratch-draw growth path is not driven. Unproved: the scratch draw strictly grows the timeline length.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1231,7 +1254,7 @@ Original expression:
 
 A105 | PianoRollStaticTest::scratchSpaceDrawGrowsTimeline | src/checks/rollcheck/static/camera.cpp:470
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Mapping/reason: Related predicate: undo-to-exact-bytes is asserted for other commands (src/checks/rollcheck/note_commands.swift:229-232; src/checks/rollcheck/keyboard.swift:53-55 restores song, camera, and history position); the scratch-draw undo round-trip is not asserted. Unproved: undoing the scratch draw re-encodes the original SMF bytes.
 Source context since previous assertion:
   ;
       while (document.undoStack()->index() > undo && document.undoStack()->canUndo())
