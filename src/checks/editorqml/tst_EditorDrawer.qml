@@ -1846,9 +1846,8 @@ TestCase {
         mouseMove(input, point.x, point.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "the node move published its hover")
-        tryCompare(label, "visible", true)
-        verify(label.text.length > 0, "the node hover names its value ('" + label.text + "')")
-        verify(model.hoverText === label.text, "the drawn label shows the published hover text")
+        tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
+                  2000, "the drawn label shows the published hover text")
         compare(bootstrap.automationHoverBuilds() > builds, true,
                 "the node move published one hover")
         compare(bootstrap.automationInteractionActive(), false,
@@ -1870,12 +1869,34 @@ TestCase {
                 "a repeated hover at the same point publishes nothing new")
         var free = testCase.automationFreePoint()
         verify(free, "the lane leaves a pointer row clear of every drawn node")
-        mouseMove(input, free.x, free.y)
-        tryVerify(function() { return model.hoverVisible === true
-                                       && model.hoverText !== nodeText }, 2000,
-                  "the background move reads the held value ('" + model.hoverText + "')")
-        verify(Math.abs(model.hoverTick - nodes[written].model.tick) > 0.5,
-               "the background hover sits between nodes, not on one")
+        var sorted = testCase.automationLaneNodes().map(function(n) { return n.model.tick })
+            .sort(function(a, b) { return a - b })
+        var gapX = -1
+        for (var g = 0; g + 1 < laneNodes.length; ++g) {
+            var left = testCase.automationNodePoint(laneNodes[g])
+            var right = testCase.automationNodePoint(laneNodes[g + 1])
+            if (left && right && right.x - left.x >= 48
+                    && !testCase.automationNodeUnderPoint((left.x + right.x) / 2, free.y)) {
+                gapX = (left.x + right.x) / 2
+                break
+            }
+        }
+        if (gapX < 0) {
+            var tail = testCase.automationNodePoint(laneNodes[laneNodes.length - 1])
+            if (tail && tail.x + 40 < input.width - 4
+                    && !testCase.automationNodeUnderPoint(tail.x + 40, free.y))
+                gapX = tail.x + 40
+        }
+        verify(gapX >= 0, "the written lane leaves a background gap on the pointer row")
+        mouseMove(input, gapX, free.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "the background move keeps its hover ('" + model.hoverText + "')")
+        var clear = true
+        for (var t = 0; t < sorted.length; ++t) {
+            if (Math.abs(model.hoverTick - sorted[t]) <= 0.5)
+                clear = false
+        }
+        verify(clear, "the background hover sits between nodes, not on one")
         ringed = 0
         laneNodes = testCase.automationLaneNodes()
         for (var j = 0; j < laneNodes.length; ++j) {
@@ -1928,9 +1949,55 @@ TestCase {
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
                   "dismissing the menu closes it")
-        mouseMove(input, point.x, point.y)
+        mouseMove(input, gapX, free.y)
         tryVerify(function() { return model.hoverVisible === true }, 2000,
                   "pointer motion after a dismissal recovers the hover")
+        mouseMove(input, point.x, point.y)
+        tryVerify(function() { return model.hoverVisible === true }, 2000,
+                  "the node hover returns after a dismissal")
+    }
+
+    // A pinned ghost draws its curve under the active lane through real input:
+    // the Control press pins Tempo, the plot gains ghost runs before the
+    // active runs, and a second press restores the unpinned plot.
+    function test_productionAutomationGhostCurvesDrawUnderActive() {
+        if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-ghost"))
+        verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
+        var model = testCase.automationModel()
+        var page = testCase.automationPageItem()
+        var active = testCase.automationCurveItems().length
+        verify(active > 0, "the active lane draws its curve")
+        var ghostTab = model.tabCount - 1
+        testCase.pressAutomationTabWithControl(ghostTab)
+        tryVerify(function() { return bootstrap.automationGhostParameters().length > 0 }, 2000,
+                  "the Control press pinned the Tempo row as a ghost")
+        tryVerify(function() {
+            return testCase.collectByNames(page, ["automationGhostCurve"], []).length > 0
+        }, 2000, "the plot drew the ghost's curve")
+        var ghosts = testCase.collectByNames(page, ["automationGhostCurve"], []).length
+        var drawn = testCase.automationCurveItems()
+        compare(drawn.length, active + ghosts,
+                "pinning adds exactly the ghost runs before the active runs")
+        var seenActive = false
+        var ordered = true
+        for (var i = 0; i < drawn.length; ++i) {
+            var name = drawn[i].objectName
+            if (name === "automationCurve")
+                seenActive = true
+            if (name !== "automationCurve" && name !== "automationGhostCurve")
+                ordered = false
+            if (seenActive && name === "automationGhostCurve")
+                ordered = false
+        }
+        verify(seenActive, "the active curve keeps its runs")
+        verify(ordered, "every ghost run draws before the active runs")
+        testCase.pressAutomationTabWithControl(ghostTab)
+        tryVerify(function() { return bootstrap.automationGhostParameters().length === 0 }, 2000,
+                  "a second Control press cleared the pin")
+        tryVerify(function() {
+            return testCase.automationCurveItems().length === active
+        }, 2000, "unpinning restores the unpinned plot")
     }
 
     /// Renders one reference pane and records its metadata. The observed facts
