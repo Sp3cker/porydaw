@@ -6,7 +6,7 @@ Original SHA-256: 32f5e5de2ff62c9d9bf4b0c9b8b73f462a356dd2f83a5f22bfba1e65fad987
 Swift counterpart: src/checks/automation/automationactions.swift
 Swift SHA-256: 04de1ba13dab994fa345d424a2a8bf5e63769ae5543c933c280b14aa4189baad
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: 8863fc0c8237b05de4bf1362e4cd2d9da6f2e49fba5c1a21afcb7a49d38c8a50
+Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.

@@ -7,9 +7,9 @@ Original SHA-256: 1d6668d96212debf3f3930429fbeae4733c422c9b15de920f4ae1a59f693ec
 Swift counterpart: src/checks/automation/tst_automationediting.swift
 Swift SHA-256: 0835a0455f23dbb35310dc8f983ffc2b29e67df4e7784a17941e95bb6f0692e9
 Additional Swift counterpart: src/checks/automation/AutomationPageChecks.swift
-Swift SHA-256: 66ff0023e15e9a97db73c6437733c92c29d893de5680ce1179876a6e3156dea4
+Swift SHA-256: dce1000e17ed29709316b9d84f1c07ecf0f11a0c323d09d5ad642cf3c325dd31
 Additional Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: 8863fc0c8237b05de4bf1362e4cd2d9da6f2e49fba5c1a21afcb7a49d38c8a50
+Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
@@ -868,6 +868,6 @@ S020 | drawerAutomationCancellationAndNoOps | src/checks/automation/automationca
                          what: "one undo restores the deleted node")
 
 Shared helper: src/checks/automation/AutomationPageChecks.swift
-SHA-256: 66ff0023e15e9a97db73c6437733c92c29d893de5680ce1179876a6e3156dea4
-src/checks/automation/AutomationPageChecks.swift:397
+SHA-256: dce1000e17ed29709316b9d84f1c07ecf0f11a0c323d09d5ad642cf3c325dd31
+src/checks/automation/AutomationPageChecks.swift:399
   report.fail("swiftcore/Automation::supplementalAwaitedPanUndo", "history regression failed: \(error)")

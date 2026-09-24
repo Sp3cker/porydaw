@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/automation/automationcanvaslayout.cpp
 Original SHA-256: 2a327b9ee3f719debb52dc61340e898ef31f3026e1e1ed02591876673fd7218c
 Swift counterpart: src/checks/automation/automationcanvaslayout.swift
-Swift SHA-256: 8863fc0c8237b05de4bf1362e4cd2d9da6f2e49fba5c1a21afcb7a49d38c8a50
+Swift SHA-256: d70079064b3497280fc052f594e9d53e374cd8b65e2e902a92abb83f82727e44
 Additional Swift counterpart: src/checks/automation/automationcanvasediting.swift
 Swift SHA-256: d2861ca291148a67d21bd3b2c97bcb6d99fa3812875721118e69aadbc6c0c6d4
 Additional Swift counterpart: src/checks/automation/presentation/painting.swift
@@ -34,10 +34,18 @@ Verification evidence
 deno task verify --filter swiftcore --verbose passed on this worktree at revision
 470231af89c12f08bf2d8b2562640c40f90a3049 (swiftcore ok; 1/14 harnesses selected, 13
 skipped). The result was supplied by the controller for the settled source snapshot
-recorded above; the ledger agent did not re-run it. The legacy automation C++ harness is
+recorded above; the ledger agent did not re-run it. The implementer reports the same lane
+green again after adding drawerAutomationViewStatePreservation (revision
+1cd6c7690, no run banner supplied). The legacy automation C++ harness is
 retired, so this file is an assertion-obligation inventory, never current execution
 evidence for the C++ original. Converted-window command: deno task verify:qml --verbose.
-Disposition tally: MATCHED 12, PARTIAL 38, GAP 16, NATIVE 62 (128 sites).
+drawerAutomationViewStatePreservation (automationcanvaslayout.swift:132) is registered by
+runAutomationPageChecks at AutomationPageChecks.swift:387 and executes under cppID
+automation/AutomationEditingTest::viewStateSwitchPreservesAutomationState (its
+detach/attach block) and cppID
+automation/AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState (its
+EditorDrawerPresenter resize block).
+Disposition tally: MATCHED 22, PARTIAL 37, GAP 7, NATIVE 62 (128 sites).
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -670,43 +678,43 @@ Original expression:
 
 A102 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:323
 Disposition: PARTIAL
-Mapping/reason: The converted page activates parameters through the production catalog (S034), but no Swift predicate asserts the original's activation return for the bend-range lane.
+Mapping/reason: The converted page activates parameters through the production catalog and the new view-state predicates require the activated lane to stay active (S042 consumes the lane's range menu, S043 keeps it active across the page switch), but the original's activateParameter return value still has no predicate.
 Original expression:
   QVERIFY(activateParameter(bendRange))
 
 A103 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:340
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no EditorDrawer-level switch check was added, and no Swift predicate reads an EditorViewState automation block.
+Disposition: MATCHED
+Mapping/reason: S043 (the active parameter survives the page switch) and S044 (the lane range survives) assert the members the original's automation block carries, at the same sequence point: the lane takes its 0-64 range, the page is detached and re-attached, and nothing is written. The switch is performed as page detach/attach rather than a drawer page change. [S043][S044]
 Original expression:
   QVERIFY(whileVelocity.automation == beforeSwitch.automation)
 
 A104 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:341
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate reads an EditorViewState laneRanges block across a drawer page switch.
+Disposition: MATCHED
+Mapping/reason: S044 asserts the lane's applied 0-64 range survives the page switch (page.scaleLabels.first?.value == 64), the lane-ranges member the original compares. [S044]
 Original expression:
   QVERIFY(whileVelocity.laneRanges == beforeSwitch.laneRanges)
 
 A105 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:342
 Disposition: PARTIAL
-Mapping/reason: The page's body-size policy is asserted (S001 and S003), but the original's automation viewport size surviving a drawer page switch has no Swift predicate.
+Mapping/reason: The page's body-size policy is asserted (S001 and S003) and the new switch predicates match the same sequence's active-parameter, lane-range, document and cursor observables (S043-S047), but the original's automation viewport size is a rendered page measurement that no Swift predicate reads.
 Original expression:
   QCOMPARE(m_page->automationViewportSize(), viewportBefore)
 
 A106 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:343
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts the active parameter surviving a drawer page switch.
+Disposition: MATCHED
+Mapping/reason: S043 asserts the active parameter survives the page switch (the activated volume lane stays page.activeParameter after detach/attach). [S043]
 Original expression:
   QCOMPARE(m_page->canvas()->activeParameter(), activeBefore)
 
 A107 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:344
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts document/history equality across a drawer page switch.
+Disposition: MATCHED
+Mapping/reason: S045 asserts a page switch writes nothing: document revision, history identity and history availability stay equal across the detach/attach. The original's SMF byte comparison is C++ serialization representation. [S045]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A108 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:345
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts the edit cursor surviving a drawer page switch.
+Disposition: MATCHED
+Mapping/reason: S046 asserts a page switch moves no cursor (fixture.session.editCursor unchanged across detach/attach). [S046]
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
@@ -717,20 +725,20 @@ Original expression:
   QCOMPARE(view.timelineSplitX(), splitBefore)
 
 A110 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:351
-Disposition: PARTIAL
-Mapping/reason: A lane range applied through the production menu is asserted (S039: scaleLabels.first?.value == 64 after the 0-64 range pick), but the original's editorViewState laneRanges surviving a drawer page switch has no Swift predicate.
+Disposition: MATCHED
+Mapping/reason: S044 asserts the lane's applied 0-64 range survives the page switch, and S047 asserts the untouched tempo stream survives it too. [S044][S047]
 Original expression:
   QCOMPARE(view.editorViewState().laneRanges.at(bendRange), uint8_t{64})
 
 A111 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:352
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts document/history equality after the switch back to the Automations page.
+Disposition: MATCHED
+Mapping/reason: S045 asserts the page switch writes nothing (document revision, history identity and availability equality), the same frozen document the original compares after switching back. [S045]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A112 | AutomationEditingTest::viewStateSwitchPreservesAutomationState | src/checks/automation/automationcanvaslayout.cpp:353
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer page switch): no Swift predicate asserts the edit cursor after the switch back.
+Disposition: MATCHED
+Mapping/reason: S046 asserts the page switch moves no cursor, the same cursor the original compares after switching back. [S046]
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
@@ -819,14 +827,14 @@ Original expression:
   QVERIFY(afterHeight.activePage == afterZoom.activePage)
 
 A127 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:395
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate asserts document/history equality across a section resize.
+Disposition: MATCHED
+Mapping/reason: S048 asserts a section resize writes nothing (EditorDrawerPresenter configureLayout -> setSectionBodyHeight -> applyResize -> endResize leaves the document snapshot equal) and S050 asserts the tempo stream is untouched. [S048][S050]
 Original expression:
   QVERIFY(frozenDocumentState() == frozen)
 
 A128 | AutomationEditingTest::wheelZoomAndSectionResizePreserveDrawerState | src/checks/automation/automationcanvaslayout.cpp:396
-Disposition: GAP
-Mapping/reason: GAP (feature-not-yet-ported:EditorDrawer section resize): no Swift predicate asserts the edit cursor across a section resize.
+Disposition: MATCHED
+Mapping/reason: S049 asserts a section resize moves no cursor (fixture.session.editCursor unchanged across the presenter's resize sequence). [S049]
 Original expression:
   QCOMPARE(view.editCursorTick(), cursorBefore)
 
@@ -1043,3 +1051,48 @@ Swift expression:
           && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
           && counters.camera == publications + 1,
       cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
+
+S042 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:141
+Swift expression:
+  report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.range64.rawValue),
+                    cppID: id, message: "the lane takes the 0-64 range")
+
+S043 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:147
+Swift expression:
+  report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
+                     what: "the active parameter survives a page switch")
+
+S044 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:149
+Swift expression:
+  report.expectEqual(64, page.scaleLabels.first?.value, cppID: id,
+                     what: "the lane range survives a page switch")
+
+S045 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:151
+Swift expression:
+  report.expectEqual(before, fixture.snapshot, cppID: id,
+                     what: "a page switch writes nothing")
+
+S046 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:153
+Swift expression:
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                     what: "a page switch moves no cursor")
+
+S047 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:155
+Swift expression:
+  report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: id,
+                     what: "the untouched stream survives a page switch")
+
+S048 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:166
+Swift expression:
+  report.expectEqual(resizeBefore, fixture.snapshot, cppID: resizeID,
+                     what: "a section resize writes nothing")
+
+S049 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:168
+Swift expression:
+  report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: resizeID,
+                     what: "a section resize moves no cursor")
+
+S050 | drawerAutomationViewStatePreservation | src/checks/automation/automationcanvaslayout.swift:170
+Swift expression:
+  report.expectEqual(["0:120", "384:140"], fixture.tempoValues, cppID: resizeID,
+                     what: "a section resize leaves the streams alone")
