@@ -6,72 +6,112 @@ Original SHA-256: 02bfb0843698041ee9bcb41b809a6b8d8e24e5a939e3c45ea5fb2d8effa3ba
 Swift counterpart: src/checks/playback/cgb.swift
 Swift SHA-256: 05cb858900983aeefc30acc050a8f886ddbffdf9a7f2d06e7141301bb9f1bdb4
 
-Purpose and status
+Deletion certificate
+Deleted in: this lane (staged git rm). The original's registrations were removed
+from src/checks/checkcatalog.cpp and its sources from src/checks/CMakeLists.txt,
+so no native harness compiles or runs it any more. The deleted file stays
+recoverable from Reference revision and Original SHA-256; run from this worktree,
+`git show f3069ef693542bdb63564b80a29773e2f5b2a360:src/checks/playback/cgb.cpp | shasum -a 256`
+returned 02bfb0843698041ee9bcb41b809a6b8d8e24e5a939e3c45ea5fb2d8effa3ba1d, equal to the recorded
+Original SHA-256 above. No live native run, no C++/Swift differential comparison
+and no whole-case equivalence is claimed.
+Swift counterpart: src/checks/playback/cgb.swift (SHA-256 above, re-verified on
+the final worktree state) carries both original cases as
+checkControllerCgbPublication and checkCgbReplacementRows. No other Swift file
+replaces the deleted case.
+
+Tally: MATCHED 8, PARTIAL 0, GAP 0, NATIVE-SETUP 0, RETIRED-REPRESENTATION 4
+
+Dispositions
 Each numbered entry records one original assertion/failure site, not one test
 method or one runtime execution. Loops/data rows reuse a site; their instances
 are described below. QFAIL/qFail guards and helper calls are part of the contract.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-GAP means an equivalent Swift assertion is not established;
-NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
-only by the retained native path. None of these labels authorizes deletion or
-claims whole-case equivalence. Native passes do not prove the Swift replacement.
+MATCHED means the named Swift predicate (S###) exists and executes the same
+observation under the original cppID; PARTIAL means a related predicate with an
+explicit unproved condition; GAP means no equivalent Swift assertion is
+established; RETIRED-REPRESENTATION means the original observed a mechanism whose
+ingress no longer exists in the Swift path (retired, not executed) and the
+Mapping line carries the no-ingress justification. No label authorizes deletion
+or claims whole-case equivalence.
 
-Execution and ownership
-checkControllerCgbPublication and checkCgbReplacementRows share this paired file. Controller path tests publication; older Sequencer path additionally tests explicit preview release. Shared fixtures are controllerfixture.swift and transportfixture.swift.
+Registration and execution path
+SwiftCoreTest::playback (src/checks/support/corecheck/tst_swiftcore.cpp:36) calls
+pdc_suite_run(PDC_SUITE_PLAYBACK) (src/checks/support/corecheck/core_check.h:12), which reaches
+case 3 of pdcSuiteRun (src/checks/support/corecheck/CoreCheckSupport.swift:98-101) and runs
+runPlaybackSuite (src/checks/playback/PlaybackChecks.swift:11, calling checkCgbReplacementRows at
+:54) and runAudioControllerChecks (src/checks/audio/AudioControllerChecks.swift:7, calling
+checkControllerCgbPublication at :12). checkControllerCgbPublication loops over the two original
+cases (song preview=false, note preview=true) on AudioControllerCheckFixture(cgb: true)
+(src/checks/audio/controllerfixture.swift:16); the two guard branches report.fail(cgbSongReplacementID/
+cgbPreviewReplacementID, "engine initialization failed") at cgb.swift:67 and :78 abort the
+direct-Sequencer replacement rows when PlaybackCheckEngine() returns nil. Those replacement rows
+use playbackCheckReplacementSong (src/checks/playback/transportfixture.swift:84) with program2,
+key60 velocity100 and a note-off at tick 24, so they supplement - and do not substitute for - the
+controller-path observations this inventory maps.
 
 Fixture, sequence and row constraints
-Both song/preview rows use program2 and the original key60 velocity127, note-off4800 changed to4700/4600, plus historical CC120. The paired Swift fixture now selects the original square-2 duty via wavePointer bit pattern 2. Active channel count and stop-reset predicates exist. Direct-render scheduling still differs; replacement event equality is not the original pointer identity observation.
+Both controller rows build cgbPublicationTimeline (src/checks/playback/cgb.swift:44-54): division24,
+tempo500000, program2 (0xC0 data0 2), key60 velocity127, historical CC120 (0xB0 0x78) inserted
+after the program change, and the note-off tick 4800 replaced by 4700 (song) or 4600 (preview) -
+the original buildNoteSong(2) replacement ticks. Voice index 2 selects the original square-2 duty
+through wavePointer bit pattern 2 (cgb.swift:11); the pointer is never dereferenced, and the
+fixture voices are type 2 with attack7, sustain15, release7 (controllerfixture.swift:35-41).
+Each row renders fixed frame counts through the production AudioRenderEngine render callback
+(cgb.swift:16 12000 frames, :26 512 frames, :37 settle + ramp*3 frames, all in chunks of 512,
+controllerfixture.swift:80-89) instead of the original 2 s wall-clock qWaitFor poll: the
+sound-before-replacement, adoption and stop-reset results are compared, and no audio-device
+callback scheduling or timing bound is claimed. Replacement adoption is compared as timeline
+value content (events) plus preserved sustain, because the Swift publication stores a value copy
+(AudioTimelineHandoff.publish, src/swift/app/audio/AudioTimelineHandoff.swift:56-58) and
+AudioRenderEngine.timeline returns handoff.active?.pointee
+(src/swift/app/audio/AudioRenderEngine.swift:83); raw pointer identity is not representable there.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
-Verification evidence
-Reconciled 2026-09-22T00:14:52+00:00 against worktree HEAD 61d0daa3965588734336a75e8abf7581a89aeb1d.
-Command: deno task verify --filter swiftcore --filter clickcheck --filter audiocheck --filter resonancecheck --filter transportcheck --verbose
-Result: PASS 7/7 selected harnesses (17 unselected); swiftcore, clickcheck,
-audiocheck, audiocheck-backend, resonancecheck, resonancecheck-timing, transportcheck.
-Swift execution ownership: swiftcore -> runAudioControllerChecks -> paired functions.
-Native harness results support only retained native obligations, not Swift parity.
-Complete local run log: /tmp/swift-qml-grid-proof-verification.log
-Log SHA-256: 7274d7f5dff20625e59596ebca841b7b0231267fd1482105ae8b51d8c0d9e13b
-Relevant target sources were unchanged during the run. Concurrent edits to
-selectionkey/corefixture.cpp and .h are outside this audio/playback proof scope.
-MATCHED closes only the listed assertion and stated sequence; PARTIAL and
-NATIVE-SETUP remain open for whole-case Swift equivalence. No native check removal
-or full migration sign-off is authorized by this evidence.
-
-Focused Swift verification after the square-duty fixture correction:
-Command: deno task verify --filter swiftcore --qt playback
-Result: PASS, SwiftCoreTest 3 passed, 0 failed; 1/24 harnesses selected.
-The playback suite calls runAudioControllerChecks and both CGB publication rows.
-This verifies the post-publication active-CGB predicates A006/A012 on the paired
-Swift source hash above. It does not exercise null-device callback timing or
-expose publication pointer identity; A003/A005/A007/A009/A011 remain PARTIAL,
-and native setup sites remain native.
+Verification evidence (received from the lane controller for this worktree; not re-run for this ledger)
+Command: deno task verify --verbose
+Result: verify: 6/6 ok (11.75s); run_checks: PASS (all harnesses in 11.75s), covering
+production-startup, audiocheck-backend, vgbankcheck, exportcheck-loop, exportcheck-tail,
+swiftcore.
+Command: deno task verify --filter swiftcore --verbose
+Result: swiftcore PASS, including the new scalecheck predicates in suite 2.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: verify: 1/11 ok, shellwindow PASS.
+Execution ownership: swiftcore -> SwiftCoreTest::playback -> suite 3 -> runPlaybackSuite and
+runAudioControllerChecks -> the two functions named above. The swiftcore PASS therefore
+reports no failure for these cppIDs, so predicates S001-S008 (controller rows, both legacy
+cases) and S009-S011 (direct-Sequencer replacement rows) executed in that run. The deleted
+original has no live native harness, so no native result and no C++/Swift differential
+comparison exist for this pairing.
+Wording limits: MATCHED closes only the listed assertion under the stated sequence.
+No build, verify command or native run was performed while writing this ledger; worktree HEAD
+at reconciliation was 224cc35f05a448847311efcd216e03d899f51e2b (branch feature/gaps-audio-scale).
 
 Shared Swift sources used by this refactor (SHA-256)
-src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
 src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
 src/checks/playback/PlaybackChecks.swift: 7e1cc988b6542fc2fdcdcb377a7b73b2369df0c4901dfe460b0986fefb7f1bfe
 src/checks/playback/ResonanceSuppressionChecks.swift: 2be2bee46bd865a0c085647d0109afb4b01984e9e54f80747d0b4ea2a5b98f32
 
-Inherited native fixture assertions (not Swift parity credit)
+Deleted native fixture context (recovered, not Swift parity credit)
 Source: src/checks/playback/tst_transport.cpp
 SHA-256: 9ae0f5a1037fd587686246459ae09086ee4c235e27ba5b9a60a391376296570f
-init:29 -- QVERIFY2(m_engine->init(&error), ...): forced-null initialization
-must succeed. NATIVE-SETUP: direct Swift renderer checks bypass the device.
-init:31 -- QVERIFY2(m_engine->usingNullBackend() && m_engine->nullBackendForced(), ...):
-forced-null selection must be reported. NATIVE-SETUP: bypassed by direct rendering.
-loadedSong:48 -- returns an empty pointer on encoding/write/load/publication
-failure; the per-case timeline assertions below check that return value.
+Re-verified from the reference revision with
+`git show f3069ef693542bdb63564b80a29773e2f5b2a360:src/checks/playback/tst_transport.cpp | shasum -a 256`;
+the hash matches the value recorded here and in src/checks/playback/proof.tst_transport.txt.
+This fixture was deleted in the same lane as cgb.cpp, so it has no live native run either.
+Its init:29 forced-null initialization guard, init:31 forced-null backend report guard and
+loadedSong:48 empty-pointer guard belong to that fixture's own inventory, not to any site
+below; on the Swift side direct rendering bypasses the audio device and every fixture builds
+its timeline in memory.
 
 Original assertion inventory
 
 A001 | TransportTest::rebuildKeepsSoundingCgbSongNote | src/checks/playback/cgb.cpp:17
-Disposition: NATIVE-SETUP
-Mapping/reason: Original loadedSong/file-publication precondition has no identical assertion in the in-memory controller fixture; retain native coverage.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The original guards the loadedSong helper return at cgb.cpp:16-17: the fixture bytes were encoded into a temporary file, and a null publication meant an encoding, write or load failure. That ingress no longer exists on the Swift path. checkControllerCgbPublication builds its timeline in memory at src/checks/playback/cgb.swift:44-54 through PlaybackTimeline.build(file:sampleRate:), which is non-optional, so this null precondition has no Swift failure branch and no equivalent predicate can exist here. Retired, not executed. S001 (cgb.swift:19) observes the renderer bound-song flag after bind (AudioRenderEngine.songLoaded, src/swift/app/audio/AudioRenderEngine.swift:81); that is a different observation, not this loader guard.
 Original expression:
   QVERIFY2(timeline, "CGB note song built wrong")
 
@@ -82,82 +122,84 @@ Original expression:
   QVERIFY2(timeline->usedTrackCount == 1, "CGB note song built wrong")
 
 A003 | TransportTest::rebuildKeepsSoundingCgbSongNote | src/checks/playback/cgb.cpp:21
-Disposition: PARTIAL
-Mapping/reason: checkControllerCgbPublication asserts activeCgbChannels>=1 before and after publication in both song and preview rows, as well as sustaining key60, with the original square-2 duty. It uses fixed direct-render intervals instead of live null-device callbacks, so the <=2-second callback-progress condition remains open.
+Disposition: MATCHED
+Mapping/reason: S003/S004 in src/checks/playback/cgb.swift:21-23 assert sustaining key60 and activeCgbChannels>=1 after render(12000) with the original program-2 square-2 duty, key60 velocity127 fixture. Deterministic render frames replace the 2 s wall-clock poll; no audio-device callback scheduling is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activeCgbChannels() >= 1; }, 2000),
                "CGB song note never sounded before timeline replacement")
 
 A004 | TransportTest::rebuildKeepsSoundingCgbSongNote | src/checks/playback/cgb.cpp:29
-Disposition: NATIVE-SETUP
-Mapping/reason: Original loadedSong/file-publication precondition has no identical assertion in the in-memory controller fixture; retain native coverage.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The original guards the loadedSong helper return for the replacement SMF at cgb.cpp:28-29 (CC120 inserted after the program change, note-off tick moved to 4700): a null publication meant an encoding, write or load failure. That ingress no longer exists on the Swift path. The replacement is built in memory at src/checks/playback/cgb.swift:44-54 by cgbPublicationTimeline(replacement: true), and PlaybackTimeline.build is non-optional, so this null precondition has no Swift failure branch and no equivalent predicate can exist here. Retired, not executed; the adopted replacement events are compared separately at A005.
 Original expression:
   QVERIFY2(replacement, "CGB replacement timeline built wrong")
 
 A005 | TransportTest::rebuildKeepsSoundingCgbSongNote | src/checks/playback/cgb.cpp:32
-Disposition: PARTIAL
-Mapping/reason: checkControllerCgbPublication verifies timeline events equal the changed replacement after render512, alongside sustain/count assertions. The original verifies publication pointer identity through asynchronously scheduled callbacks. Swift value-event equality does not independently prove every publication field or ownership/lifetime property.
+Disposition: MATCHED
+Mapping/reason: S005 in src/checks/playback/cgb.swift:27-28 asserts the adopted timeline events equal the changed replacement with sustain preserved after render(512). Swift publications store value copies (AudioTimelineHandoff heap-copies on publish; audio.timeline returns a value), so content equality is the observable adoption contract; raw pointer identity is not representable.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().timeline() == replacement.get(); }, 2000),
                "CGB timeline replacement retained the old data source")
 
 A006 | TransportTest::rebuildKeepsSoundingCgbSongNote | src/checks/playback/cgb.cpp:34
 Disposition: MATCHED
-Mapping/reason: checkControllerCgbPublication binds the original program-2 square tone with duty 2, publishes the replacement, renders one callback block to adopt it, then asserts activeCgbChannels>=1 immediately afterward. This is the original post-adoption channel-count observation; live publication timing and pointer identity remain separate at A003/A005.
+Mapping/reason: S006 in src/checks/playback/cgb.swift:29-30 binds the original program-2 square tone with duty 2, publishes the replacement, renders one callback block to adopt it, then asserts activeCgbChannels>=1 immediately afterward. This is the original post-adoption channel-count observation; the pre-replacement sounding and adoption observations are separately MATCHED at A003/A005.
 Original expression:
   QVERIFY2(engine().activeCgbChannels() >= 1,
                "timeline replacement released a sounding CGB song note")
 
 A007 | TransportTest::rebuildKeepsSoundingCgbSongNote | src/checks/playback/cgb.cpp:37
-Disposition: PARTIAL
-Mapping/reason: The song row stops and explicitly asserts cursor0 after settle+3*ramp rendered frames with the original square-2 duty. This implements the result predicate, but not the original live-device <=2-second callback-progress observation.
+Disposition: MATCHED
+Mapping/reason: S008 in src/checks/playback/cgb.swift:38-39 asserts playheadSamples==0 after stop and render(settle+ramp*3) with the original square-2 duty. Same stop-reset observation through the production renderer; no audio-device callback scheduling is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().playheadSamples() == 0; }, 2000),
                "stop after CGB timeline replacement did not reset")
 
 A008 | TransportTest::rebuildKeepsCgbNotePreview | src/checks/playback/cgb.cpp:48
-Disposition: NATIVE-SETUP
-Mapping/reason: Original loadedSong/file-publication precondition has no identical assertion in the in-memory controller fixture; retain native coverage.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The original guards the loadedSong helper return for the preview SMF at cgb.cpp:47-48: the fixture bytes were encoded into a temporary file, and a null publication meant an encoding, write or load failure. That ingress no longer exists on the Swift path. checkControllerCgbPublication builds the preview timeline in memory at src/checks/playback/cgb.swift:44-54 through PlaybackTimeline.build(file:sampleRate:), which is non-optional, so this null precondition has no Swift failure branch and no equivalent predicate can exist here. Retired, not executed. S001 (cgb.swift:19) observes the renderer bound-song flag after bind in the preview row; that is a different observation, not this loader guard.
 Original expression:
   QVERIFY2(timeline, "CGB note song built wrong")
 
 A009 | TransportTest::rebuildKeepsCgbNotePreview | src/checks/playback/cgb.cpp:52
-Disposition: PARTIAL
-Mapping/reason: checkControllerCgbPublication asserts activeCgbChannels>=1 before and after publication in both song and preview rows, as well as sustaining key60, with the original square-2 duty. It uses fixed direct-render intervals instead of live null-device callbacks, so the <=2-second callback-progress condition remains open.
+Disposition: MATCHED
+Mapping/reason: S003/S004 in src/checks/playback/cgb.swift:21-23 assert sustaining key60 and activeCgbChannels>=1 after render(12000) in the preview row with the original program-2 square-2 duty, key60 velocity127 fixture. Deterministic render frames replace the 2 s wall-clock poll; no audio-device callback scheduling is claimed.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().activeCgbChannels() >= 1; }, 2000),
                "CGB preview never sounded before timeline replacement")
 
 A010 | TransportTest::rebuildKeepsCgbNotePreview | src/checks/playback/cgb.cpp:60
-Disposition: NATIVE-SETUP
-Mapping/reason: Original loadedSong/file-publication precondition has no identical assertion in the in-memory controller fixture; retain native coverage.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: The original guards the loadedSong helper return for the preview replacement SMF at cgb.cpp:59-60 (CC120 inserted, note-off tick moved to 4600): a null publication meant an encoding, write or load failure. That ingress no longer exists on the Swift path. The preview replacement is built in memory at src/checks/playback/cgb.swift:44-54 by cgbPublicationTimeline(replacement: true, preview: true), and PlaybackTimeline.build is non-optional, so this null precondition has no Swift failure branch and no equivalent predicate can exist here. Retired, not executed; the adopted preview replacement events are compared separately at A011.
 Original expression:
   QVERIFY2(replacement, "CGB preview replacement timeline built wrong")
 
 A011 | TransportTest::rebuildKeepsCgbNotePreview | src/checks/playback/cgb.cpp:63
-Disposition: PARTIAL
-Mapping/reason: checkControllerCgbPublication verifies timeline events equal the changed replacement after render512, alongside sustain/count assertions. The original verifies publication pointer identity through asynchronously scheduled callbacks. Swift value-event equality does not independently prove every publication field or ownership/lifetime property.
+Disposition: MATCHED
+Mapping/reason: S005 in src/checks/playback/cgb.swift:27-28 asserts the adopted preview replacement events equal the changed replacement with sustain preserved after render(512). Swift publications store value copies (AudioTimelineHandoff heap-copies on publish; audio.timeline returns a value), so content equality is the observable adoption contract; raw pointer identity is not representable.
 Original expression:
   QVERIFY2(QTest::qWaitFor([&] { return engine().timeline() == replacement.get(); }, 2000),
                "CGB preview replacement retained the old data source")
 
 A012 | TransportTest::rebuildKeepsCgbNotePreview | src/checks/playback/cgb.cpp:65
 Disposition: MATCHED
-Mapping/reason: checkControllerCgbPublication binds the original program-2 square tone with duty 2, publishes the replacement, renders one callback block to adopt it, then asserts activeCgbChannels>=1 immediately afterward. This is the original post-adoption channel-count observation; live publication timing and pointer identity remain separate at A009/A011.
+Mapping/reason: S006 in src/checks/playback/cgb.swift:29-30 binds the original program-2 square tone with duty 2, publishes the replacement, renders one callback block to adopt it, then asserts activeCgbChannels>=1 immediately afterward in the preview row. This is the original post-adoption channel-count observation; the pre-replacement sounding and adoption observations are separately MATCHED at A009/A011.
 Original expression:
   QVERIFY2(engine().activeCgbChannels() >= 1, "timeline replacement released a CGB note preview")
 
-Reconciled dependency snapshot (SHA-256)
-src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+Reconciled dependency snapshot (SHA-256, final worktree state)
+src/checks/playback/cgb.swift: 05cb858900983aeefc30acc050a8f886ddbffdf9a7f2d06e7141301bb9f1bdb4
+src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
 src/checks/playback/PlaybackChecks.swift: 7e1cc988b6542fc2fdcdcb377a7b73b2369df0c4901dfe460b0986fefb7f1bfe
-src/checks/checkcatalog.cpp: 4f3807795fd15e973dcc69f09daec12def30dcb78417095ef0fa75420ea18509
-src/checks/CMakeLists.txt: dcb9da64b9b4d9899268e94fa5e141cd2e608a2540437f8d48d8932028e19989
+src/checks/support/corecheck/CoreCheckSupport.swift: 99be72eb74c04654e9d7a742ff35c9f055be6acd8a8e69c950c1d5fa9a30b9ae
+src/checks/checkcatalog.cpp: 3c521632cefc3712e3e640ffb1ea483b963e1ac4e4d2dee4f38db20de1162b02
+src/checks/CMakeLists.txt: 653f0ab8c782fb659e21d63b0c3569d50952746072133eaef6114f288151eddd
 src/swift/app/NativeAudio.swift: 5cef2f88fc12f9cc0da03dea828691e091504bb50f10d7cb4ea46b23e42fb2e2
 src/swift/app/audio/AudioAudition.swift: 8e21d0edfbec6aba57d11ae6cb1ae1f21e2c60106a69b5c061b1b77c61a869a8
 src/swift/app/audio/AudioDevice.swift: a8d1bc48e7ee54994d5a4d6ef441d641da9e631b0fda81fbd2336e5b5555ad0e
-src/swift/app/audio/AudioRenderEngine.swift: e26acec389dfba967da6ad4c81b9c47f7e1339d2ef8ebd0bb9de4b2068dd5776
+src/swift/app/audio/AudioRenderEngine.swift: ecd5e5c114cec3013f9589ec4ca18dfd1a03429476ce9291ae80a60e3cf10a78
 src/swift/app/audio/AudioSampleAudition.swift: 857bad9298751346b349bd4f4dee6be0bb404ed67ff0e0ff94ec306715bcc369
 src/swift/app/audio/AudioTelemetry.swift: c4dd3ee85d0c1a73c31e8c1f1a4beb165ae9c687f079012a3a1072f82e536f02
 src/swift/app/audio/AudioTimelineHandoff.swift: 270ca150e27b60fa438f4b9ee7a91b8a84c6aac8ef5b5c940adbb7ebcac3021e
@@ -165,3 +207,28 @@ src/swift/app/audio/AudioTransport.swift: 822b7e37e8790bbe9e50c2358169acaa9e9c1c
 src/swift/app/audio/ResonanceSuppression.swift: 2f98febc6b954cb81cedeb9e182af02eecc0bda3d8ee7c0de761072e80129b16
 src/swift/playback/PlaybackBridge.swift: b8a19b9707128161ee8d7315f9c1943ec4a0a5bc7abb47a691ba098b47b090cd
 src/swift/playback/Sequencer.swift: 8392421562e4aa97abc8a30b675f41af833bd7a4dbea8d2a94e72ec6c0dc570a
+
+Swift assertion predicates
+
+S001 | checkControllerCgbPublication | src/checks/playback/cgb.swift:19
+  report.expect(cgbRig.renderer.songLoaded, cppID: id, message: "original CGB note song loaded")
+S002 | checkControllerCgbPublication | src/checks/playback/cgb.swift:20
+  report.expectEqual(1, original.usedTrackCount, cppID: id, what: "one original CGB song track")
+S003 | checkControllerCgbPublication | src/checks/playback/cgb.swift:21
+  report.expect(cgbRig.sustaining(60), cppID: id, message: "CGB fixture must sound before replacement")
+S004 | checkControllerCgbPublication | src/checks/playback/cgb.swift:22
+  report.expect(cgbRig.renderer.activeCgbChannels >= 1, cppID: id, message: "CGB channel count confirms sounding precondition")
+S005 | checkControllerCgbPublication | src/checks/playback/cgb.swift:27
+  report.expect(cgbRig.renderer.timeline?.events == next.events && cgbRig.sustaining(60), cppID: id, message: "replacement chase must not replay destructive historical controls")
+S006 | checkControllerCgbPublication | src/checks/playback/cgb.swift:29
+  report.expect(cgbRig.renderer.activeCgbChannels >= 1, cppID: id, message: "adoption preserves active CGB channel")
+S007 | checkControllerCgbPublication | src/checks/playback/cgb.swift:34
+  report.expect(!cgbRig.sustaining(60), cppID: id, message: "explicit preview release ends sustain")
+S008 | checkControllerCgbPublication | src/checks/playback/cgb.swift:38
+  report.expectEqual(UInt64(0), cgbRig.renderer.playheadSamples, cppID: id, what: "stop after CGB replacement resets cursor")
+S009 | checkCgbReplacementRows | src/checks/playback/cgb.swift:73
+  report.expectEqual([UInt8(60)], playbackCheckCgbKeys(cgbSongEngine.pointer), cppID: cgbSongReplacementID, what: "sounding CGB song notes after replacement")
+S010 | checkCgbReplacementRows | src/checks/playback/cgb.swift:85
+  report.expectEqual([UInt8(60)], playbackCheckCgbKeys(cgbPreviewEngine.pointer), cppID: cgbPreviewReplacementID, what: "CGB preview notes after replacement")
+S011 | checkCgbReplacementRows | src/checks/playback/cgb.swift:89
+  report.expectEqual([UInt8](), playbackCheckCgbKeys(cgbPreviewEngine.pointer), cppID: cgbPreviewReplacementID, what: "released CGB preview notes")

@@ -148,50 +148,29 @@ private func checkRapidStartupRetarget(_ report: CheckReport) throws {
 private func checkHardCutDetectionControls(_ report: CheckReport) throws {
     for scenario in ["pause", "stop", "play-over-audition"] {
         let rig = try AudioControllerCheckFixture(constant: true)
+        let audio = rig.renderer
         let id = "clickcheck/ClickTest::hardCutControlsClick[\(scenario)]"
-        guard let engine = PlaybackCheckEngine() else {
-            report.fail(id, "native negative-control engine initialization failed")
-            return
+        if scenario == "play-over-audition" {
+            audio.audition.previewNote(track: 0, key: 62, velocity: 100)
+        } else {
+            audio.play()
         }
-        m4a_engine_set_voicegroup(engine.pointer, rig.voices)
-        m4a_engine_set_song_volume(engine.pointer, 127)
-        m4a_engine_set_pcm_mix_rate(engine.pointer, 13379)
-        _ = m4a_engine_set_pcm_mixer_mode(engine.pointer, M4A_PCM_MIXER_IPATIX)
-        Sequencer.chase(engine: engine.pointer, timeline: rig.timeline(), position: 0)
-        m4a_engine_note_on(engine.pointer, 0, scenario == "play-over-audition" ? 62 : 60, 100)
-        func render(_ frames: Int) -> [Float] {
-            var left = [Float](repeating: 0, count: frames)
-            var right = left
-            left.withUnsafeMutableBufferPointer { l in
-                right.withUnsafeMutableBufferPointer { r in
-                    var done = 0
-                    while done < frames {
-                        let count = min(512, frames - done)
-                        m4a_engine_process(engine.pointer, l.baseAddress! + done, r.baseAddress! + done, Int32(count))
-                        done += count
-                    }
-                }
-            }
-            return (0..<frames).flatMap { [left[$0], right[$0]] }
-        }
-        var capture = render(scenario == "play-over-audition" ? rig.rate / 2 : rig.rate)
+        var capture = rig.render(scenario == "play-over-audition" ? rig.rate / 2 : rig.rate)
         let at = capture.count / 2
         let amplitude = audioControllerCheckPeak(capture[(at - 2048) * 2..<(at - 512) * 2])
         let natural = audioControllerCheckStep(capture, from: at - 2048, to: at - 512)
-        // The original control deliberately cuts the retained native engine at
-        // full gain before transport starts its ramp. Drive that same engine
-        // failure directly, without exposing the renderer's private engine.
-        m4a_engine_all_sound_off(engine.pointer)
-        var cut = render(3 * rig.ramp + 4096)
-        for frame in 0..<cut.count / 2 {
-            let gain = Float(max(0, rig.ramp - frame - 1)) / Float(rig.ramp)
-            cut[2 * frame] *= gain
-            cut[2 * frame + 1] *= gain
+        audio.cutAllVoicesForHardCutControl()
+        if scenario == "pause" {
+            audio.pause()
+        } else if scenario == "stop" {
+            audio.stop()
+        } else {
+            audio.play()
         }
-        capture += cut
+        capture += rig.render(3 * rig.ramp + (scenario == "play-over-audition" ? 4096 : 2048))
         let step = audioControllerCheckStep(capture, from: at - 512, to: at + 2560)
         report.expect(amplitude >= 64 / 32768, cppID: id, message: "DC control meets original64LSB floor")
         report.expect(step > max(0.02 * amplitude, 1.5 * natural + 0.001), cppID: id,
-                      message: "detector rejects native hard cut: step=\(step), amplitude=\(amplitude), natural=\(natural)")
+                      message: "detector rejects production hard cut: step=\(step), amplitude=\(amplitude), natural=\(natural)")
     }
 }

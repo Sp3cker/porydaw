@@ -5,33 +5,80 @@ Original: src/checks/audio/tst_trackactivity.cpp
 Original SHA-256: edbde7297cc2f3e7d0dbdaa813141f1ec2a0624e9266476ac1ab0828e80cfa51
 Swift counterpart: src/checks/audio/tst_trackactivity.swift
 Swift SHA-256: 5d6e3d7a57a12628ad024258d5bfdd6077af440d6db656dee5780f096c85246d
+Additional Swift counterpart: src/swift/app/headers/TrackActivity.swift
+Additional Swift SHA-256: 2c936629b8d19c1171d7fdeeef854b71153b2b2eb50c6cac48da3adcf515a682
+Deleted in: feature/gaps-audio-scale staged git rm — check, header and native implementation removed; deletion not yet committed, original recoverable from the Reference revision and Original SHA-256 above
+
+Deletion certificate
+src/checks/audio/tst_trackactivity.cpp and its header were deleted in this lane,
+together with the native implementation the check exercised:
+src/ui/activity/trackactivity.h, trackactivity.cpp, trackactivityrender.h and
+trackactivityrender.cpp. The deleted check is recoverable from the recorded
+Reference revision and Original SHA-256; the recorded hash was re-derived from the
+recorded revision before this certificate was written:
+
+  git show f3069ef693542bdb63564b80a29773e2f5b2a360:src/checks/audio/tst_trackactivity.cpp | shasum -a 256
+  => edbde7297cc2f3e7d0dbdaa813141f1ec2a0624e9266476ac1ab0828e80cfa51
+
+The recorded revision is historical and was not recomputed from HEAD. The native
+trackactivitycheck registration is gone from src/checks/checkcatalog.cpp, its
+declaration from src/checks/fwd.hpp, and its sources from src/checks/CMakeLists.txt,
+so no C++ path executes the sites below in this snapshot. This certificate claims no
+live native run and no C++/Swift differential parity; its replacement evidence is the
+Swift check running in the swiftcore harness.
+
+Retired notice: the previous "File retirement: BLOCKED" entry claimed the native
+implementation stayed alive because the native activity check and unretired legacy
+track-header C++ sources referenced it. That notice no longer holds. src/ui/activity/
+is empty on disk, and the retained targets (porydaw_app, CMakeLists.txt:181;
+porydaw_checks, src/checks/CMakeLists.txt:32) list no source under it, so no compiled
+translation unit includes the deleted headers — the recorded build below succeeds with
+them absent. The remaining textual includes of "ui/activity/trackactivity.h" sit in
+legacy translation units that appear in no CMake target: src/ui/songview.h:24,
+src/ui/songview/trackheadermodel.h:20-21, src/checks/trackheaders/trackheaderfixture.cpp:20,
+trackheaderraster.cpp:16, tst_trackheadermodel.cpp:22, and tst_trackactivitymeter.cpp:20.
+The behavior lives in the Swift counterparts: src/checks/audio/tst_trackactivity.swift
+(the assertions below) and src/swift/app/headers/TrackActivity.swift (the production model).
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact Swift predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related Swift predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift window.
-GAP identifies an original predicate without a replacement assertion.
-File retirement: BLOCKED. Swift TrackActivity exercises the shipped model,
-but the native C++ implementation remains referenced by the native activity
-check and unretired legacy track-header C++ sources. Remove those consumers
-and the C++ implementation together before deleting the native check.
+All 28 sites are MATCHED and no disposition changed in this lane; PARTIAL, GAP and
+NATIVE do not occur here. MATCHED names a Swift predicate in the unchanged counterpart
+that executes the same observation under the original test-method cppID.
+Rows and sequence: attackRetainsStereoTargets_data expands three rows — asymmetric
+{128, 32}, left-only {255, 0}, right-only {0, 255} — and the Swift loop iterates the
+same three pairs. The ten policy methods run on 16 tracks (kMaxTracks,
+src/audio/trackactivitylevel.h:8) with isolated track 3, and reuse the original elapsed
+times, the 23-step release loop, the 0..<16 sweeps and the 0.0001 tolerance.
 
 Verification
-Swift: deno task verify --filter swiftcore --verbose — PASS 1/24
-(23 skipped), swiftcore 9.64s. Native: deno task verify --filter
-trackactivitycheck --filter resonancecheck --filter resonancecheck-timing
---verbose — PASS 3/24 (21 skipped). No retirement certification is claimed.
+Command: deno task verify --verbose
+Result: passing — verify: 6/6 ok (11.75s); run_checks: PASS (all harnesses in 11.75s)
+covering production-startup, audiocheck-backend, vgbankcheck, exportcheck-loop,
+exportcheck-tail and swiftcore.
+Command: deno task verify --filter swiftcore --verbose
+Result: passing — swiftcore PASS, including the new scalecheck predicates in suite 2.
+Provenance: both commands were recorded by the lane implementer from this worktree on
+the frozen snapshot with the deleted C++ absent; this proof edit ran neither. The
+retired native trackactivitycheck is no longer built or registered, so it was not run
+and no native result is claimed.
+
+Registered run path
+swiftcore suite 10 (PDC_SUITE_PROJECT_SESSION,
+src/checks/support/corecheck/core_check.h:19) -> tst_swiftcore.cpp:73 pdc_suite_run ->
+pdcSuiteRun (src/checks/support/corecheck/CoreCheckSupport.swift:88, case 10 at :137)
+-> runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:10, invoked at :74)
+-> runTrackHeadersChecks (src/checks/trackheaders/TrackHeadersChecks.swift:6-8) ->
+runTrackActivityChecks (src/checks/audio/tst_trackactivity.swift:4), compiled into
+swift_core_check (src/checks/CMakeLists.txt:68).
 
 Execution ownership
-runProjectSessionSuite (workspace/SessionChecks.swift:422, 1057) invokes
-runTrackHeadersChecks (trackheaders/TrackHeadersChecks.swift:6-8), which runs
-runTrackActivityChecks before the track-header model cases. All ten original
-policy scenarios are ported with the same inputs, loop bounds, and tolerances.
+All ten original policy scenarios are ported with the same inputs, loop bounds, and
+tolerances. runTrackActivityChecks runs first in runTrackHeadersChecks, before the
+track-header model cases of the same suite.
 
 Original assertion inventory and source sequence
 
@@ -462,105 +509,105 @@ Remaining original source (closing sequence and helper bodies):
 
 Swift assertion predicates
 
-S001 | dark | src/checks/audio/tst_trackactivity.swift:10
+S001 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:10
   report.expect(dark(activity.intensity(track: track)), cppID: fresh, message: "new track is dark")
 
-S002 | dark | src/checks/audio/tst_trackactivity.swift:12
+S002 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:12
   report.expect(dark(activity.intensity(track: -1)), cppID: fresh, message: "negative track is dark")
 
-S003 | dark | src/checks/audio/tst_trackactivity.swift:13
+S003 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:13
   report.expect(dark(activity.intensity(track: 16)), cppID: fresh, message: "high track is dark")
 
-S004 | dark | src/checks/audio/tst_trackactivity.swift:20
+S004 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:20
   report.expect(activity.advance(levels, elapsedSeconds: 0.017, playing: true),
                         cppID: id, message: "playing requires another tick")
 
-S005 | approaches | src/checks/audio/tst_trackactivity.swift:26
+S005 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:26
   report.expect(approaches(first.left, left), cppID: id, message: "left attacks without snapping")
 
-S006 | approaches | src/checks/audio/tst_trackactivity.swift:27
+S006 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:27
   report.expect(approaches(first.right, right), cppID: id, message: "right attacks without snapping")
 
-S007 | approaches | src/checks/audio/tst_trackactivity.swift:28
+S007 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:28
   report.expect(left > right ? first.left > first.right : first.right > first.left,
                         cppID: id, message: "stereo sides retain independent targets")
 
-S008 | approaches | src/checks/audio/tst_trackactivity.swift:31
+S008 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:31
   report.expect(dark(activity.intensity(track: track)), cppID: id, message: "other tracks remain dark")
 
-S009 | approaches | src/checks/audio/tst_trackactivity.swift:42
+S009 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:42
   report.expect(current.left > previous.left * 0.5 && current.right > previous.right * 0.5,
                     cppID: release, message: "release remains visibly gradual")
 
-S010 | approaches | src/checks/audio/tst_trackactivity.swift:48
+S010 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:48
   report.expect(current.left <= previous.left && current.right <= previous.right,
                         cppID: release, message: "both sides decay monotonically")
 
-S011 | approaches | src/checks/audio/tst_trackactivity.swift:52
+S011 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:52
   report.expect(dark(activity.intensity(track: 3)), cppID: release, message: "release settles at zero")
 
-S012 | approaches | src/checks/audio/tst_trackactivity.swift:59
+S012 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:59
   report.expect(dark(activity.intensity(track: 3)), cppID: "TrackActivityTest::imperceptibleTailSnapsToZero",
                     message: "visible floor removes imperceptible tail")
 
-S013 | approaches | src/checks/audio/tst_trackactivity.swift:72
+S013 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:72
   report.expect(retriggered.left > decayed.left && retriggered.right > decayed.right,
                     cppID: retrigger, message: "new peak retriggers independently")
 
-S014 | approaches | src/checks/audio/tst_trackactivity.swift:74
+S014 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:74
   report.expect(retriggered.left < 224 / Float(255) && retriggered.right < 64 / Float(255),
                     cppID: retrigger, message: "retrigger retains attack inertia")
 
-S015 | approaches | src/checks/audio/tst_trackactivity.swift:82
+S015 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:82
   report.expect((0..<16).allSatisfy { dark(activity.intensity(track: $0)) },
                     cppID: "TrackActivityTest::resetClearsEveryLight", message: "reset clears every light")
 
-S016 | approaches | src/checks/audio/tst_trackactivity.swift:90
+S016 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:90
   report.expect(activity.advance(zero, elapsedSeconds: 0.015, playing: false), cppID: paused,
                     message: "paused fill requires another tick")
 
-S017 | approaches | src/checks/audio/tst_trackactivity.swift:93
+S017 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:93
   report.expect(filling.left > beforePause.left && filling.right > beforePause.right,
                     cppID: paused, message: "paused fill gently approaches full brightness")
 
-S018 | approaches | src/checks/audio/tst_trackactivity.swift:95
+S018 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:95
   report.expect(!activity.advance(zero, elapsedSeconds: 10, playing: false), cppID: paused,
                     message: "settled paused fill stops ticks")
 
-S019 | approaches | src/checks/audio/tst_trackactivity.swift:99
+S019 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:99
   report.expect(settled.left == 1 && settled.right == 1, cppID: paused,
                         message: "all sides settle at full brightness")
 
-S020 | approaches | src/checks/audio/tst_trackactivity.swift:102
+S020 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:102
   report.expect(!activity.advance(zero, elapsedSeconds: 0, playing: false), cppID: paused,
                     message: "settled pause remains settled")
 
-S021 | approaches | src/checks/audio/tst_trackactivity.swift:108
+S021 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:108
   report.expect(activity.advance(zero, elapsedSeconds: 0.075, playing: true), cppID: resume,
                     message: "resume requires ticks")
 
-S022 | approaches | src/checks/audio/tst_trackactivity.swift:111
+S022 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:111
   report.expect(abs(resumed.left - exp(-0.075 / Float(0.015))) <= 0.0001, cppID: resume,
                     message: "resume descends through 75ms fast window")
 
-S023 | approaches | src/checks/audio/tst_trackactivity.swift:115
+S023 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:115
   report.expect(abs(ordinary.left - resumed.left * exp(-0.015 / Float(0.250))) <= 0.0001,
                     cppID: resume, message: "release returns to 250ms")
 
-S024 | approaches | src/checks/audio/tst_trackactivity.swift:117
+S024 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:117
   report.expect(ordinary.left > resumed.left * exp(-0.015 / Float(0.015)), cppID: resume,
                     message: "ordinary release does not retain fast descent")
 
-S025 | approaches | src/checks/audio/tst_trackactivity.swift:126
+S025 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:126
   report.expect(activity.intensity(track: 3).left < beforeRapidResume.left * exp(-0.015 / Float(0.250)),
                     cppID: "TrackActivityTest::rapidPauseRearmsFastDescent", message: "rapid pause restarts descent")
 
-S026 | approaches | src/checks/audio/tst_trackactivity.swift:133
+S026 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:133
   report.expect(activity.advance(levels, elapsedSeconds: -1, playing: true), cppID: elapsed,
                     message: "negative elapsed still requires ticks")
 
-S027 | approaches | src/checks/audio/tst_trackactivity.swift:135
+S027 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:135
   report.expect(dark(activity.intensity(track: 3)), cppID: elapsed, message: "negative elapsed does not move")
 
-S028 | approaches | src/checks/audio/tst_trackactivity.swift:137
+S028 | runTrackActivityChecks | src/checks/audio/tst_trackactivity.swift:137
   report.expect(dark(activity.intensity(track: 3)), cppID: elapsed, message: "zero elapsed does not move")

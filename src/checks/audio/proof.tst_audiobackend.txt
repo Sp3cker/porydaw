@@ -39,8 +39,15 @@ Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Verification evidence
-Command: deno task verify --filter audiocheck-backend --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --verbose (whole-suite integrated run recorded for this
+lane by the controller; this bookkeeping pass did not re-run it)
+Result: PASS -- verify: 6/6 ok (11.75s) and run_checks: PASS (all harnesses in
+11.75s), covering production-startup, audiocheck-backend, vgbankcheck,
+exportcheck-loop, exportcheck-tail and swiftcore. The audiocheck-backend row
+passed with Finished testing of AudioBackendTest, so the retained native harness
+executed the forced-null sites above under PORYDAW_AUDIO_BACKEND=null. Focused
+alternative: deno task verify --filter audiocheck-backend --verbose selects the
+same retained harness. The SHA-256 values below pin the tree inspected here.
 Native harness results support only retained native obligations, not Swift parity.
 NATIVE-SETUP remains open for whole-case Swift equivalence. No native check removal
 or full migration sign-off is authorized by this evidence.
@@ -49,15 +56,15 @@ Swift sources inspected (SHA-256)
 No same-dir tst_audiobackend.swift exists, and no Swift check references
 backendName, usingNullBackend, nullBackendForced, or PORYDAW_AUDIO_BACKEND.
 Inspected at these revisions:
-src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
 src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
 src/checks/audio/tst_audiotelemetry.swift: 951b2a4e544cf71f7c759c95b3b3130480b8f7eeb62ca6b56c149c9ff38aff31
-src/checks/audio/tst_clicktransport.swift: 11ac6d5c61763666d74ff1f9b83e57c112e6642d04c0c191ebfde2c8e5e588d0
+src/checks/audio/tst_clicktransport.swift: e738e6113fe1a372e221a53913d884232ff1f5690d4851c830d32a1296ac3c65
 src/checks/audio/tst_resonancelaw.swift: b05654d1714191620beeda4612926d78a723669cb4fa55a5b5f901665dc7c8d3
 src/checks/audio/tst_resonancetiming.swift: 6cc03a763d913818054ae51c73cb4d37c6d79474ac202bdda02f965543e7aa8a
 src/checks/audio/tst_trackactivity.swift: 5d6e3d7a57a12628ad024258d5bfdd6077af440d6db656dee5780f096c85246d
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c
-src/checks/audio/AudioAuditionChecks.swift: f9cb3bd0733b1f17f0f0df68b3e508cfa0ed9b07ade18f60669b1d3952d36c61
+src/checks/audio/AudioAuditionChecks.swift: eff42c2a96d3317784f2fb3d9c885add031181446b27c687c7e3c4a668c61699
 
 Original assertion inventory
 

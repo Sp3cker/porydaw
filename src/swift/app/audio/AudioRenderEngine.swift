@@ -193,6 +193,10 @@ public final class AudioRenderEngine {
         for track in 0..<Int32(MAX_TRACKS) { m4a_engine_all_notes_off(main, track) }
         audition.clearMainPreviews()
     }
+    func cutAllVoicesForHardCutControl() {
+        m4a_engine_all_sound_off(main)
+        m4a_engine_all_sound_off(preview)
+    }
     private func adopt(_ timeline: borrowing PlaybackTimeline) {
         let pending = transportState.pendingSeek.exchange(UInt64.max, ordering: .acquiringAndReleasing)
         let seeking = pending != UInt64.max

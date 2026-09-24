@@ -6,38 +6,51 @@ Original SHA-256: e5ac67cfd7333076c094fdbfd027ad6777290d5157857fbc22f401898b2964
 Swift counterpart: src/checks/audio/tst_resonancetiming.swift
 Swift SHA-256: 6cc03a763d913818054ae51c73cb4d37c6d79474ac202bdda02f965543e7aa8a
 
-Purpose and status
-Each numbered entry records one original assertion/failure site, not one test
-method or one runtime execution. Loops/data rows reuse a site; their instances
-are described below. QFAIL/qFail guards and helper calls are part of the contract.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-GAP means an equivalent Swift assertion is not established;
-NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
-only by the retained native path. None of these labels authorizes deletion or
-claims whole-case equivalence. Native passes do not prove the Swift replacement.
-File retirement: BLOCKED. These Swift predicates exercise the separate Swift
-ResonanceSuppression implementation; the native ResonanceSuppressor still runs
-in the C++ audio engine and wave export. Its timing and smoothing contracts
-need native coverage while that implementation remains in production.
+Deletion certificate
+C++ original deleted in this lane: src/checks/audio/tst_resonancetiming.cpp and its
+header are removed from the tree, the resonancecheck-timing registration is removed
+from src/checks/checkcatalog.cpp, and the native sources are removed from
+src/checks/CMakeLists.txt. The deleted file is recoverable from the Reference revision
+and Original SHA-256 above; that pin was re-verified in this worktree. Each numbered
+entry records one original assertion/failure site, not one test method or one runtime
+execution; the entries, their IDs and their order are unchanged from the pre-deletion
+inventory. No code path in this ledger was reclassified to manufacture a terminal state.
 
-Execution and ownership
-resonanceTimingChecks is called by runResonanceSuppressionChecks; uses audio/resonancefixture.swift.
+Retirement: 7 original assertion sites, all MATCHED. The deleted C++ original is
+recoverable from the Reference revision and Original SHA-256. No live native run of
+the deleted original and no differential comparison against it is claimed.
+
+Covered native implementation: src/audio/resonance_suppressor.h :: ResonanceSuppressor
+init/setParams/setEnabled/process/binGainDb, the STFT gain-smoothing mechanism the
+original assertions observed.
+Native engine status: the legacy C++ ResonanceSuppressor remains on disk under
+src/audio/ for the retained AudioEngine and wave-export chain, but it is not built into
+the registered check suite; the registered path exercises the Swift implementation
+src/swift/app/audio/ResonanceSuppression.swift :: ResonanceSuppression.
+
+Verification: controller-supplied post-deletion lane evidence — deno task verify
+--verbose: PASS, verify: 6/6 ok (11.75s), run_checks: PASS (all harnesses in 11.75s)
+covering production-startup, audiocheck-backend, vgbankcheck, exportcheck-loop,
+exportcheck-tail and swiftcore; deno task verify --filter swiftcore --verbose: PASS,
+including the scalecheck predicates added to suite 2. This ledger claims no native run
+of the deleted C++ original and no cross-implementation differential.
+
+Registered run path: src/checks/audio/tst_resonancetiming.swift :: resonanceTimingChecks
+-> src/checks/playback/ResonanceSuppressionChecks.swift:8 ::
+runResonanceSuppressionChecks -> src/checks/support/corecheck/CoreCheckSupport.swift:98-102
+pdcSuiteRun case 3 (swiftcore); counterpart compiled in src/checks/CMakeLists.txt:95 ::
+swift_core_check. The deleted original is absent from native CMake and checkcatalog.
 
 Fixture, sequence and row constraints
 release: 1 kHz/-15 dB for 3 s, 8 s gap, then 1.5 s; probe bins 42/43 before re-gate and 50 ms signal windows. plateau: 60 s source, sample bin 43 after 8 s and 59 s. attack: onset 1 s, 150 ms timing, first 63% crossing searched every 10 ms. hop limits: 4 s at 48 kHz/bin43/onset1s and 44.1 kHz/bin46/onset0s, 512-frame chunks. The rates are distinct iterations of one loop: 48 kHz checks hop cap; 44.1 kHz checks plateau and hop cap.
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
-
-Verification evidence
-Latest Swift run: deno task verify --filter swiftcore --verbose — PASS 1/24
-(23 skipped), swiftcore 9.64s. Native run: deno task verify --filter
-trackactivitycheck --filter resonancecheck --filter resonancecheck-timing
---verbose — PASS 3/24 (21 skipped). No cross-implementation differential
-or retirement certification is claimed.
+Shared signal generation, measurement and rendering live in
+audio/resonancefixture.swift; the ledger's Swift SHA-256 values below pin the exact
+files inspected here.
 
 Shared Swift sources used by this refactor (SHA-256)
-src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
 src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c

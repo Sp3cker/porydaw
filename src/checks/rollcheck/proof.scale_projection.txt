@@ -117,7 +117,7 @@ Original expression:
 
 A003 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:57
 Disposition: PARTIAL
-Mapping/reason: Executed related S003 in geometry.swift constructs another chromatic projection, but cannot perform the original root/scale transition; that condition remains unproved after the green run.
+Mapping/reason: Executed related S003 in geometry.swift constructs another chromatic projection, but cannot perform the original root/scale transition; that condition remains unproved after the green run. Feature not yet ported: Swift roll scale projection UI (no production Fold view accepts a root/scale transition).
 Source context since previous assertion:
   ;
           // A2. Drift the root/scale; Off must stay chromatic.
@@ -129,7 +129,7 @@ Original expression:
 
 A004 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:74
 Disposition: PARTIAL
-Mapping/reason: Executed related S004 in geometry.swift counts explicitly constructed selected-track PitchProjection rows, but cannot observe production Fold binding; that condition remains unproved.
+Mapping/reason: Executed related S004 in geometry.swift counts explicitly constructed selected-track PitchProjection rows, but cannot observe production Fold binding; that condition remains unproved. Feature not yet ported: Swift roll scale projection UI (no production Fold binding exists).
 Source context since previous assertion:
   ;
           view.setScaleRoot(0);
@@ -165,7 +165,7 @@ Original expression:
 
 A006 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:86
 Disposition: PARTIAL
-Mapping/reason: Executed related S006 in geometry.swift compares constructed projection visibility with selected-track occupancy, but production Fold binding remains unproved.
+Mapping/reason: Executed related S006 in geometry.swift compares constructed projection visibility with selected-track occupancy, but production Fold binding remains unproved. Feature not yet ported: Swift roll scale projection UI (no production Fold binding exists).
 Source context since previous assertion:
   ;
                   break;
@@ -234,7 +234,7 @@ Original expression:
 
 A010 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:125
 Disposition: PARTIAL
-Mapping/reason: Executed related S009 in geometry.swift reconstructs PitchProjection after isolated note insertion, but cannot observe a Fold-bound view update; that condition remains unproved.
+Mapping/reason: Executed related S009 in geometry.swift reconstructs PitchProjection after isolated note insertion, but cannot observe a Fold-bound view update; that condition remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view exists).
 Source context since previous assertion:
   ;
           } else {
@@ -246,7 +246,7 @@ Original expression:
 
 A011 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:127
 Disposition: PARTIAL
-Mapping/reason: Executed related S010 in geometry.swift keeps an unused octave hidden in a reconstructed projection, but the original Fold-bound view observation remains unproved.
+Mapping/reason: Executed related S010 in geometry.swift keeps an unused octave hidden in a reconstructed projection, but the original Fold-bound view observation remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view exists).
 Source context since previous assertion:
   ;
               if (proj.rowForPitch(exceptBase + 12) != projHidden)
@@ -255,7 +255,7 @@ Original expression:
 
 A012 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:138
 Disposition: PARTIAL
-Mapping/reason: Executed related S011 in geometry.swift hides an unused C-sharp-class pitch in a reconstructed projection; original scale membership and Fold-bound view remain unproved.
+Mapping/reason: Executed related S011 in geometry.swift hides an unused C-sharp-class pitch in a reconstructed projection; the C-sharp-class membership sub-condition is now covered by the Swift PorydawCore ScaleID membership predicates (src/checks/editcheck/ScaleChecks.swift membershipAndNeighbors rows under cppID scalecheck/ScaleCheckTest::membershipAndNeighbors), while the Fold-bound view observation remains unproved. Feature not yet ported: Swift roll scale projection UI.
 Source context since previous assertion:
   ;
               int freePitch = -1;
@@ -312,7 +312,7 @@ Original expression:
 
 A015 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:171
 Disposition: PARTIAL
-Mapping/reason: Executed related S014 in geometry.swift restores cloned document identity after undo, but the original Fold-bound view's undo sequence remains unproved.
+Mapping/reason: Executed related S014 in geometry.swift restores cloned document identity after undo, but the original Fold-bound view's undo sequence remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view has an undo sequence).
 Source context since previous assertion:
   ;
           }
@@ -327,7 +327,7 @@ Original expression:
 
 A016 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:172
 Disposition: PARTIAL
-Mapping/reason: Executed related S015 in geometry.swift restores cloned MIDI bytes after undo, but the original Fold-bound view's undo sequence remains unproved.
+Mapping/reason: Executed related S015 in geometry.swift restores cloned MIDI bytes after undo, but the original Fold-bound view's undo sequence remains unproved. Feature not yet ported: Swift roll scale projection UI (no Fold-bound production view has an undo sequence).
 Source context since previous assertion:
   ;
 Original expression:
@@ -631,7 +631,7 @@ Original expression:
 
 A031 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:378
 Disposition: PARTIAL
-Mapping/reason: Executed related S016 in geometry.swift restores cloned document identity after undo, but the original Highlight sequence and renderer remain unproved.
+Mapping/reason: Executed related S016 in geometry.swift restores cloned document identity after undo, but the original Highlight sequence and renderer remain unproved. Feature not yet ported: Swift roll scale projection UI (no Highlight production view or renderer exists).
 Source context since previous assertion:
   ;
               while (doc.undoStack()->index() > cmd0)
@@ -646,7 +646,7 @@ Original expression:
 
 A032 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:379
 Disposition: PARTIAL
-Mapping/reason: Executed related S017 in geometry.swift restores cloned MIDI bytes after undo, but the original Highlight sequence and renderer remain unproved.
+Mapping/reason: Executed related S017 in geometry.swift restores cloned MIDI bytes after undo, but the original Highlight sequence and renderer remain unproved. Feature not yet ported: Swift roll scale projection UI (no Highlight production view or renderer exists).
 Source context since previous assertion:
   ;
 Original expression:

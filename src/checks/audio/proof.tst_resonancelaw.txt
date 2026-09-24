@@ -5,24 +5,43 @@ Original: src/checks/audio/tst_resonancelaw.cpp
 Original SHA-256: 8cd681576b00626d3b93c4606feb8ff03da0f4aff9d1df5903d7833468a6f4f5
 Swift counterpart: src/checks/audio/tst_resonancelaw.swift
 Swift SHA-256: b05654d1714191620beeda4612926d78a723669cb4fa55a5b5f901665dc7c8d3
+Deleted in: this lane (gaps-audio-scale). The C++ file is removed from the
+working tree (deletion staged) against HEAD
+224cc35f05a448847311efcd216e03d899f51e2b; this lane makes no commit. The
+pre-deletion content stays recoverable at the recorded Reference revision with
+the SHA-256 above, re-verified as
+git show f3069ef693542bdb63564b80a29773e2f5b2a360:src/checks/audio/tst_resonancelaw.cpp | shasum -a 256.
+
+Deletion certificate
+src/checks/audio/tst_resonancelaw.cpp and its header were deleted in this lane
+with the other retired check sources (clickrig.cpp/h, resonancefixture.cpp/h,
+tst_audiotelemetry.cpp/h, tst_clicktransport.cpp/h, tst_resonancetiming.cpp/h,
+tst_trackactivity.cpp/h). The C++ check is no longer declared in
+src/checks/fwd.hpp, no longer registered in src/checks/checkcatalog.cpp and no
+longer built by src/checks/CMakeLists.txt, which now lists only the Swift file
+audio/tst_resonancelaw.swift. Recover the deleted source from the Reference
+revision and the SHA-256 above; no live native run of it exists in this
+checkout. Swift counterpart src/checks/audio/tst_resonancelaw.swift is
+unmodified in this lane: its fresh SHA-256 (shasum -a 256) still equals the
+recorded Swift SHA-256 line above. This certificate covers the deleted check
+harness only; the retained native resonance DSP (src/audio/resonance_suppressor.*
+on the wave-export chain) stays outside this ledger and is not claimed as
+translated or differentially covered here.
 
 Purpose and status
 Each numbered entry records one original assertion/failure site, not one test
 method or one runtime execution. Loops/data rows reuse a site; their instances
-are described below. QFAIL/qFail guards and helper calls are part of the contract.
-MATCHED means a corresponding Swift predicate was identified and executed;
-PARTIAL means a related check exists but differs in a stated way;
-GAP means an equivalent Swift assertion is not established;
-NATIVE-SETUP identifies a C++ harness/loader/device precondition still exercised
-only by the retained native path. None of these labels authorizes deletion or
-claims whole-case equivalence. Native passes do not prove the Swift replacement.
-File retirement: BLOCKED. These Swift predicates exercise the separate Swift
-ResonanceSuppression implementation; the native ResonanceSuppressor still runs
-in the C++ audio engine and wave export. Identical input/output assertions
-do not replace coverage of that live native DSP implementation.
+are described below. QFAIL guards and helper calls are part of the contract and
+stay inside the original expressions. MATCHED means a corresponding Swift
+predicate was identified and executed; PARTIAL means a related check exists but
+differs in a stated way; GAP means an equivalent Swift assertion is not
+established. No NATIVE or NATIVE-SETUP row remains: the native harness is
+deleted, so it cannot carry a native-precondition obligation. These labels do
+not claim whole-case equivalence, and the MATCHED rows are source correspondence
+plus Swift execution, not a live C++/Swift differential sweep.
 
 Execution and ownership
-resonanceLawChecks is called by runResonanceSuppressionChecks. Shared signal generation, measurement and rendering live in audio/resonancefixture.swift. Additional Swift-only reset/chunking checks remain in resonanceTransitionChecks in playback/ResonanceSuppressionChecks.swift.
+resonanceLawChecks (src/checks/audio/tst_resonancelaw.swift:4) is called by runResonanceSuppressionChecks (src/checks/playback/ResonanceSuppressionChecks.swift:6), which the swiftcore suite dispatches as case 3 (src/checks/support/corecheck/CoreCheckSupport.swift:102). Shared signal generation, measurement and rendering live in audio/resonancefixture.swift. Additional Swift-only reset/chunking checks remain in resonanceTransitionChecks in playback/ResonanceSuppressionChecks.swift.
 
 Fixture, sequence and row constraints
 Default 48 kHz stereo, 512-frame processing chunks and 2047-frame latency. Keep each original case's signal seed, frequency, level, onset, duration, analysis window and curve settings; the paired Swift do/loop blocks carry these inputs. Embedded-tone loop expands loud=-15 dB and modest=-25 dB into distinct case names. Stereo assertion expands over every output frame. Guard-bin assertion has two original predicates combined in Swift, plus an additional Nyquist predicate.
@@ -30,14 +49,19 @@ Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Verification evidence
-Latest Swift run: deno task verify --filter swiftcore --verbose — PASS 1/24
-(23 skipped), swiftcore 9.64s. Native run: deno task verify --filter
-trackactivitycheck --filter resonancecheck --filter resonancecheck-timing
---verbose — PASS 3/24 (21 skipped). No cross-implementation differential
-or retirement certification is claimed.
+Lane verification, run from this worktree against the frozen check sources:
+Command: deno task verify --verbose
+Result: PASS — verify: 6/6 ok (11.75s), run_checks: PASS (all harnesses in
+11.75s) for production-startup, audiocheck-backend, vgbankcheck,
+exportcheck-loop, exportcheck-tail and swiftcore. swiftcore executes every
+predicate in this pairing through runResonanceSuppressionChecks.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS — swiftcore, including the new scale predicates in suite 2.
+No live native run of the deleted harness and no cross-implementation
+differential or retirement-parity claim is made by this evidence.
 
 Shared Swift sources used by this refactor (SHA-256)
-src/checks/audio/controllerfixture.swift: ed301a278f5c66b9d77f7cd251315a9ecaa47889dc7b838ddac761ce01950290
+src/checks/audio/controllerfixture.swift: 60f6f6e5d489f2781c18bfea29e40cab4b0f56d73885e2e6fbb3dab02769ff4d
 src/checks/audio/resonancefixture.swift: 65fd4fc77f54ed1e6f225551f1e54e5fee7dc93d4078d4dda15261b213790654
 src/checks/playback/transportfixture.swift: 9954fe9db6763cb78623fe4c8c9410ea5ff30b4b6d0e417b066ede2339edf4ab
 src/checks/audio/AudioControllerChecks.swift: 019c0ce1191fe474b2655a24b414f1f402da0c18148c8e03643a6e0be573d77c

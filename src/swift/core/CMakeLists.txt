@@ -12,6 +12,7 @@ add_library(PorydawCore STATIC
     TimeEditing.swift
     Xcmd.swift
     MidiImport.swift
+    MusicalScale.swift
 )
 
 set_target_properties(PorydawCore PROPERTIES

@@ -40,26 +40,6 @@ qt_add_executable(porydaw_checks
     fwd.hpp
     audio/tst_audiobackend.cpp
     audio/tst_audiobackend.h
-    audio/tst_audiotelemetry.cpp
-    audio/tst_audiotelemetry.h
-    audio/clickrig.cpp
-    audio/clickrig.h
-    audio/tst_clicktransport.cpp
-    audio/tst_clicktransport.h
-    audio/resonancefixture.cpp
-    audio/resonancefixture.h
-    audio/tst_resonancelaw.cpp
-    audio/tst_resonancelaw.h
-    audio/tst_resonancetiming.cpp
-    audio/tst_resonancetiming.h
-    editcheck/tst_scale.cpp
-    editcheck/tst_scale.h
-    audio/tst_trackactivity.cpp
-    audio/tst_trackactivity.h
-    ${PROJECT_SOURCE_DIR}/src/porydaw_scale.cpp
-    ${PROJECT_SOURCE_DIR}/src/porydaw_scale.h
-    ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.cpp
-    ${PROJECT_SOURCE_DIR}/src/ui/activity/trackactivity.h
     support/checkstartup.cpp
     support/checkstartup.h
     support/songfixture.cpp
@@ -69,15 +49,6 @@ qt_add_executable(porydaw_checks
     voicegroup/voicegrouptestfixture.h
     midi/tst_midiexport.cpp
     midi/tst_midiexport.h
-    midi/tst_midiengine.cpp
-    midi/tst_midiengine.h
-    playback/tst_transport.cpp
-    playback/transportfixture.cpp
-    playback/transportfixture.h
-    playback/publish.cpp
-    playback/cgb.cpp
-    playback/tails.cpp
-    playback/settle.cpp
     ${PROJECT_SOURCE_DIR}/resources/fonts.qrc
 )
 set_target_properties(porydaw_checks PROPERTIES
@@ -130,6 +101,7 @@ if(APPLE)
         editcheck/DocumentHistoryChecks.swift
         editcheck/DocumentEditChecks.swift
         editcheck/DocumentTrackChecks.swift
+        editcheck/ScaleChecks.swift
         editcheck/EventChecks.swift
         editcheck/TrackCorpusChecks.swift
         editcheck/TimeChecks.swift

@@ -53,14 +53,14 @@ internal final class AudioControllerCheckFixture {
         samples.deallocate()
     }
     func timeline(silent: Bool = false, changed: Bool = false, looped: Bool = false,
-                  keys: [UInt8] = [60], retriggerAt: Tick? = nil) -> PlaybackTimeline {
+                  keys: [UInt8] = [60], velocity: UInt8 = 100, retriggerAt: Tick? = nil) -> PlaybackTimeline {
         var events: [MidiEvent] = [.channel(tick: 0, status: 0xC0, data0: 0)]
         if changed { events.append(.channel(tick: 0, status: 0xB0, data0: 0x78, data1: 0)) }
         if !silent {
-            for key in keys { events.append(.channel(tick: 0, status: 0x90, data0: key, data1: 100)) }
+            for key in keys { events.append(.channel(tick: 0, status: 0x90, data0: key, data1: velocity)) }
             if let tick = retriggerAt {
                 for key in keys { events.append(.channel(tick: tick, status: 0x80, data0: key)) }
-                for key in keys { events.append(.channel(tick: tick, status: 0x90, data0: key, data1: 100)) }
+                for key in keys { events.append(.channel(tick: tick, status: 0x90, data0: key, data1: velocity)) }
             }
         }
         // Playback length follows scheduled events, not the SMF end-of-track tick.
