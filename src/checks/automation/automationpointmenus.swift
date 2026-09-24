@@ -79,3 +79,186 @@ func drawerAutomationPromptTransactions(_ report: CheckReport, suite: DocumentSe
     report.expect(tempoFixture.undo() && tempoFixture.tempoValues == ["0:120"], cppID: drawerAutomationPromptID,
                   message: "one undo restores Tempo's stored microseconds")
 }
+
+@MainActor
+func drawerAutomationPointMenuDeleteAndStale(_ report: CheckReport, suite: DocumentSession,
+                                             service: ProjectService) {
+    let id = "automation/AutomationEditingTest::pointMenuDeleteCommitsEdit"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let before = fixture.snapshot
+    _ = page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                           surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 64),
+                             button: AutomationQtButton.right)
+    report.expect(page.menuTargetIsPoint, cppID: id,
+                  message: "the written point owns its captured menu target")
+    report.expect(page.publishedMenuRows.first {
+        $0.actionId == AutomationMenuAction.deleteNode.rawValue
+    }?.enabled == true, cppID: id, message: "the point menu enables Delete on a written node")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteNode.rawValue),
+                  cppID: id, message: "the Delete row is consumed")
+    report.expectEqual(["120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "Delete removes the targeted node and keeps the other")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one Delete is one revision")
+    report.expect(fixture.undo(), cppID: id, message: "the Delete undoes")
+    report.expectEqual(["24:64", "120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the deleted node")
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the Delete recorded exactly one history entry")
+
+    let staleID = "automation/AutomationEditingTest::pointMenuStaleDocumentCannotDeleteTarget"
+    let stale = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 64), (120, 40)])
+    stale.activate(stale.panLane)
+    _ = stale.page.pointerPress(x: stale.x(24), y: stale.y(stale.panLane, 64),
+                                 surface: 1, button: AutomationQtButton.right)
+    _ = stale.page.pointerRelease(x: stale.x(24), y: stale.y(stale.panLane, 64),
+                                   button: AutomationQtButton.right)
+    report.expect(stale.page.menuTargetIsPoint, cppID: staleID,
+                  message: "the stale target opens its point menu")
+    stale.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 168,
+                             through: 168, points: [LaneWrite(tick: 168, value: 5)])
+    let rewritten = stale.snapshot
+    report.expect(!stale.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteNode.rawValue), cppID: staleID,
+                  message: "a stale point menu cannot delete its target")
+    report.expectEqual(rewritten, stale.snapshot, cppID: staleID,
+                       what: "the rejected Delete leaves the rewritten lane intact")
+}
+
+@MainActor
+func drawerAutomationDuplicatePromptAndParameterSwitch(_ report: CheckReport, suite: DocumentSession,
+                                                       service: ProjectService) {
+    let id = "automation/AutomationEditingTest::pointMenuValuePromptUpdatesOneDuplicateOccurrence"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 30), (24, 90)])
+    fixture.activate(fixture.panLane)
+    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
+                       what: "both duplicate occurrences stage")
+    let before = fixture.snapshot
+    report.expect(fixture.page.openPrompt(tick: 24, value: 30), cppID: id,
+                  message: "a prompt opens on the duplicate tick")
+    report.expect(fixture.page.acceptPrompt(displayedValue: -14), cppID: id,
+                  message: "the duplicate value commits")
+    report.expectEqual(["24:30", "24:50"], fixture.values(fixture.panLane), cppID: id,
+                       what: "only the targeted duplicate occurrence moves")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one duplicate acceptance is one revision")
+    report.expect(fixture.undo(), cppID: id, message: "the duplicate acceptance undoes")
+    report.expectEqual(["24:30", "24:90"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores both duplicate occurrences")
+
+    let switchID = "automation/AutomationEditingTest::parameterSwitchInvalidatesValuePrompt"
+    let switched = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    switched.activate(switched.panLane)
+    report.expect(switched.page.openPrompt(tick: 24, value: 64), cppID: switchID,
+                  message: "a prompt opens on the CC lane")
+    switched.activate(.tempo)
+    report.expect(!switched.page.hasPrompt, cppID: switchID,
+                  message: "switching parameters closes the CC prompt")
+    let tempoBefore = switched.snapshot
+    report.expect(switched.page.openPrompt(tick: 0, value: 120), cppID: switchID,
+                  message: "Tempo opens its own prompt")
+    report.expect(switched.page.acceptPrompt(displayedValue: 150), cppID: switchID,
+                  message: "Tempo commits its prompt")
+    report.expectEqual(["0:150"], switched.tempoValues, cppID: switchID,
+                       what: "the tempo point stores the prompted BPM")
+    report.expectEqual(["24:64"], switched.values(switched.panLane), cppID: switchID,
+                       what: "the CC lane stays untouched")
+    report.expectEqual(tempoBefore.revision + 1, switched.document.revision, cppID: switchID,
+                       what: "Tempo's acceptance is one revision")
+}
+
+@MainActor
+func drawerAutomationLaneDeleteConfirmation(_ report: CheckReport, suite: DocumentSession,
+                                            service: ProjectService) {
+    let id = "automation/AutomationEditingTest::ccDeletePromptAcceptDeletesOnlyTargetLaneAndUndoRestores"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    volume: [(48, 70)],
+                                                    pan: [(24, 60), (120, 40)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let before = fixture.snapshot
+    report.expect(page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0),
+                  cppID: id, message: "the lane menu opens")
+    report.expect(page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue),
+                  cppID: id, message: "the Delete events row is consumed")
+    report.expectEqual(AutomationPromptKind.confirmLaneDelete.rawValue, page.promptKind, cppID: id,
+                       what: "the row opens the delete confirmation")
+    report.expect(page.promptMessage.contains("2 written events"), cppID: id,
+                  message: "the confirmation names the written count")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "opening the confirmation writes nothing")
+    report.expect(page.acceptPromptDraft(), cppID: id, message: "the confirmation accepts")
+    report.expectEqual([String](), fixture.values(fixture.panLane), cppID: id,
+                       what: "accept removes only the target lane")
+    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "the volume lane is preserved")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "one acceptance is one revision")
+    report.expect(fixture.undo(), cppID: id, message: "the acceptance undoes")
+    report.expectEqual(["24:60", "120:40"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the target lane")
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the acceptance recorded exactly one history entry")
+
+    let cancelID = "automation/AutomationEditingTest::ccDeletePromptCancelButtonLeavesDocumentUntouched"
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
+    _ = page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue)
+    let cancelBefore = fixture.snapshot
+    page.cancelPrompt()
+    report.expect(!page.hasPrompt, cppID: cancelID, message: "cancelling drops the confirmation")
+    report.expectEqual(cancelBefore, fixture.snapshot, cppID: cancelID,
+                       what: "cancelling leaves document and history untouched")
+
+    let staleID = "automation/AutomationEditingTest::ccDeletePromptStaleDocumentCannotDeleteTarget"
+    _ = page.openParameterMenu(index: page.catalogIndex(of: fixture.panLane), x: 0, y: 0)
+    _ = page.consumeMenuAction(actionId: AutomationMenuAction.deleteLaneEvents.rawValue)
+    fixture.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 168,
+                               through: 168, points: [LaneWrite(tick: 168, value: 5)])
+    let rewritten = fixture.snapshot
+    report.expect(!page.acceptPromptDraft(), cppID: staleID,
+                  message: "a stale confirmation cannot delete its target")
+    report.expectEqual(rewritten, fixture.snapshot, cppID: staleID,
+                       what: "the rejected confirmation leaves the rewritten lane intact")
+
+    let syntheticID = "automation/AutomationEditingTest::ccDeletePromptSyntheticOnlyVolumeSkipsConfirmation"
+    let synthetic = drawerAutomationAutomationFixture(suite: suite, service: service)
+    synthetic.activate(synthetic.volumeLane)
+    _ = synthetic.page.openParameterMenu(
+        index: synthetic.page.catalogIndex(of: synthetic.volumeLane), x: 0, y: 0)
+    report.expect(synthetic.page.publishedMenuRows.first {
+        $0.actionId == AutomationMenuAction.deleteLaneEvents.rawValue
+    }?.enabled == false, cppID: syntheticID,
+                  message: "the eventless lane disables Delete events")
+    report.expect(!synthetic.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: syntheticID,
+                  message: "the disabled row is refused")
+    report.expect(!synthetic.page.hasPrompt, cppID: syntheticID,
+                  message: "no confirmation opens for the eventless lane")
+
+    let countID = "automation/AutomationEditingTest::ccDeletePromptDefaultLaneWrittenCountExcludesSynthetic"
+    let single = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                   volume: [(48, 70)])
+    single.activate(single.volumeLane)
+    _ = single.page.openParameterMenu(
+        index: single.page.catalogIndex(of: single.volumeLane), x: 0, y: 0)
+    report.expect(single.page.consumeMenuAction(
+        actionId: AutomationMenuAction.deleteLaneEvents.rawValue), cppID: countID,
+                  message: "the Delete events row is consumed")
+    report.expect(single.page.promptMessage.contains("1 written events"), cppID: countID,
+                  message: "the confirmation counts written events only")
+    report.expect(single.page.acceptPromptDraft(), cppID: countID,
+                  message: "the confirmation accepts")
+    report.expectEqual([String](), single.values(single.volumeLane), cppID: countID,
+                       what: "accept removes the written event")
+    report.expect(single.page.catalogIndex(of: single.volumeLane) >= 0, cppID: countID,
+                  message: "the volume parameter remains in the catalog")
+    report.expect(single.undo(), cppID: countID, message: "the acceptance undoes")
+    report.expectEqual(["48:70"], single.values(single.volumeLane), cppID: countID,
+                       what: "undo restores the written event")
+}

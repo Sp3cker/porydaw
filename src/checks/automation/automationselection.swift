@@ -172,3 +172,260 @@ func drawerAutomationRestoredInteractionContracts(_ report: CheckReport, suite: 
     report.expectEqual(["24:30"], duplicate.values(duplicate.panLane), cppID: id,
                        what: "undo restores the original range contents")
 }
+
+@MainActor
+func drawerAutomationBandIsolatesTempoAndCc(_ report: CheckReport, suite: DocumentSession,
+                                            service: ProjectService) {
+    let id = "automation/AutomationEditingTest::bandSelectionIsolatesTempoAndControlChangeRows"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(48, 60)],
+                                                    tempo: [(48, 600_000)])
+    fixture.activate(.tempo)
+    let page = fixture.page
+    let before = fixture.snapshot
+    _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
+    report.expect(page.selection?.tempo == true
+                      && page.selection?.lanes == Set([AutomationParameter.tempo]),
+                  cppID: id, message: "a band on Tempo selects Tempo alone")
+    report.expect(page.selection?.scope == .lanes, cppID: id,
+                  message: "the band publishes a lane-scoped range")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "banding writes nothing")
+    report.expect(fixture.drag(.tempo, from: (48, 100), to: 120, modifiers: 0),
+                  cppID: id, message: "the pointer route takes the tempo drag")
+    report.expectEqual(["48:120"], fixture.tempoValues, cppID: id,
+                       what: "the tempo drag moves the tempo point")
+    report.expectEqual(["48:60"], fixture.values(fixture.panLane), cppID: id,
+                       what: "the tempo drag leaves the CC lane alone")
+    report.expect(fixture.undo(), cppID: id, message: "the tempo drag undoes")
+
+    fixture.activate(fixture.panLane)
+    _ = page.pointerPress(x: fixture.x(24), y: 60, surface: 1, button: AutomationQtButton.right)
+    _ = page.pointerMove(x: fixture.x(120), y: 60, buttons: AutomationQtButton.right)
+    _ = page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.right)
+    report.expect(page.selection?.tempo == false
+                      && page.selection?.lanes == Set([fixture.panLane]),
+                  cppID: id, message: "a band on Pan selects the Pan lane alone")
+}
+
+@MainActor
+func drawerAutomationMultiCcDragExcludesOthers(_ report: CheckReport, suite: DocumentSession,
+                                               service: ProjectService) {
+    let id = "automation/AutomationEditingTest::multiCcLaneSelectionDragExcludesTempoAndVolume"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    volume: [(48, 70)],
+                                                    pan: [(24, 60)],
+                                                    modulation: [(48, 70)])
+    fixture.activate(fixture.panLane)
+    fixture.page.selectRange(from: 0, to: 96, lanes: [fixture.panLane, fixture.modulationLane])
+    let before = fixture.snapshot
+    fixture.drag(fixture.panLane, from: (24, 60), to: 70, modifiers: 0)
+    report.expectEqual(["24:70"], fixture.values(fixture.panLane), cppID: id,
+                       what: "the grabbed lane moves with the selection")
+    report.expectEqual(["48:80"], fixture.values(fixture.modulationLane), cppID: id,
+                       what: "the second selected lane shares the delta")
+    report.expectEqual(["48:70"], fixture.values(fixture.volumeLane), cppID: id,
+                       what: "the unselected volume lane is excluded")
+    report.expectEqual(["0:120"], fixture.tempoValues, cppID: id,
+                       what: "tempo is excluded from the CC drag")
+    report.expectEqual(before.revision + 1, fixture.document.revision, cppID: id,
+                       what: "the multi-lane drag is one revision")
+    report.expect(fixture.undo(), cppID: id, message: "one undo restores all selected lanes")
+    report.expectEqual(["24:60"], fixture.values(fixture.panLane), cppID: id,
+                       what: "undo restores the grabbed lane")
+    report.expectEqual(["48:70"], fixture.values(fixture.modulationLane), cppID: id,
+                       what: "undo restores the second selected lane")
+    report.expect(!fixture.document.history.canUndo, cppID: id,
+                  message: "the drag recorded exactly one history entry")
+}
+
+@MainActor
+func drawerAutomationGhostViewOnlyAndSurvives(_ report: CheckReport, suite: DocumentSession,
+                                              service: ProjectService) {
+    let id = "automation/AutomationEditingTest::ghostToggleIsViewOnlyAndSurvivesActivation"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    volume: [(48, 70)],
+                                                    pan: [(24, 60)])
+    fixture.activate(fixture.volumeLane)
+    let page = fixture.page
+    let before = fixture.snapshot
+    let panIndex = page.catalogIndex(of: fixture.panLane)
+    report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
+                  message: "a lane with events pins as a ghost")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "pinning a ghost writes nothing")
+    report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
+                  message: "the page publishes the pinned ghost")
+    report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: id,
+                       what: "pinning keeps the active parameter")
+    fixture.activate(fixture.panLane)
+    fixture.activate(fixture.volumeLane)
+    report.expect(page.ghostParameters.contains(fixture.panLane), cppID: id,
+                  message: "the ghost survives parameter activation")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "activation around a ghost writes nothing")
+    report.expect(page.toggleGhostParameter(index: panIndex), cppID: id,
+                  message: "the pin toggles off again")
+    report.expect(!page.ghostParameters.contains(fixture.panLane), cppID: id,
+                  message: "unpinning drops the ghost")
+}
+
+@MainActor
+func drawerAutomationPencilOwnershipAndShift(_ report: CheckReport, suite: DocumentSession,
+                                             service: ProjectService) {
+    let id = "automation/AutomationEditingTest::pencilStrokeOutsideSelectionClearsSelection"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    fixture.activate(fixture.panLane)
+    fixture.page.selectRange(from: 20, to: 60, lanes: [fixture.panLane])
+    fixture.page.isPencilMode = true
+    report.expect(fixture.page.pointerPress(x: fixture.x(120), y: 60, surface: 1,
+                                             button: AutomationQtButton.left),
+                  cppID: id, message: "a pencil press outside the selection starts")
+    report.expect(fixture.page.selection == nil, cppID: id,
+                  message: "starting a pencil stroke outside clears the selection")
+    _ = fixture.page.pointerRelease(x: fixture.x(120), y: 60, button: AutomationQtButton.left)
+
+    let lockID = "automation/AutomationEditingTest::nodeDragShiftAxisLocks"
+    let horizontal = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                       pan: [(24, 64), (120, 40)])
+    horizontal.activate(horizontal.panLane)
+    let shift = drawerAutomationQtModifiers(AutomationModifiers(shift: true))
+    _ = horizontal.page.pointerPress(x: horizontal.x(24), y: horizontal.y(horizontal.panLane, 64),
+                                      surface: 1, button: 1, modifiers: shift)
+    _ = horizontal.page.pointerMove(x: horizontal.x(24) + 30, y: horizontal.y(horizontal.panLane, 64),
+                                     buttons: 1, modifiers: shift)
+    _ = horizontal.page.pointerMove(x: horizontal.x(24) + 60, y: horizontal.y(horizontal.panLane, 64),
+                                     buttons: 1, modifiers: shift)
+    _ = horizontal.page.pointerRelease(x: horizontal.x(24) + 60,
+                                        y: horizontal.y(horizontal.panLane, 64),
+                                        button: 1, modifiers: shift)
+    let moved = horizontal.lanePoints(horizontal.panLane)
+    report.expect(moved.count == 2 && moved[0].value == 64 && moved[0].tick > 24, cppID: lockID,
+                  message: "a horizontal Shift drag locks the value and moves the tick")
+    let vertical = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                     pan: [(24, 64), (120, 40)])
+    vertical.activate(vertical.panLane)
+    _ = vertical.page.pointerPress(x: vertical.x(24), y: vertical.y(vertical.panLane, 64),
+                                    surface: 1, button: 1, modifiers: shift)
+    _ = vertical.page.pointerMove(x: vertical.x(24), y: vertical.y(vertical.panLane, 64) - 20,
+                                   buttons: 1, modifiers: shift)
+    _ = vertical.page.pointerMove(x: vertical.x(24), y: vertical.y(vertical.panLane, 64) - 40,
+                                   buttons: 1, modifiers: shift)
+    _ = vertical.page.pointerRelease(x: vertical.x(24), y: vertical.y(vertical.panLane, 64) - 40,
+                                      button: 1, modifiers: shift)
+    let shifted = vertical.lanePoints(vertical.panLane)
+    report.expect(shifted.count == 2 && shifted[0].tick == 24 && shifted[0].value != 64,
+                  cppID: lockID,
+                  message: "a vertical Shift drag locks the tick and moves the value")
+
+    let doubleID = "automation/AutomationEditingTest::doubleClickDeletesOnceWithoutValuePrompt"
+    let twice = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 64), (120, 40)])
+    twice.activate(twice.panLane)
+    let twiceBefore = twice.snapshot
+    report.expect(twice.page.pointerDoubleClick(x: twice.x(24), y: twice.y(twice.panLane, 64)),
+                  cppID: doubleID, message: "a double-click on a node is absorbed")
+    report.expect(!twice.page.hasPrompt, cppID: doubleID,
+                  message: "a double-click opens no value prompt")
+    report.expectEqual(twiceBefore, twice.snapshot, cppID: doubleID,
+                       what: "a double-click alone writes nothing twice")
+}
+
+@MainActor
+func drawerAutomationDetailThresholdPrecedence(_ report: CheckReport, suite: DocumentSession,
+                                               service: ProjectService) {
+    let id = "automation/AutomationEditingTest::detailThresholdHiddenVisibleNodePrecedence"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    fixture.activate(fixture.panLane)
+    fixture.page.isPencilMode = true
+    func markersVisible() -> Bool {
+        AutomationProjection(
+            camera: fixture.session.camera,
+            bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+            geometry: fixture.page.geometry,
+            snapPolicy: AutomationSnapPolicy(document: fixture.document,
+                                             timeline: fixture.session.timeline,
+                                             baseFontPx: 13, devicePixelRatio: 1),
+            songEndTick: fixture.songEndTick).markersVisible()
+    }
+    report.expect(markersVisible(), cppID: id, message: "markers are visible at default zoom")
+    let zoomAnchor = fixture.x(24)
+    _ = fixture.session.mutateCamera {
+        $0.zoomAroundContentX(factor: 0.02, anchorContentX: zoomAnchor)
+    }
+    report.expect(!markersVisible(), cppID: id,
+                  message: "markers hide below the detail threshold")
+    report.expect(fixture.page.pointerPress(x: fixture.x(24), y: fixture.y(fixture.panLane, 70),
+                                             surface: 1, button: 1),
+                  cppID: id, message: "the pencil press through hidden markers starts a stroke")
+    report.expect(fixture.page.pointerRelease(x: fixture.x(24), y: fixture.y(fixture.panLane, 70),
+                                               button: 1),
+                  cppID: id, message: "the stroke through hidden markers commits")
+    let hidden = fixture.lanePoints(fixture.panLane)
+    report.expect(hidden.count == 3 && hidden.contains(where: { $0.tick == 24 && $0.value == 70 }),
+                  cppID: id,
+                  message: "the hidden-marker stroke inserts instead of grabbing the node")
+    let zoomBack = fixture.x(120)
+    _ = fixture.session.mutateCamera {
+        $0.zoomAroundContentX(factor: 50, anchorContentX: zoomBack)
+    }
+    report.expect(markersVisible(), cppID: id, message: "markers return above the threshold")
+
+    let shownFixture = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                         pan: [(24, 64), (120, 40)])
+    shownFixture.activate(shownFixture.panLane)
+    shownFixture.page.isPencilMode = true
+    report.expect(shownFixture.page.pointerPress(
+        x: shownFixture.x(24), y: shownFixture.y(shownFixture.panLane, 64),
+        surface: 1, button: 1),
+                  cppID: id, message: "the pencil press on a visible node grabs it")
+    _ = shownFixture.page.pointerRelease(x: shownFixture.x(24),
+                                          y: shownFixture.y(shownFixture.panLane, 64), button: 1)
+    report.expectEqual(["120:40"], shownFixture.values(shownFixture.panLane), cppID: id,
+                       what: "a stationary release on the grabbed node deletes exactly it")
+}
+
+@MainActor
+func drawerAutomationTempoBendClickRestore(_ report: CheckReport, suite: DocumentSession,
+                                           service: ProjectService) {
+    let tempoID = "automation/AutomationEditingTest::pencilSingleClickOnTempoLaneRestoresDefaultTempoAtCellEnd"
+    let tempo = drawerAutomationAutomationFixture(suite: suite, service: service, tempo: [])
+    tempo.activate(.tempo)
+    tempo.page.isPencilMode = true
+    report.expect(tempo.page.pointerPress(x: tempo.x(48), y: tempo.y(.tempo, 150),
+                                           surface: 1, button: 1),
+                  cppID: tempoID, message: "the pencil press on the empty tempo lane starts")
+    report.expect(tempo.page.pointerRelease(x: tempo.x(48), y: tempo.y(.tempo, 150), button: 1),
+                  cppID: tempoID, message: "the tempo click commits")
+    report.expectEqual(["48:150", "120:120"], tempo.tempoValues, cppID: tempoID,
+                       what: "the click writes its BPM at the cell start and restores default at the end")
+
+    let bendID = "automation/AutomationEditingTest::pencilSingleClickOnPitchBendLaneRestoresCenterAtCellEnd"
+    let bend = drawerAutomationAutomationFixture(suite: suite, service: service)
+    bend.activate(bend.bendLane)
+    bend.page.isPencilMode = true
+    report.expect(bend.page.pointerPress(x: bend.x(48), y: bend.y(bend.bendLane, 100),
+                                          surface: 1, button: 1),
+                  cppID: bendID, message: "the pencil press on the empty bend lane starts")
+    report.expect(bend.page.pointerRelease(x: bend.x(48), y: bend.y(bend.bendLane, 100), button: 1),
+                  cppID: bendID, message: "the bend click commits")
+    report.expectEqual(["48:100", "120:0"], bend.values(bend.bendLane), cppID: bendID,
+                       what: "the click writes its value at the cell start and restores center at the end")
+
+    let excursionID = "automation/AutomationEditingTest::pencilClickOnExcursionNodeDeletesExcursion"
+    let excursion = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                      pan: [(0, 60), (48, 90), (96, 60)])
+    excursion.activate(excursion.panLane)
+    excursion.page.isPencilMode = true
+    report.expect(excursion.page.pointerPress(x: excursion.x(48), y: excursion.y(excursion.panLane, 60),
+                                               surface: 1, button: 1),
+                  cppID: excursionID, message: "the pencil press at baseline over the excursion starts")
+    report.expect(excursion.page.pointerRelease(x: excursion.x(48),
+                                                 y: excursion.y(excursion.panLane, 60), button: 1),
+                  cppID: excursionID, message: "the baseline click commits")
+    report.expectEqual(["0:60"], excursion.values(excursion.panLane), cppID: excursionID,
+                       what: "collapsing the excursion leaves the baseline alone")
+}

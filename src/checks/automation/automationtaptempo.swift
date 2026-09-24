@@ -50,6 +50,14 @@ func drawerAutomationTapTempoCadenceAndCommit(_ report: CheckReport, suite: Docu
     cadence.reset()
     report.expectEqual(AutomationTapTempoSession(), cadence, cppID: drawerAutomationTapTempoID,
                        what: "reset returns the session to its seed state")
+    var burst = AutomationTapTempoSession()
+    for tap in 0...3 { burst.registerTap(nowMs: 50_000 + Int64(tap) * 150) }
+    report.expectEqual(TimeDefaults.maximumTempoBPM, burst.draftBpm, cppID: drawerAutomationTapTempoID,
+                       what: "a 150 ms cadence clamps to the published maximum tempo")
+    report.expect(burst.idleCommitMs == AutomationTapTempoSession.commitMinimumMs,
+                  cppID: drawerAutomationTapTempoID,
+                  message: "the clamped draft's idle window sits at the commit floor")
+    // The page commits a clamped burst through the same idle window below.
 
     let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
     fixture.activate(fixture.panLane)
@@ -130,4 +138,71 @@ func drawerAutomationTapTempoCadenceAndCommit(_ report: CheckReport, suite: Docu
                   message: "a session whose parameter moved on commits nothing")
     report.expectEqual(["0:150"], fixture.tempoValues, cppID: drawerAutomationTapTempoID,
                        what: "the switched parameter left the tempo stream alone")
+    fixture.activate(.tempo)
+    for tap in 0...3 { fixture.page.tapTempoTap(atMilliseconds: 60_000 + Int64(tap) * 150) }
+    report.expectEqual(TimeDefaults.maximumTempoBPM, fixture.page.tapTempoSession.draftBpm,
+                       cppID: drawerAutomationTapTempoID,
+                       what: "the page session clamps the 150 ms burst to the maximum tempo")
+    report.expect(fixture.page.tapTempoIdleElapsed(), cppID: drawerAutomationTapTempoID,
+                  message: "the idle window commits the clamped draft")
+    report.expectEqual(["0:\(TimeDefaults.maximumTempoBPM)"], fixture.tempoValues,
+                       cppID: drawerAutomationTapTempoID,
+                       what: "the clamped commit lands the maximum tempo at tick zero")
+}
+
+@MainActor
+func drawerAutomationTapTempoStrayAndEmptyStream(_ report: CheckReport, suite: DocumentSession,
+                                                 service: ProjectService) {
+    let id = "swiftcore/AutomationPage::tapTempoStrayAndEmptyStream"
+    report.expectEqual(TimeDefaults.maximumTempoBPM,
+                       AutomationTapTempoSession.bpm(forMeanIntervalMs: 150), cppID: id,
+                       what: "a 150 ms mean clamps to the published maximum tempo")
+    report.expectEqual(TimeDefaults.minimumTempoBPM,
+                       AutomationTapTempoSession.bpm(forMeanIntervalMs: 3000), cppID: id,
+                       what: "a 3000 ms mean clamps to the published minimum tempo")
+
+    let stray = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    stray.activate(stray.panLane)
+    let strayBefore = stray.snapshot
+    stray.page.tapTempoTap(atMilliseconds: 1000)
+    report.expect(!stray.page.tapTempoIdleElapsed(), cppID: id,
+                  message: "a single stray tap commits nothing")
+    report.expect(stray.page.tapTempoSession.tapCount == 0, cppID: id,
+                  message: "the stray idle window closes the session")
+    report.expectEqual(strayBefore, stray.snapshot, cppID: id,
+                       what: "the stray tap leaves document and history untouched")
+
+    let later = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  tempo: [(0, 500_000), (384, 428_571)])
+    later.activate(.tempo)
+    for tap in 0...3 { later.page.tapTempoTap(atMilliseconds: 70_000 + Int64(tap) * 400) }
+    report.expect(later.page.tapTempoIdleElapsed(), cppID: id,
+                  message: "the idle window commits the ready draft")
+    report.expectEqual(["0:150", "384:140"], later.tempoValues, cppID: id,
+                       what: "the commit replaces tick zero and preserves the later point")
+    report.expect(later.undo(), cppID: id, message: "the replacement undoes")
+    report.expectEqual(["0:120", "384:140"], later.tempoValues, cppID: id,
+                       what: "undo restores tick zero and preserves the later point")
+
+    let empty = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                  pan: [(24, 64)], tempo: [])
+    empty.activate(.tempo)
+    for tap in 0...3 { empty.page.tapTempoTap(atMilliseconds: 80_000 + Int64(tap) * 400) }
+    report.expect(empty.page.tapTempoIdleElapsed(), cppID: id,
+                  message: "the idle window commits the first tempo point")
+    report.expectEqual(["0:150"], empty.tempoValues, cppID: id,
+                       what: "the commit inserts tick zero on the empty stream")
+    report.expect(empty.undo(), cppID: id, message: "the insertion undoes")
+    report.expect(empty.tempoValues.isEmpty, cppID: id,
+                  message: "undo restores the empty tempo stream")
+
+    let seam = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    seam.activate(seam.panLane)
+    for tap in 0...1 { seam.page.tapTempoTap(atMilliseconds: 90_000 + Int64(tap) * 500) }
+    report.expect(seam.page.tapTempoSession.tapCount == 2, cppID: id,
+                  message: "two taps stand in the session")
+    seam.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 168,
+                            through: 168, points: [LaneWrite(tick: 168, value: 5)])
+    report.expect(seam.page.tapTempoSession.tapCount == 0 && !seam.page.tapTempoActive, cppID: id,
+                  message: "the document seam clears the session synchronously")
 }

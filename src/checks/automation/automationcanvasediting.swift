@@ -231,3 +231,67 @@ func drawerAutomationContextAndPublicationDiagnostics(_ report: CheckReport, sui
     report.expect(copyAvailable, cppID: drawerAutomationContextID,
                   message: "a retained command subscriber observes selection after page reattachment")
 }
+
+@MainActor
+func drawerAutomationInflightDragInvalidation(_ report: CheckReport, suite: DocumentSession,
+                                              service: ProjectService) {
+    let rebuildID = "automation/AutomationEditingTest::rebuildCancelsAdapterDragAndRecovers"
+    let rebuilt = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                    pan: [(24, 64), (120, 40)])
+    rebuilt.activate(rebuilt.panLane)
+    let page = rebuilt.page
+    report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64),
+                                     surface: 1, button: 1),
+                  cppID: rebuildID, message: "a press grabs the node")
+    _ = page.pointerMove(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), buttons: 1)
+    report.expect(page.hasGesture, cppID: rebuildID, message: "the drag is live past the slop")
+    rebuilt.document.writeLane(track: 0, lane: .controller(TimeDefaults.ccPan), from: 168,
+                               through: 168, points: [LaneWrite(tick: 168, value: 5)])
+    report.expect(!page.hasGesture, cppID: rebuildID,
+                  message: "the document rebuild cancels the drag synchronously")
+    let afterRebuild = rebuilt.snapshot
+    _ = page.pointerRelease(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), button: 1)
+    report.expectEqual(afterRebuild, rebuilt.snapshot, cppID: rebuildID,
+                       what: "releasing the cancelled drag commits nothing")
+    report.expect(page.pointerPress(x: rebuilt.x(24), y: rebuilt.y(rebuilt.panLane, 64),
+                                     surface: 1, button: 1),
+                  cppID: rebuildID, message: "a fresh press grabs the node after the rebuild")
+    _ = page.pointerMove(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 64), buttons: 1)
+    _ = page.pointerMove(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 90), buttons: 1)
+    _ = page.pointerRelease(x: rebuilt.x(24) + 30, y: rebuilt.y(rebuilt.panLane, 90), button: 1)
+    report.expectEqual(["24:90", "120:40", "168:5"], rebuilt.values(rebuilt.panLane),
+                       cppID: rebuildID, what: "the recovery drag commits normally")
+
+    let switchID = "automation/AutomationEditingTest::parameterSwitchCancelsNodeDrag"
+    let switched = drawerAutomationAutomationFixture(suite: suite, service: service,
+                                                     pan: [(24, 64), (120, 40)])
+    switched.activate(switched.panLane)
+    let switchedBefore = switched.snapshot
+    report.expect(switched.page.pointerPress(
+        x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
+                  cppID: switchID, message: "a press grabs the node")
+    _ = switched.page.pointerMove(x: switched.x(24) + 30, y: switched.y(switched.panLane, 64),
+                                   buttons: 1)
+    report.expect(switched.page.hasGesture, cppID: switchID, message: "the drag is live")
+    switched.activate(switched.volumeLane)
+    report.expect(!switched.page.hasGesture, cppID: switchID,
+                  message: "switching parameters cancels the drag")
+    report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
+                       what: "the cancelled drag writes nothing")
+    _ = switched.page.pointerRelease(x: switched.x(24) + 30,
+                                      y: switched.y(switched.panLane, 64), button: 1)
+    report.expectEqual(switchedBefore, switched.snapshot, cppID: switchID,
+                       what: "releasing after the switch commits nothing")
+    switched.activate(switched.panLane)
+    report.expect(switched.page.pointerPress(
+        x: switched.x(24), y: switched.y(switched.panLane, 64), surface: 1, button: 1),
+                  cppID: switchID, message: "a fresh press grabs the node after the switch")
+    _ = switched.page.pointerMove(x: switched.x(24) + 30, y: switched.y(switched.panLane, 64),
+                                   buttons: 1)
+    _ = switched.page.pointerMove(x: switched.x(24) + 30, y: switched.y(switched.panLane, 90),
+                                   buttons: 1)
+    _ = switched.page.pointerRelease(x: switched.x(24) + 30, y: switched.y(switched.panLane, 90),
+                                      button: 1)
+    report.expectEqual(["24:90", "120:40"], switched.values(switched.panLane), cppID: switchID,
+                       what: "the recovery drag commits normally")
+}

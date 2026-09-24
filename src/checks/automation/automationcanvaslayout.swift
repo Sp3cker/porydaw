@@ -81,3 +81,49 @@ func drawerAutomationHitGeometry(_ report: CheckReport, suite: DocumentSession,
     report.expectEqual(projection.cell(atRawTick: 0).tickBegin, degenerate[0].tickBegin,
                        cppID: drawerAutomationLayoutID, what: "a degenerate walk stays in the pointer's cell")
 }
+
+@MainActor
+func drawerAutomationMiddlePanIsolation(_ report: CheckReport, suite: DocumentSession,
+                                        service: ProjectService) {
+    let id = "automation/AutomationEditingTest::middlePanIsolated"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    fixture.activate(fixture.panLane)
+    let page = fixture.page
+    let before = fixture.snapshot
+    let cursorBefore = fixture.session.editCursor
+    let scrollBefore = fixture.session.camera.snapshot.scrollX
+    report.expect(page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle),
+                  cppID: id, message: "a middle press starts the pan")
+    report.expect(page.isPanning, cppID: id, message: "the page publishes the live pan")
+    report.expectEqual(AutomationCursorKind.closedHand.rawValue, page.cursorKind, cppID: id,
+                       what: "the pan publishes the closed hand")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "starting a pan mutates nothing")
+    report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                       what: "starting a pan parks no cursor")
+    _ = page.pointerMove(x: 52, y: 60, buttons: AutomationQtButton.middle)
+    report.expectEqual(scrollBefore + 48, fixture.session.camera.snapshot.scrollX, cppID: id,
+                       what: "the pan scrolls the shared camera by the travel")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "panning mutates nothing")
+    _ = page.pointerRelease(x: 52, y: 60, button: AutomationQtButton.middle)
+    report.expect(!page.isPanning, cppID: id, message: "releasing ends the pan")
+    report.expectEqual(before, fixture.snapshot, cppID: id,
+                       what: "the released pan leaves document and history untouched")
+    report.expectEqual(cursorBefore, fixture.session.editCursor, cppID: id,
+                       what: "the released pan leaves the cursor where it was")
+
+    let switchID = "automation/AutomationEditingTest::primaryTrackSwitchRebuildsRowsDuringPan"
+    _ = page.pointerPress(x: 100, y: 60, surface: 1, button: AutomationQtButton.middle)
+    report.expect(page.isPanning, cppID: switchID, message: "a second pan starts")
+    fixture.activate(fixture.volumeLane)
+    report.expect(!page.isPanning, cppID: switchID,
+                  message: "switching parameters ends the pan")
+    report.expectEqual(fixture.volumeLane, page.activeParameter, cppID: switchID,
+                       what: "the switch rebuilds the active parameter")
+    report.expectEqual(before, fixture.snapshot, cppID: switchID,
+                       what: "switching mid-pan writes nothing")
+    _ = page.pointerRelease(x: 100, y: 60, button: AutomationQtButton.middle)
+    report.expectEqual(before, fixture.snapshot, cppID: switchID,
+                       what: "releasing after the switch commits nothing")
+}

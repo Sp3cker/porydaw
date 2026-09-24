@@ -68,3 +68,27 @@ func drawerAutomationQtModifierMapping(_ report: CheckReport, suite: DocumentSes
     report.expectEqual(["24:64"], snapped.values(snapped.panLane), cppID: drawerAutomationModifierMappingID,
                        what: "the Qt control bit a QML event carries lands the drag on the neutral")
 }
+
+@MainActor
+func drawerAutomationProjectionValueBounds(_ report: CheckReport, suite: DocumentSession,
+                                                         service: ProjectService) {
+    let id = "automation/AutomationEditingTest::projectionValueBounds"
+    let fixture = drawerAutomationAutomationFixture(suite: suite, service: service, pan: [(24, 64)])
+    let metadata = AutomationParameterMetadata(parameter: fixture.panLane)
+    let projection = AutomationProjection(
+        camera: fixture.session.camera,
+        bounds: AutomationPlotBounds(width: 480, height: 120, devicePixelRatio: 1),
+        geometry: fixture.page.geometry,
+        snapPolicy: AutomationSnapPolicy(document: fixture.document,
+                                         timeline: fixture.session.timeline,
+                                         baseFontPx: 13, devicePixelRatio: 1),
+        songEndTick: fixture.songEndTick)
+    let yMin = projection.y(0, metadata: metadata)
+    let yMax = projection.y(127, metadata: metadata)
+    report.expectEqual(0, projection.value(atY: yMin, metadata: metadata), cppID: id,
+                       what: "the value axis minimum maps back to zero")
+    report.expectEqual(127, projection.value(atY: yMax, metadata: metadata), cppID: id,
+                       what: "the value axis maximum maps back to full scale")
+    report.expect(abs(projection.y(64, metadata: metadata) - 60) < 1.0, cppID: id,
+                  message: "the neutral value maps within a pixel of the lane midpoint")
+}
