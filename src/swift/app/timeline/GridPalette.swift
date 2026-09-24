@@ -110,6 +110,100 @@ public enum PaletteMath {
         return hex(mixTowardOklab(identity, zero, 1.0 - Double(v) / 127.0))
     }
 
+    /// Velocity-hue display mode (View menu, app-wide): note fills take their
+    /// hue from velocity — purple (1) sweeping the long way around the wheel
+    /// to red (127) — instead of the track identity. Mirrors
+    /// SongView::velocityNoteColor (trackvoiceops.cpp): velocity <= 0 renders
+    /// the shared zero-velocity ink; 1 and 127 are the fixed #5F44E9/#E90904
+    /// endpoints; between them hue/saturation/value interpolate linearly in
+    /// Qt HSV (hue ~250deg down to ~1deg, i.e. through blue/green/yellow)
+    /// with t = (v-1)/126, quantized to 8-bit RGB.
+    public static func velocityNoteColor(velocity: Int, zeroColor: String) -> String {
+        if velocity <= 0 { return zeroColor }
+        // Oracle endpoints: QColor(0x5F, 0x44, 0xE9) and QColor(0xE9, 0x09, 0x04).
+        if velocity <= 1 { return hex(r: 0x5F, g: 0x44, b: 0xE9) }
+        if velocity >= 127 { return hex(r: 0xE9, g: 0x09, b: 0x04) }
+        // QColor::getHsvF works in double (qreal); the oracle keeps the
+        // components in float locals and interpolates in float, so the same
+        // widths are used here: Double conversion, Float interpolation, then
+        // QColor::fromHsvF quantized with qRound (round half up, non-negative).
+        let minHSV = rgbToHsvFractional(r: 0x5F, g: 0x44, b: 0xE9)
+        let maxHSV = rgbToHsvFractional(r: 0xE9, g: 0x09, b: 0x04)
+        let t = Float(velocity - 1) / 126.0
+        let h = Double(Float(minHSV.h) + (Float(maxHSV.h) - Float(minHSV.h)) * t)
+        let s = Double(Float(minHSV.s) + (Float(maxHSV.s) - Float(minHSV.s)) * t)
+        let v = Double(Float(minHSV.v) + (Float(maxHSV.v) - Float(minHSV.v)) * t)
+        let (r, g, b) = hsvToRgbBytes(h: h, s: s, v: v)
+        return hex(r: r, g: g, b: b)
+    }
+
+    /// QColor::getHsvF for a chromatic 8-bit color: hue in [0, 1), saturation
+    /// and value in [0, 1]. The achromatic hue (-1) never occurs here — both
+    /// velocity endpoints are saturated — so only the chromatic path is kept.
+    private static func rgbToHsvFractional(r: Int, g: Int, b: Int)
+        -> (h: Double, s: Double, v: Double)
+    {
+        let red = Double(r) / 255.0
+        let green = Double(g) / 255.0
+        let blue = Double(b) / 255.0
+        let cmax = max(red, max(green, blue))
+        let cmin = min(red, min(green, blue))
+        let delta = cmax - cmin
+        let saturation = cmax == 0 ? 0 : delta / cmax
+        let hue: Double
+        if cmax == red {
+            hue = (green - blue) / delta
+        } else if cmax == green {
+            hue = 2 + (blue - red) / delta
+        } else {
+            hue = 4 + (red - green) / delta
+        }
+        var degrees = hue * 60
+        if degrees < 0 { degrees += 360 }
+        return (degrees / 360, saturation, cmax)
+    }
+
+    /// QColor::fromHsvF quantized through QRgb: h in [0, 1], s/v in [0, 1];
+    /// the result rounds each channel half up to 8 bits.
+    private static func hsvToRgbBytes(h: Double, s: Double, v: Double)
+        -> (r: Int, g: Int, b: Int)
+    {
+        let red: Double
+        let green: Double
+        let blue: Double
+        if s == 0 {
+            red = v
+            green = v
+            blue = v
+        } else {
+            let sector = h * 6
+            let index = Int(sector.rounded(.down))
+            let fraction = sector - Double(index)
+            let p = v * (1 - s)
+            let q = v * (1 - s * fraction)
+            let t = v * (1 - s * (1 - fraction))
+            switch index {
+            case 0: (red, green, blue) = (v, t, p)
+            case 1: (red, green, blue) = (q, v, p)
+            case 2: (red, green, blue) = (p, v, t)
+            case 3: (red, green, blue) = (p, q, v)
+            case 4: (red, green, blue) = (t, p, v)
+            default: (red, green, blue) = (v, p, q)
+            }
+        }
+        func quantize(_ channel: Double) -> Int {
+            min(255, max(0, Int((channel * 255).rounded(.toNearestOrAwayFromZero))))
+        }
+        return (quantize(red), quantize(green), quantize(blue))
+    }
+
+    /// Legible ink for text on `fill`: the candidate with the higher WCAG
+    /// contrast ratio. Mirrors songview contrastingTextColor (detail.cpp),
+    /// which picks between the piano keyboard's natural- and black-key inks.
+    public static func contrastingTextColor(fill: String, light: String, dark: String) -> String {
+        contrastRatio(fill, light) >= contrastRatio(fill, dark) ? light : dark
+    }
+
     static func ghostFill(track: Int, accidentalRow: Bool) -> String {
         let identity = trackIdentityOklab(track)
         let background = accidentalRow

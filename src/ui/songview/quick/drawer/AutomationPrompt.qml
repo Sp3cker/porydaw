@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import ".." as Shared
+import Porydaw.Ui
 
 FocusScope {
     id: root
@@ -68,7 +68,7 @@ FocusScope {
         acceptedButtons: Qt.AllButtons
         onWheel: wheel => wheel.accepted = true
     }
-    Shared.PromptCard {
+    PromptCard {
         id: card
         objectName: "automationPromptCard"
         anchors.centerIn: parent
@@ -105,7 +105,7 @@ FocusScope {
             font: promptAppearance.font
             renderType: Text.NativeRendering
         }
-        Shared.DragInput {
+        DragInput {
             id: field
 
             visible: !root.confirming
@@ -126,11 +126,11 @@ FocusScope {
             maximumValue: root.model.promptMaximum
             onValueCommitted: committed => root.model.updatePromptDraft(String(committed))
             onEditingAccepted: committed => root.acceptDraft()
-            Shared.HoverHint {
+            HoverHint {
                 source: field.textInput
                 hintService: root.hintService
                 scopeAllowed: root.showing
-                profile: Shared.HintProfiles.TextSelection
+                profile: HintProfiles.TextSelection
             }
         }
         Connections {
@@ -151,7 +151,7 @@ FocusScope {
         Row {
             visible: root.confirming
             spacing: promptAppearance.spacing
-            Shared.PromptButton {
+            PromptButton {
                 id: accept
                 objectName: "automationPromptAccept"
                 appearance: promptAppearance
@@ -161,7 +161,7 @@ FocusScope {
                 KeyNavigation.backtab: cancel
                 onActivated: root.acceptDraft()
             }
-            Shared.PromptButton {
+            PromptButton {
                 id: cancel
                 objectName: "automationPromptCancel"
                 appearance: promptAppearance

@@ -19,6 +19,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Shapes
+import Porydaw.Ui
 
 Item {
     id: root

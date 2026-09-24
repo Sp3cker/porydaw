@@ -1,5 +1,5 @@
 import QtQuick
-import "./swiftroll" as SwiftRoll
+import Porydaw.Ui
 
 Item {
     id: root
@@ -10,7 +10,7 @@ Item {
     required property QtObject timelineScene
 
     // Keep pitch rows below pre-roll shading and time marks.
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.plotSide
         objectName: "timelineQuickPianoGridRows"
         anchors.fill: parent
@@ -18,7 +18,7 @@ Item {
         z: 0
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.plotSide
         objectName: "timelineQuickPianoGridTime"
         anchors.fill: parent
@@ -26,7 +26,7 @@ Item {
         z: 1
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.plotSide
         objectName: "timelineQuickPianoNoteFills"
         anchors.fill: parent
@@ -34,7 +34,7 @@ Item {
         z: 2
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.plotSide
         objectName: "timelineQuickPianoDrawPreviewFill"
         anchors.fill: parent
@@ -76,7 +76,7 @@ Item {
         }
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.plotSide
         objectName: "timelineQuickPianoNoteBordersAndSelection"
         anchors.fill: parent
@@ -84,7 +84,7 @@ Item {
         z: 5
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.plotSide
         objectName: "timelineQuickPianoOverlay"
         anchors.fill: parent
@@ -92,7 +92,7 @@ Item {
         z: 6
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.gutterSide
         objectName: "timelineQuickPianoKeyboardKeys"
         anchors.fill: parent
@@ -100,7 +100,7 @@ Item {
         z: 0
     }
 
-    SwiftRoll.TimelineQuickItem {
+    TimelineQuickItem {
         parent: root.gutterSide
         objectName: "timelineQuickPianoKeyboardHighlights"
         anchors.fill: parent

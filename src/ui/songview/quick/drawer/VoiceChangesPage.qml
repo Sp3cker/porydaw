@@ -28,9 +28,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import ".." as Shared
-import "../swiftroll"
-import ".." as Shared
+import Porydaw.Ui
 
 FocusScope {
     id: page
@@ -103,7 +101,7 @@ FocusScope {
         readonly property bool hoverVisible: false
         readonly property string hoverText: ""
         readonly property var hoverLabelRect: ({ "x": 0, "y": 0, "width": 0, "height": 0 })
-        readonly property int hoverHintProfile: Shared.HintProfiles.HorizontalScroll
+        readonly property int hoverHintProfile: HintProfiles.HorizontalScroll
         readonly property var captionFont: ({})
         readonly property var titleFont: ({})
         readonly property double baseFontPx: 13
@@ -454,7 +452,7 @@ FocusScope {
             onExited: page.pageModel.pointerLeave()
         }
 
-        Shared.HoverHint {
+        HoverHint {
             id: plotHint
 
             source: plot
@@ -530,7 +528,7 @@ FocusScope {
     Component {
         id: pickerComponent
 
-        Shared.VoicePickerPrompt {
+        VoicePickerPrompt {
             promptPalette: page.gridPalette
             hintService: page.hintService
             onClosed: page.focusOrigin()

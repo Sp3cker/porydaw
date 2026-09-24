@@ -90,7 +90,7 @@ enum VoiceHintProfile {
 @QtBridgeable
 public final class VoiceChangesPage: EditorDrawerPage {
     /// The fixed production QML URL, resolved once by the container at attach.
-    public static let contentUrl = "qrc:/porydaw/drawer/VoiceChangesPage.qml"
+    public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VoiceChangesPage.qml"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .voiceChanges
     @QtIgnored public var contentUrl: String { Self.contentUrl }

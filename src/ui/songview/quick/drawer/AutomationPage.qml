@@ -27,8 +27,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import "../swiftroll"
-import ".." as Shared
+import Porydaw.Ui
 
 FocusScope {
     id: page
@@ -113,7 +112,7 @@ FocusScope {
         readonly property bool trackAvailable: false
         readonly property string plotMessage: ""
         readonly property bool isPencilMode: false
-        readonly property int hoverHintProfile: Shared.HintProfiles.Empty
+        readonly property int hoverHintProfile: HintProfiles.Empty
         readonly property bool interactionActive: false
         readonly property double baseFontPx: 13
         readonly property double plotOrigin: 0
@@ -255,7 +254,7 @@ FocusScope {
         // The production selector is a scrollable two-column grid whose
         // Tempo row spans both columns. The scroll position follows the active
         // and focused tab, exactly as the production `ensureVisible` does.
-        Shared.AutomationTabs {
+        AutomationTabs {
             anchors.fill: parent
             pageModel: page.pageModel
             sceneRoot: page
@@ -560,7 +559,7 @@ FocusScope {
         // publication selects node, origin-phantom, sweep or pencil help;
         // the group retains that originating profile only for the MouseArea's
         // real grab, then settles containment from the delivered release.
-        Shared.HoverHint {
+        HoverHint {
             id: plotHint
 
             source: plot

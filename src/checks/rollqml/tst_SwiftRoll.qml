@@ -18,7 +18,7 @@ import RollQmlCheck 1.0
 // relative path to ../../ui/songview/quick/swiftroll/SwiftRollOverlay.qml, the
 // same file the application's resource engine loads. A directory import keeps
 // one composition root -- the lane never copies, forks or re-declares it.
-import "../../ui/songview/quick/swiftroll"
+import Porydaw.Ui
 
 TestCase {
     id: testCase

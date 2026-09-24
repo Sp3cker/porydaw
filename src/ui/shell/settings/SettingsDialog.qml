@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import ".." as Shell
+import Porydaw.Ui
 
-Shell.ThemedWindow {
+ThemedWindow {
     id: dialog
     objectName: "settingsDialog"
     required property QtObject store

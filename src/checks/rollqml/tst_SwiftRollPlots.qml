@@ -14,7 +14,7 @@ import QtQuick
 import QtTest
 import PorydawApp
 import RollQmlCheck 1.0
-import "../../ui/songview/quick/swiftroll"
+import Porydaw.Ui
 
 TestCase {
     id: testCase

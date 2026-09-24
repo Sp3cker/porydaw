@@ -3,6 +3,7 @@
 // and declare rows as default children; appearance injects the shared theme
 // keys, and minimumWidth optionally floors dialogs whose content runs narrow.
 import QtQuick
+import Porydaw.Ui
 
 Item {
     id: card

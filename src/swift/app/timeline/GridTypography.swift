@@ -2,7 +2,7 @@ import NativeGridTypography
 import QtBridge
 
 enum GridFontKind {
-    case ruler, beat, bold, sig, chip, keyLabel
+    case ruler, beat, bold, sig, chip, keyLabel, noteName
 }
 
 struct GridFontSpec {
@@ -34,10 +34,14 @@ struct GridTypography {
     let beatHeight: Double
     let boldHeight: Double
     let chipHeight: Double
+    /// Occupied height (ascent + descent, i.e. QFontMetrics height) of the
+    /// fixed note-name face, for the padded row-height gate in NoteNameLabels.
+    let noteNameOccupiedHeight: Double
     private let rulerMetrics: NativeFontMetrics
     private let beatMetrics: NativeFontMetrics
     private let signatureMetrics: NativeFontMetrics
     private let chipWidths: [Double]
+    private let noteNameWidths: [Double]
     private let fontMaps: [GridFontKind: [String: QVariantSettable]]
 
     init(fonts: [GridFontKind: GridFontSpec], rowHeight: Double) {
@@ -59,52 +63,13 @@ struct GridTypography {
         signatureMetrics = measure(.sig)
         let keyLabelFit = measure(.keyLabel).fittedSize(rowHeight: rowHeight)
         chipWidths = (0..<128).map { chip.advance(GridScene.keyName($0)) }
+        let noteName = measure(.noteName)
+        noteNameOccupiedHeight = noteName.extents.height
+        noteNameWidths = (0..<128).map { noteName.advance(GridScene.keyName($0)) }
         var maps = fonts.mapValues { $0.map }
         maps[.keyLabel]!["pixelSize"] = keyLabelFit
         fontMaps = maps
     }
-
-    static func barLabel(_ bar: Int) -> String { "\(bar)" }
-
-    static func beatLabel(_ bar: Int, _ beat: Int) -> String { "\(bar).\(beat)" }
-
-    func rulerAdvance(bar: Int) -> Double {
-        rulerMetrics.advance(Self.barLabel(bar))
-    }
-
-    func beatAdvance(bar: Int, beat: Int) -> Double {
-        beatMetrics.advance(Self.beatLabel(bar, beat))
-    }
-
-    func signatureAdvance(_ label: String) -> Double {
-        signatureMetrics.advance(label)
-    }
-
-    func chipAdvance(pitch: Int) -> Double { chipWidths[pitch] }
-
-    func fontMap(_ kind: GridFontKind) -> [String: QVariantSettable] { fontMaps[kind]! }
-
-    static func fonts(metrics m: GridMetrics) -> [GridFontKind: GridFontSpec] {
-        let bodyPx = max(1.0, (m.baseFontPx * 1.125).rounded())
-        let next = "Atkinson Hyperlegible Next"
-        let mono = "Atkinson Hyperlegible Mono"
-        func spec(_ family: String, _ px: Double, _ weight: Int, _ spacing: Double = 0)
-            -> GridFontSpec
-        {
-            GridFontSpec(
-                family: family, pixelSize: Int(px), weight: weight, letterSpacing: spacing)
-        }
-        let rulerPx = max(m.rulerMinFontPx, bodyPx - 1)
-        return [
-            .ruler: spec(mono, rulerPx, 400, m.rulerLetterSpacing),
-            .beat: spec(mono, max(m.rulerMinFontPx, rulerPx - 1), 400, m.rulerLetterSpacing),
-            .bold: spec(mono, rulerPx, 600, m.rulerLetterSpacing),
-            .sig: spec(next, bodyPx, 600),
-            .chip: spec(next, m.baseFontPx, 400),
-            .keyLabel: spec(next, min(bodyPx, m.baseFontPx), 400),
-        ]
-    }
-}
 
 @MainActor
 // Visible to the swiftcore harness for the fitted-maximality check; the

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic as Controls
 import QtQuick.Layouts
+import Porydaw.Ui
 
 Item {
     id: root

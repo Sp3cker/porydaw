@@ -1,6 +1,5 @@
 import QtQuick
-import ".." as Original
-import "../drawer"
+import Porydaw.Ui
 
 Item {
     id: root
@@ -148,7 +147,7 @@ Item {
                          - root.scrollbarBreadth, 0)
         z: 1
 
-        Original.TrackHeaderBand {
+        TrackHeaderBand {
             id: trackHeaders
             x: 0
             y: root.gridModel.rulerHeight
@@ -366,7 +365,7 @@ Item {
                     objectName: "pianoGridSurface"
                     anchors.fill: parent
 
-                    Original.PianoRollCanvas {
+                    PianoRollCanvas {
                         bandSide: rollContentBand
                         gutterSide: rollGutterSide
                         plotSide: pianoGridSurface
@@ -489,7 +488,7 @@ Item {
 
     // Keep the timeline row below the drawer; its value is owned by the Swift
     // camera and the control only requests a new scroll position.
-    Original.TimelineScrollbar {
+    TimelineScrollbar {
         id: horizontalScrollBar
         objectName: "timelineHorizontalScrollBar"
         z: 2
@@ -517,7 +516,7 @@ Item {
                                   Qt.styleHints.wheelScrollLines)
     }
 
-    Original.TimelineScrollbar {
+    TimelineScrollbar {
         id: rollScrollBar
         objectName: "timelineRollScrollBar"
         z: 2
@@ -561,7 +560,7 @@ Item {
                     anchors.fill: parent
                     onPressed: root.headersModel.dismissHeaderMenu()
                 }
-                Original.QuickMenuPanel {
+                QuickMenuPanel {
                     anchors.fill: parent
                     host: root
                     menuModel: root.headersModel.menuItems
@@ -607,7 +606,7 @@ Item {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     onPressed: root.gridModel.dismissGridMenu()
                 }
-                Original.QuickMenuPanel {
+                QuickMenuPanel {
                     anchors.fill: parent
                     host: root
                     menuModel: root.gridModel.gridMenuRows
@@ -654,7 +653,7 @@ Item {
                     anchors.fill: parent
                     onPressed: root.timeSigHost.closeTimeSigMenu()
                 }
-                Original.QuickMenuPanel {
+                QuickMenuPanel {
                     anchors.fill: parent
                     host: root
                     menuModel: root.rulerMenu.rows
@@ -699,7 +698,7 @@ Item {
                     anchors.fill: parent
                     onPressed: root.timeSigHost.cancelTimeSigPrompt()
                 }
-                Original.TimeSignaturePrompt {
+                TimeSignaturePrompt {
                     anchors.centerIn: parent
                     width: implicitWidth
                     height: implicitHeight
@@ -719,7 +718,7 @@ Item {
                     anchors.fill: parent
                     onPressed: root.rulerMenu.cancelInsertTimePrompt()
                 }
-                Original.InsertTimePrompt {
+                InsertTimePrompt {
                     anchors.centerIn: parent
                     width: implicitWidth
                     height: implicitHeight
@@ -745,7 +744,7 @@ Item {
                     onPressed: root.pitchBendPresenter.cancelAndClose()
                     onWheel: (wheel) => wheel.accepted = true
                 }
-                Original.PitchBendPopup {
+                PitchBendPopup {
                     id: pitchBendPopup
                     bridge: root.pitchBendPresenter
                     fallbackFont: root.applicationFont

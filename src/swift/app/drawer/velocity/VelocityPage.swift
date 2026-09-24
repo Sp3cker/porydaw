@@ -125,7 +125,7 @@ public final class VelocityHandle {
 @QtBridgeable
 public final class VelocityPage: EditorDrawerPage {
     /// The fixed production QML URL, resolved once by the container at attach.
-    public static let contentUrl = "qrc:/porydaw/drawer/VelocityPage.qml"
+    public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/VelocityPage.qml"
 
     @QtIgnored public let sectionKind: DrawerSectionKind = .velocity
     @QtIgnored public var contentUrl: String { Self.contentUrl }

@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import ".." as Shared
+import Porydaw.Ui
 
 FocusScope {
     id: root
@@ -80,13 +80,13 @@ FocusScope {
             const p = root.pageItem ? mapToItem(root.pageItem, mouse.x, mouse.y) : Qt.point(-1, -1)
             root.model.outsideMenuPress(p.x - root.model.plotOrigin, p.y, mouse.button)
         }
-        Shared.HoverHint {
+        HoverHint {
             source: underlay
             hintService: root.hintService
             scopeAllowed: root.showing
         }
     }
-    Shared.QuickMenuPanel {
+    QuickMenuPanel {
         id: panel
         objectName: "automationMenuPanel"
         host: root
@@ -112,7 +112,7 @@ FocusScope {
         Accessible.name: qsTr("Automation actions")
         highlightedRow: root.currentRow
     }
-    Shared.QuickMenuPanel {
+    QuickMenuPanel {
         id: submenu
         objectName: "automationMenuSubmenu"
         visible: root.childOpen

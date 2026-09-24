@@ -1,4 +1,5 @@
 import QtQuick
+import Porydaw.Ui
 
 Rectangle {
     id: root

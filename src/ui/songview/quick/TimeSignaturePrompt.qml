@@ -1,4 +1,5 @@
 import QtQuick
+import Porydaw.Ui
 
 PromptCard {
     id: prompt

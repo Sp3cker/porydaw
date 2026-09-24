@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtCore
 import QtQuick.Controls.Basic as Basic
-import "qrc:/porydaw" as Shared
+import Porydaw.Ui
 
 Rectangle {
     id: bar
@@ -54,7 +54,8 @@ Rectangle {
     }
     function restoreOutputVolume() {
         volumeSettingsLoader.active = true
-        presenter.setOutputVolume(volumeSettingsLoader.item.outputVolume)
+        if (volumeSettingsLoader.status === Loader.Ready)
+            presenter.setOutputVolume(volumeSettingsLoader.item.outputVolume)
     }
 
     Timer {
@@ -299,7 +300,7 @@ Rectangle {
             color: enabled ? bar.colors.windowText : bar.colors.disabledText
             text: qsTr("Volume")
         }
-        Shared.DragInput {
+        DragInput {
             objectName: "transportMasterVolume"
             inputObjectName: "transportMasterVolumeInput"
             accessibleName: qsTr("Master volume")
@@ -343,7 +344,8 @@ Rectangle {
             Layout.preferredHeight: implicitHeight
             onValueCommitted: percent => {
                 bar.presenter.setOutputVolume(percent)
-                volumeSettingsLoader.item.outputVolume = percent
+                if (volumeSettingsLoader.status === Loader.Ready)
+                    volumeSettingsLoader.item.outputVolume = percent
             }
         }
         // QToolBar still reserves its clipped output controls at large fonts.

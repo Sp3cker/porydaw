@@ -40,10 +40,10 @@ diff --git a/Sources/QtBridge/QmlInstantiable.swift b/Sources/QtBridge/QmlInstan
          metaObjectBuilder.registerQmlElement(from: Self.self)
      }
 diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
+index c69ec15..6a08894 100644
 --- a/Sources/QtBridge/QVariant.swift
 +++ b/Sources/QtBridge/QVariant.swift
-@@ -95,6 +95,17 @@ public struct QVariant
-     public init(value: QObjectBuildable) {
+@@ -96,6 +96,17 @@ public struct QVariant
          self.variant = value.objectHolder.proxy.toVariant()
      }
  
@@ -60,9 +60,17 @@ diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
 +
      /// Creates a variant from a Swift dictionary.
      ///
-@@ -181,6 +192,11 @@ public protocol QVariantSettable : QVariantGettable {
-     /// - Parameter variant: The variant containing the QML value.
-     /// - Returns: A Swift value converted from the variant.
+     /// - Parameter value: A dictionary to be bridged to
+@@ -152,7 +163,7 @@ public struct QVariant
+         return nil
+     }
+ 
+-    internal func cppVariant() -> QtBridgeCpp.QVariant {
++    public func cppVariant() -> QtBridgeCpp.QVariant {
+         return variant
+     }
+ }
+@@ -183,6 +194,11 @@ public protocol QVariantSettable : QVariantGettable {
      static func value(from variant: QVariant) -> Self
  }
  
@@ -72,6 +80,8 @@ diff --git a/Sources/QtBridge/QVariant.swift b/Sources/QtBridge/QVariant.swift
 +}
 +
  extension Bool: QVariantSettable {
+     public func toVariant() -> QVariant { QVariant(value: self) }
+     public static func value(from variant: QVariant) -> Bool { variant.toBool() }
 diff --git a/Sources/QtBridge/QListModel.swift b/Sources/QtBridge/QListModel.swift
 --- a/Sources/QtBridge/QListModel.swift
 +++ b/Sources/QtBridge/QListModel.swift
@@ -244,3 +254,57 @@ diff --git a/Sources/QtBridgeCpp/include/qobjectproxyimpl.h b/Sources/QtBridgeCp
  
      using DeleterFn = void(*)(void *swiftObj);
      QObjectProxyImpl(void *swiftObj, DeleterFn deleter)
+diff --git a/Sources/QtBridgeCpp/include/qappcpp.h b/Sources/QtBridgeCpp/include/qappcpp.h
+index fb09757..4bb1833 100644
+--- a/Sources/QtBridgeCpp/include/qappcpp.h
++++ b/Sources/QtBridgeCpp/include/qappcpp.h
+@@ -7,6 +7,8 @@
+ #include <QtCore/qurl.h>
+ #include <QtCore/qvariant.h>
+ 
++#include <QtQml/qqmlapplicationengine.h>
++
+ #include <swift/bridging>
+ 
+ #include "qobjectproxy.h"
+@@ -25,6 +29,10 @@ public:
+ 
+     int run(int argc, char **argv);
+ 
++    // The application engine while run() is executing; nullptr before load
++    // and after exec() returns. Valid to call from slots during exec().
++    static QQmlApplicationEngine *engine();
++
+ private:
+     std::vector<QString> m_importPaths;
+     QString m_pluginsPath;
+diff --git a/Sources/QtBridgeCpp/qappcpp.cpp b/Sources/QtBridgeCpp/qappcpp.cpp
+index 7e91abd..1b207b7 100644
+--- a/Sources/QtBridgeCpp/qappcpp.cpp
++++ b/Sources/QtBridgeCpp/qappcpp.cpp
+@@ -6,6 +6,13 @@
+ #include <QtGui/qguiapplication.h>
+ #include <QtQml/qqmlapplicationengine.h>
+ 
++static QQmlApplicationEngine *s_engine = nullptr;
++
++QQmlApplicationEngine *QAppCpp::engine()
++{
++    return s_engine;
++}
++
+ QAppCpp::QAppCpp()
+ {
+ }
+@@ -44,7 +58,10 @@ int QAppCpp::run(int argc, char **argv)
+         engine.addImportPath(path);
+ 
+     engine.setInitialProperties(m_map);
++    s_engine = &engine;
+     engine.load(m_root);
+ 
+-    return app.exec();
++    const int rc = app.exec();
++    s_engine = nullptr;
++    return rc;
+ }

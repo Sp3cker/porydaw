@@ -42,7 +42,7 @@ public enum AutomationPagePolicy {
 @QtBridgeable
 public final class AutomationPage: EditorDrawerPage {
     /// The fixed production QML URL, resolved once by the container at attach.
-    public static let contentUrl = "qrc:/porydaw/drawer/AutomationPage.qml"
+    public static let contentUrl = QmlEngineAccess.moduleResourcePrefix + "src/ui/songview/quick/drawer/AutomationPage.qml"
     /// The application's proportional family, the same one the grid and the
     /// sibling pages measure their captions with.
     @QtIgnored static let fontFamily = "Atkinson Hyperlegible Next"

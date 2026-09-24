@@ -1,5 +1,5 @@
 import QtQuick
-import ".." as Original
+import Porydaw.Ui
 
 // One song tab's page: the surface of the workspace the tab owns. A page is
 // destroyed when its tab closes, and the controller keeps the bound workspace
@@ -49,7 +49,7 @@ FocusScope {
         anchors.fill: parent
         active: root.showEvents
         sourceComponent: Component {
-            Original.EventListPage {
+            EventListPage {
                 objectName: "eventListPage"
                 presenter: root.session.eventListPresenter()
             }

@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Porydaw.Ui
 
 FocusScope {
     id: pickerRoot

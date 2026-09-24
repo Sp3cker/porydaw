@@ -1,4 +1,5 @@
 import QtQml
+import Porydaw.Ui
 
 QtObject {
     // Numeric contract from ui/mousehints/hintprofiles.h.

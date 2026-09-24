@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import QtTest
 import PorydawApp
 import ShellQmlCheck 1.0
-import "../../ui/songview/quick/docks"
+import Porydaw.Ui
 
 TestCase {
     id: testCase
