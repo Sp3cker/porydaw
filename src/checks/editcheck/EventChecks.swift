@@ -18,6 +18,7 @@ func runEventEditsSuite(_ report: CheckReport) {
     documentTrackContracts(report)
     coreTrackCorpusChecks(report)
     songTimeSignatureContract(report)
+    unsignedTicksAndRawSignaturePrecedence(report)
     loopCfgUndoRedoContract(report)
     formatZeroCoercionContract(report)
     formatZeroGlobalsContract(report)

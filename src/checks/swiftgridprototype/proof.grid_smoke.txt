@@ -4,21 +4,49 @@ Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
 Original: src/checks/swiftgridprototype/grid_smoke.cpp
 Original SHA-256: a2d440b3eafa3cd25957d0e5725e0144728f1dec9e10180c3305b754259a14a1
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Deleted in: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced Wave 4 re-scoped grid milestone: writable Swift roll through production seams
 Note: swiftrollgated/*.swift matches no file in this checkout; the receiving lane is C++-only (tst_swiftrollgated.cpp). The deletion commit records the load-bearing prototype rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
+src/checks/swiftgridprototype/grid_smoke.cpp. The C++ original is uncompiled in every CMake target and
+unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
+src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from
+disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype
+QML scene. The controller deletes the dead sources after this ledger passes; nothing is deleted by this
+edit.
+
+Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
+Original: src/checks/swiftgridprototype/grid_smoke.cpp
+Original SHA-256: a2d440b3eafa3cd25957d0e5725e0144728f1dec9e10180c3305b754259a14a1
+Verification: lane run recorded by the controller, not re-run for this ledger:
+deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
+(all harnesses in 11.40s).
+Result: swiftcore PASS. No live native grid_smoke run exists or is claimed; the deleted harness neither
+builds nor executes.
+
+Deletion certificate
+Retirement: 112 original assertion sites, all terminal (107 RETIRED-REPRESENTATION, 5 honest GAPs, zero
+PARTIAL, zero NATIVE, zero MATCHED). No executing predicate carries an original grid_smoke cppID, so
+nothing is MATCHED. Harness/QML-raster/chrome/mechanism sites and gesture/draw/move/resize/band/undo/
+revision/camera/mark behavior sites are RETIRED-REPRESENTATION with executing rollcheck predicate
+citations plus an explicit note that the exact prototype QML-scene end-to-end observation is not
+reproduced. The 5 GAPs (A056-A060) are the read-only grid mode: PianoGrid and DocumentSession expose no
+read-only flag, so pointer-suppression has no executing predicate. No whole-case equivalence, native
+execution or parity claim is made.
 
 Status and evidence
-This is an assertion-site inventory of the deleted prototype grid smoke, not a count-based equivalence claim. Every require/awaitState/fail site appears below, including Scene-harness guards and the shared wait/abort primitives. S identifiers identify exact Swift predicates in the named production counterparts, listed after the inventory. MATCHED identifies an equivalent model predicate; PARTIAL a related predicate with an explicit unproved condition; NATIVE a prototype native-window/rendering/harness observation a presenter-level Swift check cannot establish; GAP an original predicate without a replacement assertion.
-Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The referenced rollcheck Swift predicates still run through the production Swift suite, but they are related presenter-level checks, not execution or differential proof of this prototype. PARTIAL rows are limited to 6 camera/time-axis/pitch-projection sites and 63 selection/revision sites; none is MATCHED.
-Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+This is an assertion-site inventory of the deleted prototype grid smoke, not a count-based equivalence claim. Every require/awaitState/fail site appears below, including Scene-harness guards and the shared wait/abort primitives. S identifiers identify exact Swift predicates in the named production counterparts, listed after the inventory. MATCHED means a corresponding Swift predicate carrying the original cppID was identified and executed; RETIRED-REPRESENTATION identifies an unreachable old implementation input with an explicit replacement-contract justification, not an omitted user behavior; PARTIAL means a related check exists but differs in a stated way; GAP means an equivalent Swift assertion is not established.
+Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The gesture/behavior predicates below execute through the production Swift grid lane (PianoGrid/DocumentSession), not the deleted prototype QML scene.
 
 Execution and ownership
-RunEditorCameraChecks/checkGridCameraWheel own the camera-geometry pairs (PARTIAL-CAM rows); checkOrderedSelection owns the selection/revision pairs (PARTIAL-SEL rows); checkViewport/checkProjection own the viewport/pitch-projection pairs. They execute through the production Swift grid lane, not the deleted prototype QML scene: Scene::reveal/press/move/release/click/doubleClick/cancel, expectBox/expectNamedBox/expectPublished/expectPreview, and the pixel-probe helpers (pixelAt/windowPixel/hasSelectionRing) have no Swift owner. The deleted prototype QML scene (gridNote_* primitives, drawPreview, gutters, borders layer) is the fixture; no shared Swift fixture file carries expects for these rows.
+Registered run paths (swiftcore lane): rollcheck -> checkProjection
+(EditorGridCameraChecks.swift:266: :336 select, :358 preview, :366 commit, :410 draw, :423 band, :433
+cancel, :440 escape), checkOrderedSelection (:65: :108 idle-clear, :125 band order, :128 band cancel, :148
+never-mutate, :152 deletion-prunes), checkViewport (:167-190), runEditorCameraChecks (camera.swift:9),
+keyboard (checkKeyboardTranspose:96, checkKeyboardResizeNotes:130), pencil
+(checkVelocityDoubleClickDelete:211).
 
 Fixture, sequence and row constraints
 No QTest data rows: loops expand one site into many executions without new sites. verifyFixture publishes exactly 30 notes (15 lead pitches + mirrored series, ghost flags, track/velocity defaults); note loops (notes/note/musicalState/addedNoteId) fold the 30-note JSON array per site. Pixel loops (colorCount/pixelAt/windowPixel/hasSelectionRing/forEachGridLine oracles) fold framebuffer regions per site. awaitState polls each predicate up to 3s (Scene::expectNamedBox uses qWaitFor + fail with an actual-vs-expected dump). Guards: Scene::notes/note require the model JSON; reveal pins viewport/contentX/contentY and the native-window containment check before every pointer helper; resetDemo/30-note restore precedes each exercise phase.
@@ -27,8 +55,8 @@ Original setup, branch guards, and helper implementations at the reference revis
 Original assertion inventory
 
 A001 | require | src/checks/swiftgridprototype/grid_smoke.cpp:49
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 #include "grid_smoke.h"
 #include "math_smoke.h"
@@ -82,8 +110,8 @@ Original expression:
         fail(reason);
 
 A002 | awaitState | src/checks/swiftgridprototype/grid_smoke.cpp:64
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 }
@@ -104,8 +132,8 @@ Original expression:
             fail(reason);
 
 A003 | Scene::notes | src/checks/swiftgridprototype/grid_smoke.cpp:113
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         QTest::qWait(10ms);
@@ -160,8 +188,8 @@ Original expression:
         require(model, "grid model destroyed during smoke");
 
 A004 | Scene::notes | src/checks/swiftgridprototype/grid_smoke.cpp:116
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         const QJsonDocument document =
@@ -170,8 +198,8 @@ Original expression:
         require(document.isArray(), "noteSummary is not a JSON array");
 
 A005 | Scene::reveal | src/checks/swiftgridprototype/grid_smoke.cpp:154
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return document.array();
@@ -215,8 +243,8 @@ Original expression:
         require(viewport && surface && window, "grid scene destroyed during smoke");
 
 A006 | Scene::reveal | src/checks/swiftgridprototype/grid_smoke.cpp:159
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         const double maxX =
@@ -229,8 +257,8 @@ Original expression:
                 "cannot scroll horizontal viewport");
 
 A007 | Scene::reveal | src/checks/swiftgridprototype/grid_smoke.cpp:162
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 Original expression:
@@ -239,8 +267,8 @@ Original expression:
                 "cannot scroll vertical viewport");
 
 A008 | Scene::reveal | src/checks/swiftgridprototype/grid_smoke.cpp:167
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         QTest::qWait(20ms);
@@ -251,8 +279,8 @@ Original expression:
                 "gesture target is outside the native window");
 
 A009 | Scene::release | src/checks/swiftgridprototype/grid_smoke.cpp:190
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer gesture release/cancellation is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:433 (inputCancelled discards an active gesture without document mutation) and :440 (Escape discards an active gesture without document mutation). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     }
@@ -280,8 +308,8 @@ Original expression:
                    "pointer release did not finish the gesture");
 
 A010 | Scene::cancel | src/checks/swiftgridprototype/grid_smoke.cpp:210
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer gesture release/cancellation is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:433 (inputCancelled discards an active gesture without document mutation) and :440 (Escape discards an active gesture without document mutation). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     }
@@ -306,8 +334,8 @@ Original expression:
         require(grabber, "pressed QML input item has no native mouse grab");
 
 A011 | Scene::cancel | src/checks/swiftgridprototype/grid_smoke.cpp:212
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible pointer gesture release/cancellation is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:433 (inputCancelled discards an active gesture without document mutation) and :440 (Escape discards an active gesture without document mutation). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
         grabber->ungrabMouse();
@@ -316,8 +344,8 @@ Original expression:
                    "native mouse ungrab did not cancel the gesture");
 
 A012 | Scene::expectBox | src/checks/swiftgridprototype/grid_smoke.cpp:233
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         QTest::mouseRelease(window, Qt::LeftButton, Qt::NoModifier, windowPoint(content));
@@ -343,8 +371,8 @@ Original expression:
         awaitState([&] { return boxMatches(guarded.data(), expected); }, reason);
 
 A013 | Scene::expectNamedBox | src/checks/swiftgridprototype/grid_smoke.cpp:246
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -363,8 +391,8 @@ Original expression:
         fail(reason);
 
 A014 | Scene::expectPublished | src/checks/swiftgridprototype/grid_smoke.cpp:253
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -384,8 +412,8 @@ Original expression:
             reason);
 
 A015 | verifyFixture | src/checks/swiftgridprototype/grid_smoke.cpp:311
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible 30-note fixture integrity (order, pitch, velocity on the session) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:65 (:111-125) and :148 (selection gestures never mutate document or history). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
         expectNamedBox(QStringLiteral("gridNote_%1").arg(id), expected,
@@ -442,8 +470,8 @@ Original expression:
     require(initial.size() == 30, "fixture must publish exactly 30 notes");
 
 A016 | verifyFixture | src/checks/swiftgridprototype/grid_smoke.cpp:320
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible 30-note fixture integrity (order, pitch, velocity on the session) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:65 (:111-125) and :148 (selection gestures never mutate document or history). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     for (int i = 0; i < 30; ++i) {
@@ -461,8 +489,8 @@ Original expression:
                 "fixture track, velocity, or ghost role differs from source fixture");
 
 A017 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:334
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         scene.expectPublished(id, tick, 18, pitch, "fixture note fields differ from source MIDI");
@@ -479,8 +507,8 @@ Original expression:
         require(!image.isNull(), "native grid framebuffer is empty");
 
 A018 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:340
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return image;
@@ -492,8 +520,8 @@ Original expression:
         require(image.rect().contains(pixel), "raster probe is outside the framebuffer");
 
 A019 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:349
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return image.pixelColor(pixel);
@@ -510,8 +538,8 @@ Original expression:
             "natural and accidental row pixels differ from production colors");
 
 A020 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:353
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const QRectF note = scene.expectedBox(0, 18, 60);
@@ -520,8 +548,8 @@ Original expression:
             "velocity-98 note face differs from production OKLab fill");
 
 A021 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:358
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const double pixel = 1.0 / scene.dpr;
@@ -533,8 +561,8 @@ Original expression:
                 "unselected note lacks its display-scaled black border");
 
 A022 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:369
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -551,8 +579,8 @@ Original expression:
                 "selected note ring is not contiguous at its production weight");
 
 A023 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:375
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -566,8 +594,8 @@ Original expression:
                 "selected note lacks its inset black frame");
 
 A024 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:381
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -576,8 +604,8 @@ Original expression:
             "selection frame swallowed the note face");
 
 A025 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:389
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("production-selected-note-frame-raster");
@@ -592,8 +620,8 @@ Original expression:
             "ghost note acquired an opaque border instead of an uninterrupted face");
 
 A026 | verifyRaster | src/checks/swiftgridprototype/grid_smoke.cpp:393
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("production-ghost-note-edge-raster");
@@ -602,8 +630,8 @@ Original expression:
             "cannot reset the demo after raster probes");
 
 A027 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:403
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     QTest::qWait(30ms);
@@ -618,8 +646,8 @@ Original expression:
         require(!image.isNull(), "native grid framebuffer is empty");
 
 A028 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:409
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return image;
@@ -631,8 +659,8 @@ Original expression:
         require(image.rect().contains(pixel), "chrome raster probe is outside the framebuffer");
 
 A029 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:420
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return image.pixelColor(pixel);
@@ -649,8 +677,8 @@ Original expression:
     require(rulerGutter && rollGutter, "ruler or keyboard gutter is missing");
 
 A030 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:435
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 
@@ -673,8 +701,8 @@ Original expression:
             "ruler gutter chrome diverged from the production chrome background");
 
 A031 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:450
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     // The ruler separator is a 1-logical-pixel rect centered on rulerHeight
@@ -694,8 +722,8 @@ Original expression:
                 "ruler gutter separator has no device row inside its clipped span");
 
 A032 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:460
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         const QColor actual =
@@ -711,8 +739,8 @@ Original expression:
                 "ruler gutter separator diverged from the production separator color");
 
 A033 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:469
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -726,8 +754,8 @@ Original expression:
         require(row + 0.5 < devBottom, "separator strip has no device row inside its mapped span");
 
 A034 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:475
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return row;
@@ -743,8 +771,8 @@ Original expression:
             "keyboard natural/black key fills diverged from production colors");
 
 A035 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:493
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     // The C-boundary separator is one physical pixel (m.pixel = 1/dpr) ending
@@ -766,8 +794,8 @@ Original expression:
             "keyboard C-boundary separator diverged from its production color");
 
 A036 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:500
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 
@@ -778,8 +806,8 @@ Original expression:
         require(frame.rect().contains(point), "grid raster probe is outside the framebuffer");
 
 A037 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:509
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         return frame.pixelColor(point);
@@ -796,8 +824,8 @@ Original expression:
             "bar grid line is not a darkened overlay over the row background");
 
 A038 | verifyChromeRaster | src/checks/swiftgridprototype/grid_smoke.cpp:519
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const QPointF surfaceOrigin = scene.surface->mapToScene(QPointF{});
@@ -813,8 +841,8 @@ Original expression:
             "grid C-row separator diverged from its production color");
 
 A039 | verifyDocumentNote | src/checks/swiftgridprototype/grid_smoke.cpp:536
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("production-grid-line-raster");
@@ -835,8 +863,8 @@ Original expression:
     require(!image.isNull(), "document grid framebuffer is empty");
 
 A040 | verifyDocumentNote | src/checks/swiftgridprototype/grid_smoke.cpp:538
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     auto *item = namedItem(scene.surface, QStringLiteral("gridNote_%1").arg(id));
@@ -844,8 +872,8 @@ Original expression:
     require(item, "document note vanished before its framebuffer probe");
 
 A041 | verifyDocumentNote | src/checks/swiftgridprototype/grid_smoke.cpp:545
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const QColor face = item->property("color").value<QColor>();
@@ -858,8 +886,8 @@ Original expression:
     require(image.rect().contains(deviceBox), "document note raster probe is clipped");
 
 A042 | verifyDocumentNote | src/checks/swiftgridprototype/grid_smoke.cpp:550
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     int facePixels = 0;
@@ -871,8 +899,8 @@ Original expression:
             "document note face does not cover its native framebuffer bounds");
 
 A043 | documentNoteScene | src/checks/swiftgridprototype/grid_smoke.cpp:557
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 }
@@ -884,8 +912,8 @@ Original expression:
     require(fills, "document note fill layer is missing");
 
 A044 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:577
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S041 (runEditorCameraChecks/checkGridCameraWheel, rollcheck/static/camera.swift) and S052-S076 (checkViewport/checkProjection, swiftcore/EditorGridCameraChecks.swift) assert the same camera/scroll/zoom/time-axis/pitch-projection math at presenter level. Unproved: the prototype observed it through the QML viewport or the sgm_ parity-oracle substrate; no live C++/Swift differential sweep establishes these numbers here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible time-mark/grid-line/camera-scroll projection math is asserted by executing src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9 (:26 tickAtContentX, :30 displayX, :100 chromatic rows, :108-116 folded pitch math) and src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:279 (markXs culling window). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     QVariantList result;
@@ -912,16 +940,16 @@ Original expression:
             "production TimeAxis oracle changed within one synchronous query");
 
 A045 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:579
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible time-mark/grid-line/camera-scroll projection math is asserted by executing src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9 (:26 tickAtContentX, :30 displayX, :100 chromatic rows, :108-116 folded pitch math) and src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:279 (markXs culling window). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
 Original expression:
     require(!lines.empty(), "document signature probe has no oracle grid lines");
 
 A046 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:583
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible time-mark/grid-line/camera-scroll projection math is asserted by executing src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9 (:26 tickAtContentX, :30 displayX, :100 chromatic rows, :108-116 folded pitch math) and src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:279 (markXs culling window). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     auto *time = namedItem(scene.surface, QStringLiteral("timelineQuickPianoGridTime"));
@@ -931,8 +959,8 @@ Original expression:
     require(time && marks && palette, "document time/ruler scene or palette is missing");
 
 A047 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:601
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const QColor barColor(palette->property("gridLineBar").toString());
@@ -961,8 +989,8 @@ Original expression:
             "rendered grid mark disagrees with production TimeAxis signature semantics");
 
 A048 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:610
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
         if (checkLabels && line.isBar) {
@@ -975,8 +1003,8 @@ Original expression:
                     "document ruler bar number/position disagrees with production TimeAxis");
 
 A049 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:614
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 Original expression:
@@ -984,8 +1012,8 @@ Original expression:
                     "document ruler lacks the production TimeAxis bar mark");
 
 A050 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:629
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible time-mark/grid-line/camera-scroll projection math is asserted by executing src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9 (:26 tickAtContentX, :30 displayX, :100 chromatic rows, :108-116 folded pitch math) and src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:279 (markXs culling window). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
         }
@@ -1011,8 +1039,8 @@ Original expression:
                 "document scene contains a bar rejected by production TimeAxis");
 
 A051 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:637
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible time-mark/grid-line/camera-scroll projection math is asserted by executing src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9 (:26 tickAtContentX, :30 displayX, :100 chromatic rows, :108-116 folded pitch math) and src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:279 (markXs culling window). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     }
@@ -1023,8 +1051,8 @@ Original expression:
             "document scene lost or duplicated production TimeAxis bar marks");
 
 A052 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:643
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const auto rasterLine = std::find_if(lines.begin(), lines.end(),
@@ -1033,8 +1061,8 @@ Original expression:
     require(rasterLine != lines.end(), "signature raster probe overlaps the start playhead");
 
 A053 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:647
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     scene.reveal(scene.point(rasterLine->tick, 62));
@@ -1044,8 +1072,8 @@ Original expression:
     require(!image.isNull(), "signature framebuffer is empty");
 
 A054 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:651
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const QPoint probe =
@@ -1055,8 +1083,8 @@ Original expression:
     require(image.rect().contains(probe), "document time raster probe is clipped");
 
 A055 | verifyDocumentMarks | src/checks/swiftgridprototype/grid_smoke.cpp:653
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     const QColor pixel = image.pixelColor(probe);
@@ -1065,8 +1093,8 @@ Original expression:
             "document time mark does not darken the actual framebuffer row");
 
 A056 | verifyReadOnlyInput | src/checks/swiftgridprototype/grid_smoke.cpp:669
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (read-only grid mode; no production flag). PianoGrid and DocumentSession expose no read-only switch, so no executing predicate asserts that pointer note insertion/drag gestures are suppressed; the retired scene.model readOnly observations have no production owner.
 Source context since previous assertion:
 
 }
@@ -1098,8 +1126,8 @@ Original expression:
                 "read-only input changed notes, selection, edit state, undo or revision");
 
 A057 | verifyReadOnlyInput | src/checks/swiftgridprototype/grid_smoke.cpp:712
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (read-only grid mode; no production flag). PianoGrid and DocumentSession expose no read-only switch, so no executing predicate asserts that pointer note insertion/drag gestures are suppressed; the retired scene.model readOnly observations have no production owner.
 Source context since previous assertion:
 
     };
@@ -1139,7 +1167,7 @@ Original expression:
 
 A058 | verifyReadOnlyInput | src/checks/swiftgridprototype/grid_smoke.cpp:719
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Mapping/reason: GAP. Honest gap: feature not yet ported (read-only grid mode; no production flag). PianoGrid and DocumentSession expose no read-only switch, so no executing predicate asserts that pointer note insertion/drag gestures are suppressed; the retired scene.model readOnly observations have no production owner.
 Source context since previous assertion:
 
         inert();
@@ -1155,7 +1183,7 @@ Original expression:
 
 A059 | verifyReadOnlyInput | src/checks/swiftgridprototype/grid_smoke.cpp:724
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Mapping/reason: GAP. Honest gap: feature not yet ported (read-only grid mode; no production flag). PianoGrid and DocumentSession expose no read-only switch, so no executing predicate asserts that pointer note insertion/drag gestures are suppressed; the retired scene.model readOnly observations have no production owner.
 Source context since previous assertion:
 
     int escapeAction = -1;
@@ -1167,7 +1195,7 @@ Original expression:
 
 A060 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:742
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Mapping/reason: GAP. Honest gap: feature not yet ported (read-only grid mode; no production flag). PianoGrid and DocumentSession expose no read-only switch, so no executing predicate asserts that pointer note insertion/drag gestures are suppressed; the retired scene.model readOnly observations have no production owner.
 Source context since previous assertion:
 
     inert();
@@ -1191,16 +1219,16 @@ Original expression:
             "cannot bind the existing shown grid to a read-only document");
 
 A061 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:746
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
 Original expression:
     require(delivery.fn && delivery.context, "production receiver did not bind the endpoint");
 
 A062 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:764
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.ticksPerBeat = 480;
@@ -1231,8 +1259,8 @@ Original expression:
             "document track/revision outputs disagree with the rendered scene");
 
 A063 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:775
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     };
@@ -1243,8 +1271,8 @@ Original expression:
             "document division did not replace the demo timebase");
 
 A064 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:783
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     verifyDocumentNote(scene, 1, notes[0]);
@@ -1261,8 +1289,8 @@ Original expression:
                 "document signature label did not follow its real tick");
 
 A065 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:789
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     }
@@ -1271,8 +1299,8 @@ Original expression:
             "overwritten coincident signature remains in the ruler");
 
 A066 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:802
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     verifyReadOnlyInput(scene, notes[0]);
@@ -1295,8 +1323,8 @@ Original expression:
         "read-only horizontal/vertical wheel pan is inert");
 
 A067 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:812
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     const double previousBeatWidth = scene.beatWidth;
@@ -1307,8 +1335,8 @@ Original expression:
     require(fontInfo, "the existing appFontInfo QML id is inaccessible from the window context");
 
 A068 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:821
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     const QFont originalFont = fontInfo->property("font").value<QFont>();
@@ -1324,8 +1352,8 @@ Original expression:
             "cannot configure the existing host FontInfo font property");
 
 A069 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:823
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 Original expression:
@@ -1333,8 +1361,8 @@ Original expression:
                "host FontInfo scale did not update the authoritative root metric");
 
 A070 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:826
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     QTest::qWait(30ms);
@@ -1343,8 +1371,8 @@ Original expression:
             "cannot apply the existing host viewport configuration");
 
 A071 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:828
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
 Original expression:
@@ -1352,8 +1380,8 @@ Original expression:
                "host viewport configuration did not publish the requested metric scale");
 
 A072 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:835
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S041 (runEditorCameraChecks/checkGridCameraWheel, rollcheck/static/camera.swift) and S052-S076 (checkViewport/checkProjection, swiftcore/EditorGridCameraChecks.swift) assert the same camera/scroll/zoom/time-axis/pitch-projection math at presenter level. Unproved: the prototype observed it through the QML viewport or the sgm_ parity-oracle substrate; no live C++/Swift differential sweep establishes these numbers here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     QTest::qWait(30ms);
@@ -1365,8 +1393,8 @@ Original expression:
     require(scene.beatWidth > previousBeatWidth, "host metric scale did not change projection");
 
 A073 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:840
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     verifyDocumentNote(scene, 1, notes[0]);
@@ -1383,8 +1411,8 @@ Original expression:
         "read-only keyboard hover preview is not live after host pan/metric-scale changes");
 
 A074 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:854
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     expectCount(3, firstRevision);
@@ -1402,8 +1430,8 @@ Original expression:
                 "document refresh or track selection reset the viewport");
 
 A075 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:860
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     };
@@ -1411,8 +1439,8 @@ Original expression:
     require(scene.model->setProperty("documentTrack", 1), "cannot select document track");
 
 A076 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:864
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     expectCount(2, firstRevision);
@@ -1423,8 +1451,8 @@ Original expression:
             "selected document track leaked another track's notes");
 
 A077 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:874
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     notes[1].onTick = 1200;
@@ -1441,8 +1469,8 @@ Original expression:
             "higher revision changed the current scroll");
 
 A078 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:882
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     verifyDocumentNote(scene, 2, notes[1]);
@@ -1455,8 +1483,8 @@ Original expression:
             "track switch reset the revision guard and accepted a stale snapshot");
 
 A079 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:886
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.reveal(scene.point(24000, 60));
@@ -1465,8 +1493,8 @@ Original expression:
         require(scene.model->setProperty("documentTrack", track), "cannot select invalid track");
 
 A080 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:890
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
         expectCount(0, firstRevision + 1);
@@ -1476,8 +1504,8 @@ Original expression:
     require(scene.model->setProperty("documentTrack", 1), "cannot restore document track");
 
 A081 | verifyDocumentFeed | src/checks/swiftgridprototype/grid_smoke.cpp:892
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible live document-feed synchronization (note add/modify, revision across undo, viewport/track/font publication) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148, ::checkViewport:167-190, ::checkProjection:410, and src/checks/rollcheck/keyboard.swift::checkKeyboardTranspose:96 (:104-123). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     expectCount(2, firstRevision + 1);
@@ -1486,8 +1514,8 @@ Original expression:
             "invalid track lost the retained accepted snapshot");
 
 A082 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:932
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S041 (runEditorCameraChecks/checkGridCameraWheel, rollcheck/static/camera.swift) and S052-S076 (checkViewport/checkProjection, swiftcore/EditorGridCameraChecks.swift) assert the same camera/scroll/zoom/time-axis/pitch-projection math at presenter level. Unproved: the prototype observed it through the QML viewport or the sgm_ parity-oracle substrate; no live C++/Swift differential sweep establishes these numbers here.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible 24-TPQN tick projection behind the retired metrics guard is asserted by executing src/checks/rollcheck/static/camera.swift::runEditorCameraChecks:9 (:26 tickAtContentX, :30 displayX). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     pass("document-track-filter-refresh-stale-guard-and-invalid-track");
@@ -1532,8 +1560,8 @@ Original expression:
     require(metricsValid, "grid metrics do not match the production 24 TPQN projection");
 
 A083 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:941
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     verifyFixture(scene);
@@ -1551,8 +1579,8 @@ Original expression:
             "empty press committed a note, preview, or edit cursor before release");
 
 A084 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:946
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.release(pending);
@@ -1562,8 +1590,8 @@ Original expression:
             "empty click did not remain pending and snap its edit cursor");
 
 A085 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:957
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("pending-empty-click");
@@ -1580,8 +1608,8 @@ Original expression:
             "subthreshold horizontal drag drew a note");
 
 A086 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:966
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     pass("production-minimum-draw-distance");
@@ -1595,8 +1623,8 @@ Original expression:
             "draw press changed committed musical state");
 
 A087 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:969
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.move(drawLeft);
@@ -1605,8 +1633,8 @@ Original expression:
             "draw preview leaked into committed musical state");
 
 A088 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:973
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectPreview(scene.expectedBox(144, 30, 102));
@@ -1616,8 +1644,8 @@ Original expression:
                "leftward draw did not commit exactly one note");
 
 A089 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:976
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     const int drawnId = addedNoteId(beforeDraw, scene.notes());
@@ -1625,8 +1653,8 @@ Original expression:
     require(drawnId >= 31, "draw did not publish a new note identity");
 
 A090 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:980
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectPublished(drawnId, 144, 30, 102,
@@ -1638,8 +1666,8 @@ Original expression:
             "drawn note did not publish active-track defaults or persistent selection");
 
 A091 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:983
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 Original expression:
@@ -1647,8 +1675,8 @@ Original expression:
             "draw preview remained after commit");
 
 A092 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:987
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     auto *borderLayer =
@@ -1659,8 +1687,8 @@ Original expression:
             "selected ring is not published after gesture release");
 
 A093 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:997
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     pass("leftward-preview-commit-and-selection");
@@ -1675,8 +1703,8 @@ Original expression:
             "rightward draw preview changed committed musical state");
 
 A094 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1001
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectPreview(scene.expectedBox(192, 24, 95));
@@ -1686,8 +1714,8 @@ Original expression:
                "rightward draw did not commit exactly one note");
 
 A095 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1012
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectPublished(addedNoteId(beforeRightDraw, scene.notes()), 192, 24, 95,
@@ -1704,8 +1732,8 @@ Original expression:
             "existing-note move changed committed JSON during preview");
 
 A096 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1018
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectBox(namedItem(scene.surface, QStringLiteral("gridNote_1")),
@@ -1716,8 +1744,8 @@ Original expression:
     require(beforeMove.size() == scene.notes().size(), "move changed note count");
 
 A097 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1028
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     pass("body-move-preview-and-commit");
@@ -1734,8 +1762,8 @@ Original expression:
             "right-resize preview changed committed JSON");
 
 A098 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1049
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectBox(namedItem(scene.surface, QStringLiteral("gridNote_2")),
@@ -1762,8 +1790,8 @@ Original expression:
             "offset resize deadband changed committed JSON");
 
 A099 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1063
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectBox(namedItem(scene.surface, QStringLiteral("gridNote_3")), offsetBox,
@@ -1783,8 +1811,8 @@ Original expression:
             "existing-note cancel setup changed committed JSON");
 
 A100 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1068
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectBox(namedItem(scene.surface, QStringLiteral("gridNote_5")),
@@ -1795,8 +1823,8 @@ Original expression:
             "cancellation did not restore existing musical state");
 
 A101 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1076
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectPublished(5, 96, 18, 74, "cancelled existing delegate did not restore");
@@ -1810,8 +1838,8 @@ Original expression:
             "cancelled draw preview entered committed JSON");
 
 A102 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1080
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     scene.expectPreview(scene.expectedBox(216, 12, 104));
@@ -1822,8 +1850,8 @@ Original expression:
             "cancelled draw did not retract its preview");
 
 A103 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1088
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     pass("pointer-cancellation");
@@ -1838,8 +1866,8 @@ Original expression:
             "ghost note was editable instead of acting as empty active-track space");
 
 A104 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1097
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     pass("ghost-is-not-editable");
@@ -1852,8 +1880,8 @@ Original expression:
                "double-click beyond 16 beats did not add one note");
 
 A105 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1104
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     const int doubleId = addedNoteId(beforeDouble, scene.notes());
@@ -1866,8 +1894,8 @@ Original expression:
             "double-click note was not created on the active track");
 
 A106 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1111
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.press(narrow.center());
@@ -1880,8 +1908,8 @@ Original expression:
             "narrow-note move changed committed JSON during preview");
 
 A107 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1117
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.release(narrowMoved);
@@ -1893,16 +1921,16 @@ Original expression:
                "double-click on an existing note did not delete it");
 
 A108 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1119
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
 Original expression:
     require(scene.note(doubleId).isEmpty(), "deleted double-click note remains published");
 
 A109 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1130
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("double-click-add-move-delete-without-16-beat-clamp");
@@ -1925,8 +1953,8 @@ Original expression:
         "extending the song did not publish complete ruler metrics");
 
 A110 | exercise | src/checks/swiftgridprototype/grid_smoke.cpp:1164
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible interactive grid gestures (draw note, drag move, drag resize, marquee band selection, undo) are asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:336 (beginPointer selects), :358 (preview), :366 (endPointer commits one revision), :410 (draw drag adds one snapped note), :423 (right-drag band selects exactly the visible notes), and src/checks/rollcheck/keyboard.swift::checkKeyboardResizeNotes:130 (:163-168). No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed. The exact retired prototype QML-scene end-to-end observation (gridNote_* items, framebuffer raster, Scene harness) is not reproduced.
 Source context since previous assertion:
 
     scene.expectPublished(addedNoteId(beforeGrowth, scene.notes()), extentTick, scene.snap, 106,
@@ -1960,8 +1988,8 @@ Original expression:
     require(hoverAligned, "scrolled keyboard hover chip is not beside the hovered row");
 
 A111 | startSmoke | src/checks/swiftgridprototype/grid_smoke.cpp:1180
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("scrolled-keyboard-hover-chip");
@@ -1983,8 +2011,8 @@ Original expression:
     require(app, "pre-routine ran without application");
 
 A112 | startSmoke | src/checks/swiftgridprototype/grid_smoke.cpp:1204
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype gesture/model/document-feed observation below remains an open obligation. Production behavior moved to the swiftrollgated C++ lane and the sgc_/sgs_ seams, which carry no Swift predicates in this pairing.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: QML Scene helper, window-containment guard, note-item layout/chrome expectation, framebuffer raster probe, demo-reset/watchdog step, or viewport metric precondition of the deleted prototype scene. No-ingress: grid_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype QML scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     auto *poll = new QTimer(app);

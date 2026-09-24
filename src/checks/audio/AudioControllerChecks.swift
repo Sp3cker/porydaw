@@ -15,7 +15,36 @@ func runAudioControllerChecks(_ report: CheckReport) {
         try checkControllerTailMatrix(report)
         try checkControllerSettingsAndBank(report)
         try checkControllerPreviewIsolation(report)
+        try checkControllerPitchBendAudio(report)
     } catch { report.fail("swiftcore/AudioController", "controller initialization failed: \(error)") }
+}
+
+private func checkControllerPitchBendAudio(_ report: CheckReport) throws {
+    func renderPhrase(bent: Bool) throws -> [Float] {
+        let rig = try AudioControllerCheckFixture()
+        var events: [MidiEvent] = [.channel(tick: 0, status: 0xC0, data0: 0)]
+        if bent { events.append(.channel(tick: 0, status: 0xE0, data0: 0, data1: 32)) }
+        events.append(.channel(tick: 0, status: 0x90, data0: 60, data1: 100))
+        if bent { events.append(.channel(tick: 12, status: 0xE0, data0: 0, data1: 96)) }
+        events.append(.channel(tick: 4800, status: 0xB0, data0: 7, data1: 100))
+        let file = MidiFile(division: 24, chunks: [
+            MidiChunk(events: [.meta(tick: 0, type: 0x51, data: [0x07, 0xA1, 0x20])], endTick: 4800),
+            MidiChunk(events: events, endTick: 4800),
+        ])
+        let timeline = PlaybackTimeline.build(file: file, sampleRate: Double(rig.rate))
+        rig.renderer.bind(timeline: timeline, voicegroup: rig.voices, settings: AudioSettings())
+        rig.renderer.play()
+        return rig.render(rig.ramp + rig.settle + Int(timeline.sample(for: 6)))
+    }
+
+    let plain = try renderPhrase(bent: false)
+    let bent = try renderPhrase(bent: true)
+    let difference = zip(plain, bent).reduce(0.0) { sum, pair in
+        sum + abs(Double(pair.0) - Double(pair.1))
+    }
+    report.expect(plain.count == bent.count && difference > 0.01,
+                  cppID: "swiftgridprototype/audio_smoke.cpp::A008",
+                  message: "early pitch-bend point audibly changes production PCM before the final curve point")
 }
 
 private func checkControllerControls(_ report: CheckReport) throws {

@@ -4,21 +4,48 @@ Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
 Original: src/checks/swiftgridprototype/interaction_smoke.cpp
 Original SHA-256: 6e26d7182fa795f65ff85310df925b71838f146cbd684d0dd33ed760f4a25a9f
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Additional Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift SHA-256: 3865b7618bb681a7720785153c04ce764b67d2780e09dfcf6e833fc6a20c62fd
 Deleted in: fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced Wave 4 re-scoped grid milestone: writable Swift roll through production seams
 Note: swiftrollgated/*.swift matches no file in this checkout; the receiving lane is C++-only (tst_swiftrollgated.cpp). The deletion commit records the load-bearing prototype rows as moved to swiftrollgated (testBandLeadingGripDecline, testBandTrailingGripResizeCommitOnce).
+Retired in: feature/w2-retired-prototypes — this ledger is the deletion certificate for
+src/checks/swiftgridprototype/interaction_smoke.cpp. The C++ original is uncompiled in every CMake target
+and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt,
+src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from
+disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype
+interaction scene. The controller deletes the dead sources after this ledger passes; nothing is deleted by
+this edit.
+
+Reference revision: 18fee9357273c3351d1eaadf4fe6f8d52edb9a98
+Original: src/checks/swiftgridprototype/interaction_smoke.cpp
+Original SHA-256: 6e26d7182fa795f65ff85310df925b71838f146cbd684d0dd33ed760f4a25a9f
+Verification: lane run recorded by the controller, not re-run for this ledger:
+deno task verify --filter swiftcore --verbose -> verify: 1/6 ok (11.40s, 5 skipped); run_checks: PASS
+(all harnesses in 11.40s).
+Result: swiftcore PASS. No live native interaction_smoke run exists or is claimed; the deleted harness
+neither builds nor executes.
+
+Deletion certificate
+Retirement: 48 original assertion sites, all terminal (12 RETIRED-REPRESENTATION, 36 honest GAPs, zero
+PARTIAL, zero NATIVE, zero MATCHED). No executing predicate carries an original interaction_smoke cppID, so
+nothing is MATCHED. Band-selection sites (A011,A014,A015,A017) and reticle/grabber-raster plus demo-reset
+sites are RETIRED-REPRESENTATION with executing rollcheck citations plus an explicit note that the exact
+prototype scene end-to-end observation is not reproduced. The 36 GAPs are honest feature gaps: A003-A008
+and A032-A048 (pitch-bend editor; PitchBendPopup.qml unreferenced by production), A019-A020 (note context
+menu keyboard navigation; PianoGrid.contextMenuRequested at PianoGrid.swift:676 is emitted but no
+shell/editorqml test navigates the menu), and A021-A028 (prototype audio-session transport/playhead rows
+with no executing predicate in the cited production lanes). No whole-case equivalence, native execution or
+parity claim is made.
 
 Status and evidence
-This is an assertion-site inventory of the deleted prototype interaction smoke, not a count-based equivalence claim. Every require/awaitState site appears below, including the sgc_ curve-seam probes and prototype chrome guards. S identifiers identify exact Swift predicates in the named production counterparts, listed after the inventory. MATCHED identifies an equivalent model predicate; PARTIAL a related predicate with an explicit unproved condition; NATIVE a prototype native-window/rendering/harness observation a presenter-level Swift check cannot establish; GAP an original predicate without a replacement assertion.
-Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The referenced rollcheck Swift predicates still run through the production Swift suite, but they are related presenter-level checks, not execution or differential proof of this prototype. PARTIAL rows are limited to 6 camera/time-axis/pitch-projection sites and 63 selection/revision sites; none is MATCHED.
-Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+This is an assertion-site inventory of the deleted prototype interaction smoke, not a count-based equivalence claim. Every require/awaitState site appears below, including the sgc_ curve-seam probes and prototype chrome guards. S identifiers identify exact Swift predicates in the named production counterparts, listed after the inventory. MATCHED means a corresponding Swift predicate carrying the original cppID was identified and executed; RETIRED-REPRESENTATION identifies an unreachable old implementation input with an explicit replacement-contract justification, not an omitted user behavior; PARTIAL means a related check exists but differs in a stated way; GAP means an equivalent Swift assertion is not established.
+Execution boundary: SwiftGridPrototype is retired: its C++ sources were deleted in fe1ff4df9f4834cbd4e4e59d2e710078c10a8ced and no target/registration for this prototype remains. The band-selection predicates below execute through the production Swift grid lane (PianoGrid/DocumentSession), not the deleted prototype scene.
 
 Execution and ownership
-No Swift entry point in this pairing executes the deleted sgc_ curve probes, the right-drag reticle raster, the note-menu keyboard flow, the prototype transport/audio playheads, or the pitch/modulation popup rasters: runEditorCameraChecks, checkGridCameraWheel, and runEditorGridCameraChecks assert camera, selection, and viewport state only. The 30-note musical fixture reset, the SGCurveValue canonical vectors, and the qRgb(0,202,219)/qRgb(205,84,84) raster oracles above have no Swift owner in the named counterparts.
+Registered run paths (swiftcore lane): rollcheck -> checkProjection
+(EditorGridCameraChecks.swift:266: :423 band selection) and checkOrderedSelection (:65: :125 band order,
+:148 never-mutate, :152 deletion-prunes).
 
 Fixture, sequence and row constraints
 No QTest data rows: the reset() closure restores the 30-note musical fixture before each phase; notes()/selectedCount() fold the noteSummary JSON array per site; colorCount() folds framebuffer regions (cyan dash qRgb(0,202,219), pitch-curve qRgb(205,84,84)) per site. awaitState polls each predicate up to 3s. The requireCanonical closure re-runs the two canonical-export assertions after every curve mutation (export, vertex-drag cancel, stroke cancel). The focusTarget loop (pitchBendGraph/pitchBendPopup) expands the Escape-dismissal sites across two focus targets. Guards: center() requires the native interaction target; item() lookups require named QML primitives.
@@ -27,8 +54,8 @@ Original setup, branch guards, and helper implementations at the reference revis
 Original assertion inventory
 
 A001 | awaitState | src/checks/swiftgridprototype/interaction_smoke.cpp:35
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 #include "curve_session.h"
 #include "grid_smoke.h"
@@ -68,8 +95,8 @@ Original expression:
     require(QTest::qWaitFor(predicate, 3s), reason);
 
 A002 | center | src/checks/swiftgridprototype/interaction_smoke.cpp:73
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 }
@@ -114,7 +141,7 @@ Original expression:
 
 A003 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:117
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     return sceneRect(item).center().toPoint();
@@ -166,7 +193,7 @@ Original expression:
 
 A004 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:120
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
         for (size_t i = 0; i < count; ++i)
@@ -176,7 +203,7 @@ Original expression:
 
 A005 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:128
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     };
@@ -193,7 +220,7 @@ Original expression:
 
 A006 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:137
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     sgc_cancel(session);
@@ -207,7 +234,7 @@ Original expression:
 
 A007 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:140
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     sgc_move(session, sgc_x_at_tick(session, 10), sgc_y_at_value(session, 8191), 0);
@@ -217,7 +244,7 @@ Original expression:
 
 A008 | verifyCurveExport | src/checks/swiftgridprototype/interaction_smoke.cpp:143
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     sgc_cancel(session);
@@ -227,8 +254,8 @@ Original expression:
             "cancelled stroke did not restore the keyboard cursor and live value");
 
 A009 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:159
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     requireCanonical();
@@ -248,8 +275,8 @@ Original expression:
         require(QMetaObject::invokeMethod(window, "resetDemo"), "cannot reset the prototype");
 
 A010 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:160
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
 Original expression:
@@ -257,8 +284,8 @@ Original expression:
                    "reset did not restore the musical fixture");
 
 A011 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:177
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible right-drag band selection (live counts, shrink deselection, back-drag, commit) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:423 (right-drag band selects exactly the visible intersecting notes) and ::checkOrderedSelection:125 (band keeps press order). No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed. The exact retired prototype scene end-to-end observation is not reproduced.
 Source context since previous assertion:
 
         QTest::qWait(50ms);
@@ -281,8 +308,8 @@ Original expression:
                    "right-drag did not select intersecting editable notes live");
 
 A012 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:182
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     };
@@ -293,8 +320,8 @@ Original expression:
             "right-drag reticle does not render the production cyan dash frame");
 
 A013 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:185
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     auto *grabber = window->mouseGrabberItem();
@@ -302,8 +329,8 @@ Original expression:
     require(grabber, "right-drag did not acquire the native mouse grab");
 
 A014 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:188
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible right-drag band selection (live counts, shrink deselection, back-drag, commit) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:423 (right-drag band selects exactly the visible intersecting notes) and ::checkOrderedSelection:125 (band keeps press order). No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed. The exact retired prototype scene end-to-end observation is not reproduced.
 Source context since previous assertion:
 
     grabber->ungrabMouse();
@@ -313,8 +340,8 @@ Original expression:
                "cancelled reticle did not restore the previous selection");
 
 A015 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:192
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible right-drag band selection (live counts, shrink deselection, back-drag, commit) is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkProjection:423 (right-drag band selects exactly the visible intersecting notes) and ::checkOrderedSelection:125 (band keeps press order). No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed. The exact retired prototype scene end-to-end observation is not reproduced.
 Source context since previous assertion:
 
     beginBand();
@@ -323,8 +350,8 @@ Original expression:
     require(selectedCount(model) == 2, "released reticle discarded its selection");
 
 A016 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:196
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     pass("right-reticle-raster-live-selection-and-cancel");
@@ -335,16 +362,16 @@ Original expression:
                "right click did not open the note menu");
 
 A017 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:198
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S051 (checkOrderedSelection, swiftcore/EditorGridCameraChecks.swift) assert selection order, selection publication domains, and document revision at DocumentSession level. Unproved: the prototype observed QUndoStack revision/canUndo state and QML noteSummary selection through the prototype model substrate, not a production DocumentSession; no differential sweep maps the two undo substrates.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Consumer-visible multi-selection preservation across note-menu destruction is asserted by executing src/checks/rollcheck/EditorGridCameraChecks.swift::checkOrderedSelection:148 (selection gestures never mutate document or history) and :152 (deletion prunes membership and preserves survivor order). No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed. The popup-menu keyboard half of the observation is not reproduced.
 Source context since previous assertion:
 
 Original expression:
     require(selectedCount(model) == 2, "note menu destroyed an existing multi-selection");
 
 A018 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:200
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: RETIRED-REPRESENTATION
+Mapping/reason: RETIRED-REPRESENTATION. Retired-harness mechanism: awaitState/center helper, prototype demo-reset, or reticle frame-raster / native mouse-grabber observation of the deleted scene. No-ingress: interaction_smoke.cpp is uncompiled in every CMake target and unregistered in src/checks/checkcatalog.cpp (verified zero references in src/checks/CMakeLists.txt, src/checks/checkcatalog.cpp and src/checks/fwd.hpp); src/ui/songview/quick/swiftgrid/ is deleted from disk; SwiftGrid*/Sgc* are absent from src/swift/; the Swift suite never touches the retired prototype interaction scene. No live native run exists or is claimed.
 Source context since previous assertion:
 
     QTest::qWait(30ms);
@@ -354,7 +381,7 @@ Original expression:
 
 A019 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:205
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (note context menu keyboard navigation). No executing shell/editorqml predicate drives popup Up/Down/Enter/Escape traversal; PianoGrid.contextMenuRequested exists at src/swift/app/roll/PianoGrid.swift:676 (emitted at :581) but no test navigates the menu.
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_Down);
@@ -365,7 +392,7 @@ Original expression:
 
 A020 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:208
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (note context menu keyboard navigation). No executing shell/editorqml predicate drives popup Up/Down/Enter/Escape traversal; PianoGrid.contextMenuRequested exists at src/swift/app/roll/PianoGrid.swift:676 (emitted at :581) but no test navigates the menu.
 Source context since previous assertion:
 
     for (const QJsonValue value : notes(model)) {
@@ -374,8 +401,8 @@ Original expression:
         require(id != 1 && id != 2, "menu Delete removed the wrong notes");
 
 A021 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:215
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
     }
@@ -388,8 +415,8 @@ Original expression:
     require(audio, "missing audio session");
 
 A022 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:216
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
 Original expression:
@@ -401,8 +428,8 @@ Original expression:
         "Play did not advance the real poryaaaa transport");
 
 A023 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:222
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
 Original expression:
@@ -411,7 +438,7 @@ Original expression:
 
 A024 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:225
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
     click("transportPlayPause");
@@ -420,7 +447,7 @@ Original expression:
 
 A025 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:228
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
     const double paused = audio->property("playheadTick").toDouble();
@@ -430,7 +457,7 @@ Original expression:
 
 A026 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:230
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
     click("transportStop");
@@ -438,8 +465,8 @@ Original expression:
     require(audio->property("playheadTick").toDouble() == 0, "Stop did not return to song start");
 
 A027 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:233
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
     pass("real-audio-play-pause-stop-and-playhead");
@@ -450,7 +477,7 @@ Original expression:
 
 A028 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:236
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: the retired prototype audio-session transport/playhead rows (playing flag, playheadTick pause/stop, playhead visibility) have no executing predicate in the cited production lanes (camera/selection/viewport Swift checks and shell grid-input tests observe no transport state).
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_Return);
@@ -459,8 +486,8 @@ Original expression:
             "Enter did not activate the focused Stop button");
 
 A029 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:242
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     pass("transport-space-priority-and-local-enter");
@@ -472,8 +499,8 @@ Original expression:
                "G did not open a functional pitch popup");
 
 A030 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:245
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     auto *popup = item("pitchBendPopup");
@@ -483,7 +510,7 @@ Original expression:
 
 A031 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:249
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation. No equivalent Swift predicate in the existing paired S001-S086 inventory has been established; the prototype curve-seam/transport/popup observation below remains an open obligation.
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     auto *graph = item("pitchBendGraph");
@@ -492,8 +519,8 @@ Original expression:
     require(plot.width() > 0 && plot.height() > 0, "pitch graph has no native canvas geometry");
 
 A032 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:263
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     const QPoint low = graph
@@ -514,8 +541,8 @@ Original expression:
             "pitch gesture did not render the production track-colored curve");
 
 A033 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:267
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     const QImage drawn = window->grabWindow();
@@ -525,8 +552,8 @@ Original expression:
                "Escape did not dismiss the pitch popup");
 
 A034 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:270
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_G);
@@ -535,8 +562,8 @@ Original expression:
                "pitch popup did not reopen");
 
 A035 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:277
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     QTest::qWait(40ms);
@@ -549,8 +576,8 @@ Original expression:
             "edited pitch curve did not survive popup close and reopen");
 
 A036 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:285
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     pass("native-pitch-curve-raster-and-committed-reopen");
@@ -564,8 +591,8 @@ Original expression:
                "pitch bend range numeric editor did not accept text input");
 
 A037 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:289
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     click("pitchBendReset");
@@ -575,8 +602,8 @@ Original expression:
             "Reset did not restore the zero pitch curve");
 
 A038 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:292
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_Escape);
@@ -585,8 +612,8 @@ Original expression:
                "pitch popup did not close after numeric editing");
 
 A039 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:295
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_G);
@@ -599,8 +626,8 @@ Original expression:
         "pitch bend range did not survive popup reopen");
 
 A040 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:307
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     pass("pitch-popup-numeric-range-reset-and-persistence");
@@ -614,8 +641,8 @@ Original expression:
                 "unreleased pitch gesture did not produce a live preview");
 
 A041 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:312
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     };
@@ -625,8 +652,8 @@ Original expression:
     require(pitchGrabber, "pitch gesture did not acquire the native mouse grab");
 
 A042 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:316
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     pitchGrabber->ungrabMouse();
@@ -637,8 +664,8 @@ Original expression:
             "aborted pitch gesture did not restore the committed curve");
 
 A043 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:322
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     for (const char *focusTarget : std::array{"pitchBendGraph", "pitchBendPopup"}) {
@@ -650,8 +677,8 @@ Original expression:
                    "Escape did not dismiss an active pitch gesture");
 
 A044 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:326
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
         QTest::mouseRelease(window, Qt::LeftButton, Qt::ShiftModifier, high);
@@ -661,8 +688,8 @@ Original expression:
                    "pitch popup did not reopen after cancelling a live gesture");
 
 A045 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:329
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
         QTest::qWait(40ms);
@@ -672,8 +699,8 @@ Original expression:
                 "Escape persisted a live preview or discarded a previously committed numeric edit");
 
 A046 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:354
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     }
@@ -703,8 +730,8 @@ Original expression:
                "outside click did not dismiss the pitch popup");
 
 A047 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:357
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     QTest::keyClick(window, Qt::Key_G);
@@ -717,8 +744,8 @@ Original expression:
         "LFO speed did not survive popup reopen");
 
 A048 | verifyGridInteractions | src/checks/swiftgridprototype/interaction_smoke.cpp:365
-Disposition: NATIVE
-Mapping/reason: Prototype native-window/rendering/harness observation (QML item geometry or visibility, framebuffer raster or pixel color, native mouse grab, viewport handle, QML chrome handle, or smoke-harness precondition). A presenter-level Swift check cannot establish this observation.
+Disposition: GAP
+Mapping/reason: GAP. Honest gap: feature not yet ported (pitch-bend editor; PitchBendPopup.qml unreferenced by production). The retired sgc_ curve seam, pitch/modulation popup graph editing, raster persistence, and Escape-dismissal rows have no executing Swift presenter predicate (C++ coverage lives under src/checks/pitchbend/, outside this Swift pairing).
 Source context since previous assertion:
 
     QTest::qWait(40ms);
