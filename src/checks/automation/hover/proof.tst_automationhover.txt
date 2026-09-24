@@ -53,13 +53,8 @@ A004 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhov
 Disposition: RETIRED-REPRESENTATION
 
 A005 | AutomationHoverTest::init | src/checks/automation/hover/tst_automationhover.cpp:83
-Disposition: GAP
-Mapping/reason: No executing check: the native C++ lane (src/checks/automation/hover/tst_automationhover.cpp) no longer builds or runs. Previous native note: NATIVE: native TimelineQuickScene and its raw AutomationHover layer retired; the converted page publishes Swift records to QML items (automationHoverLabel, automationNodeHover) and no native scene is built.
-Source context since previous assertion:
-
-
-Original expression:
-  QVERIFY(m_fixture->rig->quickScene());
+Disposition: RETIRED-REPRESENTATION
+Mapping: The retired TimelineQuickScene handle is not part of the Swift/QML drawer; the hover ring and value label render through AutomationPage.qml (S050, S052, S095).
 
 A006 | QTest::mouseRelease | src/checks/automation/hover/tst_automationhover.cpp:103
 Disposition: GAP
@@ -1360,7 +1355,7 @@ S049 | test_automationHintsRetainGrabOrigin | src/checks/editorqml/tst_EditorDra
 Anchor: message "the originating instructions survive outside motion"
 
 S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
-Anchor: message "the drawn label shows the published hover text"
+Anchor: message "the node ring and value label share one hover presentation"
 
 S051 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "hovering a node writes nothing"
@@ -1493,6 +1488,9 @@ Anchor: function
 
 S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "pointer motion after a dismissal restores the underlay hint"
+
+S095 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
+Anchor: message "the ring and value label appear together"
 
 Shared helpers: the swiftcore predicates run under drawerAutomationAutomationFixture with the
 suite dispatch in src/checks/automation/AutomationPageChecks.swift; the QML predicates run in the

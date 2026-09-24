@@ -1142,7 +1142,7 @@ S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_Edi
 Anchor: message "the node move published its hover"
 
 S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
-Anchor: message "the drawn label shows the published hover text"
+Anchor: message "the node ring and value label share one hover presentation"
 
 S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml
 Anchor: message "the node hover paints over the background hover"

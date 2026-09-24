@@ -51,10 +51,17 @@ extension AutomationPage {
             }
         }
         guard let session, let hover else {
+            let wasVisible = hoverVisible
             hoverVisible = false
             hoverText = ""
             hoverTick = 0
             hoverLabelRect = Self.rect(0, 0, 0, 0)
+            if wasVisible {
+                hoverDisplay = [
+                    "visible": false, "text": "", "hasNode": false, "nodeTick": 0.0,
+                    "x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0,
+                ]
+            }
             return
         }
         let facts = facts(parameter: hover.parameter, modifiers: .init(), session: session)
@@ -66,6 +73,13 @@ extension AutomationPage {
         hoverLabelRect = labelRect(
             text: hover.text, tick: hover.tick, x: hoverX,
             valueY: hover.value.map { projection.y($0, metadata: metadata) })
+        hoverDisplay = [
+            "visible": true, "text": hover.text, "hasNode": hoveredTick != nil,
+            "nodeTick": hoveredTick ?? 0.0,
+            "x": hoverLabelRect["x"] ?? 0.0, "y": hoverLabelRect["y"] ?? 0.0,
+            "width": hoverLabelRect["width"] ?? 0.0,
+            "height": hoverLabelRect["height"] ?? 0.0,
+        ]
     }
 
     /// The frozen gesture's draft: one marker per draft point and the value
