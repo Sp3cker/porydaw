@@ -3,8 +3,8 @@ Assertion correspondence: themelayout/tst_themelayout_scale.cpp
 Reference revision: 97dc7fea819cb7c4a97a0dac819244ee570e993f
 Original: src/checks/themelayout/tst_themelayout_scale.cpp
 Original SHA-256: 20f44068baca7354d92aabd7096f44f33dfcaa09ade047aebefa98695b36feb8
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/themelayout/TypographyLayoutChecks.swift
+Swift SHA-256: 17c207030c3e0f79e412cadd7d4ec29cea9f4148ad5bb34810275d698543e803
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -16,24 +16,30 @@ MATCHED means a corresponding Swift predicate was identified and would execute;
 PARTIAL means a related Swift predicate exists with a stated unproved condition;
 GAP means no equivalent Swift assertion is established;
 NATIVE means the site observes native window/rendering/harness state a
-presenter-level Swift check cannot establish. No Swift counterpart file covering
-this suite was identified (src/checks/editorqml/EditorQmlTests.swift stages
-fontPx values for QML reference profiles but establishes no layout-math
-predicates), so no MATCHED or PARTIAL disposition is claimed anywhere in this
-file.
+presenter-level Swift check cannot establish. Pure scale tables (A006-A009)
+execute in TypographyLayoutChecks.swift via runTypographyLayoutChecks; the
+process-scoped initialization guards (A001-A005) have no Swift counterpart
+because Swift layout is a pure value of the lane base, not process-global state.
 
 Verification
+Command: deno task verify --filter swiftcore --verbose
 Command: deno task verify --filter editor-layout-12 --verbose
 Command: deno task verify --filter editor-layout-16 --verbose
 Command: deno task verify --filter editor-layout-18 --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: swiftcore PASS on the current worktree with the Swift counterpart below
+(20.87s, 1/24 harness selected, 23 skipped); the native editor-layout lanes
+still execute until Main deletes them; source hashes pin the tree inspected here.
 
 Execution and ownership
 Native ownership only. runThemeLayoutScaleCheck (defined in
 src/checks/themelayout/themelayoutcheck.cpp) launches the editor-layout-12/16/18
 lanes with base font sizes 12, 16, and 18; ThemeLayoutScaleTest::init-style
 setup is the lane runner pinning the application font pixel size before
-ui::initializeApplication. No Swift entry point executes any of this. Suite
+ui::initializeApplication. Swift execution: runTypographyLayoutChecks
+(src/checks/themelayout/TypographyLayoutChecks.swift:53) via
+runProjectSessionSuite (src/checks/workspace/SessionChecks.swift:16) into the
+projectSession slot (swiftcore suite 10 via pdcSuiteRun); the counterpart is
+compiled in src/checks/CMakeLists.txt :: swift_core_check. Suite
 declarations live in src/checks/themelayout/tst_themelayout.h; no shared Swift
 fixture file exists.
 
@@ -46,7 +52,10 @@ branches of layoutScale, expanded over the layoutScale_data rows: 8 fontPx
 rows, 3 fontPxF rows, 8 space-token rows, and 1 single-pixel row (20 rows per
 lane, 60 executions across the three lanes). expectedIntegral clamps through
 qMax(1, ...) with a 0.0 short-circuit; the scale-operation switch returns
-immediately after each branch assertion.
+immediately after each branch assertion. Swift rows: the same 8 fontPx
+multipliers, 3 fontPxF multipliers, 8 space multipliers and the single-pixel
+case execute as pinned literal tables at bases 12, 16 and 18
+(TypographyLayoutChecks.swift:15-48).
 Original setup, branch guards, and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
@@ -55,8 +64,11 @@ Original assertion inventory
 A001 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:57
 Disposition: NATIVE
 Mapping/reason: Native harness precondition: the QCoreApplication instance
-must be a QApplication before stylesheet/layout initialization. A
-presenter-level Swift check cannot establish the native application object.
+must be a QApplication before stylesheet/layout initialization. No
+QWidget/QApplication layer exists in the Swift shell, whose layout owners are
+pure values needing no application object; a presenter-level Swift check
+cannot establish the native application object. Spacing correctness at the
+lane base is covered by S001 and S002.
 Source context since previous assertion:
   #include "checks/themelayout/tst_themelayout.h"
 
@@ -119,9 +131,9 @@ Original expression:
 
 A002 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:59
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-re-initializing layout with the lane's base font size must succeed, and the
-stylesheet-snapshot comparison below pins that success is side-effect free.
+Mapping/reason: Swift layout is a pure function of the lane base with no
+process-scoped initialize call, so the call-success mechanism has no Swift
+counterpart. Side-effect-free re-resolution is covered for A009 by S004/S005.
 Source context since previous assertion:
   ;
       const QString styleSheet = application->styleSheet();
@@ -130,8 +142,9 @@ Original expression:
 
 A003 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:60
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-initializing with size 0 must fail so a degenerate base size can never latch.
+Mapping/reason: Swift has no initialize call to reject size 0; degenerate
+bases fall back to the seed instead (font-suite S004/S005). The native
+rejection mechanism has no Swift counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -139,9 +152,9 @@ Original expression:
 
 A004 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:61
 Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-initialization is process-scoped, so re-initializing with a different size
-must fail rather than rescale the running process.
+Mapping/reason: Swift has no process-global base to conflict with; each
+surface carries its own base. The native conflict-rejection mechanism has no
+Swift counterpart.
 Source context since previous assertion:
   ;
 Original expression:
@@ -150,18 +163,23 @@ Original expression:
 A005 | ThemeLayoutScaleTest::initializationIsProcessScoped | src/checks/themelayout/tst_themelayout_scale.cpp:62
 Disposition: NATIVE
 Mapping/reason: Original native application-state obligation: the successful
-re-initialize must leave the native stylesheet byte-identical. A presenter
-check cannot observe the native stylesheet.
+re-initialize must leave the native stylesheet byte-identical. No stylesheet
+layer exists in the Swift shell; a presenter check cannot observe the native
+stylesheet. Stable styling is covered by S001/S002 and the shell-typography
+geometry predicates.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(application->styleSheet(), styleSheet);
 
 A006 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:106
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-FontPx branch must equal the clamped integral expectation on each of the 8
-fontPx data rows.
+Disposition: MATCHED
+Mapping/reason: The same clamped-integral table executes in Swift:
+fontPx(base, multiplier) pins all 8 original fontPx rows at bases 12, 16
+and 18. S001.
+Swift counterpart expression:
+  report.expectEqual(
+          typographyLayoutFontPxExpected[lane][row], fontPx(base, multiplier), ...)
 Source context since previous assertion:
   ;
   }
@@ -211,10 +229,11 @@ Original expression:
   QCOMPARE(layout::fontPx(multiplier), expectedIntegral(multiplier, m_baseFontPx));
 
 A007 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:109
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-FontPxF branch must equal the unclamped fractional expectation on each of the
-3 fontPxF data rows (including the negative multiplier).
+Disposition: MATCHED
+Mapping/reason: The unclamped fractional product executes in Swift on all 3
+original fontPxF rows, including the negative multiplier. S003.
+Swift counterpart expression:
+  report.expect(abs(actual - base * multiplier) < 1e-9, ...)
 Source context since previous assertion:
   ;
           return;
@@ -223,10 +242,12 @@ Original expression:
   QCOMPARE(layout::fontPxF(multiplier), expectedFractional(multiplier, m_baseFontPx));
 
 A008 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:113
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established; the
-Space branch must equal the clamped integral expectation for each of the 8
-space-token data rows via the local spaceMultiplier table.
+Disposition: MATCHED
+Mapping/reason: All 8 space-token rows execute in Swift through the same
+multiplier table at bases 12, 16 and 18. S002.
+Swift counterpart expression:
+  report.expectEqual(
+          typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier), ...)
 Source context since previous assertion:
   ;
           return;
@@ -236,10 +257,12 @@ Original expression:
   QCOMPARE(layout::space(token), expectedIntegral(spaceMultiplier(token), m_baseFontPx));
 
 A009 | ThemeLayoutScaleTest::layoutScale | src/checks/themelayout/tst_themelayout_scale.cpp:117
-Disposition: GAP
-Mapping/reason: No equivalent predicate in Swift has been established;
-singlePixel must be exactly 1 device-independent pixel on the single-pixel
-data row.
+Disposition: MATCHED
+Mapping/reason: The unit hairline executes in Swift in both owners: the
+drawer metrics pixel and the grid device pixel are exactly 1. S004, S005.
+Swift counterpart expression:
+  report.expectEqual(1, EditorDrawerMetrics.resolve(...).pixel, ...)
+  report.expectEqual(1.0, GridMetrics(...).pixel, ...)
 Source context since previous assertion:
   ;
           return;
@@ -254,8 +277,42 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Swift assertion predicates
-None identified: no Swift counterpart file establishes predicates for this
-suite.
+
+S001 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:65
+Swift expression:
+  report.expectEqual(
+          typographyLayoutFontPxExpected[lane][row], fontPx(base, multiplier),
+          cppID: typographyLayoutScaleID,
+          what: "fontPx pins clamped row \(row) at base \(Int(base))")
+
+S002 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:71
+Swift expression:
+  report.expectEqual(
+          typographyLayoutSpaceExpected[lane][token], fontPx(base, multiplier),
+          cppID: typographyLayoutScaleID,
+          what: "space token \(token) pins its multiplier row at base \(Int(base))")
+
+S003 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:80
+Swift expression:
+  report.expect(
+          abs(actual - base * multiplier) < 1e-9, cppID: typographyLayoutScaleID,
+          message: "fontPxF keeps the unclamped product at base \(Int(base))")
+
+S004 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:88
+Swift expression:
+  report.expectEqual(
+          1, EditorDrawerMetrics.resolve(baseFontPx: base, appFontLineSpacing: 0).pixel,
+          cppID: typographyLayoutScaleID,
+          what: "drawer metrics keep the unit hairline at base \(Int(base))")
+
+S005 | typographyLayoutCheckScaleTables | src/checks/themelayout/TypographyLayoutChecks.swift:92
+Swift expression:
+  report.expectEqual(
+          1.0, GridMetrics(baseFontPx: base, dpr: 1, width: 0, height: 0).pixel,
+          cppID: typographyLayoutScaleID,
+          what: "grid metrics keep the unit device pixel at base \(Int(base))")
 
 Shared helper
-None: no Swift fixture file carries expects for this suite.
+Suite entry runTypographyLayoutChecks wires the scale, base-propagation and
+face-contract checks into runProjectSessionSuite; no shared fixture file
+carries expects for this suite.

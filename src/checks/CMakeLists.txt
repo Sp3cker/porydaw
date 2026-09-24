@@ -174,6 +174,7 @@ if(APPLE)
         rollcheck/velocity_prompt.swift
         rollcheck/EditorGridCameraChecks.swift
         drawerpresentation/EditorDrawerChecks.swift
+        themelayout/TypographyLayoutChecks.swift
         nativegraphics/SharedPlayheadChecks.swift
         velocity/VelocityPageChecks.swift
         drawerpresentation/VoiceChangesPageChecks.swift

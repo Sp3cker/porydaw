@@ -21,7 +21,8 @@ ApplicationWindow {
     visible: true
     color: shell.session.palette.windowBackground
     font: Qt.font({ family: regularFont.name || baseFontInfo.family,
-                    pixelSize: bodyFontPx, hintingPreference: Font.PreferNoHinting })
+                    pixelSize: bodyFontPx, hintingPreference: Font.PreferNoHinting,
+                    features: { "tnum": 1 } })
 
     ShellPresenter {
         id: shell
