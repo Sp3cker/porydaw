@@ -96,6 +96,7 @@ TestCase {
         settings.setValue("editorDrawer/voiceChangesVisible", true)
         settings.setValue("editorDrawer/voiceChangesHeight", 220)
         settings.setValue("editorDrawer/activePage", activePage)
+        settings.setValue("lastProjectDir", "")
         settings.sync()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")

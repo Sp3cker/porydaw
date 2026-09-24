@@ -71,12 +71,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
     private var hasReleased = false
     private var activeReplacementTask: Task<Void, Never>?
     private var pendingProjectSwitch: ProjectSwitchCandidate?
+    private var settingsApplicationName = ""
+    private var editorLanes = EditorLaneState()
+    private var isRestoringTabs = false
+    private var isHostCloseWalk = false
+    private var isReplacingProject = false
 
     /// A fully read project waiting to replace the open one: everything that can
     /// fail is read before any live tab is released.
     private struct ProjectSwitchCandidate {
         let path: String
         let label: String?
+        let restore: WorkspaceTabRecipe?
         let service: ProjectService
         let labels: [String]
         let voicegroupArgs: [String]
@@ -476,6 +482,20 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     // MARK: - Project and song opens
+    @QtIgnored
+    func configurePersistence(applicationName: String) {
+        settingsApplicationName = applicationName
+        editorLanes = EditorViewStateCodec.loadLanes(applicationName: applicationName)
+    }
+
+    @QtIgnored
+    func restoreStartup() {
+        guard !settingsApplicationName.isEmpty else { return }
+        let recipe = EditorViewStateCodec.loadTabs(applicationName: settingsApplicationName)
+        guard !recipe.projectPath.isEmpty else { return }
+        startProjectSwitch(path: recipe.projectPath, label: nil, restore: recipe)
+    }
+
 
     public func openProject(path: String) {
         requestProjectSwitch(path: path, label: nil)
@@ -507,6 +527,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// path calls this; `allTabsClosed` answers when the last tab is gone and
     /// `closeCancelled` answers a refusal.
     public func requestCloseAll() {
+        persistTabRecipe()
+        isHostCloseWalk = true
         songTabs.startCloseAll()
     }
 
@@ -522,6 +544,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
         // The selected workspace's grid owns command availability; switching
         // tabs swaps it, so the window's Edit-menu enabled states must refresh.
         gridCommandAvailabilityChanged()
+        persistTabRecipe()
     }
 
     /// A tab is about to leave the strip. Its workspace is retained here until
@@ -593,6 +616,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
             pendingProjectSwitch = nil
             guard closed else {
                 Task { await pending.service.close() }
+                persistTabRecipe()
                 closeCancelled()
                 return
             }
@@ -601,7 +625,13 @@ public final class ApplicationSession: QmlInstantiableStatus {
             }
             return
         }
-        if closed { allTabsClosed() } else { closeCancelled() }
+        if !closed {
+            isHostCloseWalk = false
+            persistTabRecipe()
+            closeCancelled()
+        } else {
+            allTabsClosed()
+        }
     }
 
     /// The gate approved reopening a song in place: the tab closed, and the same
@@ -667,10 +697,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func requestProjectSwitch(path: String, label: String?) {
-        startProjectSwitch(path: path, label: label)
+        startProjectSwitch(path: path, label: label, restore: nil)
     }
 
-    private func startProjectSwitch(path: String, label: String?) {
+    private func startProjectSwitch(path: String, label: String?,
+                                    restore: WorkspaceTabRecipe?) {
         let priorTask = activeReplacementTask
         activeReplacementTask = Task { [weak self] in
             _ = await priorTask?.value
@@ -687,7 +718,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
                     return
                 }
                 let candidate = ProjectSwitchCandidate(
-                    path: path, label: label, service: service, labels: labels,
+                    path: path, label: label, restore: restore, service: service, labels: labels,
                     voicegroupArgs: voicegroupArgs, voicegroupCatalog: voicegroupCatalog)
                 if self.songTabs.tabCount == 0 {
                     await self.finishProjectSwitch(candidate)
@@ -697,6 +728,11 @@ public final class ApplicationSession: QmlInstantiableStatus {
                 }
             } catch {
                 await service.close()
+                if restore != nil, !self.settingsApplicationName.isEmpty {
+                    EditorViewStateCodec.saveTabs(
+                        WorkspaceTabRecipe(projectPath: path, orderedSongs: [], selectedSong: ""),
+                        applicationName: self.settingsApplicationName)
+                }
                 self.failOpen(String(describing: error))
             }
         }
@@ -737,6 +773,15 @@ public final class ApplicationSession: QmlInstantiableStatus {
             workspace.automationPage.onCommandAvailabilityChanged = { [weak self] in
                 self?.gridCommandAvailabilityChanged()
             }
+            workspace.automationPage.onLaneRangeChanged = { [weak self] parameter, range in
+                self?.updateEditorLaneRange(parameter: parameter, range: range)
+            }
+            workspace.automationPage.laneRanges = editorLanes.laneRanges.reduce(into: [:]) {
+                if let parameter = EditorViewStateCodec.parameter(for: $1.key) {
+                    $0[parameter] = $1.value
+                }
+            }
+            workspace.automationPage.refreshCamera()
             guard !isDisposed, !Task.isCancelled else {
                 // The host is closing: nothing adopts this document.
                 workspace.teardown()
@@ -852,6 +897,7 @@ public final class ApplicationSession: QmlInstantiableStatus {
     }
 
     private func finishProjectSwitch(_ candidate: ProjectSwitchCandidate) async {
+        isReplacingProject = true
         await releaseTabs()
         await catalogService?.close()
         guard !isDisposed, !Task.isCancelled else {
@@ -871,7 +917,46 @@ public final class ApplicationSession: QmlInstantiableStatus {
         voiceList.adsrDefaults = catalog.defaults
         voiceList.catalogRevision += 1
         projectOpen = true
-        if let label = candidate.label { await openTab(label: label, at: nil) }
+        if let recipe = candidate.restore {
+            let restored = recipe.normalized(available: candidate.labels)
+            isRestoringTabs = true
+            for song in restored.orderedSongs {
+                await openTab(label: song, at: nil)
+            }
+            if let selected = songTabs.tab(label: restored.selectedSong) {
+                songTabs.selectTab(tabId: selected.tabId)
+            }
+            isRestoringTabs = false
+        } else if let label = candidate.label {
+            isReplacingProject = false
+            await openTab(label: label, at: nil)
+        }
+        isReplacingProject = false
+        if candidate.restore == nil { persistTabRecipe() }
+    }
+
+    private func persistTabRecipe() {
+        guard projectOpen, !settingsApplicationName.isEmpty,
+              !isRestoringTabs, !isHostCloseWalk, !isReplacingProject,
+              pendingProjectSwitch == nil else { return }
+        EditorViewStateCodec.saveTabs(songTabs.recipe(projectPath: projectRoot),
+                                      applicationName: settingsApplicationName)
+    }
+
+    private func updateEditorLaneRange(parameter: AutomationParameter, range: Int) {
+        guard let key = EditorViewStateCodec.rowKey(for: parameter) else { return }
+        guard editorLanes.laneRanges[key] != range else { return }
+        editorLanes.laneRanges[key] = range
+        for tab in songTabs.allTabs {
+            let page = tab.workspace.automationPage
+            if page.laneRanges[parameter] != range {
+                page.laneRanges[parameter] = range
+                page.refreshCamera()
+            }
+        }
+        if !settingsApplicationName.isEmpty {
+            EditorViewStateCodec.saveLanes(editorLanes, applicationName: settingsApplicationName)
+        }
     }
 
     /// Republishes the flags the window and the strip read: the song is open

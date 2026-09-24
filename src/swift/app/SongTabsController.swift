@@ -194,6 +194,13 @@ public final class SongTabsController {
     @QtIgnored
     var allTabs: [SongTabSession] { tabs.asArray }
 
+    /// The strip order, not the workspace allocation order, is the persistence order.
+    @QtIgnored
+    func recipe(projectPath: String) -> WorkspaceTabRecipe {
+        WorkspaceTabRecipe(projectPath: projectPath, orderedSongs: tabs.map(\.title),
+                           selectedSong: selectedPage?.title ?? "")
+    }
+
     func publishTimeSigFlags() {
         for tab in allTabs { tab.pullTimeSigFlags() }
     }
@@ -254,6 +261,7 @@ public final class SongTabsController {
         tabs.move(from: sourceIndex, to: destinationIndex)
         // Read the resulting order: the native move can reject a request.
         publishSelection(index: tabIndex(of: selectedId) ?? -1)
+        app?.tabsDidChange()
     }
 
     // MARK: - Close gate

@@ -92,6 +92,7 @@ public final class AutomationPage: EditorDrawerPage {
     @QtIgnored public internal(set) var ghostLabels: [String] = []
     @QtIgnored public internal(set) var selection: AutomationTimeSelection?
     @QtIgnored public var onCommandAvailabilityChanged: (() -> Void)?
+    @QtIgnored public var onLaneRangeChanged: ((AutomationParameter, Int) -> Void)?
     @QtIgnored public var pointerGestureActive: Bool {
         gesture != nil || band != nil || panActive
     }

@@ -65,7 +65,7 @@ ApplicationWindow {
                                     Qt.application.name)
             settings.setValue("mode", shell.themeMode)
             settings.setValue("grid-line-contrast", shell.gridLineContrast)
-            shell.openStartup()
+            shell.openStartup(Qt.application.name)
         }
     }
     Component.onCompleted: {

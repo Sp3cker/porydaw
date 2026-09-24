@@ -101,6 +101,9 @@ TestCase {
     }
 
     function openShell(labels) {
+        // Every explicit-open test starts without a stale startup recipe.
+        settings.setValue("lastProjectDir", "")
+        settings.sync()
         seedDrawerPrefs()
         shell = shellComponent.createObject(null)
         verify(shell !== null, "the production ShellWindow loads")
@@ -1019,5 +1022,52 @@ TestCase {
                 && note.duration === saved.duration
         })
         verify(persisted, "the saved song carries the note the user drew")
+    }
+
+    function test_kStartupRestoresTabsAndFreshCamera() {
+        var ids = openShell(["mus_route101", "mus_littleroot_test"])
+        tabs().moveTab(ids[1], 0)
+        verify(waitForNative(function() {
+            return tabOrderIds().join(",") === [ids[1], ids[0]].join(",")
+        }, 5000), "the current strip order is different from opening order")
+        clickSelectTab(ids[0])
+        var grid = gridOf(ids[0])
+        var freshScrollY = grid.cameraScrollY
+        verify(grid.cameraMaxVScroll > 1, "fixture camera has vertical travel")
+        grid.handleWheel(0, freshScrollY < grid.cameraMaxVScroll - 1 ? -120 : 120,
+                         0, 0, 0, 0, true, 10, 10)
+        verify(waitForNative(function() {
+            return Math.abs(gridOf(ids[0]).cameraScrollY - freshScrollY) > 0.5
+        }, 5000), "first tab's runtime camera moved before shutdown")
+
+        var automation = pageOf(ids[0]).session.automationPage()
+        verify(automation.openParameterMenu(0, 0, 0), "volume's real range menu opens")
+        verify(automation.consumeMenuAction(16), "the 0–64 range is a cosmetic lane change")
+        verify(!session().documentDirty, "changing an editor lane preference does not dirty MIDI")
+
+        shell.close()
+        verify(waitForNative(function() { return shell.shellPresenter.closeReady }, 30000),
+               "the clean host close releases its tab pages")
+        settings.sync()
+        compare(settings.value("lastSongLabel"), "mus_route101",
+                "final-close walk retains the previously selected tab")
+        shell.destroy()
+        shell = null
+        wait(0)
+
+        shell = shellComponent.createObject(null)
+        verify(shell !== null, "a second production shell mounts")
+        verify(waitForNative(function() {
+            return tabs().tabCount === 2 && tabsRoot() !== null
+        }, 30000), "startup reconstructs the prior two-tab recipe")
+        var restored = tabOrderIds()
+        compare(restored.length, 2)
+        waitForPage(restored[0])
+        waitForPage(restored[1])
+        compare(pageOf(restored[0]).session.title, "mus_littleroot_test")
+        compare(pageOf(restored[1]).session.title, "mus_route101")
+        compare(tabs().selectedId, restored[1], "startup restores the selected tab")
+        fuzzyCompare(gridOf(restored[1]).cameraScrollY, freshScrollY, 0.01,
+                     "reopened tab starts with a fresh camera, not a saved camera")
     }
 }
