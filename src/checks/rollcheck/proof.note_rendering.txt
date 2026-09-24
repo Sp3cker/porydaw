@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/note_rendering.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/note_rendering.cpp
 Original SHA-256: 0f8d60d3551145e9a748ee0d0871dd0a0f5bf0e8fc592491f1abf04b8ac6b271
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/note_rendering.swift
+Swift SHA-256: 7dbe0a49d10a8f68d26beee519aba7b6386942c27ac6bd7ab2c113a089a161ae
 Retained native counterpart: src/checks/swiftrollgated/notevisuals.cpp
 Retained native SHA-256: 4645863a3b68289a910d275140a40f1bcf44c1609df37bc405af27076bed5931
 
@@ -18,14 +18,14 @@ PARTIAL identifies related counterpart predicates with an explicit unproved cond
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Tiny-border thinning, selected-frame ring and border, ghost faces, the velocity-color ramp and mode, note-name labels and short-note velocity values all render through the legacy Quick framebuffer; noteRasterParity proves ring, border, face and thinning parity on the Swift grid surface. Fifteen framebuffer observations without a parity equivalent stay native, eleven ring/border/thinning sites are partial, and the remaining twenty-eight stay open.
+The Swift session check asserts published selected/unselected border geometry at 16.375 key height, tiny border geometry at 5.0, and published note fills for velocities 1, 64, and 127. Four velocity-color predicates are MATCHED (S042–S045). Eleven ring/border/thinning sites remain PARTIAL because their named legacy Quick surface observation is not executed by the scene check. Twenty-four GAP sites, including ghost, note-name, zero-velocity palette-only, mode/ramp, and transaction predicates, stay open; fifteen framebuffer observations remain NATIVE.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (controller, 10.17s); Swift session suite executed note_rendering.swift. Native swiftrollgated evidence remains separately indexed below.
 
 Execution and ownership
-SwiftRollGatedTest::noteRasterParity executes the paired raster checks on the Swift grid surface (skips unless the swiftrollgated mode is active). Shared helpers (visibleNote, thinnedVisibleNote, fittedFrameThickness, blackFrameFailure, frameColorFailure and the originalNoteFace oracle) are defined in the counterpart file itself. No separate fixture file carries predicates.
+runNoteRenderingChecks executes scene-primitive and published-note-fill assertions in the swiftcore projectSession suite (S042–S045); no framebuffer pixels are observed there. SwiftRollGatedTest::noteRasterParity separately executes paired raster checks on the Swift grid surface only in swiftrollgated mode (S001–S041). Shared native raster helpers live in that counterpart file.
 
 Fixture, sequence and row constraints
 velocityValueRaster expands over two keyHeight rows (8.6px/9.0px); the per-velocity loop (2..127, early break) and per-pixel loops re-execute hue, ring and border sites; velocityValueRaster_data carries no assertions. Each slot unwinds its document edits to the local SMF baseline.
@@ -457,32 +457,32 @@ Original expression:
   QCOMPARE(zero.alpha(), 255);
 
 A022 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:298
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S042 | src/checks/rollcheck/note_rendering.swift:222 compares the published velocity-127 note fill with the track identity palette fill after the same note velocity is set.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
   QCOMPARE(maximum, SongView::trackColor(track));
 
 A023 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:299
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S043 | src/checks/rollcheck/note_rendering.swift:224 asserts the published velocity-127 note fill has an opaque #RRGGBB value.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
   QCOMPARE(maximum.alpha(), 255);
 
 A024 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:300
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S044 | src/checks/rollcheck/note_rendering.swift:226 asserts the published velocity-64 note fill has an opaque #RRGGBB value.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
   QCOMPARE(midpoint.alpha(), 255);
 
 A025 | PianoRollTest::velocityColorRaster | src/checks/rollcheck/note_rendering.cpp:301
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S045 | src/checks/rollcheck/note_rendering.swift:228 asserts the published velocity-64 note fill differs from the neutral zero palette and the published velocity-127 fill (also velocity 1).
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -1065,7 +1065,7 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-The S entries are exact predicates already executed by the gated Swift-surface suite: C++ QTest checks driving the Swift grid (no report.expect Swift predicates exist in these counterparts). Their presence alone does not close any A entry. Preserve their surrounding setup and order in the paired source.
+S001–S041 are the gated C++ QTest predicates driving the Swift grid; S042–S045 are Swift report.expect predicates executed by deno task verify --filter swiftcore --verbose. Predicate presence alone does not close an A entry: each mapping requires corresponding execution and equivalent setup.
 
 S001 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:241
 Counterpart expression:
@@ -1240,3 +1240,23 @@ Counterpart expression:
 S041 | SwiftRollGatedTest::noteRasterParity | src/checks/swiftrollgated/notevisuals.cpp:419
 Counterpart expression:
   QVERIFY2(gridcheck::colorsNear(smallFace, smallExpectedFace), qPrintable(smallFaceFailure));
+
+S042 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:222
+Counterpart expression:
+  report.expect(maximum == palette.noteFill(track: track, velocity: 127),
+                cppID: id, message: "A022 published full velocity uses the track identity fill")
+
+S043 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:224
+Counterpart expression:
+  report.expect(publishedOpaque(maximum), cppID: id,
+                message: "A023 published full velocity is opaque")
+
+S044 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:226
+Counterpart expression:
+  report.expect(publishedOpaque(midpoint), cppID: id,
+                message: "A024 published middle velocity is opaque")
+
+S045 | swiftcore/PianoRoll::velocityColorRaster | src/checks/rollcheck/note_rendering.swift:228
+Counterpart expression:
+  report.expect(midpoint != zero && midpoint != minimum && midpoint != maximum, cppID: id,
+                message: "A025 published middle velocity differs from both endpoints")

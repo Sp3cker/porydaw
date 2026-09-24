@@ -22,6 +22,18 @@ public final class ApplicationSession: QmlInstantiableStatus {
     @QtTracked public var canUndo = false
     @QtTracked public var canRedo = false
 
+    @QtTracked public var timeSigPromptOpen = false
+    @QtTracked public var timeSigMenuOpen = false
+    @QtTracked public var timeSigPromptInitialNumerator = 4
+    @QtTracked public var timeSigPromptInitialDenominatorPow2 = 2
+    @QtTracked public var timeSigPromptAppearance: [String: QVariantSettable] = [:]
+    @QtTracked public var timeSigPromptFont: [String: QVariantSettable] = [:]
+    @QtTracked public var timeSigPromptMinimumNumerator = 1
+    @QtTracked public var timeSigPromptMaximumNumerator = 32
+    @QtTracked public var timeSigPromptMinimumDenominatorPow2 = 0
+    @QtTracked public var timeSigPromptMaximumDenominatorPow2 = 5
+    @QtTracked public var timeSigPromptTitle = "Time Signature"
+    @QtTracked public var timeSigPromptLabel = "Numerator (1-32):"
     /// The one palette for the whole surface. The host pushes the window theme
     /// into it once; the strip and every page read their roles from it.
     @QtTracked public var palette: GridPalette
@@ -82,6 +94,111 @@ public final class ApplicationSession: QmlInstantiableStatus {
     /// it, so all of them follow the selection, and it is nil exactly while the
     /// strip is empty.
     private var workspace: DocumentWorkspace? { songTabs.selectedWorkspace }
+    private struct PendingTimeSignature {
+        let session: DocumentSession
+        let tick: Tick
+        let revision: UInt64
+        let numerator: Int
+        let denominatorPower: Int
+    }
+    private var pendingTimeSignature: PendingTimeSignature?
+
+    public func openTimeSigPrompt(tick: Double) {
+        guard let workspace, tick.isFinite, tick >= 0,
+              tick < Double(TimeDefaults.noTick) else { return }
+        let session = workspace.session
+        let target = TimeDefaults.tick(from: tick)
+        let axis = TimeAxis(map: TimeMap(
+            ticksPerBeat: UInt32(session.document.ticksPerBeat),
+            timeSigs: session.document.timeSignatures.map {
+                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
+                             denomPow2: $0.denominatorPower)
+            }))
+        let signature = axis.signatureAt(target)
+        pendingTimeSignature = PendingTimeSignature(
+            session: session, tick: target, revision: session.document.revision,
+            numerator: signature.numerator, denominatorPower: signature.denomPow2)
+        timeSigPromptInitialNumerator = min(32, max(1, signature.numerator))
+        timeSigPromptInitialDenominatorPow2 = min(5, max(0, signature.denomPow2))
+        var appearance = PromptAppearance.metrics(base: workspace.grid.baseFontPx)
+        timeSigPromptFont = PromptAppearance.font(base: workspace.grid.baseFontPx)
+        appearance["background"] = palette.chromeBackground
+        appearance["text"] = palette.primaryText
+        appearance["buttonText"] = palette.primaryText
+        appearance["buttonBackground"] = palette.chromeBackground
+        appearance["pressedBackground"] = palette.hoverChipFill
+        appearance["focus"] = palette.editCursor
+        appearance["outline"] = palette.separator
+        timeSigPromptAppearance = appearance
+        timeSigMenuOpen = false
+        timeSigPromptOpen = true
+        songTabs.publishTimeSigFlags()
+    }
+
+    public func openTimeSigPromptAtCursor() {
+        guard let session = workspace?.session else { return }
+        openTimeSigPrompt(tick: Double(session.editCursor))
+    }
+
+    public func acceptTimeSigPrompt(numerator: Int, denominatorPow2: Int) {
+        guard (1...32).contains(numerator), (0...5).contains(denominatorPow2),
+              let pending = pendingTimeSignature else { return }
+        pendingTimeSignature = nil
+        timeSigPromptOpen = false
+        songTabs.publishTimeSigFlags()
+        guard workspace?.session === pending.session,
+              pending.session.document.revision == pending.revision,
+              numerator != pending.numerator || denominatorPow2 != pending.denominatorPower
+        else { return }
+        pending.session.document.setTimeSignature(
+            tick: pending.tick, numerator: numerator, denominatorPower: denominatorPow2)
+    }
+
+    public func cancelTimeSigPrompt() {
+        pendingTimeSignature = nil
+        timeSigPromptOpen = false
+        songTabs.publishTimeSigFlags()
+    }
+
+    public func openTimeSigMenu(contentX: Double) {
+        guard let workspace, contentX.isFinite else { return }
+        let chip = timeSigChipTick(contentX: contentX)
+        let tick = chip >= 0 ? Tick(chip)
+            : Tick(max(0, workspace.grid.snapTickDown(
+                workspace.session.camera.tickAtContentX(contentX))))
+        workspace.session.editCursor = tick
+        cancelTimeSigPrompt()
+        timeSigMenuOpen = true
+        songTabs.publishTimeSigFlags()
+    }
+
+    public func closeTimeSigMenu() {
+        timeSigMenuOpen = false
+        songTabs.publishTimeSigFlags()
+    }
+
+    public func timeSigChipTick(contentX: Double) -> Double {
+        guard let workspace, contentX.isFinite else { return -1 }
+        let session = workspace.session
+        let tolerance = max(4, workspace.grid.baseFontPx * 0.5)
+        for signature in session.document.timeSignatures.reversed() {
+            let x = session.camera.contentX(tick: Double(signature.tick))
+            let labelWidth = Double("\(signature.numerator)/\(1 << min(signature.denominatorPower, 6))".count)
+                * workspace.grid.baseFontPx * 0.6
+            if abs(x - contentX) <= tolerance
+                || (contentX >= x && contentX <= x + tolerance + labelWidth) {
+                return Double(signature.tick)
+            }
+        }
+        return -1
+    }
+
+    private func invalidateTimeSigPrompt(session: DocumentSession, revision: UInt64) {
+        if let pending = pendingTimeSignature, pending.session === session,
+           pending.revision != revision {
+            cancelTimeSigPrompt()
+        }
+    }
 
     /// The selected tab's document session, for Swift-side drivers that need
     /// the document's own timeline and camera. Not bridged: QML reaches the
@@ -188,6 +305,8 @@ public final class ApplicationSession: QmlInstantiableStatus {
         // the empty presenter is cancelled only when no document is present.
         if let workspace {
             workspace.cancel(reason: reason)
+            cancelTimeSigPrompt()
+            closeTimeSigMenu()
         } else {
             emptyDrawerPresenter.inputCancelled(reason: reason)
         }
@@ -567,6 +686,9 @@ public final class ApplicationSession: QmlInstantiableStatus {
             sessionStateChanged: { [weak self] in self?.tabStateChanged() },
             publicationFailed: { [weak self] message in
                 self?.lastSaveError = message
+            },
+            timeSignaturePromptInvalidated: { [weak self] session, revision in
+                self?.invalidateTimeSigPrompt(session: session, revision: revision)
             })
     }
 

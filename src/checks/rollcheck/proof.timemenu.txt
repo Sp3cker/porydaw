@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/timemenu.cpp
 Reference revision: 90446f5dbbb9f9d9f9000d7819c42c1b8b2c5389
 Original: src/checks/rollcheck/timemenu.cpp
 Original SHA-256: 6d55204de3dc8c173d5bcb80107ae20ee92bb20c9d63f2e9de77d9c89c74416f
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/timemenu.swift
+Swift SHA-256: 0ec19201ff364ba3a694258e725460f4901ffc26b94f2cdfc9ea7781314f36b7
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -13,24 +13,25 @@ loops, and guards between assertions verbatim. MATCHED identifies an equivalent
 Swift predicate with execution; PARTIAL a related predicate with an explicit
 unproved condition; NATIVE a retained native-window/rendering/input or harness
 obligation a presenter-level Swift check cannot establish; GAP an original
-predicate without a replacement assertion. No same-dir Swift counterpart exists
-and no Swift file covering this suite was identified, so this file lists no S
-predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
-or claims whole-case equivalence.
+predicate without a replacement assertion. The Swift counterpart executes an
+Insert Time undo-byte predicate indexed below; it does not click a menu row,
+assert a history index/count, or validate the remaining menu scenarios. None of
+these labels authorizes deletion or claims whole-case equivalence.
 Five slots cover the shared time-selection menu: paste enablement, rejected
 paste preservation, stale/cancel no-op, Insert Time, and sweep canonical
 enablement. Popup session open/close state, typed row presence/enablement,
 menu clicks, focus, seed guards, and spy validity need the native Quick session
 and are NATIVE. Clipboard payloads, note fields, selection/time-selection
 values, cursor, camera, revision, undo, and spy counts are document/model
-observations and therefore GAP.
+observations; only the indexed undo-byte condition is MATCHED.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS (controller, 10.17s).
+Counts: MATCHED 1, PARTIAL 0, GAP 57, NATIVE 42.
 
 Execution and ownership
-No Swift entry point executes these checks. The original slots run under
+The Swift projectSession suite executes the indexed model assertion; the original slots run under
 PianoRollTest (checks/rollcheck/tst_pianoroll.h):
 timeSelectionMenuOpensWithPasteEnablement, rejectedNotePastePreservesViewState,
 timeSelectionMenuStaleAndCancelNoOp, timeSelectionMenuInsertTimeAndStaleNoOp,
@@ -1125,8 +1126,8 @@ Original expression:
                "the Insert Time row did not commit exactly one undo transaction")
 
 A088 | PianoRollTest::timeSelectionMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/timemenu.cpp:465
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001 | src/checks/rollcheck/timemenu.swift:47 — undo following the same six-tick insertion restores pre-insertion song bytes.
 Source context since previous assertion:
   ;
       doc.undoStack()->undo();
@@ -1286,6 +1287,15 @@ Source context since previous assertion:
 Original expression:
   QVERIFY2(actions->action(SongView::EditCommand::Duplicate)->isEnabled(),
                "a note-only selection left Duplicate cached as disabled")
+
+Swift executable assertion index
+This predicate runs in the green swiftcore projectSession suite; it establishes
+only the model undo restoration, not a rendered menu click.
+
+S001 | checkTimeMenuInsertTime | src/checks/rollcheck/timemenu.swift:47
+Counterpart expression:
+  report.expect(coreTimeBytes(document) == before, cppID: id,
+                message: "A088: one undo restores the bytes before time insertion")
 
 Remaining original source (closing sequence and helper bodies):
   ;

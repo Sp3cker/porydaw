@@ -13,6 +13,9 @@ Item {
     property int minimumValue: 0
     property int maximumValue: 127
     property string inputObjectName: ""
+    // Allows a form to display an out-of-range draft so Return can reject it.
+    // Commit still uses maximumValue; other consumers retain the same limit.
+    property int inputMaximumValue: maximumValue
     property string accessibleName: ""
     property string accessibleDescription: ""
     // When false the field is a plain numeric editor: no scrub drag, wheel
@@ -156,7 +159,7 @@ Item {
         inputMethodHints: Qt.ImhDigitsOnly
         validator: IntValidator {
             bottom: control.minimumValue
-            top: control.maximumValue
+            top: control.inputMaximumValue
         }
         // The editor never takes focus: the focusLeaf sibling owns keyboard
         // focus and edits this text through direct API calls, so a focused

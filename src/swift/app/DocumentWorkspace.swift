@@ -14,6 +14,7 @@ public final class DocumentWorkspace {
         public var gridCommandAvailabilityChanged: () -> Void
         public var sessionStateChanged: () -> Void
         public var publicationFailed: (String) -> Void
+        public var timeSignaturePromptInvalidated: (DocumentSession, UInt64) -> Void
 
         public init(addTrackRequested: @escaping () -> Void,
                     changeTrackVoiceRequested: @escaping (Int) -> Void,
@@ -21,7 +22,9 @@ public final class DocumentWorkspace {
                     headerContextMenuRequested: @escaping (Double, Double) -> Void,
                     gridCommandAvailabilityChanged: @escaping () -> Void,
                     sessionStateChanged: @escaping () -> Void,
-                    publicationFailed: @escaping (String) -> Void) {
+                    publicationFailed: @escaping (String) -> Void,
+                    timeSignaturePromptInvalidated: @escaping (DocumentSession, UInt64) -> Void) {
+            self.timeSignaturePromptInvalidated = timeSignaturePromptInvalidated
             self.addTrackRequested = addTrackRequested
             self.changeTrackVoiceRequested = changeTrackVoiceRequested
             self.revealTrackVoiceRequested = revealTrackVoiceRequested
@@ -278,6 +281,9 @@ public final class DocumentWorkspace {
     private func sessionDidChange(_ change: SessionChange) {
         let documentChanged = change.domains.contains(.document)
         let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
+        if documentChanged {
+            callbacks.timeSignaturePromptInvalidated(session, change.revision)
+        }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank]
         playheadGuides.sessionDidChange(change)

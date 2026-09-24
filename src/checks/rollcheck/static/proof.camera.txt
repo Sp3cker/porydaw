@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/rollcheck/static/camera.cpp
 Original SHA-256: cd54f262cc3b30c64e2b1ff8ee7bc1b843c4cad469b58b5aea08c7ac4644fe78
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -18,9 +18,12 @@ it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Converted-window command: deno task verify:qml --verbose
+Command: deno task verify --filter swiftcore --qt projectSession
+Result: PASS, SwiftCoreTest::projectSession 3 passed, 0 failed (controller run).
+Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
+Converted-window command: deno task verify:qml-roll
+Converted-window result: PASS, 1/1 (controller run).
+Verified QML SHA-256: cd60f69c80030deeefa46358a8131bcc38de8e5fe112042e37155521faf1e1e0
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
@@ -28,6 +31,7 @@ Execution ownership
 runEditorCameraChecks is called in its previous suite position. checkGridCameraWheel
 is called between checkViewport and checkProjection by EditorGridCameraChecks;
 it shares the existing session, grid, and publication counters.
+Tally: MATCHED 37, PARTIAL 64, GAP 0, NATIVE 8
 
 Original assertion inventory and source sequence
 
@@ -569,8 +573,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A051 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:203
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S046 checks full-notch versus four quarter-notch pitch height with the original 8px/300px fixture; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -591,16 +595,16 @@ Original expression:
   QVERIFY(std::abs(view.camera().keyHeight() - partialHeight) <= 1e-12)
 
 A052 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:204
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S046 also checks the original pitch scroll equality after the two wheel sequences; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().scrollY() - partialScroll) <= 1e-10)
 
 A053 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:208
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S047 checks momentum leaves the settled pitch height unchanged; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       const double settledHeight = view.camera().keyHeight();
@@ -610,16 +614,16 @@ Original expression:
   QVERIFY(std::abs(view.camera().keyHeight() - settledHeight) <= 1e-12)
 
 A054 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:209
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S047 checks momentum leaves the settled pitch scroll unchanged; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().scrollY() - settledScroll) <= 1e-10)
 
 A055 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:213
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S048 checks the quarter-notch wheel preserves the row under the original y=200 anchor; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -630,8 +634,8 @@ Original expression:
               1e-12)
 
 A056 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:218
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S049 checks ten full notches clamp key height at the fixture's 16px maximum; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -641,8 +645,8 @@ Original expression:
   QVERIFY(std::abs(view.camera().keyHeight() - 16.0) <= 1e-12)
 
 A057 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:221
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S050 checks a 240px wheel delta reaches the same 16px key-height clamp; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -651,8 +655,8 @@ Original expression:
   QVERIFY(std::abs(view.camera().keyHeight() - 16.0) <= 1e-12)
 
 A058 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:225
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S051 checks one pixel of gutter wheel pans scrollY by -0.5; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       const double keyboardScroll = view.camera().scrollY();
@@ -662,8 +666,8 @@ Original expression:
   QVERIFY(std::abs(view.camera().scrollY() - (keyboardScroll - 0.5)) <= 1e-12)
 
 A059 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:231
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S052 checks four positive then four negative quarter-notches restore the original 8px key height; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -675,16 +679,16 @@ Original expression:
   QVERIFY(std::abs(view.camera().keyHeight() - state.keyHeight) <= 1e-12)
 
 A060 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:232
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S052 also checks the opposing quarter-notches restore the original 300px vertical scroll; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().scrollY() - state.scrollY) <= 1e-10)
 
 A061 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:236
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S053 checks restoration of fractional keyHeight 9.375 without rounding; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       state.keyHeight = 9.375;
@@ -694,16 +698,16 @@ Original expression:
   QCOMPARE(view.viewState().keyHeight, state.keyHeight)
 
 A062 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:237
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S053 also checks restoration of fractional scrollY 257.625 without rounding; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(view.viewState().scrollY, state.scrollY)
 
 A063 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:245
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S054 checks DPR-2 snapped boundary minus 0.25 selects pitch 128-40 in the executing grid; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       const int boundaryRow = 40;
@@ -717,8 +721,8 @@ Original expression:
   QCOMPARE(fixture.roll()->property("hoverKey").toInt(), 128 - boundaryRow)
 
 A064 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:249
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S055 checks DPR-2 snapped boundary plus 0.25 selects pitch 127-40 in the executing grid; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       checks::events::sendMouse(*fixture.gutterInput(), QEvent::MouseMove,
@@ -728,8 +732,8 @@ Original expression:
   QCOMPARE(fixture.roll()->property("hoverKey").toInt(), 127 - boundaryRow)
 
 A065 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:253
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S057 checks restoration of integral 11px key height after the boundary hover sequence; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       state.keyHeight = 11.0;
@@ -739,8 +743,8 @@ Original expression:
   QCOMPARE(view.viewState().keyHeight, 11.0)
 
 A066 | PianoRollStaticTest::verticalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:254
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S057 also checks restoration of integral scrollY 217 after the boundary hover sequence; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
@@ -762,8 +766,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A068 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:279
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S061 checks the recorded full-notch scale 359.2664053212564 at initial 300.125px/beat; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -786,24 +790,24 @@ Original expression:
   QVERIFY(std::abs(view.camera().pxPerBeat() - expectedScale) <= expectedScale * 1e-12)
 
 A069 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:280
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S061 checks four quarter-notches and one full notch reach the same pixels-per-beat scale; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().pxPerBeat() - partialScale) <= 1e-12)
 
 A070 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:281
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S061 also checks quarter-notch and full-notch horizontal offsets agree at x=73.375; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().scrollX() - partialScroll) <= 1e-9)
 
 A071 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:286
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S062 checks 24px pixel wheel matches full angle-notch scale; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       const double fullScale = view.camera().pxPerBeat();
@@ -814,16 +818,16 @@ Original expression:
   QVERIFY(std::abs(view.camera().pxPerBeat() - fullScale) <= 1e-12)
 
 A072 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:287
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S062 also checks 24px pixel wheel matches full angle-notch horizontal scroll; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().scrollX() - fullScroll) <= 1e-9)
 
 A073 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:292
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S063 checks 8px horizontal pixel wheel changes scrollX by -8 from 23.625; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -834,16 +838,16 @@ Original expression:
   QVERIFY(std::abs(view.camera().scrollX() - (horizontalScroll - 8.0)) <= 1e-12)
 
 A074 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:293
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S063 also checks horizontal pixel panning preserves the 300.125 scale; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().pxPerBeat() - horizontalScale) <= 1e-12)
 
 A075 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:297
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S064 checks time zoom preserves tick beneath the original fractional x=73.375 anchor; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -853,8 +857,8 @@ Original expression:
   QVERIFY(std::abs(view.camera().tickAtContentX(anchor.x()) - tick) <= 1e-9)
 
 A076 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:303
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S065 checks four positive and four negative quarter-notches restore scale 300.125; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.applyViewState(state);
@@ -866,16 +870,16 @@ Original expression:
   QVERIFY(std::abs(view.camera().pxPerBeat() - state.pxPerBeat) <= 1e-10)
 
 A077 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:304
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S065 also checks opposing quarter-notches restore scrollX 23.625; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(std::abs(view.camera().scrollX() - state.scrollPx) <= 1e-9)
 
 A078 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:308
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S066 checks restoration of fractional pixels-per-beat 311.375 exactly; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       state.pxPerBeat = 311.375;
@@ -885,8 +889,8 @@ Original expression:
   QCOMPARE(view.viewState().pxPerBeat, state.pxPerBeat)
 
 A079 | PianoRollStaticTest::horizontalCameraWheelContract | src/checks/rollcheck/static/camera.cpp:309
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S066 also checks restoration of fractional scrollX 47.625 exactly; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
 Original expression:
@@ -919,8 +923,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A081 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:338
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S042 asserts the three original affine fixture rows at tick 24 against recorded x values; S043 checks their fractional tick/content round-trip; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -937,8 +941,8 @@ Original expression:
                        affineTick) <= 1e-9)
 
 A082 | PianoRollStaticTest::affineCameraProjection | src/checks/rollcheck/static/camera.cpp:351
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S044 checks origin 0/.25 and DPR 1/2 physical-pixel projection across the original three affine fixture rows; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       Tick tick = view.grid().snapTickUp(std::max(0.0, view.camera().tickAtContentX(0.0)));
@@ -1002,8 +1006,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A087 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:374
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S045 asserts a positive lead pad; converted QML test_preRollCameraBounds reads the mounted roll camera lead pad and checks it is positive; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -1014,8 +1018,8 @@ Original expression:
   QVERIFY(pad > 0.0)
 
 A088 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:378
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S005 checks left pre-roll bound; converted QML test_preRollCameraBounds scrolls mounted roll camera to -1e9 and checks cameraScrollX equals -leadPad; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       SongView::ViewState state = original;
@@ -1025,8 +1029,8 @@ Original expression:
   QVERIFY(std::abs(view.camera().scrollX() + pad) <= 1e-9)
 
 A089 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:381
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S006 checks right bound; converted QML test_preRollCameraBounds scrolls mounted roll camera to 1e9 and checks cameraScrollX equals timeline length times cameraPxPerTick; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       state.scrollPx = 1e9;
@@ -1036,8 +1040,8 @@ Original expression:
                                                      view.camera().pxPerTick()) <= 1e-9)
 
 A090 | PianoRollStaticTest::cameraRangeAndPreRollRaster | src/checks/rollcheck/static/camera.cpp:384
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S005 checks the pre-roll floor; converted QML test_preRollCameraBounds invokes the mounted roll's resetCameraScroll and checks cameraScrollX returns to -leadPad; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       view.goToStart();
@@ -1251,8 +1255,8 @@ Original expression:
   QVERIFY2(fixture.create(error), qPrintable(error))
 
 A107 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:485
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S058 checks the grid gutter midpoint against camera pitch projection; converted QML test_hoverChipOverlay checks the production gutter label's corresponding MIDI hoverKey; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       SongView &view = *fixture.view();
@@ -1265,8 +1269,8 @@ Original expression:
   QCOMPARE(fixture.roll()->property("hoverKey").toInt(), expected)
 
 A108 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:489
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S059 checks moving one row down decreases hoverKey by exactly one; converted QML test_hoverChipOverlay checks that a second gutter label republishes the MIDI pitch; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       checks::events::sendMouse(gutter, QEvent::MouseMove,
@@ -1276,8 +1280,8 @@ Original expression:
   QCOMPARE(fixture.roll()->property("hoverKey").toInt(), expected - 1)
 
 A109 | PianoRollStaticTest::keyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.cpp:492
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001, S002, S003, S004, S005, S006, S007, S008, S009, S010, S011, S012, S013, S014, S015, S016, S017, S018, S019, S020, S021, S022, S023, S024, S025, S026, S027, S028, S029, S030, S031, S032, S033, S034, S035, S036, S037, S038, S039, S040, S041 in src/checks/rollcheck/static/camera.swift; direct Swift presenter calls do not yet establish every original event, fixture, and observation condition below.
+Disposition: MATCHED
+Mapping/reason: Swift S060 checks clearKeyboardHover resets hoverKey to -1; converted QML test_hoverChipOverlay checks gutter leave hides the chip and clears hoverKey; executed by the green controller projectSession and qml-roll runs recorded in Verification.
 Source context since previous assertion:
   ;
       checks::events::sendMouse(gutter, QEvent::Leave, QPointF(4.0, y), Qt::NoButton, Qt::NoButton,
@@ -1295,81 +1299,81 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 
 S001 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:16
-  report.expect(near(compact.snapshot.viewportWidth, 50) &&
-                    near(compact.snapshot.minHScroll, -48) &&
-                    near(compact.snapshot.maxHScroll, 0),
+  report.expect(gridCameraNear(compact.snapshot.viewportWidth, 50) &&
+                    gridCameraNear(compact.snapshot.minHScroll, -48) &&
+                    gridCameraNear(compact.snapshot.maxHScroll, 0),
                     cppID: cameraTransformID,
                     message: "caller-resolved minimum viewport produces observable camera bounds")
 
 S002 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:26
-  report.expect(near(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
+  report.expect(gridCameraNear(camera.tickAtContentX(content), 96), cppID: cameraTransformID,
                     message: "tick/content transforms round-trip with a fractional offset")
 
 S003 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:28
-  report.expect(near(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
+  report.expect(gridCameraNear(camera.snapshot.scrollX, 10.25), cppID: cameraTransformID,
                     message: "horizontal restoration preserves fractional offsets")
 
 S004 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:30
-  report.expect(near(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
+  report.expect(gridCameraNear(camera.displayX(tick: 24, origin: 0.2, dpr: 2), 22),
                     cppID: cameraTransformID, message: "display projection snaps to a physical pixel")
 
 S005 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:33
-  report.expect(near(camera.snapshot.scrollX, -48) && near(camera.snapshot.minHScroll, -48),
+  report.expect(gridCameraNear(camera.snapshot.scrollX, -48) && gridCameraNear(camera.snapshot.minHScroll, -48),
                     cppID: cameraTransformID, message: "horizontal scrolling clamps to production pre-roll")
 
 S006 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:36
-  report.expect(near(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
+  report.expect(gridCameraNear(camera.snapshot.scrollX, 640), cppID: cameraTransformID,
                     message: "bound timeline end reaches the plot origin")
 
 S007 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:43
-  report.expect(near(viewportCamera.snapshot.scrollX, -48),
+  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, -48),
                     cppID: cameraTransformID,
                     message: "bound viewport shrink reclamps the changed pre-roll floor")
 
 S008 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:48
-  report.expect(near(viewportCamera.snapshot.scrollX, 10.25),
+  report.expect(gridCameraNear(viewportCamera.snapshot.scrollX, 10.25),
                     cppID: cameraTransformID,
                     message: "bound viewport updates preserve a legal fractional offset")
 
 S009 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:56
   report.expect(zoom.zoomChanged && zoom.scrollChanged &&
-                    near(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
+                    gridCameraNear(camera.tickAtContentX(anchorX), anchoredTick), cppID: cameraZoomID,
                     message: "interactive time zoom preserves its tick anchor")
 
 S010 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:65
-  report.expect(near(clampedTimeZoom.snapshot.scrollX, 64) &&
-                    !near(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
+  report.expect(gridCameraNear(clampedTimeZoom.snapshot.scrollX, 64) &&
+                    !gridCameraNear(clampedTimeZoom.tickAtContentX(boundedAnchor), tickBeforeBoundedZoom),
                     cppID: cameraZoomID,
                     message: "time zoom reaches its bound when the pointer anchor is unreachable")
 
 S011 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:70
-  report.expect(near(camera.snapshot.pixelsPerBeat, 48) &&
-                    near(camera.snapshot.keyHeight, 16) && near(camera.snapshot.scrollX, 10.5) &&
-                    near(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
+  report.expect(gridCameraNear(camera.snapshot.pixelsPerBeat, 48) &&
+                    gridCameraNear(camera.snapshot.keyHeight, 16) && gridCameraNear(camera.snapshot.scrollX, 10.5) &&
+                    gridCameraNear(camera.snapshot.scrollY, 20.25), cppID: cameraZoomID,
                     message: "unanchored restoration keeps valid fractional camera state")
 
 S012 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:78
-  report.expect(near(sanitized.snapshot.pixelsPerBeat, 32) &&
-                    near(sanitized.snapshot.keyHeight, 12) &&
-                    near(sanitized.snapshot.scrollX, 0) && near(sanitized.snapshot.scrollY, 0),
+  report.expect(gridCameraNear(sanitized.snapshot.pixelsPerBeat, 32) &&
+                    gridCameraNear(sanitized.snapshot.keyHeight, 12) &&
+                    gridCameraNear(sanitized.snapshot.scrollX, 0) && gridCameraNear(sanitized.snapshot.scrollY, 0),
                     cppID: cameraZoomID,
                     message: "restoration sanitizes non-finite transient view-state values independently")
 
 S013 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:86
-  report.expect(near(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
+  report.expect(gridCameraNear(camera.snapshot.scrollX, 20), cppID: cameraTransformID,
                     message: "content shrink reclamps the horizontal offset")
 
 S014 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:89
-  report.expect(near(camera.snapshot.viewportWidth, 800) && near(camera.snapshot.scrollY, 0),
+  report.expect(gridCameraNear(camera.snapshot.viewportWidth, 800) && gridCameraNear(camera.snapshot.scrollY, 0),
                     cppID: cameraTransformID,
                     message: "viewport growth reclamps vertical content")
 
 S015 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:93
-  report.expect(near(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
+  report.expect(gridCameraNear(camera.snapshot.scrollX, -80), cppID: cameraTransformID,
                     message: "an unbound timeline homes to its lead pad")
 
 S016 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:96
-  report.expect(near(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
+  report.expect(gridCameraNear(camera.snapshot.scrollX, -100), cppID: cameraTransformID,
                     message: "unbound viewport updates follow the resolved home")
 
 S017 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:100
@@ -1395,7 +1399,7 @@ S019 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:116
                     cppID: cameraPitchID, message: "DPR-snapped row and pitch inverses agree")
 
 S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
-  report.expect(near(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
+  report.expect(gridCameraNear(folded.rowBottom(0, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) ?? -1,
                          10) &&
                     folded.row(atY: 9.99, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 0 &&
                     folded.row(atY: 10, keyHeight: 10.2, scrollY: 0.1, dpr: 1.5) == 1,
@@ -1403,27 +1407,27 @@ S020 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:119
                     message: "fractional DPR snapping defines the inverse row boundary")
 
 S021 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:131
-  report.expect(near(projectedContent.snapshot.scrollY, 15),
+  report.expect(gridCameraNear(projectedContent.snapshot.scrollY, 15),
                     cppID: cameraPitchID,
                     message: "pitch projection shrink reclamps the vertical offset")
 
 S022 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:139
-  report.expect(near(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
+  report.expect(gridCameraNear(pitchCamera.snapshot.maxVScroll, 15), cppID: cameraPitchID,
                     message: "vertical bounds derive from projected row height")
 
 S023 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:146
-  report.expect(near(anchoredRow, resultingRow), cppID: cameraZoomID,
+  report.expect(gridCameraNear(anchoredRow, resultingRow), cppID: cameraZoomID,
                     message: "pitch zoom preserves its row anchor when bounds permit")
 
 S024 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:159
-  report.expect(near(clampedPitchZoom.snapshot.scrollY, 0) &&
-                    near(clampedPitchZoom.snapshot.maxVScroll, 0) &&
-                    !near(rowAfterBoundedZoom, rowBeforeBoundedZoom),
+  report.expect(gridCameraNear(clampedPitchZoom.snapshot.scrollY, 0) &&
+                    gridCameraNear(clampedPitchZoom.snapshot.maxVScroll, 0) &&
+                    !gridCameraNear(rowAfterBoundedZoom, rowBeforeBoundedZoom),
                     cppID: cameraZoomID,
                     message: "pitch zoom reaches its bound when the row anchor is unreachable")
 
 S025 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:166
-  report.expect(pitchCamera.ensureKeyVisible(60) && near(pitchCamera.snapshot.scrollY, 15),
+  report.expect(pitchCamera.ensureKeyVisible(60) && gridCameraNear(pitchCamera.snapshot.scrollY, 15),
                     cppID: cameraPitchID, message: "key reveal scrolls only enough to show its row")
 
 S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
@@ -1432,87 +1436,200 @@ S026 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:168
 
 S027 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:173
   report.expect(reveal.ensureTickVisible(480, dpr: 2) &&
-                    near(reveal.snapshot.scrollX, 573.3333333333),
+                    gridCameraNear(reveal.snapshot.scrollX, 573.3333333333),
                     cppID: cameraTransformID,
                     message: "tick reveal uses the production one-third anchor")
 
 S028 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:178
   report.expect(!reveal.ensureRangeVisible(startTick: 0, endTick: 149,
                                                preferEnd: false, dpr: 1) &&
-                    near(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
+                    gridCameraNear(reveal.snapshot.scrollX, 0), cppID: cameraTransformID,
                     message: "a fitting range on the physical right boundary stays visible")
 
 S029 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:182
   report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
                                               preferEnd: false, dpr: 1) &&
-                    near(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
+                    gridCameraNear(reveal.contentX(tick: 240), 0), cppID: cameraTransformID,
                     message: "wide range reveal prefers its requested leading edge")
 
 S030 | runEditorCameraChecks | src/checks/rollcheck/static/camera.swift:187
   report.expect(reveal.ensureRangeVisible(startTick: 240, endTick: 480,
                                               preferEnd: true, dpr: 1) &&
-                    near(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
+                    gridCameraNear(reveal.contentX(tick: 480), 199), cppID: cameraTransformID,
                     message: "wide range reveal honors the requested trailing edge")
 
-S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:220
+S031 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:261
   report.expect(
               after.pixelsPerBeat > before.pixelsPerBeat
                   && gridCameraNear(session.camera.tickAtContentX(anchorX), anchorTick, tolerance: 1e-7)
                   && counters.camera == publications + 1,
               cppID: gridCameraWheelID, message: "phase \(phase.rawValue) performs one anchored time zoom publication")
 
-S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:233
+S032 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:274
   report.expect(
           session.camera.snapshot == beforeMomentum && counters.camera == momentumPublications,
           cppID: gridCameraWheelID, message: "momentum suppresses time zoom without publishing")
 
-S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:248
+S033 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:289
   report.expect(
           gridCameraNear(angleZoom, 35 * pow(1.0015, 120), tolerance: 1e-7)
               && gridCameraNear(session.camera.snapshot.pixelsPerBeat,
                       angleZoom * pow(1.0015, 120), tolerance: 1e-7),
           cppID: gridCameraWheelID, message: "pixel deltas receive five-times angle weighting")
 
-S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:253
+S034 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:294
   report.expect(
           counters.camera == 2,
           cppID: gridCameraWheelID, message: "effective angle and pixel zooms each publish once")
 
-S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:263
+S035 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:304
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollX, 90) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "Shift wheel pans by negative selected delta exactly once")
 
-S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:278
+S036 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:319
   report.expect(
           gridCameraNear(minimumPan.scrollX, minimumPan.minHScroll)
               && minimumPublications == 1 && counters.camera == minimumPublications,
           cppID: gridCameraWheelID, message: "Shift pan clamps at minimum and repeated clamped pan is silent")
 
-S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:295
+S037 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:336
   report.expect(
           gridCameraNear(maximumPan.scrollX, maximumPan.maxHScroll)
               && maximumPublications == 1 && counters.camera == maximumPublications,
           cppID: gridCameraWheelID, message: "Shift pan clamps at maximum and repeated clamped pan is silent")
 
-S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:306
+S038 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:347
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollX, 112) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "horizontal-only momentum still pans exactly once")
 
-S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:318
+S039 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:359
   report.expect(
           pitchAfter.keyHeight > pitchBefore.keyHeight
               && gridCameraNear((pitchAfter.scrollY + 100) / pitchAfter.keyHeight, pitchRow, tolerance: 1e-7)
               && counters.camera == 1,
           cppID: gridCameraWheelID, message: "Ctrl wheel performs one row-anchored pitch zoom publication")
 
-S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:329
+S040 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:370
   report.expect(
           session.camera.snapshot == pitchMomentum && counters.camera == 0,
           cppID: gridCameraWheelID, message: "momentum suppresses pitch zoom without publishing")
 
-S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
+S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:380
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")
+
+S042 | checkAffineCameraProjection | src/checks/rollcheck/static/camera.swift:206
+  report.expect(gridCameraNear(camera.contentX(tick: 24), expectedX), cppID: id,
+                message: "recorded fractional affine projection at tick 24")
+
+S043 | checkAffineCameraProjection | src/checks/rollcheck/static/camera.swift:209
+  report.expect(gridCameraNear(camera.tickAtContentX(camera.contentX(tick: affineTick)),
+                     affineTick),
+                cppID: id, message: "fractional affine tick round-trip at \(pixelsPerBeat)")
+
+S044 | checkAffineCameraProjection | src/checks/rollcheck/static/camera.swift:217
+  report.expect(gridCameraNear(displayed, ((origin + x) * dpr).rounded() / dpr),
+                cppID: id, message: "physical-pixel affine projection")
+
+S045 | checkFallbackCamera | src/checks/rollcheck/static/camera.swift:232
+  report.expect(camera.leadPad > 0 && gridCameraNear(camera.leadPad, pad)
+                    && gridCameraNear(camera.contentX(tick: 0), pad),
+                cppID: id, message: "unbound viewport homes tick zero at its lead pad")
+
+S046 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:414
+  report.expect(gridCameraNear(full.keyHeight, partial.keyHeight, tolerance: 1e-12)
+                    && gridCameraNear(full.scrollY, partial.scrollY, tolerance: 1e-10),
+                cppID: id, message: "four quarter-notch pitch zooms equal one full notch")
+
+S047 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:418
+  report.expect(session.camera.snapshot == full, cppID: id,
+                message: "pitch-zoom momentum leaves height and scroll unchanged")
+
+S048 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:426
+  report.expect(gridCameraNear((anchorY + anchored.scrollY) / anchored.keyHeight,
+                     anchoredRow, tolerance: 1e-12),
+                cppID: id, message: "quarter-notch zoom holds the fractional pitch row")
+
+S049 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:431
+  report.expect(gridCameraNear(session.camera.snapshot.keyHeight, 16, tolerance: 1e-12),
+                cppID: id, message: "ten pitch notches clamp at the font-scaled 16px maximum")
+
+S050 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:435
+  report.expect(gridCameraNear(session.camera.snapshot.keyHeight, 16, tolerance: 1e-12),
+                cppID: id, message: "240px wheel delta reaches the same pitch-height maximum")
+
+S051 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:439
+  report.expect(gridCameraNear(session.camera.snapshot.scrollY, gutterBefore - 0.5, tolerance: 1e-12),
+                cppID: id, message: "one gutter pixel pans pitch by a negative half-pixel")
+
+S052 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:446
+  report.expect(gridCameraNear(returned.keyHeight, 8, tolerance: 1e-12)
+                    && gridCameraNear(returned.scrollY, 300, tolerance: 1e-10),
+                cppID: id, message: "opposite quarter-notches restore pitch height and offset")
+
+S053 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:453
+  report.expect(fractional.keyHeight == 9.375 && fractional.scrollY == 257.625,
+                cppID: id, message: "fractional pitch height and scroll restore without rounding")
+
+S054 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:458
+  report.expect(grid.hoverKey == 128 - boundaryRow, cppID: id,
+                message: "DPR-snapped row boundary minus a quarter pixel selects upper pitch")
+
+S055 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:461
+  report.expect(grid.hoverKey == 127 - boundaryRow, cppID: id,
+                message: "DPR-snapped row boundary plus a quarter pixel selects lower pitch")
+
+S056 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:464
+  report.expect(grid.hoverKey == -1, cppID: id,
+                message: "leaving the keyboard clears the projected hover pitch")
+
+S057 | checkVerticalCameraWheelContract | src/checks/rollcheck/static/camera.swift:469
+  report.expect(session.camera.snapshot.keyHeight == 11 && session.camera.snapshot.scrollY == 217,
+                cppID: id, message: "integral pitch height and scroll restore exactly")
+
+S058 | checkKeyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.swift:483
+  report.expect(expected > 0 && grid.hoverKey == expected, cppID: id,
+                message: "gutter midpoint hover selects the projected pitch")
+
+S059 | checkKeyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.swift:486
+  report.expect(grid.hoverKey == expected - 1, cppID: id,
+                message: "adjacent lower gutter row changes hover pitch by one")
+
+S060 | checkKeyboardGutterHoverTracksRows | src/checks/rollcheck/static/camera.swift:489
+  report.expect(grid.hoverKey == -1, cppID: id,
+                message: "gutter leave clears the hover pitch")
+
+S061 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift:521
+  report.expect(gridCameraNear(full.pixelsPerBeat, expectedScale,
+                     tolerance: expectedScale * 1e-12)
+                    && gridCameraNear(full.pixelsPerBeat, partial.pixelsPerBeat, tolerance: 1e-12)
+                    && gridCameraNear(full.scrollX, partial.scrollX, tolerance: 1e-9),
+                cppID: id, message: "four quarter-notch time zooms equal a full notch")
+
+S062 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift:528
+  report.expect(gridCameraNear(session.camera.snapshot.pixelsPerBeat, full.pixelsPerBeat,
+                     tolerance: 1e-12)
+                    && gridCameraNear(session.camera.snapshot.scrollX, full.scrollX, tolerance: 1e-9),
+                cppID: id, message: "24px wheel equals one full angle notch")
+
+S063 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift:534
+  report.expect(gridCameraNear(session.camera.snapshot.scrollX, 23.625 - 8, tolerance: 1e-12)
+                    && gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-12),
+                cppID: id, message: "horizontal pixel wheel pans without changing scale")
+
+S064 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift:540
+  report.expect(gridCameraNear(session.camera.tickAtContentX(anchorX), tick, tolerance: 1e-9),
+                cppID: id, message: "quarter-notch time zoom preserves fractional tick anchor")
+
+S065 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift:545
+  report.expect(gridCameraNear(session.camera.snapshot.pixelsPerBeat, 300.125, tolerance: 1e-10)
+                    && gridCameraNear(session.camera.snapshot.scrollX, 23.625, tolerance: 1e-9),
+                cppID: id, message: "opposite quarter-notches restore scale and offset")
+
+S066 | checkHorizontalCameraWheelContract | src/checks/rollcheck/static/camera.swift:549
+  report.expect(session.camera.snapshot.pixelsPerBeat == 311.375
+                    && session.camera.snapshot.scrollX == 47.625,
+                cppID: id, message: "fractional time scale and offset restore exactly")

@@ -114,6 +114,7 @@ enum RollQmlLane {
         app.setPluginsPath(EditorQmlPaths.pluginPath)
         pdAppRegisterTypes()
         RollQmlBootstrap.registerQmlElement()
+        // ApplicationSession itself supplies the Swift ruler form bridge.
         let inputFile = URL(fileURLWithPath: inputDirectory, isDirectory: true)
             .appendingPathComponent(file).path
         let laneArguments = [CommandLine.arguments.first ?? "roll_qml_tests",
@@ -217,6 +218,7 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
     @QtIgnored private var originalSettings: [String: Data] = [:]
     @QtIgnored private var absentKeys: Set<String> = []
     @QtIgnored private var hasSnapshot = false
+    @QtIgnored private var timeSigFixtureIdentity: DocumentIdentity?
 
     /// The runner's scratch directory, staged before Qt builds any QML object.
     public var projectRoot: String = RollQmlBootstrap.stagedProjectRoot
@@ -374,6 +376,108 @@ public final class RollQmlBootstrap: QmlInstantiableStatus {
         guard let session else { return false }
         session.cancelGridInput(reason: 2)
         return !session.drawerPresenter().interactionActive
+    }
+
+    public func timeSigFixtureActive() -> Bool {
+        timeSigFixtureIdentity != nil
+    }
+
+    /// Seeds the real presented document; all following observations read that
+    /// same document after QML pointer and key delivery.
+    public func seedTimeSigFixture() -> Double {
+        guard let document else { return -1 }
+        timeSigFixtureIdentity = document.document.history.currentIdentity
+        let tick = Tick(document.document.ticksPerBeat * 4)
+        document.document.setTimeSignature(tick: tick, numerator: 3, denominatorPower: 2)
+        return Double(tick)
+    }
+
+    public func restoreTimeSigFixture() -> Bool {
+        guard let document, let identity = timeSigFixtureIdentity else { return false }
+        let history = document.document.history
+        while history.currentIdentity != identity && history.canUndo {
+            guard history.undoDocument() else { return false }
+        }
+        timeSigFixtureIdentity = nil
+        return history.currentIdentity == identity
+    }
+
+    public func undoTimeSignature() -> Bool {
+        document?.document.history.undoDocument() ?? false
+    }
+
+    public func setTimeSigCursor(tick: Double) -> Bool {
+        guard let document, tick.isFinite, tick >= 0 else { return false }
+        document.editCursor = TimeDefaults.tick(from: tick)
+        return true
+    }
+
+    public func setInterveningTimeSignature(tick: Double) -> Bool {
+        guard let document, tick.isFinite, tick >= 0 else { return false }
+        document.document.setTimeSignature(
+            tick: TimeDefaults.tick(from: tick), numerator: 5, denominatorPower: 2)
+        return true
+    }
+
+    public func timeSigBytes() -> String {
+        guard let document, let snapshot = try? document.document.captureSave()
+        else { return "" }
+        return Data(snapshot.bytes).base64EncodedString()
+    }
+
+    public func timeSigRevision() -> Double {
+        Double(document?.document.revision ?? 0)
+    }
+
+    public func timeSigUndoIndex() -> Int {
+        document?.document.history.undoIndex ?? -1
+    }
+
+    public func timeSigUndoCount() -> Int {
+        document?.document.history.undoCount ?? -1
+    }
+
+    public func timeSigNumerator(tick: Double) -> Int {
+        guard let document, tick.isFinite, tick >= 0 else { return -1 }
+        return document.document.timeSignatures.first {
+            Double($0.tick) == tick
+        }.map { Int($0.numerator) } ?? -1
+    }
+
+    public func timeSigDenominatorPower(tick: Double) -> Int {
+        guard let document, tick.isFinite, tick >= 0 else { return -1 }
+        return document.document.timeSignatures.first {
+            Double($0.tick) == tick
+        }.map { Int($0.denominatorPower) } ?? -1
+    }
+
+    public func timeSigSegmentStart(tick: Double) -> Double {
+        Double(timeSigSegment(tick: tick)?.start ?? TimeDefaults.noTick)
+    }
+
+    public func timeSigSegmentBeats(tick: Double) -> Int {
+        Int(timeSigSegment(tick: tick)?.beatsPerBar ?? 0)
+    }
+
+    public func timeSigSegmentBeatTicks(tick: Double) -> Int {
+        Int(timeSigSegment(tick: tick)?.beatTicks ?? 0)
+    }
+
+    @QtIgnored
+    private func timeSigSegment(tick: Double) -> GridSegment? {
+        guard let document, tick.isFinite, tick >= 0 else { return nil }
+        let song = document.document
+        let axis = TimeAxis(map: TimeMap(
+            ticksPerBeat: UInt32(song.ticksPerBeat),
+            timeSigs: song.timeSignatures.map {
+                TimeSigPoint(tick: $0.tick, numerator: $0.numerator,
+                             denomPow2: $0.denominatorPower)
+            }))
+        return axis.segmentAt(TimeDefaults.tick(from: tick))
+    }
+
+    public func timeSigTicksPerBeat() -> Int {
+        document?.document.ticksPerBeat ?? 0
     }
 
     /// `EditCommand.setVelocity`'s canonical value, so no case copies the table.

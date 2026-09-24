@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/rollcheck/velocity_prompt.cpp
 Original SHA-256: 909169cc2bebb6c06b28a98d919a9d94942d98bd35f723cf04a5b2f1f5c7fa30
 Swift counterpart: src/checks/rollcheck/velocity_prompt.swift
-Swift SHA-256: 8b87f6cee41dd245b700f1e0f772e5c257fe38985252796258827ca09c072bff
+Swift SHA-256: c3b986acf84e9422692cae0ecc36c78bacf81bb9eadbc23bc8f20e296f358185
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +23,11 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (controller, 10.17s).
+Counts: MATCHED 0, PARTIAL 0, GAP 105, NATIVE 0. The indexed Swift
+prompt-model predicates do not establish the original QML input text, native
+event delivery, or history count/index conjuncts; no site is flipped.
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper

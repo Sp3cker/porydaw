@@ -32,7 +32,19 @@ public struct EditSurfaceState {
     public var origin: EditKeyOrigin
     public var autoRepeat: Bool
     public var commandAvailable: Bool       // host answers eligibility (editCommandAvailable analog)
+
+    public init(pointerGestureActive: Bool, timeSelectionActive: Bool,
+                noteSelectionEmpty: Bool, origin: EditKeyOrigin,
+                autoRepeat: Bool, commandAvailable: Bool) {
+        self.pointerGestureActive = pointerGestureActive
+        self.timeSelectionActive = timeSelectionActive
+        self.noteSelectionEmpty = noteSelectionEmpty
+        self.origin = origin
+        self.autoRepeat = autoRepeat
+        self.commandAvailable = commandAvailable
+    }
 }
+
 
 public enum EditKeyArbiter {
 

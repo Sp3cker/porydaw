@@ -4,8 +4,10 @@ Reference revision: 0b4c9ea649baa7174e53be880163d45b4d951d8d
 Deleted in: 91cab247f7600b41c92b14114ad0352e3a002df0 Refine check suite boundaries and native fixture isolation
 Original: src/checks/rollcheck/header_reconciliation.cpp
 Original SHA-256: 70afce2bc8c968ac2e07bda2381e175882152793f4e4c6748a6cb2760a84d566
-Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
-Swift SHA-256: 0ae3978d46ea8641d2d5a1f1ad82a17aadc9a50c450b0d54255d8c657a5d0b89
+Swift counterpart: src/checks/rollcheck/presentation.swift
+Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
+Additional Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
+Additional Swift SHA-256: 0ae3978d46ea8641d2d5a1f1ad82a17aadc9a50c450b0d54255d8c657a5d0b89
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -14,9 +16,9 @@ context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
 Two header-reconciliation slots (unchanged-song reset, structural replacement with
 undo restore and rename cancellation) pin TrackHeaderModel records against the
-timeline. Five sites are partial toward converted header-model predicates, six
-stay open, and two require the retired native viewport and header model.
-Disposition tally: 13 sites: 6 GAP, 2 NATIVE, 5 PARTIAL.
+timeline. Three structural document/header-order predicates are matched,
+five remain partial, three stay open, and two require the retired native viewport.
+Disposition tally: 13 sites: 3 MATCHED, 3 GAP, 2 NATIVE, 5 PARTIAL.
 MATCHED identifies equivalent model predicates; execution must still be verified.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
@@ -25,8 +27,8 @@ GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
 
 Verification
-Command: deno task verify --filter rollcheck --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (controller, 10.17s); the registered Swift session executed S009–S011 green.
 The legacy rollcheck header C++ slots were retired during the boundary sweep;
 their sources are reference inventories only, never current execution evidence.
 
@@ -195,8 +197,8 @@ Original expression:
           QFAIL("header reconciliation fixture lacks ordered records and a last add record");
 
 A008 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:114
-Disposition: GAP
-Mapping/reason: No Swift predicate observes modelReset counts or recordsMatchTimeline reconciliation across track deletion.
+Disposition: MATCHED
+Mapping: S009 (src/checks/rollcheck/presentation.swift:230) asserts deletion of the last used track leaves precisely the first engine track in the two-track Swift fixture.
 Source context since previous assertion:
 
       ModelChanges changes;
@@ -210,8 +212,8 @@ Original expression:
           QFAIL("replacement fixture did not drop exactly the last used slot");
 
 A009 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:122
-Disposition: GAP
-Mapping/reason: No Swift predicate observes modelReset counts or recordsMatchTimeline reconciliation across structural replacement.
+Disposition: MATCHED
+Mapping: S010 (src/checks/rollcheck/presentation.swift:233) checks one presenter-row rebuild after deletion, retaining first-track and trailing add rows with the deleted last-track row absent; it does not claim native setSong/modelReset delivery.
 Source context since previous assertion:
       }
 
@@ -224,8 +226,8 @@ Original expression:
           QFAIL("structural header replacement did not reset to the replacement records");
 
 A010 | headerReconciliationStructural | src/checks/rollcheck/header_reconciliation.cpp:135
-Disposition: GAP
-Mapping/reason: No Swift predicate observes undo-restored header records or the trailing add row; S-series rename predicates cover drafts, not undo restore of the record list.
+Disposition: MATCHED
+Mapping: S011 (src/checks/rollcheck/presentation.swift:239) checks that undo performs one further presenter-row rebuild, restoring the last used track and trailing add row in order; it does not claim native setSong/modelReset delivery.
 Source context since previous assertion:
       }
 
@@ -313,3 +315,23 @@ Counterpart expression:
 S008 | headerMenuRenameBeginsAfterCloseAndFocusesEditor | src/checks/trackheaders/trackheadermenu.swift:85
 Counterpart expression:
       report.expectEqual("Lead", h.renameDraft, cppID: id, what: "editor starts with editable track name")
+
+S009 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift:230
+Counterpart expression:
+report.expect(document.engineTracks.usedTrackCount == 1
+              && document.engineTracks.tracks[0].midiChunk != nil, cppID: structuralID,
+              message: "replacement drops the last used track, keeping the first")
+
+S010 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift:233
+Counterpart expression:
+report.expect(headers.rowRebuildCount == resets + 1 && headers.rows.count == 2
+              && headers.rows[0].track == 0 && headers.rows[1].isAddTrack,
+              cppID: structuralID,
+              message: "structural deletion rebuilds ordered records exactly once")
+
+S011 | checkHeaderReconciliation | src/checks/rollcheck/presentation.swift:239
+Counterpart expression:
+report.expect(headers.rowRebuildCount == resets + 2 && headers.rows.count == 3
+              && headers.rows[1].track == lastUsed && headers.rows[2].isAddTrack,
+              cppID: structuralID,
+              message: "undo restores the last record and trailing add row in one reset")

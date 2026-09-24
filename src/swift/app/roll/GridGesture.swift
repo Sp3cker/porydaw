@@ -6,6 +6,7 @@ import PorydawCore
 enum GridGesture {
     case pendingDraw(PendingDraw)
     case draw(Draw)
+    case velocity(Velocity)
     case move(Move)
     case resize(Resize)
     case pendingMenu(PendingMenu)
@@ -38,6 +39,12 @@ enum GridGesture {
         var pressKey: Int
         var dTick: Int = 0
         var dKey: Int = 0
+    }
+    struct Velocity {
+        var noteId: NoteID
+        var pressY: Double
+        var original: Int
+        var preview: Int? = nil
     }
 
     struct Resize {
@@ -125,6 +132,9 @@ enum GridGesture {
             let key = pitch(y)
             if key >= 0 { state.dKey = key - state.pressKey }
             return .move(state)
+        case .velocity(var state):
+            state.preview = min(127, max(1, state.original + Int((state.pressY - y).rounded())))
+            return .velocity(state)
         case .resize(var state):
             let tick = camera.tickAtContentX(x)
             let desired = Double(state.gripTick) + (tick - state.pressTick)

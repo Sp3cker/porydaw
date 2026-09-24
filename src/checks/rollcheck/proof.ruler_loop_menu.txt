@@ -3,27 +3,28 @@ Assertion correspondence: rollcheck/ruler_loop_menu.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/ruler_loop_menu.cpp
 Original SHA-256: 01fd47f273c20f209a8baa5fee8003f95ea9a66865c75bf7426cab2189ac22f6
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/ruler_loop_menu.swift
+Swift SHA-256: 30bd4ebf214dcc5a8daed5483fa5974e661a445130039f41845b24ada48266ac
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below, including fixture guards. Source
 context preserves setup, rows, loops, and guards between assertions verbatim.
 S identifiers identify exact counterpart predicates, listed after the inventory.
-MATCHED identifies equivalent model predicates; execution must still be verified.
+MATCHED identifies equivalent model predicates executed by the green swiftcore suite.
 PARTIAL identifies related counterpart predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Ruler context-menu loop editing (set start/end, two-command remove with two-step undo, loop from selection), menu enablement/selection context, Escape/stale/selection-change/outside-press dismissal without writes, and Insert Time with stale no-ops are exercised through real right press/release gestures and rendered typed-row clicks on the legacy ruler input. None of the gated Swift-surface files (gesturechecks, clipboardchecks, notevisuals, chromevisuals) carries a ruler-menu, loop-marker or time-insertion predicate; every entry below is an open obligation.
+Ruler context-menu loop editing (set start/end, two-command remove with two-step undo, loop from selection), menu enablement/selection context, Escape/stale/selection-change/outside-press dismissal without writes, and Insert Time with stale no-ops are exercised through real right press/release gestures and rendered typed-row clicks on the legacy ruler input. The Swift counterpart exercises the indexed loop-marker, explicit-signature, and insertion-byte predicates; real menu rows, gestures, focus, selection and history-index/count obligations remain open.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (controller, 10.17s).
+Counts: MATCHED 15, PARTIAL 0, GAP 98, NATIVE 0.
 
 Execution and ownership
-No gated entry point executes these ruler-menu scenarios. Original helpers rulerInput, rulerPressPoint, openRulerMenu and rulerRow (all local to this file) plus the quick_popup PromptGuard/menu-frame/row-click harness have no Swift-surface equivalent.
+The Swift projectSession suite executes the indexed model assertions. Original helpers rulerInput, rulerPressPoint, openRulerMenu and rulerRow (all local to this file) plus the quick_popup PromptGuard/menu-frame/row-click harness have no Swift-surface equivalent.
 
 Fixture, sequence and row constraints
 makeResizeSeed stages the snap cell; setAndTwoStepUndo clears seeded loop markers, sets start/end through typed rows, removes with two commands and undoes one marker at a time, then repeats via loop-from-selection; enablement seeds an explicit (5,2) signature chip and walks disabled-row clicks, chip removal, implicit-row disablement, exact-tick chips and Clear selection; staleCancel walks Escape, document-edit, selection-change and outside-press dismissal; insertTime inserts blank time over a selection then probes the half-open end boundary.
@@ -186,8 +187,8 @@ QVERIFY2(view.grid().snapTick(double(startTick)) == startTick &&
              "the ruler loop fixture ticks are not snap-aligned")
 
 A004 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:134
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001 | src/checks/rollcheck/ruler_loop_menu.swift:47 — after clearing both fixture markers, playback timeline has no start or end marker.
 Source context since previous assertion:
 ;
     // Start from a known empty loop state regardless of song-seeded markers.
@@ -248,8 +249,8 @@ QVERIFY2(startMenu.session && !startMenu.session->isOpen(),
              "the Set loop start activation left the ruler menu open")
 
 A009 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:153
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002 | src/checks/rollcheck/ruler_loop_menu.swift:52 — setting the start at the seeded note edge yields the exact timeline loop-start tick.
 Source context since previous assertion:
 ;
 
@@ -308,8 +309,8 @@ QVERIFY2(quick_popup::clickMenuRow(*endMenu.session, setEndRow),
              "the Set loop end row did not receive a real click")
 
 A015 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:166
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S003 | src/checks/rollcheck/ruler_loop_menu.swift:57 — the second marker lands one six-tick cell after the start in the playback timeline.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -328,8 +329,8 @@ Original expression:
 QCOMPARE(doc.undoStack()->index(), undo + 2)
 
 A017 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:170
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S003 | src/checks/rollcheck/ruler_loop_menu.swift:57 — two placed markers change song bytes compared with the empty-marker baseline.
 Source context since previous assertion:
 ;
     const QByteArray afterSets = doc.smf().write();
@@ -383,8 +384,8 @@ QVERIFY2(removeMenu.session && !removeMenu.session->isOpen(),
              "the Remove loop activation left the ruler menu open")
 
 A022 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:184
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S004 | src/checks/rollcheck/ruler_loop_menu.swift:65 — sequential start/end removal clears both timeline loop markers.
 Source context since previous assertion:
 ;
 
@@ -404,8 +405,8 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
              "removing both loop markers did not push exactly two commands")
 
 A024 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:190
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S005 | src/checks/rollcheck/ruler_loop_menu.swift:71 — first undo restores only the removed end marker while start remains absent.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -416,8 +417,8 @@ QTRY_VERIFY2(check.timeline().loopEndTick == endTick &&
                  "the first undo did not restore only the loop end marker")
 
 A025 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:194
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S006 | src/checks/rollcheck/ruler_loop_menu.swift:76 — second undo restores start while retaining the restored end marker.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -428,8 +429,8 @@ QTRY_VERIFY2(check.timeline().loopStartTick == startTick &&
                  "the second undo did not restore the start marker and retain the end marker")
 
 A026 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:197
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S006 | src/checks/rollcheck/ruler_loop_menu.swift:76 — second removal undo restores bytes from after both markers were set.
 Source context since previous assertion:
 ;
 
@@ -480,8 +481,8 @@ QVERIFY2(quick_popup::clickMenuRow(*selectionMenu.session, loopSelectionRow),
              "the Set loop to selection row did not receive a real click")
 
 A030 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:218
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S007 | src/checks/rollcheck/ruler_loop_menu.swift:84 — setting both markers to the six-tick selection bounds brackets that interval.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -502,8 +503,8 @@ QVERIFY2(doc.undoStack()->index() == undo + 4,
              "loop from selection did not push exactly two commands")
 
 A032 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:224
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S008 | src/checks/rollcheck/ruler_loop_menu.swift:88 — undoing the selection end restores the old end while retaining the selection start.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -514,8 +515,8 @@ QTRY_VERIFY2(check.timeline().loopStartTick == selectionStart &&
                  "the first loop-from-selection undo did not restore only the end marker")
 
 A033 | PianoRollTest::rulerLoopMenuSetAndTwoStepUndo | src/checks/rollcheck/ruler_loop_menu.cpp:228
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S009 | src/checks/rollcheck/ruler_loop_menu.swift:91 — undoing the selection start restores the manually set marker song bytes.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -565,8 +566,8 @@ QVERIFY2(view.grid().snapTick(double(chipTick)) == chipTick,
              "the ruler menu fixture tick is not snap-aligned")
 
 A037 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:250
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S010 | src/checks/rollcheck/ruler_loop_menu.swift:102 — the playback timeline contains an explicit 5/4 signature at the seeded chip tick.
 Source context since previous assertion:
 ;
     doc.setLoopTick(false, -1);
@@ -721,8 +722,8 @@ QVERIFY2(opened.session && !opened.session->isOpen(),
              "the Remove time signature activation left the ruler menu open")
 
 A050 | PianoRollTest::rulerLoopMenuEnablementSelectionContext | src/checks/rollcheck/ruler_loop_menu.cpp:298
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S011 | src/checks/rollcheck/ruler_loop_menu.swift:107 — removal deletes the explicit signature at the exact fixture chip tick from the rebuilt timeline.
 Source context since previous assertion:
 ;
 
@@ -1434,8 +1435,8 @@ QVERIFY2(doc.undoStack()->count() == undoIndex + 1,
              "the ruler Insert Time row did not commit exactly one undo transaction")
 
 A108 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:547
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S012 | src/checks/rollcheck/ruler_loop_menu.swift:136 — inserting one six-tick interval changes song bytes while shifting the seed note.
 Source context since previous assertion:
 ;
 
@@ -1444,8 +1445,8 @@ QVERIFY2(doc.smf().write() != before,
              "the ruler Insert Time row did not change the song bytes")
 
 A109 | PianoRollTest::rulerLoopMenuInsertTimeAndStaleNoOp | src/checks/rollcheck/ruler_loop_menu.cpp:550
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S013 | src/checks/rollcheck/ruler_loop_menu.swift:141 — after insertion, undo restores pre-insertion song bytes.
 Source context since previous assertion:
 ;
     doc.undoStack()->undo();
@@ -1500,6 +1501,83 @@ Original expression:
 QVERIFY2(rulerRow(*atEnd.model, songview::RulerMenuAction::LoopFromSelection) < 0 &&
                  rulerRow(*atEnd.model, songview::RulerMenuAction::SetLoopStart) >= 0,
              "the exact-end press did not open the cursor menu")
+
+Swift executable assertion index
+These predicates run in the green swiftcore projectSession suite; they establish
+only model observations, not rendered ruler menu activation.
+
+S001 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:47
+Counterpart expression:
+  report.expect(timeline.loopStartTick == TimeDefaults.noTick &&
+                timeline.loopEndTick == TimeDefaults.noTick,
+                cppID: id, message: "A004: both markers begin absent")
+
+S002 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:52
+Counterpart expression:
+  report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopStartTick == startTick,
+                cppID: id, message: "A009: setting loop start moves its marker to the cell edge")
+
+S003 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:57
+Counterpart expression:
+  report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000).loopEndTick == endTick &&
+                document.history.currentIdentity != afterStart && afterSets != before,
+                cppID: id, message: "A015/A017: the end marker is one snap cell later and changes the song")
+
+S004 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:65
+Counterpart expression:
+  report.expect(afterRemoval.loopStartTick == TimeDefaults.noTick &&
+                afterRemoval.loopEndTick == TimeDefaults.noTick,
+                cppID: id, message: "A022: removal clears both markers")
+
+S005 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:71
+Counterpart expression:
+  report.expect(firstUndo.loopStartTick == TimeDefaults.noTick && firstUndo.loopEndTick == endTick,
+                cppID: id, message: "A024: first undo restores only the end marker")
+
+S006 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:76
+Counterpart expression:
+  report.expect(secondUndo.loopStartTick == startTick && secondUndo.loopEndTick == endTick &&
+                coreTimeBytes(document) == afterSets,
+                cppID: id, message: "A025/A026: second undo restores both markers and song bytes")
+
+S007 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:84
+Counterpart expression:
+  report.expect(selected.loopStartTick == selectionStart && selected.loopEndTick == startTick,
+                cppID: id, message: "A030: the selection bounds become the loop markers")
+
+S008 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:88
+Counterpart expression:
+  report.expect(selectionUndo.loopStartTick == selectionStart && selectionUndo.loopEndTick == endTick,
+                cppID: id, message: "A032: first selection undo restores only the old end")
+
+S009 | checkRulerLoopSetAndUndo | src/checks/rollcheck/ruler_loop_menu.swift:91
+Counterpart expression:
+  report.expect(coreTimeBytes(document) == afterSets, cppID: id,
+                message: "A033: second selection undo restores the manual markers")
+
+S010 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift:102
+Counterpart expression:
+  report.expect(PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+      .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
+                message: "A037: the explicit 5/4 signature exists at the snap cell")
+
+S011 | checkRulerSignatureRemoval | src/checks/rollcheck/ruler_loop_menu.swift:107
+Counterpart expression:
+  report.expect(!PlaybackTimeline.build(state: document.state, sampleRate: 48_000)
+      .timeSignatures.contains { $0.tick == chipTick }, cppID: id,
+                message: "A050: removing the chip deletes the exact event")
+
+S012 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift:136
+Counterpart expression:
+  report.expect(document.notes(in: 0).contains {
+      $0.tick == insertEnd && $0.pitch == note.pitch && $0.velocity == note.velocity
+  } && document.history.currentIdentity != identity && coreTimeBytes(document) != before,
+  cppID: id, message: "A104/A108: the note shifts by exactly one span and the song bytes change")
+
+S013 | checkRulerInsertTime | src/checks/rollcheck/ruler_loop_menu.swift:141
+Counterpart expression:
+  report.expect(coreTimeBytes(document) == before, cppID: id,
+                message: "A109: one undo restores the song before ruler insertion")
 
 Remaining original source (closing sequence and helper bodies):
 ;

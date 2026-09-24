@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/selection.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/selection.cpp
 Original SHA-256: 8b6e0fcc40ed8cc900e586579465c65944ed837fa7c47b473bdd1f698dffe50c
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/selection.swift
+Swift SHA-256: 5adc3c8e8c2c82d9803b4d50858d19e0b25c6ea79dfddf3697569b3eb4e05de4
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -13,10 +13,11 @@ loops, and guards between assertions verbatim. MATCHED identifies an equivalent
 Swift predicate with execution; PARTIAL a related predicate with an explicit
 unproved condition; NATIVE a retained native-window/rendering/input or harness
 obligation a presenter-level Swift check cannot establish; GAP an original
-predicate without a replacement assertion. No same-dir Swift counterpart exists
-and no Swift file covering this suite was identified, so this file lists no S
-predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
-or claims whole-case equivalence.
+predicate without a matching assertion. The Swift selection.swift check runs
+band release, modifier click, and move/nudge cases, but seeds different ticks
+and omits the original press-audition, readout, minimum-distance, velocity
+and full restoration sequences. No site qualifies for MATCHED: all 48
+model sites remain GAP and all 26 native sites remain NATIVE.
 Six slots cover band sweep selection, press audition, pending-draw readout,
 minimum draw distance, modifier velocity drags, and non-Scale moves. Selection,
 note-field, velocity, duration, undo-count, and smf sites are document/model
@@ -27,10 +28,10 @@ are NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS (controller, 10.17s). selection.swift executed, but no report.expect reproduces a whole original site with the required fixture values and sequence.
 
 Execution and ownership
-No Swift entry point executes these checks. The original slots run under
+runSelectionChecks executes checkSelectionBandSweep and checkSelectionNonScaleMove in the projectSession Swift suite. The original slots run under
 PianoRollTest (checks/rollcheck/tst_pianoroll.h): selectionBandSweep,
 selectionPressAudition, selectionPendingDrawReadout,
 selectionMinimumDrawDistance, selectionModifierVelocity, selectionNonScaleMove.

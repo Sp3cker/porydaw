@@ -5,6 +5,8 @@ Original: src/checks/rollcheck/pencil.cpp
 Original SHA-256: 446556b3d179cf5d822cf62c7e75a28c732ce3300b4557a6f4b8346711b3ef50
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift counterpart: src/checks/rollcheck/pencil.swift
+Additional Swift SHA-256: 9fdd7a587866d35457c75e107100cc7bac92e9d405986b3b31d565ef44eacaa1
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -22,7 +24,7 @@ Pencil drawing, fractional displayed-cell editing, abutting raster paint and gut
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS (controller, 10.17s); S026 executed in swiftcore. Other GAP/PARTIAL sites remain open unless their original fixture, cadence, and predicate are exercised.
 
 Execution and ownership
 SwiftRollGatedTest::pointerDrawMoveAndNeighborTrim and SwiftRollGatedTest::windowUndoRedoRerenders execute the paired pointer-editing checks on the Swift grid surface. Shared fixture: GridFixture, defined in the counterpart file itself (grid scene open, free-lane search, drawNote/dragMouse helpers, note summary model). No separate fixture file carries predicates.
@@ -35,8 +37,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::pencilFractionalPlacement | src/checks/rollcheck/pencil.cpp:45
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S026 in src/checks/rollcheck/pencil.swift:114 asserts the same fractional pxPerBeat 31.375 and scrollPx 0.625 camera values after applying the camera settings; deno task verify --filter swiftcore --verbose PASS (controller, 10.17s).
 Source context since previous assertion:
 #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -585,3 +587,9 @@ report.expect(
     session.selectedNotes.isEmpty && session.document.revision == escapeRevision
         && grid.lastCancelReason == GridCancelReason.hidden.rawValue,
     cppID: id, message: "idle Escape clears selection without a cancel reason or mutation")
+
+S026 | swiftcore/PianoRoll::pencilFractionalPlacement | src/checks/rollcheck/pencil.swift:114
+Counterpart expression:
+report.expect(abs(snapshot.pixelsPerBeat - 31.375) <= 1e-12
+                  && abs(snapshot.scrollX - 0.625) <= 1e-12,
+              cppID: id, message: "fractional edit camera applies exactly")

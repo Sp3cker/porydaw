@@ -173,13 +173,15 @@ TestCase {
                        Math.max(s.height - drawer.height - hint.height, 0))
     }
 
-    // The canonical plot rect: the band minus the header and keyboard gutter,
-    // the same column the shared playhead's rollPlotRect publishes.
+    // The canonical plot column excludes the ruler above the note rows as
+    // well as the header and keyboard gutter to their left.
     function canonicalPlot() {
         var s = surface()
         var band = canonicalBand()
         var origin = s.headersModel.trackHeaderWidth + s.gridModel.keyboardWidth
-        return Qt.rect(origin, band.y, Math.max(band.width - origin, 0), band.height)
+        return Qt.rect(origin, band.y + s.gridModel.rulerHeight,
+                       Math.max(band.width - origin, 0),
+                       Math.max(band.height - s.gridModel.rulerHeight, 0))
     }
 
     function sceneRect(item) {
@@ -251,5 +253,42 @@ TestCase {
                "the restored input rect matches the canonical plot column")
         verify(sameRect(head.rollPlotRect, canonicalPlot()),
                "the shared playhead's published roll plot rect matches the canonical column")
+    }
+
+    // Published SceneRect coordinates are plot-local; the production
+    // TimelineQuickItem delegate must retain those projected note bounds.
+    function test_noteRectReachesPlotDelegate() {
+        var s = surface()
+        var grid = s.gridModel
+        var plot = findChild(s, "timelineQuickPianoNoteFills")
+        verify(plot, "the production note-fill layer is mounted")
+        tryVerify(function() { return grid.renderedNoteCount > 0 }, 5000,
+                  "the staged song publishes notes")
+        var notes = JSON.parse(grid.noteSummary)
+        var dpr = grid.devicePixelRatio
+        var observed = false
+        for (var i = 0; i < notes.length; ++i) {
+            var note = notes[i]
+            var item = findChild(plot, "gridNote_" + note.id)
+            if (!item)
+                continue
+            var left = Math.round((note.tick * grid.beatWidth / grid.ticksPerBeat
+                                   - grid.cameraScrollX) * dpr) / dpr
+            var right = Math.round(((note.tick + note.duration)
+                                    * grid.beatWidth / grid.ticksPerBeat
+                                    - grid.cameraScrollX) * dpr) / dpr
+            verify(Math.abs(item.x - left) < 0.01,
+                   "note delegate uses the camera-projected left edge")
+            verify(Math.abs(item.width - Math.max(Math.max(1, Math.round(grid.baseFontPx / 6)),
+                                                  right - left)) < 0.01,
+                   "note delegate uses the camera-projected note width")
+            verify(item.height > 0 && item.y + item.height > 0
+                   && item.y < plot.height,
+                   "the note's published row bounds meet the mounted plot")
+            verify(item.color.a === 1, "the note's published fill is opaque")
+            observed = true
+            break
+        }
+        verify(observed, "a visible published note reached its delegate")
     }
 }

@@ -230,6 +230,10 @@ internal struct DocumentChangeSet: Sendable {
 public final class SongHistory {
     public var canUndo: Bool { transition == nil && index > 0 }
     public var canRedo: Bool { transition == nil && index < entries.count }
+    /// Applied-entry cursor. Mirrors QUndoStack::index().
+    public var undoIndex: Int { index }
+    /// Recorded entries, including undone ones. Mirrors QUndoStack::count().
+    public var undoCount: Int { entries.count }
     public var bankTransitionInFlight: Bool { transition != nil }
     public var currentIdentity: DocumentIdentity {
         guard index > 0 else { return baseIdentity }

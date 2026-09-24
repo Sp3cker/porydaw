@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/presentation.cpp
 Reference revision: 02752345fa3a1dbaf11ee6f1cd3ad5da475f0e06
 Original: src/checks/rollcheck/presentation.cpp
 Original SHA-256: 898cf2f8c3470a0ebcee65764bb17ac67081ad0d659ec53bd4d850efe741e38d
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/presentation.swift
+Swift SHA-256: 592f516980fe1e10bfa1861326aea56309034273b059db437f11047fb338de2b
 Retained native counterpart: src/checks/swiftrollgated/chromevisuals.cpp
 Retained native SHA-256: 1912beb70940207f7504aae791e961e51e0ac51e66379b9f0c6236664bccd23d
 
@@ -18,14 +18,14 @@ PARTIAL identifies related counterpart predicates with an explicit unproved cond
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Pan follow-scroll suspension, inline track rename (commit/discard/loop-marker guard), revealNote dock jumps and keyboard mute/solo with header-role publication are exercised against the legacy Quick header model and camera. The gated counterpart checks chrome raster parity on the Swift grid surface only; no header-model, rename, reveal or mute/solo predicate exists there.
+Pan follow-scroll suspension, inline track rename (commit/discard/loop-marker guard), revealNote dock jumps and keyboard mute/solo with header-role publication are exercised against the legacy Quick header model and camera. The registered presentation.swift checks observe converted camera, header, rename and mute/solo models; the original pan probes both roll and automation input, and Quick rename and mute/solo assertions depend on focused native/QML input delivery not executed by those model calls.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (controller, 10.17s); presentation.swift ran green, without closing the original QML input and fixture obligations.
 
 Execution and ownership
-No gated entry point executes these header-presentation scenarios. The indexed S predicates are the chrome raster-parity checks on the Swift grid surface (closest presentation precedent). Original helpers headercheck::model/renameInput and trackheaders rowForTrack have no Swift-surface equivalent.
+runPresentationChecks executes converted header/camera models in swiftcore; it does not replay the original native/QML input sequences. The indexed S predicates remain the older gated chrome raster checks and do not prove any listed A site. Original headercheck::model/renameInput and trackheaders rowForTrack helpers have no equivalent input assertion here.
 
 Fixture, sequence and row constraints
 headerPanFollow probes both the roll input and the automation-lanes input with a middle-button pan while the playhead follows; headerRename types drafts through the rename field with Return/Escape and a '[' loop-marker guard; headerRevealNote jumps to the middle view-model note then probes an unused key; headerKeyboardMuteSolo toggles M/masks, triggers the canonical Solo action, and probes a mixed mute scope while counting model resets. All methods end with undo-index and SMF comparisons.

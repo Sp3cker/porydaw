@@ -5,6 +5,8 @@ Original: src/checks/rollcheck/remap.cpp
 Original SHA-256: f0c18ebf9ff091b783f1892f9ccbb39ea8760142f97a3a740811dffb5f9e0441
 Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Additional Swift counterpart: src/checks/rollcheck/remap.swift
+Additional Swift SHA-256: bed5eaa92b96b15a37fcf75ed0ab35cf651073753d86dc270ba0683cf0883b16
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -22,7 +24,7 @@ Track move/insert/duplicate/delete owner remap, metadata-only invariance and raw
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS (controller, 10.17s); the registered remap.swift checks ran green, but the listed original predicates retain their explicit unproved native or fixture conditions.
 
 Execution and ownership
 SwiftRollGatedTest::trackFollowAndSessionReplacement executes the paired track-follow and session-replacement checks on the Swift grid surface (setTrack rerender, reopened song rebuild, deleted-view lifetime). Shared RemapFixture (local to this file: RemapFixture struct, remapCosmetics/hasMovedTrackState/hasOriginalTrackState/hasTimeSelectionLanes/hasNoOwnerCosmetics helpers) has no Swift-surface equivalent.

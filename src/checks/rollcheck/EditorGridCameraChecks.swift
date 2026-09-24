@@ -692,7 +692,7 @@ private func checkCommandRouting(_ report: CheckReport, session: DocumentSession
     grid.performCommand(command: EditCommand.shortenNote.rawValue)
     report.expect(
         session.document.note(a).map { Int($0.duration) == 1 } == true
-            && session.document.note(b).map { Int($0.duration) == 1 } == true,
+            && session.document.note(b).map { Int($0.duration) == 7 } == true,
         cppID: id, message: "repeated shorten at the floor is a no-op")
     _ = session.document.history.undoDocument()
     report.expect(
@@ -1096,6 +1096,10 @@ private func firstRect(named name: String, in model: QListModel<SceneRect>) -> S
 }
 
 
+/// Absolute camera comparison. Default `1e-9` covers bindings and fractional
+/// offsets. Call sites override it: `1e-12` for an exact scale, height, or
+/// pixel literal; `1e-10` for an offset restored after compounded zoom; `1e-7`
+/// for a wheel anchor or an exponential zoom product.
 func gridCameraNear(_ lhs: Double, _ rhs: Double, tolerance: Double = 1e-9) -> Bool {
     abs(lhs - rhs) <= tolerance
 }

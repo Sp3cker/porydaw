@@ -3,8 +3,8 @@ Assertion correspondence: rollcheck/interlock.cpp
 Reference revision: a7fcaa3e9ea51a057c85bc1959e541c69fe4a3ea
 Original: src/checks/rollcheck/interlock.cpp
 Original SHA-256: 971c3e6a77a900a75bbef16205c6f5a4cb3c5872fad7a6833cd7d1d85c842e18
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/interlock.swift
+Swift SHA-256: d37ba279712c6fec477b9d5d407aa378be67cedf26683b0b3dc8d23617ccc93c
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -18,14 +18,14 @@ PARTIAL identifies related counterpart predicates with an explicit unproved cond
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Five gesture-interlock scenarios (blocked click resolving as empty space, demoted right band, PendingDraw park-cursor release, deferred modifier click with audition, velocity-preview abort) plus slot-level undo-neutrality; the gated band slots commit and cancel selection bands on the Swift surface but establish none of these interlock outcomes, so all twenty sites stay open.
+interlock.swift drives all five button sequences and asserts note selection, audition, velocity previews, and per-scenario and slot-level MIDI byte/history invariants. A003 and A005 are PARTIAL: interlock.swift asserts empty note selection and no active pointer, but PianoGrid has no time-selection state, so the original inactive-time-selection conjunct stays unproved. Counts: MATCHED 18, PARTIAL 2, GAP 0, NATIVE 0. The gated S001-S033 index remains separate and closes no site.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (swiftcore, 10.04s).
 
 Execution and ownership
-SwiftRollGatedTest::rightDragSelectionCommits, escapeCancelsSelectionBand and ungrabCancelsSelectionBand execute the paired band gestures on the Swift grid surface (all three skip unless the swiftbandkeys mode is active). Shared fixture: GridFixture, defined in the counterpart lane itself (scene open, visible-note search, selection-band helpers, draw and drag helpers, note summary model). No separate fixture file carries predicates.
+runInterlockChecks executes checkGestureInterlock in the projectSession Swift suite; interlock.swift drives PianoGrid through five original interlock sequences. SwiftRollGatedTest::rightDragSelectionCommits, escapeCancelsSelectionBand and ungrabCancelsSelectionBand retain a separate gated index below.
 
 Fixture, sequence and row constraints
 Each scenario owns local SMF bytes, undo index and undo count baselines inside gestureInterlock; the slot closes with two undo-slot QCOMPAREs. No data rows; fixture scans never re-execute an assertion.
@@ -35,8 +35,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:27
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:46 report.expect(seeded?.count == 2) proves the two-note fixture is seeded.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -68,8 +68,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A002 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:58
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:74 report.expect(freeX != nil) proves a projected unoccupied draw cell exists.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -105,8 +105,8 @@ Original expression:
   QVERIFY2(freeCell.key >= 0, "no free grid cell for the gesture interlock scenarios");
 
 A003 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:77
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: interlock.swift:104 asserts empty note selection and no active pointer after blocked right release. PARTIAL remains because PianoGrid has no time-selection state, so the original inactive-time-selection conjunct is unproved.
 Source context since previous assertion:
       view.selectionModel().clearNoteSelection();
       view.selectionModel().clearTimeSelection();
@@ -131,8 +131,8 @@ Original expression:
                    "right release did not resolve the blocked click as empty space");
 
 A004 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:82
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:107 report.expect(unchanged(before)) compares captured MIDI bytes, undoIndex and undoCount after left release.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandEnd, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -141,8 +141,8 @@ Original expression:
                    "aborted left Move changed the document or undo history");
 
 A005 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:103
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: interlock.swift:119 asserts empty note selection and no active pointer after demoted Band right release. PARTIAL remains because PianoGrid has no time-selection state, so the original inactive-time-selection conjunct is unproved.
 Source context since previous assertion:
       }
 
@@ -169,8 +169,8 @@ Original expression:
                    "demoted right Band did not resolve as a plain clear");
 
 A006 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:108
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:122 report.expect(unchanged(before)) compares MIDI bytes, undoIndex and undoCount after demoted Band left release.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, beyondB, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -179,8 +179,8 @@ Original expression:
                    "demoted right Band changed the document or undo history");
 
 A007 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:126
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:133 report.expect(containsAB()) checks both original seeded IDs after right Band release from PendingDraw.
 Source context since previous assertion:
       }
 
@@ -202,8 +202,8 @@ Original expression:
   QVERIFY2(containsAB(), "right Band did not select notes A and B from PendingDraw");
 
 A008 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:129
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:136 report.expect(containsAB()) verifies both seeded IDs remain selected after parked left release.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, freeCell.center, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -211,8 +211,8 @@ Original expression:
   QVERIFY2(containsAB(), "PendingDraw park-cursor release changed the band selection");
 
 A009 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:130
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:138 report.expect(unchanged(before)) checks MIDI bytes, undoIndex and undoCount after parked left release.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -220,8 +220,8 @@ Original expression:
                    "PendingDraw interlock changed the document or undo history");
 
 A010 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:148
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:149 report.expect(session.selectedNoteOrder == [seeded[1]]) after Ctrl-left press and release while right Band is live.
 Source context since previous assertion:
       }
 
@@ -243,8 +243,8 @@ Original expression:
   QCOMPARE(view.selectionModel().noteSelection(), std::vector<NoteId>{noteB.noteId});
 
 A011 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:158
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:159 report.expect(bAuditioned) observes onAudition with B pitch and velocity > 0 on following right Band move.
 Source context since previous assertion:
           bool noteBAuditioned = false;
           const auto auditionConnection = QObject::connect(&view, &SongView::auditionNoteTimed, &view,
@@ -259,8 +259,8 @@ Original expression:
   QVERIFY2(noteBAuditioned, "deferred modifier click did not preserve the live right Band");
 
 A012 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:164
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:163 report.expect(containsAB()) checks both seeded IDs after the deferred Ctrl click and right Band release.
 Source context since previous assertion:
           const QPoint beyondA = beyond(b.center, a.center);
           checks::events::sendMouse(roll, QEvent::MouseMove, beyondA, Qt::NoButton, Qt::RightButton,
@@ -271,8 +271,8 @@ Original expression:
   QVERIFY2(containsAB(), "right Band token did not survive the deferred modifier click");
 
 A013 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:165
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:165 report.expect(unchanged(before)) compares MIDI bytes, undoIndex and undoCount after deferred modifier Band release.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
@@ -280,8 +280,8 @@ Original expression:
                    "deferred modifier interlock changed the document or undo history");
 
 A014 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:180
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:175 report.expect(grid.previewVelocity(seeded[1]) != nil) on first Ctrl-left upward drag.
 Source context since previous assertion:
       }
 
@@ -301,8 +301,8 @@ Original expression:
                    "modifier velocity drag did not create a preview");
 
 A015 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:186
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:180 report.expect(grid.previewVelocity(seeded[1]) == nil) after first right press/release abort.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
                                     bothButtons, Qt::NoModifier);
@@ -313,8 +313,8 @@ Original expression:
                    "right release did not abort the live velocity preview");
 
 A016 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:194
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:175 report.expect(grid.previewVelocity(seeded[1]) != nil) on second Ctrl-left upward drag (attempt == 1).
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -327,8 +327,8 @@ Original expression:
                    "later modifier velocity gesture did not create a preview");
 
 A017 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:200
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:180 report.expect(grid.previewVelocity(seeded[1]) == nil) after second right press/release abort (attempt == 1).
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonPress, bandStart, Qt::RightButton,
                                     bothButtons, Qt::NoModifier);
@@ -339,8 +339,8 @@ Original expression:
                    "second right release did not abort the live velocity preview");
 
 A018 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:204
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: interlock.swift:185 report.expect(unchanged(before)) compares MIDI bytes, undoIndex and undoCount after both velocity aborts.
 Source context since previous assertion:
           checks::events::sendMouse(roll, QEvent::MouseButtonRelease, bandStart, Qt::LeftButton,
                                     Qt::NoButton, Qt::NoModifier);
@@ -349,16 +349,16 @@ Original expression:
                    "right-release velocity abort changed the document or undo history");
 
 A019 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:207
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Slot-level undo-neutrality across all five scenarios.
+Disposition: MATCHED
+Mapping: interlock.swift:188 report.expect(session.document.history.undoIndex == undoSlot) after all five scenarios.
 Source context since previous assertion:
       }
 Original expression:
   QCOMPARE(doc.undoStack()->index(), undoSlot);
 
 A020 | PianoRollTest::gestureInterlock | src/checks/rollcheck/interlock.cpp:208
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Slot-level byte-for-byte SMF restoration across all five scenarios.
+Disposition: MATCHED
+Mapping: interlock.swift:190 report.expect((try? session.document.captureSave().bytes) == beforeSlot) after all five scenarios.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:

@@ -3,27 +3,22 @@ Assertion correspondence: rollcheck/identity.cpp
 Reference revision: 85b97239ce94dc4c4cf5f3f4fb66fc96ff2cf27e
 Original: src/checks/rollcheck/identity.cpp
 Original SHA-256: 14b6f45a36b2cf769bc6c886c20980ef133de0ba504524ab8a14c7416813bddc
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/identity.swift
+Swift SHA-256: 2898d686195d4e6dcd146728931deb4d25345a2bd858b874aa2621138dacb952
 
 Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every
-original macro/failure site appears below, including fixture guards. Source
-context preserves setup, rows, loops, and guards between assertions verbatim.
-No counterpart predicates were identified, so no S entries follow.
-MATCHED identifies equivalent model predicates; execution must still be verified.
-PARTIAL identifies related counterpart predicates with an explicit unproved condition.
-NATIVE identifies retained native-window/rendering or native setup obligations;
-it does not establish coverage of the converted Swift surface.
-GAP identifies an original predicate without a replacement assertion.
-Duplicate-note identity, unassigned-timeline projection and ViewState round-trip run on an isolated SongDocument/SongView pair plus a hand-built MidiTimeline; no gated Swift-surface slot executes these scenarios. Three sites are native loader/window preconditions; the remaining eleven stay open.
+This assertion-site inventory preserves the original setup and assertion context.
+S001-S002 identify executing Swift predicates for duplicate minting and undo.
+MATCHED requires whole-predicate equivalence; nine GAP sites still need their
+original click, complete note fields, timeline projection, or ViewState checks.
+The three native loader/window preconditions remain NATIVE.
 
 Verification
-Command: deno task verify --filter swiftrollgated --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (controller, 10.17s). This run executed the S001-S002 report.expect predicates; it does not discharge the open obligations.
 
 Execution and ownership
-PianoRollTest::duplicateNoteIdentity, timelineProjection and viewStateRoundTrip run as QTest slots via runRollCheck in src/checks/rollcheck.cpp. The slots build their own projection document from the loaded song; no harness seed is used. No counterpart file carries predicates for these scenarios.
+runIdentityChecks executes checkDuplicateNoteIdentity from the projectSession Swift suite. The native QTest slots also cover timelineProjection and viewStateRoundTrip; neither scenario has an assertion in identity.swift.
 
 Fixture, sequence and row constraints
 duplicateNoteIdentity mints two equal-visible duplicates and edits one by ID; timelineProjection projects a two-event hand-built MidiTimeline; viewStateRoundTrip perturbs every retained ViewState field once. No data rows; the candidate-track scan only selects an alternate track and never re-executes an assertion.
@@ -76,8 +71,8 @@ Original expression:
   QFAIL("could not load note identity projection fixture");
 
 A003 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:55
-Disposition: GAP
-Mapping/reason: No counterpart executes this scenario; document-level duplicate-identity minting is exercised by the editcheck Swift suite, not by any rollcheck counterpart. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S001 checkDuplicateNoteIdentity, src/checks/rollcheck/identity.swift:49-54, adds two equal-visible notes (tick 480, pitch 60, duration 24, velocity 100) and asserts assigned distinct IDs and matching visible fields; deno task verify --filter swiftcore --verbose PASS (controller, 10.17s).
 Source context since previous assertion:
       }
 
@@ -164,8 +159,8 @@ Original expression:
   QFAIL("one-ID edit changed the wrong duplicate");
 
 A007 | PianoRollTest::duplicateNoteIdentity | src/checks/rollcheck/identity.cpp:109
-Disposition: GAP
-Mapping/reason: No counterpart executes this scenario; no equivalent Swift assertion has been established. Original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S002 checkDuplicateNoteIdentity, src/checks/rollcheck/identity.swift:72-75, undoes the one-ID +1 pitch edit and asserts both duplicates retain their complete original identity and values (ID, track, chunk, tick, duration, pitch, velocity, channel) and the first ID remains selected; deno task verify --filter swiftcore --verbose PASS (controller, 10.17s).
 Source context since previous assertion:
       }
 
@@ -340,4 +335,18 @@ Remaining original source (closing sequence and helper bodies):
   }
 
 Counterpart executable predicate index
-No counterpart predicates identified; no S entries.
+S001 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift:49
+Counterpart expression:
+  report.expect(firstID.isAssigned && secondID.isAssigned && firstID != secondID
+      && firstBefore.tick == secondBefore.tick
+      && firstBefore.duration == secondBefore.duration
+      && firstBefore.pitch == secondBefore.pitch
+      && firstBefore.velocity == secondBefore.velocity,
+      cppID: id, message: "equal-visible notes receive distinct assigned IDs")
+
+S002 | checkDuplicateNoteIdentity | src/checks/rollcheck/identity.swift:72
+Counterpart expression:
+  report.expect(sameIdentityAndValue(session.document.note(firstID), firstBefore)
+      && sameIdentityAndValue(session.document.note(secondID), secondBefore)
+      && session.selectedNoteOrder == [firstID], cppID: id,
+      message: "undo restores both duplicate values without replacing their identities")

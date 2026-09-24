@@ -3,39 +3,38 @@ Assertion correspondence: rollcheck/scale_projection.cpp
 Reference revision: 996c6446f2cbfaa5b88ed721df4fa831129bd7bc
 Original: src/checks/rollcheck/scale_projection.cpp
 Original SHA-256: 4dc0fed604392d4a02f9a9f67f8b95fedf68363320ffba60658062c3f437c36d
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/rollcheck/static/geometry.swift
+Swift SHA-256: bd885d4f3cee03f29a4d0864a9b32d6b0c807e191a0e16cad72fd6160f1dcc82
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
 original macro/failure site appears below. Source context preserves setup, rows,
 loops, and guards between assertions verbatim. MATCHED identifies an equivalent
-Swift predicate with execution; PARTIAL a related predicate with an explicit
+Swift predicate executed green; PARTIAL a related predicate with an explicit
 unproved condition; NATIVE a retained native-window/rendering/input or harness
 obligation a presenter-level Swift check cannot establish; GAP an original
-predicate without a replacement assertion. No same-dir Swift counterpart exists
-and no Swift file covering this suite was identified, so this file lists no S
-predicates: every site is GAP or NATIVE. None of these labels authorizes deletion
-or claims whole-case equivalence.
-Two slots cover projection invariants (Block A: pure queries over
-view.pitchProjection()) and Highlight raster pixels (Block B: Quick framebuffer
-captures). Block A row-set/inverse/nearest/scroll-bound sites and the
-undo-index/smf guards are GAP. Block B tint/lane/compose/face sites read rendered
-pixels and are NATIVE. The static/ camera.swift Swift pitch-projection model
-(S017-S026 of proof.camera.txt) exercises a synthetic EditorCamera
-PitchProjection, not this suite's production SongView projection, occupied-pitch
-fixtures, and framebuffer observations; no site here claims it, so those sites
-stay GAP/NATIVE rather than PARTIAL by the unsure-to-GAP rule. A future
-deliberate mapping may upgrade them with stated unproved conditions.
+predicate without an equivalent executed replacement. The geometry.swift
+predicates S001-S017 ran green in projectSession: seven model sites are MATCHED
+and ten sites remain PARTIAL because their counterpart is only related. S003 does
+not exercise a root/scale transition because Swift projection has no root
+or scale parameter. Folded checks construct a projection from selected-track
+notes instead of switching production Fold; that binding remains unproved.
+S016-S017 check isolated note insertion and undo, not the native Highlight
+sequence or its raster observations. None of these labels authorizes
+deletion or claims whole-case equivalence.
+Block A audits the model row-set/inverse/nearest/scroll-bound sites and the
+undo-index/smf guards. Block B tint/lane/compose/face sites read rendered
+pixels and remain NATIVE. Model predicates in geometry.swift are not native
+SongView window proof.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --qt projectSession
+Result: green post-refactor controller run; SwiftCoreTest::projectSession 3 passed, 0 failed.
 
 Execution and ownership
-No Swift entry point executes these checks. The original slots run under
-PianoRollTest (checks/rollcheck/tst_pianoroll.h): scaleProjectionInvariants and
-scaleHighlightRaster, on the per-slot PianoRollFixture
+runGeometryChecks ran green in projectSession. The original slots run under
+PianoRollTest (checks/rollcheck/tst_pianoroll.h):
+scaleProjectionInvariants and scaleHighlightRaster, on the per-slot PianoRollFixture
 (checks/rollcheck/rollcheck.h, m_fixture) with the SnappedRows sampler, Quick
 pumping and framebuffer capture (checks/support/quickframebuffer.h), and
 file-local foldCenterY/pixelAt lambdas.
@@ -52,8 +51,8 @@ compares note-face pixels, and closes with the same undo-index plus smf guard.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:46
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S001 in geometry.swift confirms the chromatic PitchProjection exposes exactly 128 rows; projectSession green.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -104,8 +103,8 @@ Original expression:
   QFAIL("Off projection does not expose 128 rows")
 
 A002 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:52
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S002 in geometry.swift confirms every MIDI pitch 0-127 has a chromatic visible row; projectSession green.
 Source context since previous assertion:
   ;
           bool anyHidden = false;
@@ -117,8 +116,8 @@ Original expression:
   QFAIL("Off projection hides a pitch")
 
 A003 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:57
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S003 in geometry.swift constructs another chromatic projection, but cannot perform the original root/scale transition; that condition remains unproved after the green run.
 Source context since previous assertion:
   ;
           // A2. Drift the root/scale; Off must stay chromatic.
@@ -129,8 +128,8 @@ Original expression:
   QFAIL("Off mode root/scale change altered the row count")
 
 A004 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:74
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S004 in geometry.swift counts explicitly constructed selected-track PitchProjection rows, but cannot observe production Fold binding; that condition remains unproved.
 Source context since previous assertion:
   ;
           view.setScaleRoot(0);
@@ -153,8 +152,8 @@ Original expression:
   QFAIL("Fold row count does not match selected-track occupancy")
 
 A005 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:79
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S005 in geometry.swift checks every folded PitchProjection row is strictly lower-pitched than its predecessor; projectSession green.
 Source context since previous assertion:
   ;
           int prevPitch = 128; // above the highest MIDI pitch; rows descend
@@ -165,8 +164,8 @@ Original expression:
   QFAIL("Fold visible pitches are not strictly descending")
 
 A006 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:86
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S006 in geometry.swift compares constructed projection visibility with selected-track occupancy, but production Fold binding remains unproved.
 Source context since previous assertion:
   ;
                   break;
@@ -179,8 +178,8 @@ Original expression:
   QFAIL("Fold visible pitches do not exactly match selected-track occupancy")
 
 A007 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S007 in geometry.swift verifies each folded visible row maps to a pitch that maps back to that row; projectSession green.
 Source context since previous assertion:
   ;
                   break;
@@ -194,8 +193,8 @@ Original expression:
   QFAIL("Fold visible row does not map back to itself")
 
 A008 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:101
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S008 in geometry.swift verifies every non-hidden folded pitch maps to a row that maps back to that pitch; projectSession green.
 Source context since previous assertion:
   ;
                   break;
@@ -234,8 +233,8 @@ Original expression:
   QFAIL("no free C#-class octave pair for the Fold occupancy exception")
 
 A010 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:125
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S009 in geometry.swift reconstructs PitchProjection after isolated note insertion, but cannot observe a Fold-bound view update; that condition remains unproved.
 Source context since previous assertion:
   ;
           } else {
@@ -246,8 +245,8 @@ Original expression:
   QFAIL("Fold did not expose an occupied off-scale pitch")
 
 A011 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:127
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S010 in geometry.swift keeps an unused octave hidden in a reconstructed projection, but the original Fold-bound view observation remains unproved.
 Source context since previous assertion:
   ;
               if (proj.rowForPitch(exceptBase + 12) != projHidden)
@@ -255,8 +254,8 @@ Original expression:
   QFAIL("Fold exposed an unoccupied off-scale octave")
 
 A012 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:138
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S011 in geometry.swift hides an unused C-sharp-class pitch in a reconstructed projection; original scale membership and Fold-bound view remain unproved.
 Source context since previous assertion:
   ;
               int freePitch = -1;
@@ -273,8 +272,8 @@ Original expression:
   QFAIL("Fold revealed an off-scale unused pitch")
 
 A013 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:150
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S012 in geometry.swift verifies nearestVisiblePitch(61) chooses 60 on the visible {60,62} pitch subset; projectSession green.
 Source context since previous assertion:
   ;
               while (doc.undoStack()->index() > cmd0)
@@ -292,8 +291,8 @@ Original expression:
   QFAIL("nearestVisiblePitch tie did not pick the lower pitch")
 
 A014 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:163
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Executed S013 in geometry.swift verifies an extreme EditorCamera vertical scroll clamps within folded projection height and viewport bounds; projectSession green.
 Source context since previous assertion:
   ;
           }
@@ -312,8 +311,8 @@ Original expression:
   QFAIL("Fold scroll Y is not bounded by the folded content height")
 
 A015 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:171
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S014 in geometry.swift restores cloned document identity after undo, but the original Fold-bound view's undo sequence remains unproved.
 Source context since previous assertion:
   ;
           }
@@ -327,8 +326,8 @@ Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A016 | PianoRollTest::scaleProjectionInvariants | src/checks/rollcheck/scale_projection.cpp:172
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S015 in geometry.swift restores cloned MIDI bytes after undo, but the original Fold-bound view's undo sequence remains unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -631,8 +630,8 @@ Original expression:
   QFAIL("Highlight changed the painted note face")
 
 A031 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:378
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S016 in geometry.swift restores cloned document identity after undo, but the original Highlight sequence and renderer remain unproved.
 Source context since previous assertion:
   ;
               while (doc.undoStack()->index() > cmd0)
@@ -646,8 +645,8 @@ Original expression:
   QCOMPARE(doc.undoStack()->index(), undo)
 
 A032 | PianoRollTest::scaleHighlightRaster | src/checks/rollcheck/scale_projection.cpp:379
-Disposition: GAP
-Mapping/reason: No equivalent Swift predicate has been established for this document/model observation; the original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Executed related S017 in geometry.swift restores cloned MIDI bytes after undo, but the original Highlight sequence and renderer remain unproved.
 Source context since previous assertion:
   ;
 Original expression:
@@ -656,3 +655,80 @@ Original expression:
 Remaining original source (closing sequence and helper bodies):
   ;
   }
+
+Swift assertion predicates
+
+S001 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:63
+  report.expect(chromatic.visibleRowCount == 128, cppID: id,
+                  message: "A001 Off projects all 128 pitches")
+
+S002 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:65
+  report.expect((0..<128).allSatisfy { chromatic.row(forPitch: $0) != PitchProjection.hiddenRow },
+                  cppID: id, message: "A002 Off hides no pitch")
+
+S003 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:68
+  report.expect(PitchProjection().visibleRowCount == chromatic.visibleRowCount, cppID: id,
+                  message: "A003 related chromatic construction remains 128 rows")
+
+S004 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:74
+  report.expect(folded.visibleRowCount == occupied.count, cppID: id,
+                  message: "A004 folded row count equals distinct selected-track pitches")
+
+S005 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:85
+  report.expect(descending, cppID: id, message: "A005 folded rows descend strictly")
+
+S006 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:86
+  report.expect((0..<128).allSatisfy {
+          (folded.row(forPitch: $0) != PitchProjection.hiddenRow) == occupied.contains(UInt8($0))
+      }, cppID: id, message: "A006 folded visible pitches exactly equal selected-track occupancy")
+
+S007 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:89
+  report.expect((0..<folded.visibleRowCount).allSatisfy { row in
+          folded.visiblePitch(at: row).map { folded.row(forPitch: $0) == row } == true
+      }, cppID: id, message: "A007 each visible folded row maps back to itself")
+
+S008 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:92
+  report.expect((0..<128).allSatisfy { pitch in
+          let row = folded.row(forPitch: pitch)
+          return row == PitchProjection.hiddenRow || folded.visiblePitch(at: row) == pitch
+      }, cppID: id, message: "A008 each visible folded pitch maps back to itself")
+
+S009 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:122
+  report.expect(inserted.row(forPitch: insertedBase) != PitchProjection.hiddenRow,
+                          cppID: id, message: "A010 occupied off-scale C-sharp becomes visible")
+
+S010 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:124
+  report.expect(inserted.row(forPitch: insertedBase + 12) == PitchProjection.hiddenRow,
+                          cppID: id, message: "A011 unused off-scale octave remains hidden")
+
+S011 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:129
+  report.expect(freePitch.map { inserted.row(forPitch: $0) == PitchProjection.hiddenRow }
+                          == true, cppID: id, message: "A012 unused off-scale pitch remains hidden")
+
+S012 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:134
+  report.expect(tieProjection.nearestVisiblePitch(to: 61) == 60, cppID: id,
+                  message: "A013 equal-distance nearest pitch chooses lower pitch")
+
+S013 | checkScaleProjectionInvariants | src/checks/rollcheck/static/geometry.swift:140
+  report.expect(camera.snapshot.scrollY >= -1e-9 && camera.snapshot.scrollY <= maximum + 1e-9,
+                  cppID: id, message: "A014 folded scroll remains inside its projected height")
+
+S014 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:214
+  report.expect(document.history.currentIdentity == identity, cppID: id,
+                  message: messages.history)
+  checkScaleProjectionInvariants supplies history: "A015 undo restores the pre-probe document history"
+
+S015 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:216
+  report.expect(before != nil && (try? document.captureSave().bytes) == before,
+                  cppID: id, message: messages.bytes)
+  checkScaleProjectionInvariants supplies bytes: "A016 undo restores serialized MIDI"
+
+S016 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:214
+  report.expect(document.history.currentIdentity == identity, cppID: id,
+                  message: messages.history)
+  checkScaleHighlightRasterDocumentGuards supplies history: "A031 highlight note probe restores document history"
+
+S017 | checkDocumentUndoProbe | src/checks/rollcheck/static/geometry.swift:216
+  report.expect(before != nil && (try? document.captureSave().bytes) == before,
+                  cppID: id, message: messages.bytes)
+  checkScaleHighlightRasterDocumentGuards supplies bytes: "A032 highlight note probe restores serialized MIDI"

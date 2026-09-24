@@ -168,8 +168,12 @@ final class NoteCommands {
 
     private func resizeTrailing(_ delta: Int64) {
         let notes = selectedNotes()
-        guard !notes.isEmpty else { return }
-        session.document.resizeNoteLengths(notes.map(\.id), byTicks: delta)
+        guard let minimum = notes.lazy.map(\.duration).min() else { return }
+        // Keyboard resizing preserves duration differences: the shortest note
+        // bounds the whole selection, unlike independent pointer-edge clamps.
+        let uniformDelta = delta < 0 ? max(delta, 1 - Int64(minimum)) : delta
+        guard uniformDelta != 0 else { return }
+        session.document.resizeNoteLengths(notes.map(\.id), byTicks: uniformDelta)
     }
 
     private func toggleMute() {

@@ -148,6 +148,22 @@ if(APPLE)
         editcheck/TimeChecks.swift
         editcheck/TimeCorpusChecks.swift
         rollcheck/static/camera.swift
+        rollcheck/static/geometry.swift
+        rollcheck/static/gate.swift
+        rollcheck/pencil.swift
+        rollcheck/resize.swift
+        rollcheck/scale_editing.swift
+        rollcheck/note_rendering.swift
+        rollcheck/keyboard.swift
+        rollcheck/selection.swift
+        rollcheck/identity.swift
+        rollcheck/interlock.swift
+        rollcheck/note_commands.swift
+        rollcheck/remap.swift
+        rollcheck/presentation.swift
+        rollcheck/time_signature_prompt.swift
+        rollcheck/timemenu.swift
+        rollcheck/ruler_loop_menu.swift
         nativegraphics/tst_playhead_quick.swift
         nativegraphics/PlayheadFeatureChecks.swift
         eventviews/EventListPlayheadChecks.swift

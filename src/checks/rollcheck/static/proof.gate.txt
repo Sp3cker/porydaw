@@ -4,7 +4,9 @@ Reference revision: 90446f5dbbb9f9d9f9000d7819c42c1b8b2c5389
 Original: src/checks/rollcheck/static/gate.cpp
 Original SHA-256: 78ee6803e1c397aaa0e035fdcda0ae63f87e72ac8be9336e62aa1ee4718b4620
 Swift counterpart: src/checks/rollcheck/static/camera.swift
-Swift SHA-256: 0321944175f23cab5587282618a52d043e1c44e650859d3599e42ce8c7db1f76
+Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
+Ready-wheel Swift counterpart: src/checks/rollcheck/static/gate.swift
+Ready-wheel Swift SHA-256: f848be0e07c37edd0f644d93a836391c1e59f540fa088cd96b3e229cd12718f2
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -16,27 +18,34 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-No MATCHED site is claimed. The gated/ready camera-channel holds and
-movements (scrollX, pxPerBeat) are PARTIAL against the related Swift
-wheel/pan/zoom predicates; the edit-cursor set/read-back sites have no related
-Swift predicate and are GAP; fixture creation, readiness, surface
-enablement/visibility/presence, control-text sync, native event delivery, and
-tooltip hover geometry are NATIVE.
+Only the ready roll-wheel movement A068 is MATCHED: S042 checks the ready
+presenter's zoom after the original wheel delta and anchor, and the mounted
+QML roll-wheel case verifies the visible zoom change. The MIDI-only loading
+stage gate is not represented by the Swift presenter; its gated holds remain
+PARTIAL, as do native scrollbar-wheel movements. Edit-cursor set/read-back
+sites remain GAP; fixture creation, readiness, surface enablement/visibility/
+presence, control-text sync, native event delivery, and tooltip hover geometry
+remain NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Converted-window command: deno task verify:qml --verbose
+Result: PASS (controller, 10.17s); S042 executed in the green SwiftCore session.
+Verified Swift SHA-256: 95fb2e80f95bf57e41250632cb8b3e7378fa32be143d02f5bd092313f6029808
+Verified ready-wheel Swift SHA-256: f848be0e07c37edd0f644d93a836391c1e59f540fa088cd96b3e229cd12718f2
+Converted-window command: deno task verify:qml-roll --verbose
+Converted-window result: PASS (controller); test_readyRollWheelZoom exercises A068.
+Verified QML SHA-256: e0b92076f7f202fd3a2a84bde6e5ff36fb71579a3b496742e3f126bb04e50fb6
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
 Execution and ownership
-runEditorCameraChecks is called in its previous suite position, and
-checkGridCameraWheel runs between checkViewport and checkProjection under
-EditorGridCameraChecks (see proof.camera.txt); those execute the 41 S
-predicates below. No Swift function executes the gate slots. The original slots
-run under PianoRollStaticTest (static/tst_pianorollstatic.h) on the GateFixture
-(static/fixtures.h, fixtures.cpp): a deliberately local loading-stage SongTab
+runEditorCameraChecks and checkGridCameraWheel execute the 41 camera
+predicates below in suite 10. runGateChecks executes S042 on the same ready
+session, and tst_SwiftRollWindowing.qml:307-323 sends a wheel to the mounted
+roll input and observes the resulting time zoom. No Swift function executes
+the MIDI-only gate slots. The original slots run under PianoRollStaticTest on
+the GateFixture (static/fixtures.h, fixtures.cpp): a deliberately local
+loading-stage SongTab
 with roll/ruler/scrollbar/controls/division/feel/tooltip/ruler/headers/event-list/drawer
 surfaces. File-local helpers stage readiness (bindMidiStage, bindVoicegroup),
 deliver native events (sendRulerClick, sendScrollbarWheel, sendRollWheel), and
@@ -865,8 +874,8 @@ Original expression:
   QVERIFY(bindVoicegroup(fixture))
 
 A068 | PianoRollStaticTest::gatedAndReadyRollZoom | src/checks/rollcheck/static/gate.cpp:344
-Disposition: PARTIAL
-Mapping/reason: Related predicates S033, S034 in src/checks/rollcheck/static/camera.swift; the Swift wheel-zoom predicates use synthetic inputs and publish on zoom, so they do not establish the ready native roll-wheel zoom movement below.
+Disposition: MATCHED
+Mapping: S042 in src/checks/rollcheck/static/gate.swift:21 asserts ready time zoom increases after a +120 angle-delta wheel at (80, 100); src/checks/rollqml/tst_SwiftRollWindowing.qml:307-323 sends that wheel to the mounted roll input and verifies the visible time zoom changes. The MIDI-only gated hold A066 remains PARTIAL.
 Source context since previous assertion:
   ;
       const double ready = fixture.view()->camera().pxPerBeat();
@@ -1356,3 +1365,9 @@ S041 | checkGridCameraWheel | src/checks/rollcheck/static/camera.swift:339
   report.expect(
           gridCameraNear(session.camera.snapshot.scrollY, gutterBefore + 6) && counters.camera == 1,
           cppID: gridCameraWheelID, message: "gutter wheel scrolls by negative half-delta exactly once")
+
+S042 | checkReadyRollZoom | src/checks/rollcheck/static/gate.swift:21
+Counterpart expression:
+  report.expect(session.camera.snapshot.pixelsPerBeat > readyZoom,
+                cppID: "swiftcore/PianoRollStaticTest::gatedAndReadyRollZoom",
+                message: "a roll wheel at (80, 100) changes time zoom on a ready song")

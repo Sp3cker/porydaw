@@ -301,6 +301,27 @@ TestCase {
         verify(rename && !rename.visible, "the rename editor stays hidden")
     }
 
+    // The ready half of gate.cpp's gatedAndReadyRollZoom: a real wheel over
+    // the mounted roll plot reaches the production presenter and changes zoom.
+    // The MIDI-only loading-stage gate is not represented by this surface.
+    function test_readyRollWheelZoom() {
+        var surface = testCase.selectedSurface()
+        verify(surface, "the ready roll surface is mounted")
+        var input = findChild(surface, "swiftRollInput")
+        var grid = session.gridPresenter()
+        verify(input && grid && input.width > 80 && input.height > 100,
+               "the ready roll's wheel target is mounted")
+        var before = grid.beatWidth
+        mouseWheel(input, 80, 100, 0, 120)
+        tryVerify(function() {
+            return grid.beatWidth > before
+        }, 5000, "a ready roll wheel changes the visible time zoom")
+        mouseWheel(input, 80, 100, 0, -120)
+        tryVerify(function() {
+            return Math.abs(grid.beatWidth - before) < 0.001
+        }, 5000, "the opposite wheel restores the ready roll zoom")
+    }
+
     // The window-level half of the C++ gridContrastPreviewAndApply oracle: a
     // palette push repaints the live grid, and restoring the palette restores
     // the frame. The C++ ThemeDialog/ThemeController settings half stays

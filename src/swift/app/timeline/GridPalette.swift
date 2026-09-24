@@ -167,6 +167,10 @@ public final class GridPalette {
                                  PaletteMath.oklab(r: 0x04, g: 0x00, b: 0x00), 0.15))
 
     public var noteVelocityZero: String = "#8B847E"
+    public func noteFill(track: Int, velocity: Int) -> String {
+        PaletteMath.noteFill(track: track, velocity: velocity)
+    }
+
     public var noteBorder: String = "#FF000000"
     public var selectionRing: String = "#B9E8EE"
     public var selectionFill: String = "#1EB9E8EE"

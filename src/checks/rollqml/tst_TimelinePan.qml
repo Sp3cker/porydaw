@@ -95,6 +95,8 @@ TestCase {
             surface = testCase.selectedSurface()
             return surface !== null
         }, 5000), "the selected tab's production EditorSurface mounted")
+        // Keep the note viewport's fixture height after reserving the ruler.
+        item.height += surface.gridModel.rulerHeight
         surface.drawerPreferenceLocation = bootstrap.preferencesUrl("lane-drawer.ini")
         var drawer = findChild(surface, "editorDrawer")
         verify(drawer, "the production drawer is mounted")
@@ -343,6 +345,11 @@ TestCase {
         compare(scene.hoverChipText, pitch.text)
         var chipRect = scene.hoverChipRect
         verify(chipRect.x >= 0, "the chip stays on-screen")
+        // The gutter updates this same grid model; its published key and
+        // the scene's keyboard-label text must agree at the hovered row.
+        tryVerify(function() { return g.hoverKey >= 0 }, 5000,
+                  "the gutter resolves a visible MIDI key")
+        var firstKey = g.hoverKey
         verify(chipText.contentWidth <= chip.width, "the chip covers its text")
 
         // A second row republishes the chip.
@@ -367,18 +374,22 @@ TestCase {
         }, 5000), "the realized chip tracks the republished rect")
         verify(scene.hoverChipVisible)
         verify(scene.hoverChipRect.x >= 0, "the second chip stays on-screen")
+        tryVerify(function() {
+            return g.hoverKey >= 0 && g.hoverKey !== firstKey
+        }, 5000, "moving to another gutter row resolves another MIDI key")
         verify(chipText.contentWidth <= chip.width, "the second chip covers its text")
 
-        // Overlay structure: the chip and its text live on the band root above
-        // the clipped plot and gutter boxes.
+        // The chip shares the note rows' coordinate space below the ruler;
+        // its overlay layer sits above the clipped plot and gutter boxes.
         var plotBox = findChild(surface(), "timelineQuickRollPlot")
         var gutterBoxItem = gutterBox()
         var bandRoot = plotBox.parent
         verify(bandRoot !== null, "the roll band root exists")
-        compare(chip.parent, bandRoot)
-        compare(chipText.parent, bandRoot)
-        verify(chip.z > plotBox.z, "the chip draws above the plot")
-        verify(chip.z > gutterBoxItem.z, "the chip draws above the gutter")
+        compare(chip.parent, chipText.parent)
+        compare(chip.parent.parent, bandRoot)
+        compare(chip.parent.y, plotBox.y)
+        verify(chip.parent.z > plotBox.z, "the chip layer draws above the plot")
+        verify(chip.parent.z > gutterBoxItem.z, "the chip layer draws above the gutter")
         verify(chipText.z > chip.z, "the chip text draws above the chip")
         verify(gutterBoxItem.clip, "the gutter box clips its contents")
 
@@ -440,6 +451,36 @@ TestCase {
         verify(label.contentWidth <= label.width)
         verify(!label.clip)
         compare(label.horizontalAlignment, Text.AlignRight)
+        g.clearKeyboardHover()
+        tryCompare(g, "hoverKey", -1, 5000)
+        tryCompare(scene, "hoverChipVisible", false, 5000)
+    }
+
+    // static camera's bound-scroll and lead-pad contract through the mounted
+    // Swift roll, rather than a detached camera value.
+    function test_preRollCameraBounds() {
+        var g = grid()
+        var prior = g.cameraScrollX
+        try {
+            g.resetCameraScroll()
+            var pad = bootstrap.cameraContentX(0)
+            verify(pad > 0, "the mounted camera has a positive pre-roll pad")
+            g.setCameraHScroll(-1e9)
+            tryCompare(g, "cameraScrollX", -pad, 5000)
+            compare(bootstrap.cameraContentX(0), pad,
+                    "the mounted tick-zero projection lands at the pre-roll home")
+            g.setCameraHScroll(1e9)
+            tryVerify(function() {
+                return Math.abs(g.cameraScrollX
+                    - bootstrap.timelineLengthTicks() * bootstrap.cameraPxPerTick()) <= 1e-9
+            }, 5000, "the bound timeline end clamps at the plot origin")
+            g.resetCameraScroll()
+            tryCompare(g, "cameraScrollX", -pad, 5000)
+            compare(bootstrap.cameraContentX(0), pad,
+                    "home restores the viewport's tick-zero lead pad")
+        } finally {
+            g.setCameraHScroll(prior)
+        }
     }
 
     // timelinepan's coalesced-refresh assertions: a section resize changes the

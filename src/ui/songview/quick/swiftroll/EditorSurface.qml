@@ -19,6 +19,32 @@ Item {
     onHintWindowActiveChanged: hintService.setWindowActive(hintWindowActive)
     readonly property real timelineSplitX: headersModel.trackHeaderWidth + gridModel.keyboardWidth
     readonly property int noteCount: gridModel.renderedNoteCount
+    readonly property var timeSigHost: applicationSession.timeSigHost
+    property point timeSigMenuPosition: Qt.point(0, 0)
+    readonly property var rulerMenuRows: [
+        { actionId: 9, text: qsTr("Edit Time Signature"), enabled: true }
+    ]
+
+    function hoverRow(panel, row) { panel.highlightedRow = row }
+    function activateRow(panel, row) {
+        if (row !== 0)
+            return
+        timeSigHost.closeTimeSigMenu()
+        rulerInput.editTimeSignatureAtCursor()
+    }
+
+    Connections {
+        target: root.applicationSession
+        function onTimeSigPromptOpenChanged() {
+            if (!root.applicationSession.timeSigPromptOpen)
+                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
+        }
+        function onTimeSigMenuOpenChanged() {
+            if (!root.applicationSession.timeSigMenuOpen
+                && !root.applicationSession.timeSigPromptOpen)
+                rulerInput.forceActiveFocus(Qt.OtherFocusReason)
+        }
+    }
     readonly property string appliedRevisionText: gridModel.appliedRevisionText
 
     // The drawer's bar row is measured in the application font, as production's
@@ -64,8 +90,9 @@ Item {
         Original.TrackHeaderBand {
             id: trackHeaders
             x: 0
+            y: root.gridModel.rulerHeight
             width: root.headersModel.trackHeaderWidth
-            height: parent.height
+            height: Math.max(parent.height - y, 0)
             bandRect: Qt.rect(0, 0, width, height)
             bandVisible: rollBandContent.visible
             model: root.headersModel
@@ -80,12 +107,89 @@ Item {
             height: parent.height
             clip: true
 
+            // The same GridScene ruler chrome, marks and chip labels as the
+            // timeline canvas. Its input occupies its own top band rather
+            // than letting roll gestures intercept signature-chip clicks.
+            Item {
+                id: rulerBand
+                objectName: "timelineQuickRuler"
+                width: parent.width
+                height: root.gridModel.rulerHeight
+                clip: true
+
+                TimelineQuickItem {
+                    objectName: "timelineQuickRulerGutterChrome"
+                    width: root.gridModel.keyboardWidth
+                    height: parent.height
+                    rects: root.gridModel.scene.rulerGutterChrome
+                }
+
+                Item {
+                    x: root.gridModel.keyboardWidth
+                    width: Math.max(parent.width - x, 0)
+                    height: parent.height
+                    clip: true
+
+                    TimelineQuickItem {
+                        anchors.fill: parent
+                        objectName: "timelineQuickRulerChrome"
+                        rects: root.gridModel.scene.rulerChrome
+                    }
+                    TimelineQuickItem {
+                        anchors.fill: parent
+                        objectName: "timelineQuickRulerMarks"
+                        rects: root.gridModel.scene.rulerMarks
+                    }
+                    Repeater {
+                        model: root.gridModel.scene.rulerTextModel
+                        delegate: Text {
+                            required property var labelRect
+                            required property string labelText
+                            required property string labelColor
+                            required property var labelFont
+                            x: labelRect.x
+                            y: labelRect.y
+                            width: labelRect.width
+                            height: labelRect.height
+                            color: labelColor
+                            text: labelText
+                            font: Qt.font(labelFont)
+                            textFormat: Text.PlainText
+                            renderType: Text.NativeRendering
+                        }
+                    }
+                    MouseArea {
+                        id: rulerInput
+                        objectName: "timelineRulerInput"
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                        activeFocusOnTab: true
+                        function editTimeSignatureAtCursor() {
+                            root.timeSigHost.openTimeSigPromptAtCursor()
+                        }
+                        onDoubleClicked: (mouse) => {
+                            if (mouse.button !== Qt.LeftButton)
+                                return
+                            const tick = root.timeSigHost.timeSigChipTick(mouse.x)
+                            if (tick >= 0)
+                                root.timeSigHost.openTimeSigPrompt(tick)
+                        }
+                        onPressed: (mouse) => {
+                            if (mouse.button !== Qt.RightButton)
+                                return
+                            root.timeSigMenuPosition = mapToItem(root, mouse.x, mouse.y)
+                            root.timeSigHost.openTimeSigMenu(mouse.x)
+                        }
+                    }
+                }
+            }
+
             Item {
                 id: rollGutterSide
                 objectName: "timelineQuickRollGutter"
-                x: 0
+                y: root.gridModel.rulerHeight
                 width: root.gridModel.keyboardWidth
-                height: parent.height
+                height: Math.max(parent.height - y, 0)
                 clip: true
 
                 MouseArea {
@@ -128,10 +232,11 @@ Item {
                 id: rollPlot
                 objectName: "timelineQuickRollPlot"
                 x: root.gridModel.keyboardWidth
+                y: root.gridModel.rulerHeight
                 width: Math.max(parent.width - x, 0)
                 // The band carries only the height the drawer leaves, so the plot
                 // and the viewport push follow the band rather than the surface.
-                height: parent.height
+                height: Math.max(parent.height - y, 0)
                 clip: true
 
                 onWidthChanged: root.configureViewport()
@@ -143,7 +248,7 @@ Item {
                     anchors.fill: parent
 
                     Original.PianoRollCanvas {
-                        bandSide: rollStack
+                        bandSide: rollContentBand
                         gutterSide: rollGutterSide
                         plotSide: pianoGridSurface
                         timelineScene: root.gridModel.scene
@@ -219,6 +324,81 @@ Item {
                     onWheel: (event) => {
                         root.deliverWheel(event, false)
                     }
+                }
+            }
+            // Keyboard labels and hover chips are band-local in GridScene.
+            // Move their shared parent with the plot, not just the gutter,
+            // so adding the ruler does not displace these overlays.
+            Item {
+                id: rollContentBand
+                y: root.gridModel.rulerHeight
+                width: parent.width
+                height: Math.max(parent.height - y, 0)
+                z: 3
+            }
+        }
+    }
+
+    Loader {
+        id: timeSigMenuLoader
+        anchors.fill: parent
+        z: 10
+        active: root.applicationSession.timeSigMenuOpen
+        sourceComponent: Component {
+            Item {
+                focus: true
+                Keys.onEscapePressed: (event) => {
+                    root.timeSigHost.closeTimeSigMenu()
+                    event.accepted = true
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    onPressed: root.timeSigHost.closeTimeSigMenu()
+                }
+                Original.QuickMenuPanel {
+                    anchors.fill: parent
+                    host: root
+                    menuModel: root.rulerMenuRows
+                    rootLevel: true
+                    rowObjectNamePrefix: "rulerMenuRow_"
+                    appearance: ({
+                        background: root.gridModel.palette.chromeBackground,
+                        outline: root.gridModel.palette.separator,
+                        text: root.gridModel.palette.primaryText,
+                        hoverBackground: root.gridModel.palette.hoverChipFill,
+                        hoverText: root.gridModel.palette.primaryText,
+                        disabledText: root.gridModel.palette.secondaryText,
+                        font: Application.font
+                    })
+                    rowHeight: 28
+                    separatorHeight: 1
+                    textX: 12
+                    textRight: 200
+                    menuWidth: 220
+                    menuHeight: rowHeight + 2
+                    menuOrigin: root.timeSigMenuPosition
+                }
+                Component.onCompleted: forceActiveFocus(Qt.PopupFocusReason)
+            }
+        }
+    }
+
+    Loader {
+        id: timeSigPromptLoader
+        anchors.fill: parent
+        z: 11
+        active: root.applicationSession.timeSigPromptOpen
+        sourceComponent: Component {
+            Item {
+                MouseArea {
+                    anchors.fill: parent
+                    onPressed: root.timeSigHost.cancelTimeSigPrompt()
+                }
+                Original.TimeSignaturePrompt {
+                    anchors.centerIn: parent
+                    width: implicitWidth
+                    height: implicitHeight
+                    bridge: root.timeSigHost
                 }
             }
         }

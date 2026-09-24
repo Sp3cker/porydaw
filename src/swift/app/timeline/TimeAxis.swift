@@ -7,28 +7,42 @@ import PorydawCore
 // restatement is a defect even when the literals pass (spec §5).
 
 /// Time-signature change from SMF meta 0x58; mirrors C++ `TimeSigPoint`.
-struct TimeSigPoint: Equatable {
-    var tick: Tick
-    var numerator: UInt8       // blank (0) reads as 4 via beatsPerBarFor
-    var denomPow2: UInt8       // denominator = 1 << denomPow2
+public struct TimeSigPoint: Equatable, Sendable {
+    public var tick: Tick
+    public var numerator: UInt8       // blank (0) reads as 4 via beatsPerBarFor
+    public var denomPow2: UInt8       // denominator = 1 << denomPow2
+    public init(tick: Tick, numerator: UInt8, denomPow2: UInt8) {
+        self.tick = tick
+        self.numerator = numerator
+        self.denomPow2 = denomPow2
+    }
 }
 
 /// Copied musical time. Precondition (matching C++): timeSigs is tick-sorted
 /// (non-decreasing); same-tick entries are legal and the last wins.
-struct TimeMap: Equatable {
-    var ticksPerBeat: UInt32 = 24
-    var lengthTicks: Tick = 0
-    var loopStartTick: Tick = TimeDefaults.noTick
-    var loopEndTick: Tick = TimeDefaults.noTick
-    var timeSigs: [TimeSigPoint] = []
+public struct TimeMap: Equatable, Sendable {
+    public var ticksPerBeat: UInt32 = 24
+    public var lengthTicks: Tick = 0
+    public var loopStartTick: Tick = TimeDefaults.noTick
+    public var loopEndTick: Tick = TimeDefaults.noTick
+    public var timeSigs: [TimeSigPoint] = []
+    public init(ticksPerBeat: UInt32 = 24, lengthTicks: Tick = 0,
+                loopStartTick: Tick = TimeDefaults.noTick,
+                loopEndTick: Tick = TimeDefaults.noTick, timeSigs: [TimeSigPoint] = []) {
+        self.ticksPerBeat = ticksPerBeat
+        self.lengthTicks = lengthTicks
+        self.loopStartTick = loopStartTick
+        self.loopEndTick = loopEndTick
+        self.timeSigs = timeSigs
+    }
 }
 
 /// Time-signature segment governing a tick; mirrors `TimeAxis::GridSegment`.
-struct GridSegment: Equatable {
-    var start: Tick = 0                 // governing signature's tick
-    var next: Tick = TimeDefaults.noTick
-    var beatTicks: UInt32 = 24          // denominator-scaled beat length
-    var beatsPerBar: UInt32 = 4
+public struct GridSegment: Equatable, Sendable {
+    public var start: Tick = 0
+    public var next: Tick = TimeDefaults.noTick
+    public var beatTicks: UInt32 = 24
+    public var beatsPerBar: UInt32 = 4
 }
 
 /// The signature governing a tick, normalized; mirrors
@@ -50,9 +64,9 @@ private func beatTicksFor(_ ticksPerBeat: UInt32, _ denomPow2: UInt8) -> UInt32 
     return max(UInt32(1), UInt32(truncatingIfNeeded: (UInt64(ticksPerBeat) * 4) >> shift))
 }
 
-struct TimeAxis: Equatable {
+public struct TimeAxis: Equatable, Sendable {
     let map: TimeMap
-    init(map: TimeMap = TimeMap()) {     // default init = the fallback axis
+    public init(map: TimeMap = TimeMap()) {
         self.map = map
     }
 
@@ -85,7 +99,7 @@ struct TimeAxis: Equatable {
         return resolved
     }
 
-    func segmentAt(_ tick: Tick) -> GridSegment {
+    public func segmentAt(_ tick: Tick) -> GridSegment {
         var seg = GridSegment()                             // implicit opening 4/4 at tick 0
         seg.beatTicks = ticksPerBeat
         for ts in map.timeSigs {                            // tick-sorted

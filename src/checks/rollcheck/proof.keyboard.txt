@@ -3,8 +3,10 @@ Assertion correspondence: rollcheck/keyboard.cpp
 Reference revision: a1244957bb05a59d62b8912e053d49b2a6f3d771
 Original: src/checks/rollcheck/keyboard.cpp
 Original SHA-256: 35206c7f5c5ea64c6eca1fcc455d8559248b5f974a71989f8306cc2bfe9ebaee
-Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
-Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
+Swift counterpart: src/checks/rollcheck/keyboard.swift
+Swift SHA-256: 6db4784f8cd68510a8e4791ad0d6f772db480fde64718efdd0d174baab9220cd
+Additional Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
+Additional Swift SHA-256: 00fef6b54dfe09c78960fca23f31e3fc0eb5b680e0f2536d1d6e9768115a4eb5
 Retained native counterpart: src/checks/swiftrollgated/gesturechecks.cpp
 Retained native SHA-256: 4ade53282b20a324a89d990e0f8fbc61c927a534b022bce0affc843b178e445a
 
@@ -18,14 +20,14 @@ PARTIAL identifies related counterpart predicates with an explicit unproved cond
 NATIVE identifies retained native-window/rendering or native setup obligations;
 it does not establish coverage of the converted Swift surface.
 GAP identifies an original predicate without a replacement assertion.
-Eleven keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize); the gated routing and resize slots nudge, delete, toggle and edge-resize notes on the Swift grid surface but establish almost none of these key-driven outcomes. Eleven framebuffer and popup observations stay native, three sites are partial, and the remaining ninety-one stay open.
+Eleven keyboard and timeline slots (transpose, keep-visible, ruler scope, other-events strip, partial repaint, time shortcuts, duplicate-time, two insert-time variants, batch resize). The registered keyboard Swift checks establish seed, transpose and off-grid snap, and uniform batch-resize outcomes; the insert-time checks establish scoped document effects, but not the native cursor/selection composite or host key delivery. Coverage: 18 MATCHED, 3 PARTIAL, 73 GAP, 11 NATIVE.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Result: PASS (controller, 10.17s); the registered swiftcore suite executed keyboard.swift S043..S060 and EditorGridCameraChecks.swift S029..S042 (not the gated S001..S028).
 
 Execution and ownership
-SwiftRollGatedTest::focusedGridCommandRouting (skips unless the selectionkey mode is active) and resizeEdgesRespectMinimumDuration (swiftrollgated mode) execute the paired command and resize checks on the Swift grid surface. Shared fixture: GridFixture, defined in the counterpart lane itself (scene open, visible-note search, selection-band helpers, draw and drag helpers, note summary model). No separate fixture file carries predicates.
+runKeyboardChecks executes keyboardTranspose, keyboardResizeNotes, timelineInsertBlankTimeTracks, and timelineInsertBlankTimeLanes in the registered swiftcore projectSession suite. withKeyboardSeed builds a visible unoccupied note with pixel-88 tick, keys 115 down to 24, velocity 100, and grid-drawn duration; each scenario restores its document and camera on exit. EditorGridCamera::commandRouting and the retained native gated checks supply the older related predicates, not host key-delivery proof.
 
 Fixture, sequence and row constraints
 Every slot snapshots SMF bytes plus undo index and count, then unwinds to them; timelineInsertBlankTimeTracks additionally probes a rejected insert mid-slot and restores afterwards; keyboardResizeNotes re-executes its shrink sites once per Shift+Left press (up to 256 presses). No _data rows expand sites in this file.
@@ -35,8 +37,8 @@ revision remain authoritative; this inventory does not replace those sources.
 Original assertion inventory and source sequence
 
 A001 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:38
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 asserts that the matching keyboard seed note exists at the selected track, tick, pitch, and duration.
 Source context since previous assertion:
   #include "checks/rollcheck/tst_pianoroll.h"
 
@@ -79,8 +81,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A002 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:53
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S044 keyboard.swift:108 asserts that Up moves the selected seed one semitone without moving its tick.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -101,8 +103,8 @@ Original expression:
                "Up did not transpose up a semitone");
 
 A003 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:56
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S045 keyboard.swift:112 asserts that Shift+Down after Up places the note eleven semitones below its seed pitch at the same tick.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Down, Qt::ShiftModifier, false);
 Original expression:
@@ -111,7 +113,7 @@ Original expression:
 
 A004 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:59
 Disposition: PARTIAL
-Mapping/reason: focusedGridCommandRouting (S007..S028) nudges the selected note right one snap on the Swift grid surface and verifies tick and pitch; commandRouting (S029..S042) proves octave transpose up/down restoring pitch and off-grid snap-back nudges on the Swift surface; unproved: native key-event delivery and the rollcheck song and fixture.
+Mapping/reason: S046 keyboard.swift:116 checks the one-snap Right nudge after the same semitone/octave transpose sequence; PARTIAL remains because native key-event delivery and the original rollcheck song and fixture are not established.
 Source context since previous assertion:
       sendKeyStroke(roll, Qt::Key_Right, Qt::NoModifier, false);
 Original expression:
@@ -119,8 +121,8 @@ Original expression:
                "Right did not nudge one snap cell right");
 
 A005 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:64
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S047 keyboard.swift:122 verifies that Left after a half-snap displacement restores the selected note to seed tick plus one snap without changing pitch.
 Source context since previous assertion:
       doc.moveNotes({note}, int64_t(snapCell / 2), 0);
       view.selectionModel().setNoteSelection({note.noteId});
@@ -131,7 +133,7 @@ Original expression:
 
 A006 | PianoRollTest::keyboardTranspose | src/checks/rollcheck/keyboard.cpp:68
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Swift S048 keyboard.swift:53 restores the pre-seed document, whereas this original comparison restores the post-seed snapshot; that transaction boundary remains unproved.
 Source context since previous assertion:
       while (doc.undoStack()->index() > undo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -984,8 +986,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A068 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:549
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 checks the track-insertion scenario seed at its selected track, tick, pitch, and duration.
 Source context since previous assertion:
   }
 
@@ -997,8 +999,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A069 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:558
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 asserts that the track-insertion seed exists on the selected track at the original tick and pitch.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -1013,8 +1015,8 @@ Original expression:
                "track insertion seed note was not found");
 
 A070 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:561
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S056 keyboard.swift:209 checks the shifted insert seed at original tick plus two snap cells and pitch minus ten.
 Source context since previous assertion:
       doc.moveNotes({transposed}, int64_t(2 * snapCell), -10);
 Original expression:
@@ -1079,7 +1081,7 @@ Original expression:
 
 A075 | PianoRollTest::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.cpp:606
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: S057 keyboard.swift:234 verifies that track-scoped insertion moves the selected note and leaves the other track intact; the original composite also requires one history-index increment, the retained time-selection band, and cursor reset to range start, none asserted here. GAP remains.
 Source context since previous assertion:
       const int insertUndoIndex = doc.undoStack()->index();
       view.insertTime();
@@ -1190,8 +1192,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A082 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:673
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 checks the lane-insertion scenario seed at its selected track, tick, pitch, and duration.
 Source context since previous assertion:
   }
 
@@ -1203,8 +1205,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A083 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:682
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 asserts that the lane-insertion seed exists at the selected track, tick, and pitch.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -1262,7 +1264,7 @@ Original expression:
 
 A087 | PianoRollTest::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.cpp:721
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: S059 keyboard.swift:271 verifies the CC7 shift and stationary note for lane-scoped insertion; the original composite additionally asserts a history-index increment, retained lane-scoped time-selection band, and cursor reset to range start, none asserted here. GAP remains.
 Source context since previous assertion:
       const int insertUndoIndex = doc.undoStack()->index();
       view.insertTime();
@@ -1296,8 +1298,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), before);
 
 A089 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:737
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Fixture-seed guard.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 checks that the keyboard-resize seed is present with the selected track, tick, pitch, and duration.
 Source context since previous assertion:
   }
 
@@ -1309,8 +1311,8 @@ Original expression:
   QVERIFY(seed.has_value());
 
 A090 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:747
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S043 keyboard.swift:86 asserts that the resize seed note exists on the selected track with its original tick and pitch.
 Source context since previous assertion:
       SongDocument &doc = check.document();
       SongView &view = check.view();
@@ -1355,16 +1357,16 @@ Original expression:
                "could not create the second resize note");
 
 A093 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:767
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S049 keyboard.swift:148 checks that both selected resize notes have unequal durations and the second retains its intended duration.
 Source context since previous assertion:
   (adjacent to previous assertion; no intervening source lines)
 Original expression:
   QVERIFY2(noteB.duration != noteA.duration, "the resize fixture is not mixed-duration");
 
 A094 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:777
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S050 keyboard.swift:162 checks that two Shift+Right commands extend both selected notes by the same two-snap delta despite their different onsets and durations.
 Source context since previous assertion:
       view.selectionModel().setNoteSelection({noteA.noteId, noteB.noteId});
 
@@ -1393,16 +1395,16 @@ Original expression:
                "repeated Shift+Right presses did not merge into one undo entry");
 
 A096 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:786
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Intermediate baseline (merged-resize undo), not the slot baseline.
+Disposition: MATCHED
+Mapping: S051 keyboard.swift:167 checks that one undo of the merged Shift+Right pair returns the complete document to the post-seed, pre-resize baseline and its history identity.
 Source context since previous assertion:
       doc.undoStack()->undo();
 Original expression:
   QCOMPARE(doc.smf().write(), resizedBefore);
 
 A097 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:790
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S051 keyboard.swift:167 compares the full post-seed state after the merged-resize undo, including both original notes and their ticks, pitches, and durations.
 Source context since previous assertion:
       // Shortening applies the same uniform delta until the shortest selected
       // note reaches one tick; further presses are consumed no-ops.
@@ -1428,8 +1430,8 @@ Original expression:
                    "Shift+Left lost a resized note");
 
 A099 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:804
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Executes once per Shift+Left press in the shrink loop.
+Disposition: MATCHED
+Mapping: S052 keyboard.swift:181 checks after every Shift+Left press that the shortest duration decreases and both selected notes shorten by exactly the same positive delta.
 Source context since previous assertion:
           const uint32_t shrink = previousMin - std::min(noteA.duration, noteB.duration);
 Original expression:
@@ -1439,7 +1441,7 @@ Original expression:
 
 A100 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:808
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; commandRouting (S029..S042) proves the one-tick floor clamp, the uniform batch delta, merged undo, and floor no-op presses on the Swift surface; unproved: native key-event delivery and the time-selection block in this slot.
+Mapping/reason: S052 keyboard.swift:181 verifies every uniform Shift+Left delta and S053 keyboard.swift:185 verifies the one-tick floor; PARTIAL remains because native key-event delivery and the active-time-selection block in this slot are unproved.
 Source context since previous assertion:
       }
 Original expression:
@@ -1448,7 +1450,7 @@ Original expression:
 
 A101 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:814
 Disposition: PARTIAL
-Mapping/reason: resizeEdgesRespectMinimumDuration (S001..S006) drags note edges down to the minimum duration on the Swift grid surface; commandRouting (S029..S042) proves the one-tick floor clamp, the uniform batch delta, merged undo, and floor no-op presses on the Swift surface; unproved: native key-event delivery and the time-selection block in this slot. Extra presses at the floor are consumed no-ops.
+Mapping/reason: S054 keyboard.swift:192 asserts the extra Shift+Left at the one-tick floor leaves document, history identity and revision unchanged; PARTIAL remains because native key-event delivery and the active-time-selection block in this slot are unproved.
 Source context since previous assertion:
       const QByteArray floorBytes = doc.smf().write();
       const int floorIndex = doc.undoStack()->index();
@@ -1460,8 +1462,8 @@ Original expression:
                "Shift+Left at the duration floor changed the document or history");
 
 A102 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:819
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation. Intermediate baseline (floor undo), not the slot baseline.
+Disposition: MATCHED
+Mapping: S055 keyboard.swift:196 verifies that one undo of the merged shortening sequence restores the post-seed, pre-resize document baseline.
 Source context since previous assertion:
       while (doc.undoStack()->index() > floorUndo && doc.undoStack()->canUndo())
           doc.undoStack()->undo();
@@ -1469,8 +1471,8 @@ Original expression:
   QCOMPARE(doc.smf().write(), resizedBefore);
 
 A103 | PianoRollTest::keyboardResizeNotes | src/checks/rollcheck/keyboard.cpp:823
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the gated Swift-surface counterpart has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping: S055 keyboard.swift:196 compares the restored post-seed state after floor undo, including both notes at their original tracks, ticks, and pitches.
 Source context since previous assertion:
       // An active time selection owns the timeline: the resize commands refuse
       // without touching the document or history.
@@ -1733,3 +1735,127 @@ Counterpart expression:
 report.expect(
     session.document.revision == revisionBeforePress && session.document.note(a) != nil,
     cppID: id, message: "releasing a zero-delta press commits nothing")
+
+S043 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift:86
+Counterpart expression:
+report.expect(document.note(noteID).map {
+    $0.track == track && $0.tick == tick && Int($0.pitch) == pitch
+        && $0.duration == duration
+} == true, cppID: id, message: "the seeded keyboard note is present")
+
+S044 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:108
+Counterpart expression:
+report.expect(session.document.note(seed.id).map {
+    $0.tick == seed.tick && Int($0.pitch) == seed.pitch + 1
+} == true, cppID: id, message: "Up transposes the selected note one semitone")
+
+S045 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:112
+Counterpart expression:
+report.expect(session.document.note(seed.id).map {
+    $0.tick == seed.tick && Int($0.pitch) == seed.pitch - 11
+} == true, cppID: id, message: "Shift+Down transposes down an octave")
+
+S046 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:116
+Counterpart expression:
+report.expect(session.document.note(seed.id).map {
+    $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
+} == true, cppID: id, message: "Right nudges one snap cell without changing pitch")
+
+S047 | swiftcore/PianoRoll::keyboardTranspose | src/checks/rollcheck/keyboard.swift:122
+Counterpart expression:
+report.expect(session.document.note(seed.id).map {
+    $0.tick == seed.tick + seed.snap && Int($0.pitch) == seed.pitch - 11
+} == true, cppID: id, message: "Left snaps the off-grid note back to the lattice")
+
+S048 | swiftcore/PianoRoll::withKeyboardSeed | src/checks/rollcheck/keyboard.swift:53
+Counterpart expression:
+report.expect(document.state == before && document.history.currentIdentity == identity
+    && session.camera.snapshot == originalCamera,
+    cppID: id, message: "undo restores the original song, camera, and history position")
+
+S049 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:148
+Counterpart expression:
+report.expect(seed.duration != laterDuration
+    && session.document.note(second)?.duration == laterDuration,
+    cppID: id, message: "the batch fixture has two different durations")
+
+S050 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:162
+Counterpart expression:
+report.expect(session.document.note(seed.id)?.duration == seed.duration + 2 * seed.snap
+    && session.document.note(second)?.duration == laterDuration + 2 * seed.snap,
+    cppID: id, message: "two Shift+Right presses extend both notes by two snap cells")
+
+S051 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:167
+Counterpart expression:
+report.expect(session.document.state == baseline
+    && session.document.history.currentIdentity == resizeIdentity,
+    cppID: id, message: "one undo restores both different durations")
+
+S052 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:181
+Counterpart expression:
+report.expect(shrink > 0 && nextA.duration == a.duration - shrink
+    && nextB.duration == b.duration - shrink,
+    cppID: id, message: "Shift+Left shortens both notes by the same step")
+
+S053 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:185
+Counterpart expression:
+report.expect(min(session.document.note(seed.id)?.duration ?? 0,
+                  session.document.note(second)?.duration ?? 0) == 1,
+              cppID: id, message: "repeated Shift+Left reaches the one-tick floor")
+
+S054 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:192
+Counterpart expression:
+report.expect(session.document.state == atFloor
+    && session.document.history.currentIdentity == floorIdentity
+    && session.document.revision == floorRevision,
+    cppID: id, message: "an extra Shift+Left at the floor is a document and history no-op")
+
+S055 | swiftcore/PianoRoll::keyboardResizeNotes | src/checks/rollcheck/keyboard.swift:196
+Counterpart expression:
+report.expect(session.document.history.undoDocument()
+    && session.document.state == baseline, cppID: id,
+    message: "the shrink sequence merges and one undo restores the fixture")
+
+S056 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:209
+Counterpart expression:
+report.expect(session.document.note(seed.id).map {
+    $0.tick == start && Int($0.pitch) == seed.pitch - 10
+} == true, cppID: id, message: "track insertion seed reaches its shortcut position")
+
+S057 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:234
+Counterpart expression:
+report.expect(session.document.insertBlankTime(range, scope: TimeScope(tracks: [seed.track]))
+    && session.document.notes(in: seed.track).contains(where: {
+        $0.tick == end && Int($0.pitch) == seed.pitch - 10
+    })
+    && session.document.note(otherID).map {
+        $0.tick == otherBefore.tick && $0.duration == otherBefore.duration
+            && $0.pitch == otherBefore.pitch && $0.velocity == otherBefore.velocity
+    } == true, cppID: id,
+    message: "track-scoped blank insertion shifts only the selected track")
+
+S058 | swiftcore/PianoRoll::timelineInsertBlankTimeTracks | src/checks/rollcheck/keyboard.swift:243
+Counterpart expression:
+report.expect(session.document.history.undoDocument()
+    && session.document.state == baseline
+    && session.document.history.currentIdentity == history,
+    cppID: id, message: "undo restores the track-scoped insertion")
+
+S059 | swiftcore/PianoRoll::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift:271
+Counterpart expression:
+report.expect(session.document.insertBlankTime(range, scope: scope)
+    && session.document.lanePoints(track: seed.track, lane: lane).contains(where: {
+        $0.tick == pointTick + seed.snap && $0.value == 80
+    })
+    && session.document.note(seed.id).map {
+        $0.tick == noteBefore.tick && $0.duration == noteBefore.duration
+            && $0.pitch == noteBefore.pitch && $0.velocity == noteBefore.velocity
+    } == true, cppID: id,
+    message: "lane-scoped blank insertion shifts CC7 without moving the note")
+
+S060 | swiftcore/PianoRoll::timelineInsertBlankTimeLanes | src/checks/rollcheck/keyboard.swift:280
+Counterpart expression:
+report.expect(session.document.history.undoDocument()
+    && session.document.state == baseline
+    && session.document.history.currentIdentity == history,
+    cppID: id, message: "undo restores the lane-scoped insertion")

@@ -6,7 +6,9 @@ PromptCard {
     required property var bridge
 
     objectName: "timeSignaturePrompt"
-    appearance: bridge.timeSigPromptAppearance
+    appearance: Object.assign({}, bridge.timeSigPromptAppearance, {
+        font: Qt.font(bridge.timeSigPromptFont)
+    })
 
     property int draftNumerator: bridge.timeSigPromptInitialNumerator
     property int draftDenominatorPow2: bridge.timeSigPromptInitialDenominatorPow2
@@ -82,6 +84,7 @@ PromptCard {
         value: prompt.draftNumerator
         minimumValue: bridge.timeSigPromptMinimumNumerator
         maximumValue: bridge.timeSigPromptMaximumNumerator
+        inputMaximumValue: 999
         inputObjectName: "timeSignatureNumerator"
         accessibleName: bridge.timeSigPromptLabel
         accessibleDescription: bridge.timeSigPromptTitle

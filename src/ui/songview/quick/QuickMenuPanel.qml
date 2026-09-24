@@ -101,10 +101,13 @@ Item {
                 id: row
                 required property int index
                 required property var model
+                // Array-backed Swift ruler rows arrive as modelData; the
+                // existing typed QAbstractItemModel exposes its roles directly.
+                readonly property var itemData: model.modelData ?? model
                 objectName: panel.rowObjectNamePrefix.length > 0
-                            ? panel.rowObjectNamePrefix + model.actionId : ""
-                readonly property bool separator: model.separator ?? false
-                readonly property bool available: model.enabled ?? true
+                            ? panel.rowObjectNamePrefix + (itemData.actionId ?? itemData.itemId) : ""
+                readonly property bool separator: itemData.separator ?? false
+                readonly property bool available: itemData.enabled ?? true
 
                 // Canonical Qt state: Item.enabled drives accessibility, so
                 // a disabled row must be a disabled item, not a styling
@@ -145,7 +148,7 @@ Item {
                 Item {
                     id: tick
 
-                    visible: (row.model.checkable ?? false) && (row.model.checked ?? false)
+                    visible: (row.itemData.checkable ?? false) && (row.itemData.checked ?? false)
                              && !row.separator
                     x: panel.checkX
                     y: (row.height - width) / 2
@@ -180,7 +183,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     color: row.rowTextColor
                     font: panel.menuFont
-                    text: row.model.text
+                    text: row.itemData.text
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                     elide: Text.ElideRight
@@ -195,7 +198,7 @@ Item {
                     verticalAlignment: Text.AlignVCenter
                     color: Qt.alpha(row.rowTextColor, 0.6)
                     font: panel.menuFont
-                    text: row.model.shortcutText ?? ""
+                    text: row.itemData.shortcutText ?? ""
                     textFormat: Text.PlainText
                     renderType: Text.NativeRendering
                 }
@@ -204,7 +207,7 @@ Item {
                 Item {
                     id: arrow
 
-                    visible: (row.model.hasSubmenu ?? false) && !row.separator
+                    visible: (row.itemData.hasSubmenu ?? false) && !row.separator
                     x: panel.arrowRight - width
                     y: (row.height - height) / 2
                     width: panel.arrowWidth
@@ -251,7 +254,7 @@ Item {
                 }
 
                 Accessible.role: row.separator ? Accessible.Separator : Accessible.MenuItem
-                Accessible.name: row.model.text
+                Accessible.name: row.itemData.text
                 Accessible.onPressAction: {
                     if (row.active)
                         panel.host.activateRow(panel, row.index)

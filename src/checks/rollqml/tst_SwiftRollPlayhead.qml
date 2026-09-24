@@ -299,20 +299,20 @@ TestCase {
 
         // The header band and the keyboard gutter never carry playhead pixels,
         // except the triangle's deliberate half-width overhang at the split.
-        var headerRect = Qt.rect(0, 0, splitX - halfWidth, roll.height)
+        var headerRect = Qt.rect(0, roll.y, splitX - halfWidth, roll.height)
         verify(regionUnchanged(shown, hidden, headerRect),
                "the playhead left the header band and keyboard gutter unchanged")
         // The ruler-edge obligation: the roll segment's triangle clip extends
         // half a triangle width left of the plot origin, so the strip just
         // left of the split carries the triangle's left half.
-        var edgeStrip = Qt.rect(splitX - halfWidth, 0, halfWidth, roll.height)
+        var edgeStrip = Qt.rect(splitX - halfWidth, roll.y, halfWidth, roll.height)
         // The published position is the camera's own projection of the tick.
         compare(pres.contentX, bootstrap.cameraContentX(0),
                 "the playhead sits on the projected tick")
         verify(frameHasPlayhead(shown, edgeStrip, color),
                "the triangle overhang draws left of the plot origin")
         // The roll plot and every visible drawer body carry the playhead.
-        var rollRect = Qt.rect(splitX, 0, roll.width, roll.height)
+        var rollRect = Qt.rect(splitX, roll.y, roll.width, roll.height)
         verify(frameHasPlayhead(shown, rollRect, color),
                "the roll plot shows the playhead")
         var bands = ["Velocity", "VoiceChanges", "Automation"]
@@ -334,7 +334,7 @@ TestCase {
         compare(pres.contentX, bootstrap.cameraContentX(movedTick),
                 "the moved playhead sits on the projected tick")
         var moved = grabSurface()
-        var staticRect = Qt.rect(splitX + 128, 0, roll.width - 128, roll.height)
+        var staticRect = Qt.rect(splitX + 128, roll.y, roll.width - 128, roll.height)
         verify(regionUnchanged(moved, shown, staticRect),
                "a position-only move left the static roll pixels unchanged")
 

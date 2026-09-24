@@ -174,9 +174,10 @@ TestCase {
         bootstrap.cancelInput()
         bootstrap.resumePlayheadPolling()
     }
-
     function cleanup() {
         bootstrap.cancelInput()
+        if (bootstrap.timeSigFixtureActive())
+            verify(bootstrap.restoreTimeSigFixture(), "time-signature fixture restores its entry history")
         wait(0)
     }
 
@@ -222,5 +223,181 @@ TestCase {
         verify(image.width > 0 && image.height > 0,
                "the window framebuffer holds the rendered surface")
         compare(session.songTabs.tabCount, 1, "the staged song occupies one tab")
+    }
+    function timeSigSnapshot() {
+        return {
+            bytes: bootstrap.timeSigBytes(),
+            revision: bootstrap.timeSigRevision(),
+            undoIndex: bootstrap.timeSigUndoIndex(),
+            undoCount: bootstrap.timeSigUndoCount()
+        }
+    }
+
+    function compareTimeSigSnapshot(expected, message) {
+        compare(bootstrap.timeSigBytes(), expected.bytes, message + " bytes")
+        compare(bootstrap.timeSigRevision(), expected.revision, message + " revision")
+        compare(bootstrap.timeSigUndoIndex(), expected.undoIndex, message + " undo index")
+        compare(bootstrap.timeSigUndoCount(), expected.undoCount, message + " undo count")
+    }
+
+    function openTimeSigChip(tick) {
+        var surface = testCase.selectedSurface()
+        var ruler = findChild(surface, "timelineRulerInput")
+        verify(ruler && ruler.width > 0 && ruler.height > 0, "A001: live ruler input exists")
+        var x = bootstrap.cameraContentX(tick)
+        verify(x >= 0 && x < ruler.width, "the seeded signature chip is in the ruler")
+        mouseDoubleClickSequence(ruler, x, ruler.height / 4, Qt.LeftButton)
+        // QtBridge queues property notifications: observe the realized loader,
+        // not just the Swift flag set by the input handler.
+        tryVerify(function() { return findChild(surface, "timeSignaturePrompt") !== null },
+                  5000, "the prompt loader responds to the published open state")
+        var prompt = findChild(surface, "timeSignaturePrompt")
+        verify(prompt, "A002: double-click opened the shared time-signature prompt")
+        var numerator = findChild(prompt, "timeSignatureNumerator")
+        verify(numerator, "A003: numerator text editor exists")
+        tryCompare(numerator, "activeFocus", true)
+        return { ruler: ruler, prompt: prompt, numerator: numerator }
+    }
+
+    function chooseTimeSigEight(prompt) {
+        var button = findChild(prompt, "timeSignatureDenominator3")
+        verify(button, "A005: denominator 8 button exists")
+        mouseClick(button, button.width / 2, button.height / 2, Qt.LeftButton)
+        tryCompare(button, "activeFocus", true)
+    }
+
+    function test_timeSignaturePromptAcceptUndoGrid() {
+        var tick = bootstrap.seedTimeSigFixture()
+        verify(tick > 0 && bootstrap.timeSigTicksPerBeat() > 0,
+               "A001: the staged song seeded a 3/4 chip at four beats")
+        var before = timeSigSnapshot()
+        var opened = openTimeSigChip(tick)
+        keyClick(Qt.Key_7)
+        compare(opened.numerator.text, "7", "A004: typed 7 replaces selected 3")
+        chooseTimeSigEight(opened.prompt)
+        keyClick(Qt.Key_Return)
+        tryCompare(session, "timeSigPromptOpen", false)
+        compare(bootstrap.timeSigNumerator(tick), 7, "A007: numerator is 7")
+        compare(bootstrap.timeSigDenominatorPower(tick), 3, "A007: denominator is 8")
+        compare(bootstrap.timeSigRevision(), before.revision + 1, "A007: one revision")
+        compare(bootstrap.timeSigUndoIndex(), before.undoIndex + 1, "A007: one undo index")
+        compare(bootstrap.timeSigUndoCount(), before.undoCount + 1, "A007: one undo command")
+        compare(bootstrap.timeSigSegmentStart(tick), tick, "A009: grid starts at signature")
+        compare(bootstrap.timeSigSegmentBeats(tick), 7, "A009: seven beats per bar")
+        compare(bootstrap.timeSigSegmentBeatTicks(tick), bootstrap.timeSigTicksPerBeat() / 2,
+                "A009: denominator scales beat ticks")
+        tryCompare(opened.ruler, "activeFocus", true)
+        verify(bootstrap.undoTimeSignature(), "A011: one undo succeeds")
+        compare(bootstrap.timeSigBytes(), before.bytes, "A011: original MIDI bytes restored")
+
+        var unchanged = openTimeSigChip(tick)
+        var same = timeSigSnapshot()
+        var accept = findChild(unchanged.prompt, "timeSignatureAccept")
+        verify(accept, "A013: reopened prompt has Accept")
+        mouseClick(accept, accept.width / 2, accept.height / 2, Qt.LeftButton)
+        tryCompare(session, "timeSigPromptOpen", false)
+        compareTimeSigSnapshot(same, "A014: accepting unchanged 3/4")
+    }
+
+    function test_timeSignaturePromptCancelStale() {
+        var tick = bootstrap.seedTimeSigFixture()
+        verify(tick >= 0, "A015: the fixture opened")
+        var before = timeSigSnapshot()
+        var cancelled = openTimeSigChip(tick)
+        keyClick(Qt.Key_7)
+        var cancel = findChild(cancelled.prompt, "timeSignatureCancel")
+        verify(cancel, "A017: Cancel button exists")
+        mouseClick(cancel, cancel.width / 2, cancel.height / 2, Qt.LeftButton)
+        tryCompare(session, "timeSigPromptOpen", false)
+        compareTimeSigSnapshot(before, "A018: Cancel")
+        tryCompare(cancelled.ruler, "activeFocus", true)
+
+        var invalid = openTimeSigChip(tick)
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_9)
+        keyClick(Qt.Key_Return)
+        compare(session.timeSigPromptOpen, true, "A021: invalid 999 keeps the prompt")
+        compareTimeSigSnapshot(before, "A021: invalid 999")
+        keyClick(Qt.Key_Escape)
+        tryCompare(session, "timeSigPromptOpen", false)
+
+        openTimeSigChip(tick)
+        verify(bootstrap.setInterveningTimeSignature(tick + bootstrap.timeSigTicksPerBeat()),
+               "an external document edit arrives while the prompt is open")
+        var intervening = timeSigSnapshot()
+        compare(session.timeSigPromptOpen, false, "A024: revision retires the stale prompt")
+        compareTimeSigSnapshot(intervening, "A024: no extra command from stale prompt")
+    }
+
+    function test_timeSignaturePromptMenuEntries_data() {
+        return [{ tag: "on chip", onChip: true }, { tag: "off chip", onChip: false }]
+    }
+
+    function test_timeSignaturePromptMenuEntries(data) {
+        var tick = bootstrap.seedTimeSigFixture()
+        verify(tick >= 0, "A025: the fixture opened")
+        var surface = testCase.selectedSurface()
+        var ruler = findChild(surface, "timelineRulerInput")
+        verify(ruler, "A025: the mounted ruler input exists")
+        var menuTick = tick + (data.onChip ? 0 : bootstrap.timeSigTicksPerBeat())
+        mouseClick(ruler, bootstrap.cameraContentX(menuTick), ruler.height / 4, Qt.RightButton)
+        tryVerify(function() { return findChild(surface, "quickMenuPanelRoot") !== null },
+                  5000, "the menu loader responds to the published open state")
+        var menu = findChild(surface, "quickMenuPanelRoot")
+        verify(menu && session.timeSigMenuOpen, "A026: shared ruler menu opens")
+        var editRow = findChild(menu, "rulerMenuRow_9")
+        verify(editRow, "the existing Edit Time Signature menu row is rendered")
+        mouseClick(editRow, editRow.width / 2, editRow.height / 2, Qt.LeftButton)
+        compare(session.timeSigMenuOpen, false, "A027: menu no longer owns the prompt")
+        tryVerify(function() { return findChild(surface, "timeSignaturePrompt") !== null },
+                  5000, "the menu action realizes the prompt")
+        var prompt = findChild(surface, "timeSignaturePrompt")
+        verify(prompt && session.timeSigPromptOpen, "A028: menu action opens the form")
+        var numerator = findChild(prompt, "timeSignatureNumerator")
+        tryCompare(numerator, "activeFocus", true)
+        keyClick(Qt.Key_Escape)
+        tryCompare(session, "timeSigPromptOpen", false)
+        tryCompare(ruler, "activeFocus", true)
+    }
+
+    function test_timeSignaturePromptCursorEntry_data() {
+        return [{ tag: "on event", onEvent: true }, { tag: "off event", onEvent: false }]
+    }
+
+    function test_timeSignaturePromptCursorEntry(data) {
+        var tick = bootstrap.seedTimeSigFixture()
+        verify(tick >= 0, "A031: the fixture opened")
+        var cursorTick = data.onEvent ? tick : tick + 7
+        var before = timeSigSnapshot()
+        verify(bootstrap.setTimeSigCursor(cursorTick), "A032: exact edit cursor established")
+        var surface = testCase.selectedSurface()
+        var ruler = findChild(surface, "timelineRulerInput")
+        verify(ruler, "A032: the live ruler interaction exists")
+        ruler.editTimeSignatureAtCursor()
+        tryVerify(function() { return findChild(surface, "timeSignaturePrompt") !== null },
+                  5000, "the cursor action realizes the prompt")
+        var prompt = findChild(surface, "timeSignaturePrompt")
+        verify(prompt, "A033: cursor opens the live prompt")
+        var numerator = findChild(prompt, "timeSignatureNumerator")
+        verify(numerator, "A034: numerator input exists")
+        tryCompare(numerator, "activeFocus", true)
+        compare(numerator.text, "3", "A035: in-effect signature seeds numerator")
+        keyClick(Qt.Key_5)
+        compare(numerator.text, "5", "A036: typed 5 is displayed")
+        chooseTimeSigEight(prompt)
+        keyClick(Qt.Key_Return)
+        tryCompare(session, "timeSigPromptOpen", false)
+        compare(bootstrap.timeSigNumerator(cursorTick), 5, "A039: exact cursor numerator")
+        compare(bootstrap.timeSigDenominatorPower(cursorTick), 3, "A039: exact cursor denominator")
+        compare(bootstrap.timeSigRevision(), before.revision + 1, "A039: one revision")
+        compare(bootstrap.timeSigUndoIndex(), before.undoIndex + 1, "A039: one undo index")
+        compare(bootstrap.timeSigUndoCount(), before.undoCount + 1, "A039: one undo command")
+        if (!data.onEvent) {
+            compare(bootstrap.timeSigNumerator(tick), 3, "A040: original event numerator stays")
+            compare(bootstrap.timeSigDenominatorPower(tick), 2,
+                    "A040: original event denominator stays")
+        }
+        tryCompare(ruler, "activeFocus", true)
     }
 }

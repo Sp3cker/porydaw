@@ -30,6 +30,12 @@ public final class SongTabSession {
     /// standalone session's pages, this facade's never fail — they resolve
     /// against a workspace that lives exactly as long as the tab.
     @QtTracked public var songOpen = true
+    /// The application that owns window-scoped prompt state. The page binds
+    /// this tab as `applicationSession`, so the time-signature prompt cannot
+    /// read those properties unless they are a stored object reference.
+    @QtTracked public var timeSigHost: ApplicationSession
+    @QtTracked public var timeSigPromptOpen = false
+    @QtTracked public var timeSigMenuOpen = false
 
     /// The workspace this tab presents: one document plus every presenter bound
     /// to it. The tab owns it for as long as the tab is live; the application
@@ -45,6 +51,7 @@ public final class SongTabSession {
         self.title = title
         self.workspace = workspace
         self.app = app
+        timeSigHost = app
         grid = workspace.grid
         dirty = SongTabSession.isDirty(workspace.session)
     }
@@ -95,6 +102,13 @@ public final class SongTabSession {
 
     public func requestGridContextMenu(x: Double, y: Double) {
         app.requestGridContextMenu(x: x, y: y)
+    }
+
+    func pullTimeSigFlags() {
+        let prompt = app.timeSigPromptOpen
+        let menu = app.timeSigMenuOpen
+        if timeSigPromptOpen != prompt { timeSigPromptOpen = prompt }
+        if timeSigMenuOpen != menu { timeSigMenuOpen = menu }
     }
 }
 
@@ -175,6 +189,10 @@ public final class SongTabsController {
     /// Every live tab, in strip order.
     @QtIgnored
     var allTabs: [SongTabSession] { tabs.asArray }
+
+    func publishTimeSigFlags() {
+        for tab in allTabs { tab.pullTimeSigFlags() }
+    }
 
     /// Republishes every tab's own dirty state from its document. Each caption
     /// and the close gate read the tab's own answer, so one document change
