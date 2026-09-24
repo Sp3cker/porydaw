@@ -1,5 +1,7 @@
 # Lifecycle & State-Ownership Conformance Audit
 
+> Scope note (2026-09): this audit covers the retained native C++ seam. Porydaw is now a Swift 6 + QML application: Swift owns behavior and exposes it to QML through QtBridge, with no QWidgets and no new C++ outside the native boundaries. The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift` → `src/ui/shell/*.qml`). Findings below still govern the named native owners until they migrate to Swift.
+
 This document is the bounded conformance audit of mutable-state ownership
 and lifecycle across the `ProjectWorkspace → WorkspaceUi/SongTab →
 MainWindow` seam in Porydaw. It is adjudicated: every accepted finding

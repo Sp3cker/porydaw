@@ -11,7 +11,7 @@ _Avoid_: primary track (speech), active lane
 
 **Multi-selected Tracks**:
 Only the shift-clicked extra headers. Never includes the selected track.
-_Code_: extras inside `Track Scope` / `TrackMask` (the mask also contains the selected track)
+_Code_: extras inside `DocumentSession.selectedTracks` (the set also contains the selected track; `selectedTrack` is the selected track)
 _Avoid_: Track Scope (speech), selected tracks
 
 **Note Selection**:
@@ -39,22 +39,22 @@ _Avoid_: parameter (speech), CC lane, Volume lane, Tempo lane, tab
 
 **Automation Label** (also: **Automation Button**):
 The exclusive clickable cell that activates an automation. Synonyms for the same cell, not two objects.
-_Code_: `Controls.TabButton`, `automationParameterTabN`, `automationParameterTabs`
+_Code_: `automationParameterTab` primitive object names in `AutomationPage.qml`
 _Avoid_: tab, toggle, lane header
 
 **Automation Lane**:
 The one shared plot where nodes are drawn. Switching automations retargets this same lane. Never “the Volume lane”.
-_Code_: QML plot, `laneBody`
+_Code_: `AutomationPage.qml` `automationPlot`
 _Avoid_: Volume lane, automation lanes (stacked), plot (speech)
 
 **Label Gutter** (also: **Label Area**):
 The left column of the automation drawer that holds the automation labels.
-_Code_: automation band `gutterRect`
+_Code_: `AutomationPage.qml` `automationGutter`
 _Avoid_: gutter (bare — also the piano keyboard and Grid controls), header
 
 **Automation Drawer**:
 The whole surface: label gutter plus automation lane. Shown with A.
-_Code_: `EditorDrawerPage::Automations`
+_Code_: Swift `AutomationPage` (conforms to the `EditorDrawerPage` protocol)
 _Avoid_: Automation Lanes
 
 Do not rename the `parameter*` API. Search `parameterLabels` / `activeParameter` / `automationParameterTab`, not a repo-wide `automation` grep.
@@ -65,12 +65,12 @@ Do not rename the `parameter*` API. Search `parameterLabels` / `activeParameter`
 
 **Velocity Drawer** (also: **Velocity Pane**):
 The velocity page. Shown with V.
-_Code_: `EditorDrawerPage::Velocity`
+_Code_: Swift `VelocityPage` (conforms to the `EditorDrawerPage` protocol)
 _Avoid_: velocity lane
 
 **Voice-change Drawer** (also: **Voice-change Pane**):
 The page of voice-change markers. Shown with P.
-_Code_: `EditorDrawerPage::VoiceChanges`
+_Code_: Swift `VoiceChangesPage` (conforms to the `EditorDrawerPage` protocol)
 _Avoid_: Voice Changes (speech for the page), voice change lane
 
 **Voice Change**:
@@ -80,5 +80,6 @@ _Avoid_: Voice Change lane, Voice row, program lane, voice node lane
 ## Other surfaces
 
 **Song Tab**:
-One open song in the central `QTabWidget`. This is the only spoken “tab”.
+One open song in the `ShellWindow` tab strip. This is the only spoken “tab”.
+_Code_: Swift `SongTabsController` (`tabs`, `selectedIndex`)
 _Avoid_: calling an automation label a tab

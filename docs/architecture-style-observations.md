@@ -1,3 +1,5 @@
+> Scope note (2026-09): this is a cross-repository provenance study feeding STYLE_GUIDE.md, not a description of the Porydaw app. Porydaw itself is now a Swift 6 + QML application (Swift owns behavior, exposed to QML through QtBridge; no QWidgets). The `cProjects/porydaw` row above describes its earlier C++20/Qt6 era.
+
 Nothing here is a universal prescription. Each observation in §3 is
 labeled as **observed fact**, **inference**, **evolution**, or
 **counterexample**, and carries a confidence level. Sections 2, 4, 5,

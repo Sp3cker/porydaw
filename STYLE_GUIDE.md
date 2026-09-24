@@ -1,3 +1,7 @@
+# Architecture scope
+
+Porydaw is a Swift 6 + QML application: Swift owns behavior and exposes it to QML through QtBridge. There are no QWidgets and no new C++ outside the native boundaries (`src/app/clipboard_host.cpp`, `font_metrics.cpp`, `src/project/`). The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift` → `src/ui/shell/*.qml`); new document, session, presenter, and drawer behavior belongs in `src/swift/` with its QML surface. Apply the ownership, publication, and lifecycle rules below to the Swift owners first; the named C++ seams (`SongDocument`, `ProjectWorkspace`, `SongTab`, `QUndoStack`) govern the retained native code they still own until it migrates.
+
 ## Fast path for agents
 
 Before changing code, be able to name five things in one sentence each:

@@ -8,6 +8,7 @@ pokeruby, and forks). It is configured with a single path — the user's decomp 
 directory — and from that it knows how to load instruments, samples, and songs, play
 them back GBA-accurately, and save drop-in `.mid` files that the project's existing
 `mid2agb` build pipeline consumes unchanged.
+*(Platform note, 2026-09: the Swift rewrite proceeds macOS-first; Windows is deferred, not dropped, with existing users frozen on the last C++ release until Windows returns on the Swift codebase. macOS is currently the only platform that builds the Swift app.)*
 
 ## 1. Vision
 
@@ -38,7 +39,7 @@ in the UI, not fights against a general-purpose DAW's assumptions.
 | Decision | Choice | Rationale |
 |---|---|---|
 | Fork vs. scratch | **Build from scratch** | Existing DAWs (LMMS, Qtractor, Ardour, …) are enormous codebases centered on features we don't need (audio tracks, plugin graphs), while porydaw's value is m4a-native constraints. The hard real-time parts already exist in poryaaaa. |
-| UI stack | **Qt 6 / C++** | Same stack as porymap: proven cross-platform shipping to this exact audience, native menus/dialogs/docking, well-trodden piano-roll territory (LMMS/Qtractor are Qt). |
+| UI stack | **Qt 6 / Swift 6 + QML via QtBridge** *(revised 2026-09; originally C++)* | Swift owns behavior and exposes it to QML through QtBridge: proven shipping to this exact audience through the Qt/QML scene, native menus/dialogs, well-trodden piano-roll territory (LMMS/Qtractor are Qt). No QWidgets; no new C++ outside the native boundaries. |
 | Song source of truth | **The `.mid` file is canonical** | porydaw edits `sound/songs/midi/*.mid` in place, constrained to the mid2agb-compatible subset. Saving *is* exporting. Perfect interop: the same file opens in any DAW; porydaw can never corrupt a build. |
 | Project write-back depth | **All song-related files** *(revised 2026-07-05; originally "songs only" with copy-paste snippets)* | porydaw writes `.mid` files, the song's `midi.cfg` line, and the registration files (`song_table.inc`, `songs.h`, `ld_script.ld`, `charmap.txt`, `src/debug.c`) directly — inserting or correcting only the song's own lines, byte-conservative for everything else (§6.3). Voicegroup `.inc` files: the editor rewrites only the edited voice lines, preserving every other byte (§5.3). Nothing outside this set is ever modified. |
 | Repo shape | **New repo; poryaaaa as git submodule** | porydaw is its own CMake project consuming poryaaaa's engine sources (`ENGINE_SOURCES` set). Fixes the engine needs (see §9) are upstreamed to poryaaaa so the CLAP plugin benefits too. |
@@ -50,16 +51,16 @@ Four layers; dependencies point downward only.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  UI shell (Qt 6 / C++)                                  │
+│  UI shell (Swift 6 + QML via QtBridge)                  │
 │  main window · track list · piano roll · automation     │
 │  lanes · instrument browser · transport · wizards       │
 ├─────────────────────────────────────────────────────────┤
-│  Document + Sequencer (C++)                             │
+│  Document + Sequencer (Swift)                           │
 │  SongDocument (in-memory SMF + m4a semantics) · undo/   │
 │  redo · mid2agb simulation (LUTs, CC map) · transport   │
 │  state · sample-accurate event scheduler                │
 ├─────────────────────────────────────────────────────────┤
-│  Decomp Project Adapter (C++)                           │
+│  Decomp Project Adapter (Swift + native service)        │
 │  project discovery/profile · song list (song_table.inc, │
 │  songs.h, midi.cfg) · SMF read/write · midi.cfg write · │
 │  registration writer                                    │

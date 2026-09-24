@@ -25,6 +25,20 @@ Download Porydaw below to start using it immediately. Older versions of Porydaw 
 
 Read [INSTALL.md](INSTALL.md) for instructions on how to compile Porydaw from source.
 
+## Architecture
+
+Porydaw is a Swift 6 + QML application. Swift owns behavior and exposes it to
+QML through QtBridge; there are no QWidgets and no new C++ outside the native
+boundaries (`src/app/clipboard_host.cpp`, `font_metrics.cpp`, `src/project/`).
+The application entry point is the Swift shell
+(`src/swift/app/shell/PorydawShellApp.swift`), which loads
+`src/ui/shell/PorydawApplication.qml` and `ShellWindow.qml`.
+
+Builds run through Deno tasks against a checkout-local Qt 6.11. On macOS the
+Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
+macOS is currently the only platform that builds the Swift app; Windows and
+Linux Swift build support is pending.
+
 ## Contributing
 
 Code formatting is enforced with Deno and clang-format (major version 22 — output differs between major versions). Before opening a pull request, run:
@@ -36,10 +50,14 @@ deno task format:check    # what CI runs
 
 QML is deliberately excluded from clang-format. Explicit QML paths make `deno task format` reject the entire file list before changing anything; `.clang-format-ignore` also protects QML files at every directory depth from direct clang-format invocations.
 
-Build and run the complete application check sweep with Deno:
+Build and run the check sweep with Deno:
 
 ```bash
-deno task checks
+deno task verify                             # native check runner harnesses (builds first)
+deno task verify --filter swiftcore --verbose  # Swift core/presenter suites
+deno task verify:shell --verbose               # production ShellWindow QML lanes
+deno task verify:qml --verbose                 # editor drawer QML lane
+deno task verify:qml-roll --verbose            # Swift roll window QML lane
 ```
 
 ## License

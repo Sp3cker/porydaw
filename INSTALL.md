@@ -13,7 +13,11 @@ Installation is not required to use Porydaw. You can download the latest release
 
 ## Build from source
 
-Porydaw uses one cross-platform Deno setup command. It checks installed host build tools before making changes, provisions only missing prerequisites, initializes `poryaaaa`, creates checkout-local Qt and formatter tooling, configures the complete check-enabled build, and builds the application.
+Porydaw is a Swift 6 + QML application (Swift owns behavior, exposed to QML through QtBridge; no QWidgets). The application entry point is the Swift shell (`src/swift/app/shell/PorydawShellApp.swift`), which loads `src/ui/shell/PorydawApplication.qml` and `ShellWindow.qml`.
+
+macOS is currently the only platform that builds the Swift app; Windows and Linux Swift build support is pending. The platform sections below describe the last C++ release downloads and the multi-platform setup scaffolding.
+
+Porydaw uses one Deno setup command. It checks installed host build tools before making changes, provisions only missing prerequisites, initializes `poryaaaa`, creates checkout-local Qt and formatter tooling, configures the complete check-enabled build, and builds the application.
 
 Install Deno 2 first. The setup command cannot install Deno because Deno runs the command.
 
@@ -33,7 +37,7 @@ deno task setup --dry-run
 deno task setup
 ```
 
-`deno task setup` needs an internet connection when a prerequisite is missing. Before invoking a package manager, it checks CMake, the selected generator, a C and C++20 toolchain, and Python. Compatible installed tools are left unchanged. If an installed tool is incompatible, setup stops before provisioning it and reports the required and detected versions.
+`deno task setup` needs an internet connection when a prerequisite is missing. Before invoking a package manager, it checks CMake, the selected generator, a C and C++20 toolchain, a Swift 6 toolchain, and Python. Compatible installed tools are left unchanged. If an installed tool is incompatible, setup stops before provisioning it and reports the required and detected versions. On macOS the Swift toolchain is pinned by `.swift-version` (currently 6.4.0) via swiftly.
 
 When it must provision a missing host prerequisite, it uses:
 
@@ -41,7 +45,7 @@ When it must provision a missing host prerequisite, it uses:
 - WinGet plus Visual Studio 2022 Build Tools on Windows;
 - `apt-get` (Debian/Ubuntu), `pacman` (Arch), or `dnf` (Fedora) on Linux.
 
-The required host tools are CMake 3.24 or newer, a C++20 compiler, Python 3.10 or newer that can create a virtual environment with pip, and the generator selected for the build. Qt 6.11 and the CI-matched `clang-format` 22 are installed only into this checkout:
+The required host tools are CMake 3.24 or newer, a C++20 compiler, Swift 6 (pinned by `.swift-version` on macOS via swiftly), Python 3.10 or newer that can create a virtual environment with pip, and the generator selected for the build. Qt 6.11 and the CI-matched `clang-format` 22 are installed only into this checkout:
 
 ```text
 .cache/setup/qt/
