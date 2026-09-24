@@ -43,7 +43,6 @@
 
 namespace {
 
-constexpr auto kClipMimeType = "application/x-porydaw-clip";
 constexpr int kSelectionFillAlpha = 30;
 
 QString hexColor(const QColor &color)
@@ -746,32 +745,4 @@ void RewriteWindow::invokeNoArgs(const char *method)
 {
     if (m_session)
         QMetaObject::invokeMethod(m_session, method);
-}
-
-extern "C" bool pd_clipboard_write(const uint8_t *bytes, size_t count)
-{
-    if (!qApp || QThread::currentThread() != qApp->thread() || (bytes == nullptr && count != 0) ||
-        count > size_t((std::numeric_limits<qsizetype>::max)())) {
-        return false;
-    }
-    auto *mime = new QMimeData;
-    const QByteArray payload =
-        count == 0 ? QByteArray{}
-                   : QByteArray(reinterpret_cast<const char *>(bytes), qsizetype(count));
-    mime->setData(kClipMimeType, payload);
-    QApplication::clipboard()->setMimeData(mime);
-    return true;
-}
-
-extern "C" bool pd_clipboard_read(void *context, PdConsumeBytesCallback consume)
-{
-    if (!qApp || QThread::currentThread() != qApp->thread() || consume == nullptr)
-        return false;
-    const QMimeData *mime = QApplication::clipboard()->mimeData();
-    if (!mime || !mime->hasFormat(kClipMimeType))
-        return false;
-    const QByteArray payload = mime->data(kClipMimeType);
-    consume(context, reinterpret_cast<const uint8_t *>(payload.constData()),
-            size_t(payload.size()));
-    return true;
 }

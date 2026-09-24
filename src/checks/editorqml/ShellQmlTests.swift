@@ -4,18 +4,24 @@ import PorydawProjectService
 import QtBridge
 import QtBridgeCpp
 
-/// Hosts the actual production ShellWindow through Qt Quick Test. The runner
-/// stages the same two-song project as mainwindowrouting's window fixture.
+/// Hosts the actual production ShellWindow through Qt Quick Test. Each entry
+/// is one TestCase file with its own staged decomp-project fixture; the runner
+/// passes the entry name first, then the scratch project it staged.
 @main
 enum ShellQmlLane {
-    private static let entryName = "shellwindow"
-    private static let inputFileName = "tst_ShellWindow.qml"
-    /// The standalone runner owns fixture staging for both named songs.
-    private static let fixtureFiles = [
+    private struct Entry {
+        let name: String
+        let inputFileName: String
+        let fixtureFiles: [String]
+        /// run_checks.ts windowing: "offscreen", or "window-system" for real
+        /// focus/activation delivery (run serially, never beside other windows).
+        var windowing = "offscreen"
+    }
+
+    /// Project tables, samples and the original `_fixture_rich` voicegroups.
+    private static let projectFixture = [
         "sound/song_table.inc",
         "sound/songs/midi/midi.cfg",
-        "sound/songs/midi/mus_route101.mid",
-        "sound/songs/midi/mus_littleroot_test.mid",
         "sound/direct_sound_data.inc",
         "sound/direct_sound_samples/fixture_bass.bin",
         "sound/direct_sound_samples/fixture_drum.bin",
@@ -32,10 +38,21 @@ enum ShellQmlLane {
         "sound/voicegroups/fixture_drums_b.inc",
     ]
 
+    private static func songs(_ labels: String...) -> [String] {
+        projectFixture + labels.map { "sound/songs/midi/\($0).mid" }
+    }
+
+    private static let entries = [
+        Entry(name: "shellwindow", inputFileName: "tst_ShellWindow.qml",
+              fixtureFiles: songs("mus_route101", "mus_littleroot_test")),
+    ]
+
     private static var manifestLine: String {
-        let files = fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
-        let entry = #"{"name":"\#(entryName)","argv":["{scratch}"],"binary":"checks","windowing":"offscreen","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
-        return #"{"checks":[\#(entry)]}"#
+        let checks = entries.map { entry in
+            let files = entry.fixtureFiles.map { "\"" + $0 + "\"" }.joined(separator: ",")
+            return #"{"name":"\#(entry.name)","argv":["\#(entry.name)","{scratch}"],"binary":"checks","windowing":"\#(entry.windowing)","framework":"qt-test","optIn":false,"scratchKind":"existing-directory","fixtureRootKind":"decomp-project","fixtureFiles":[\#(files)]}"#
+        }
+        return #"{"checks":[\#(checks.joined(separator: ","))]}"#
     }
 
     static func main() {
@@ -50,17 +67,22 @@ enum ShellQmlLane {
             print(manifestLine)
             return 0
         }
-        guard let scratch = arguments.first, !scratch.isEmpty,
-              FileManager.default.fileExists(atPath: scratch)
+        let usage = "usage: shell_qml_tests <entry> <staged-project-directory> [--qt <Qt args>]"
+        guard arguments.count >= 2,
+              let entry = entries.first(where: { $0.name == arguments[0] })
         else {
-            return fail("usage: shell_qml_tests <staged-project-directory> [--qt <Qt args>]")
+            return fail(usage)
         }
-        var payload = Array(arguments.dropFirst())
+        let scratch = arguments[1]
+        guard !scratch.isEmpty, FileManager.default.fileExists(atPath: scratch) else {
+            return fail(usage)
+        }
+        var payload = Array(arguments.dropFirst(2))
         if let separator = payload.firstIndex(of: "--qt") {
             payload = Array(payload[(separator + 1)...])
         }
         guard !payload.contains("-input") else {
-            return fail("shellwindow owns its -input file: \(inputFileName)")
+            return fail("\(entry.name) owns its -input file: \(entry.inputFileName)")
         }
         ShellQmlBootstrap.stage(projectRoot: scratch)
         var app = QTestAppCpp()
@@ -71,7 +93,7 @@ enum ShellQmlLane {
         ShellPresenter.registerQmlElement()
         ShellQmlBootstrap.registerQmlElement()
         let inputFile = URL(fileURLWithPath: EditorQmlPaths.testDirectory, isDirectory: true)
-            .appendingPathComponent(inputFileName).path
+            .appendingPathComponent(entry.inputFileName).path
         let arguments = [CommandLine.arguments.first ?? "shell_qml_tests", "-input", inputFile] + payload
         var argv: [UnsafeMutablePointer<Int8>?] = arguments.map { strdup($0) }
         defer { argv.forEach { free($0) } }
