@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/trackheaders/trackheadermutations.cpp
 Original SHA-256: 33aaa04ef0108105def9b4a5a1a4a870ef78099e242c98fbb967bf32358a4785
 Swift counterpart: src/checks/trackheaders/trackheadermutations.swift
-Swift SHA-256: 0ae3978d46ea8641d2d5a1f1ad82a17aadc9a50c450b0d54255d8c657a5d0b89
+Swift SHA-256: 822b24d3f99f7b60759761cfcb74e90059532a8a1d1c7628303a018ef4131068
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -18,9 +18,12 @@ it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Converted-window command: deno task verify:qml --verbose
+Command: deno task verify --filter swiftcore --verbose --qt projectSession -maxwarnings 100000
+Result: PASS (3 passed, 0 failed; covering PASS IDs renameTargetRowAndScrolledTitleResolve, renameMenuTargetsAndBegins). Full-suite PASS not claimed (concurrent-slice noise during the run).
+Converted-window command: deno task verify:qml-roll --verbose
+Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_renameEditorBoundToTrackRow (:156-174) exercises A017-A019, test_reorderMarkerStaysInsideInput (:176-192) exercises A047-A048, test_headerMenuRenameRowActivates (:194-211) exercises A004 through the mounted panel. This proof-only pass cites the exercised lines without re-running the suite.
+Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 90f4b3bbdcb88534a16c157d15f36dee7a7497ef86911ca40a93e2adcf9e0c9b (header menu loader :363-405; mount wiring :27/:33-44/:88-94; Main-authorized parity fix for the previously unrendered presenter menu)
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
@@ -29,7 +32,7 @@ TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
 original Swift suite order. headerfixture.swift constructs a real two-track
 DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
 headerinputfixture.swift owns pointer probes and document/history baselines.
-Their helper expectations execute on every call and are inventoried below.
+Their helper expectations execute on every call and are inventoried below. Caller pin: src/checks/trackheaders/TrackHeadersInputChecks.swift SHA-256 0e30a3e3f6929ae540cf35157403c95f1bf2e25f2d3d908e3a37011a5742abb5 calls renameTargetRowAndScrolledTitleResolve at line 14 and renameMenuTargetsAndBegins at line 15.
 
 Original assertion inventory and source sequence
 
@@ -95,8 +98,8 @@ Original expression:
   QVERIFY2(fixture.focusInput(focusError), qPrintable(focusError))
 
 A002 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:58
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: report.expect(row != 0 && h.rows[row].track == target): the rename target row resolves from track identity, with a guard-fail when absent. [S058]
 Source context since previous assertion:
   ;
 
@@ -105,8 +108,8 @@ Original expression:
   QVERIFY2(row, "the rename target has no header row")
 
 A003 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:64
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: The visibleTitlePoint guard plus the scrollY/viewport and double-click predicates prove the scrolled title point exists, stays visible, and accepts the rename double click for the resolved track. [S059, S060, S061]
 Source context since previous assertion:
   ;
       // Scrolling the target row to the top keeps the title point inside the
@@ -118,8 +121,8 @@ Original expression:
   QVERIFY2(title, "the header row title point is not visible")
 
 A004 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:67
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window session liveness: the header menu Loader mounts the typed panel exactly when headersModel.menuOpen (EditorSurface.qml:363-366, typed rows headerMenuRow_ :383); test_headerMenuRenameRowActivates drives a real right-press to menuOpen [S074] and observes the rendered Rename row headerMenuRow_3 [S075] through the real panel before activating rename [S076].
 Source context since previous assertion:
   ;
 
@@ -143,8 +146,8 @@ Original expression:
                "the header right-press did not open the shared menu")
 
 A006 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:80
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: report.expect over the typed menu items proves the menu renders the enabled Rename track action. [S062]
 Source context since previous assertion:
   ;
       songview::QuickMenuModel *const model =
@@ -164,8 +167,8 @@ Original expression:
                "the Rename track row did not receive a real click")
 
 A008 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:84
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: report.expect(!h.menuOpen): selecting Rename closes the header menu. [S063]
 Source context since previous assertion:
   ;
       QCoreApplication::processEvents();
@@ -173,8 +176,8 @@ Original expression:
   QVERIFY2(!session->isOpen(), "the Rename track pick left the header menu open")
 
 A009 | commitRename | src/checks/trackheaders/trackheadermutations.cpp:85
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: report.expectEqual(target, h.renamingTrack): selecting Rename begins editing the menu target. [S064]
 Source context since previous assertion:
   ;
 Original expression:
@@ -260,8 +263,8 @@ Original expression:
   QVERIFY(fx.rename().isVisible())
 
 A017 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:118
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermutations.swift; renamingTrack is proven but the native editor item has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_renameEditorBoundToTrackRow resolves the rename editor item from its bound track row and verifies it non-null [S065], with editor visibility proven alongside [S066].
 Source context since previous assertion:
   ;
       QQuickItem *const editor = fx.rename().parentItem();
@@ -269,16 +272,16 @@ Original expression:
   QVERIFY(editor)
 
 A018 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:119
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermutations.swift; renamingTrack is proven but native editor x geometry has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_renameEditorBoundToTrackRow proves editor x equals the model renameEditorRect x [S067].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(editor->x(), headers.renameEditorRect().x()))
 
 A019 | TrackHeadersTest::renameCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:120
-Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermutations.swift; renamingTrack is proven but native editor y geometry has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_renameEditorBoundToTrackRow proves editor y equals row index times rowHeight minus scrollY plus renameEditorRect y [S068].
 Source context since previous assertion:
   ;
 Original expression:
@@ -541,16 +544,16 @@ Original expression:
   QVERIFY(fx.marker().isVisible())
 
 A047 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:188
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012-S029 in src/checks/trackheaders/trackheadermutations.swift; reorderIndicatorY is proven but the native marker item has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_reorderMarkerStaysInsideInput proves the rendered reorder marker y is non-negative [S072], with marker visibility proven alongside [S071].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fx.marker().y() >= 0.0)
 
 A048 | TrackHeadersTest::reorderCommitsAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:189
-Disposition: PARTIAL
-Mapping/reason: Related predicates S012-S029 in src/checks/trackheaders/trackheadermutations.swift; reorderIndicatorY is proven but native marker bounds have no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_reorderMarkerStaysInsideInput proves marker y plus height stays inside the input height [S073].
 Source context since previous assertion:
   ;
 Original expression:
@@ -992,7 +995,7 @@ Original expression:
 
 A096 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:299
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the onAddTrackRequested callback is proven but the native voice-picker window has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the onAddTrackRequested callback; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1000,7 +1003,7 @@ Original expression:
 
 A097 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:301
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker cancelled = checks::voicepicker::active(fx.view());
@@ -1095,7 +1098,7 @@ Original expression:
 
 A107 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:325
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; completeVoiceRequest(-1) covers cancellation but native outside-press picker dismissal has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift with completeVoiceRequest(-1) cover cancellation; outside-press picker dismissal stays unproved: the picker surface is owned by the editor/drawer surface, not the header band, and no header-band QML predicate dismisses it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1153,7 +1156,7 @@ Original expression:
 
 A114 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:335
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the reopened picker request is proven but the native picker window has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the reopened picker request; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1161,7 +1164,7 @@ Original expression:
 
 A115 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:337
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(fx.view());
@@ -1170,7 +1173,7 @@ Original expression:
 
 A116 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:340
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but the native accept-button state has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker accept-button state stays unproved: accept-state is owned by the editor/drawer picker surface (drawer/VoicePicker.qml), not the header band, and no header-band QML predicate observes it.
 Source context since previous assertion:
   ;
 
@@ -1428,7 +1431,7 @@ Original expression:
 
 A145 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:398
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the remapped picker request is proven but the native picker window has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the remapped picker request; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
 Source context since previous assertion:
   ;
       // Drive the opening gesture through the QQuickWindow. Calling the model
@@ -1441,7 +1444,7 @@ Original expression:
 
 A146 | TrackHeadersTest::addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.cpp:400
 Disposition: PARTIAL
-Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
+Mapping/reason: Related predicates S030-S057 in src/checks/trackheaders/trackheadermutations.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker remapped = checks::voicepicker::active(fx.view());
@@ -1768,8 +1771,80 @@ S056 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheade
 S057 | addTrackOpensPickerAndRebuildsHeader | src/checks/trackheaders/trackheadermutations.swift:178
   report.expect(fx.document.moveTrack(0, to: 1), cppID: id, message: "picker target remaps")
 
+S058 | renameTargetRowAndScrolledTitleResolve | src/checks/trackheaders/trackheadermutations.swift:19
+  report.expect(row != 0 && h.rows[row].track == target, cppID: id,
+                  message: "rename target row resolves from track identity")
+
+S059 | renameTargetRowAndScrolledTitleResolve | src/checks/trackheaders/trackheadermutations.swift:25
+  report.expect(h.scrollY > 0 && title.y >= 0 && title.y < h.viewportHeight,
+                  cppID: id, message: "target title stays visible after scrolling")
+
+S060 | renameTargetRowAndScrolledTitleResolve | src/checks/trackheaders/trackheadermutations.swift:27
+  report.expect(h.doublePointer(x: title.x, y: title.y, button: 1, modifiers: 0),
+                  cppID: id, message: "scrolled target title accepts rename double click")
+
+S061 | renameTargetRowAndScrolledTitleResolve | src/checks/trackheaders/trackheadermutations.swift:29
+  report.expectEqual(target, h.renamingTrack, cppID: id,
+                       what: "scrolled rename opens for the identity-resolved track")
+
+S062 | renameMenuTargetsAndBegins | src/checks/trackheaders/trackheadermutations.swift:45
+  report.expect((0..<h.menuItems.count).contains {
+      h.menuItems[$0].actionId == 3 && h.menuItems[$0].text == "Rename track..."
+          && h.menuItems[$0].enabled
+  }, cppID: id, message: "menu exposes enabled Rename track action")
+
+S063 | renameMenuTargetsAndBegins | src/checks/trackheaders/trackheadermutations.swift:50
+  report.expect(!h.menuOpen, cppID: id, message: "selecting Rename closes the header menu")
+
+S064 | renameMenuTargetsAndBegins | src/checks/trackheaders/trackheadermutations.swift:51
+  report.expectEqual(target, h.renamingTrack, cppID: id,
+                       what: "selecting Rename begins editing menu target")
+
+S065-S078 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_renameEditorBoundToTrackRow, test_reorderMarkerStaysInsideInput and test_headerMenuRenameRowActivates, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
+
+S065 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:168
+  var editor = rename.parent
+  verify(editor !== null)
+
+S066 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:170
+  tryCompare(editor, "visible", true)
+
+S067 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:171
+  verify(near(editor.x, h.renameEditorRect.x))
+
+S068 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:172
+  verify(near(editor.y, first.index * h.rowHeight - h.scrollY + h.renameEditorRect.y))
+
+S069 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:173
+  verify(near(editor.width, h.renameEditorRect.width))
+
+S070 | test_renameEditorBoundToTrackRow | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:174
+  verify(near(editor.height, h.renameEditorRect.height))
+
+S071 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:188
+  tryCompare(marker, "visible", true)
+
+S072 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:189
+  verify(marker.y >= 0)
+
+S073 | test_reorderMarkerStaysInsideInput | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:190
+  verify(marker.y + marker.height <= input.height + testCase.tolerance)
+
+S074 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:202
+  tryCompare(h, "menuOpen", true)
+
+S075 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:204
+  tryVerify(function() {
+      row = findChild(surface(), "headerMenuRow_3")
+      return row !== null
+  })
+
+S076 | test_headerMenuRenameRowActivates | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:210
+  tryCompare(h, "renamingTrack", first.track)
+  tryCompare(item("timelineTrackHeaderRename"), "visible", true)
+
 Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 src/checks/trackheaders/headerfixture.swift:64
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts press")

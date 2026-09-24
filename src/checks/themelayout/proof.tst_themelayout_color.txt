@@ -542,7 +542,7 @@ Original expression:
 
 A039 | ThemeLayoutTest::laneAndWaveformLegibility | src/checks/themelayout/tst_themelayout_color.cpp:245
 Disposition: PARTIAL
-Mapping/reason: S003 asserts the 3.0 floor for the three live pairs per theme row (edit-preview/roll, add-lane/roll, selected-tab/active-automation). Unproved: the five sample-editor pairs per row have no Swift owner -- no sample-editor surface exists in the Swift app (needs owner decision).
+Mapping/reason: S003 asserts the same 3.0 floor for the three live-editor pairs per theme row (ThemeColorChecks.swift:333-339: edit-preview/roll, add-lane/roll, selected-tab/active-automation). feature not yet ported: sample editor (sample_waveform_ink, sample_crop_handle, sample_loop_handle x2, sample_seam_end_ink); the five sample-editor pairs have no Swift owner -- no sample-editor surface exists in the Swift app.
 Source context since previous assertion:
   ;
       }
@@ -745,8 +745,9 @@ Counterpart expression:
 S003 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:241
 Counterpart expression:
   report.expectEqual(row.window, palette.windowBackground, ...)
-  per theme row for every applied GridPalette field, plus the 4.5/1.3/3.0
-  floors judged by the independent reference.
+  per theme row for every applied GridPalette field (:246-281), plus the
+  4.5/1.3/3.0 menu/control floors (:315-328) and the three lane-legibility
+  3.0 floors (:333-339) judged by the independent reference.
 
 S004 | themeAssertComplete | src/checks/themecolor/ThemeColorChecks.swift:222
 Counterpart expression:

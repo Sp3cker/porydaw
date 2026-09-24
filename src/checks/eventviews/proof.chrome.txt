@@ -3,18 +3,18 @@ Assertion correspondence: eventviews/chrome.cpp
 Reference revision: 9f1bdd1b021196289b916074dd8eda12e80b7cc2
 Original: src/checks/eventviews/chrome.cpp
 Original SHA-256: fe75a27d16134b7551b44aee1b2dc893441eab4b313683debc3d6e88ab9c70d5
-Swift counterpart: none identified
-Swift SHA-256: n/a
+Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
+Swift SHA-256: 8844e59119c3710fa155d7050f9bbfaac73f8f5838f2acd6994b833fe4c91dba
 
 Status and evidence
-This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards and the filter-menu lambda-local predicates. NATIVE identifies predicates that observe the live Quick window, rendered items, the popup session/panel, delivered mouse/key/wheel input, active focus, or the controller effect of such a natively delivered stimulus; a presenter-level Swift check cannot establish these observations. GAP identifies fixture-open/conversion guards, lookup guards, static model mirrors, the fixed filter-category ledger count, and SongView state predicates with no Swift equivalent. A swiftcore-wide search (EventChecks, SharedPlayheadChecks, EditorGridCameraChecks, EditorDrawerChecks, SessionChecks, TimeChecks, MidiChecks) found no event-list controller, filter-menu, column-width, typography, scrollbar, or view-state Swift predicates; the Swift suite observes documents, grids, and drawers, never the event-list chrome. None of these labels authorizes deletion or claims whole-case equivalence.
+This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including fixture guards and the filter-menu lambda-local predicates. NATIVE identifies predicates that observe the live Quick window, rendered items, the popup session/panel, delivered mouse/key/wheel input, active focus, or the controller effect of such a natively delivered stimulus; a presenter-level Swift check cannot establish these observations. GAP identifies sites whose rendered EventListPage surface is not yet ported (EventListPage unmounted; presenter wired but unconsumed), including fixture-open/conversion guards, lookup guards, static model mirrors, the fixed filter-category ledger count, and SongView state predicates. A008-A009 are instead MATCHED by the pure-model row-count/EOT-tick contract (S001-S002 in eventListRowsAndEditContract). A swiftcore-wide search (EventChecks, SharedPlayheadChecks, EditorGridCameraChecks, EditorDrawerChecks, SessionChecks, TimeChecks, MidiChecks) found no event-list controller, filter-menu, column-width, typography, scrollbar, or view-state Swift predicates; the Swift suite observes documents, grids, and drawers, never the event-list chrome. None of these labels authorizes deletion or claims whole-case equivalence.
 
 Verification
-Command: deno task verify --filter eventviews --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore --verbose
+Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level); source hashes pin the tree inspected here.
 
 Execution and ownership
-No Swift entry point executes these checks. Native ownership: runEventViewsChromeCheck in this file drives EventViewsChromeTest (visibilityAndTrackSelection, rowMirrorPlusEot, monoTypography, columnResizeDrag, drawerFocusKeepsNavigation, scrollbarWheelClamps, filterMatrix, viewStateRoundTrip, filterMenuSession, rowMenuActivationCloses, outsideRightCancelsAndSwallowsRelease). The rig fixture lives in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openRigFixture shapes Basic, Empty, EotCoincident, Long).
+runEventListPlayheadChecks (src/checks/eventviews/EventListPlayheadChecks.swift:133) executes the paired pure-model contract eventListRowsAndEditContract covering A008-A009; no Swift entry point renders EventListPage. Native ownership: runEventViewsChromeCheck in this file drives EventViewsChromeTest (visibilityAndTrackSelection, rowMirrorPlusEot, monoTypography, columnResizeDrag, drawerFocusKeepsNavigation, scrollbarWheelClamps, filterMatrix, viewStateRoundTrip, filterMenuSession, rowMenuActivationCloses, outsideRightCancelsAndSwallowsRelease). The rig fixture lives in src/checks/eventviews/eventview_fixture.h and src/checks/eventviews/eventview_fixture.cpp (openRigFixture shapes Basic, Empty, EotCoincident, Long).
 
 Fixture, sequence and row constraints
 Data rows expand single sites into many cases: rowMirrorPlusEot_data emits 3 shapes (empty chunk, single event at EOT, multi-event chunk); filterMatrix_data emits 4 category rows (meta, meta and notes, none, all). The monoTypography column loop (columns 0, 2, 3, 4 over first and last rows) expands each font QCOMPARE site over 8 cells. The columnResizeDrag 4-step pointer drag, the scrollbarWheelClamps 600/1200-notch wheel loops, and the filterMenuSession/rowMenuActivationCloses multi-phase menu sessions expand their sites over repeated native deliveries; the row-menu retire sequence re-verifies dismissal across four context changes (row change, chunk switch, document edit, selection change).
@@ -25,7 +25,7 @@ Original assertion inventory and source sequence
 
 A001 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:62
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 #include "checks/eventviews/eventview_fixture.h"
 #include "checks/eventviews/tst_eventviews.h"
@@ -94,7 +94,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
 Disposition: GAP
-Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -103,7 +103,7 @@ QVERIFY(!opened.fixture->view().eventListVisible())
 
 A003 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:66
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -114,7 +114,7 @@ QVERIFY(widgets)
 
 A004 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:69
 Disposition: GAP
-Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -126,7 +126,7 @@ QTRY_COMPARE(widgets.controller->chunk(),
 
 A005 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:85
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -149,7 +149,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A006 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:87
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -159,7 +159,7 @@ QVERIFY(widgets)
 
 A007 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:90
 Disposition: GAP
-Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -169,8 +169,9 @@ Original expression:
 QVERIFY(chunk >= 0)
 
 A008 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:94
-Disposition: GAP
-Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Disposition: MATCHED
+Swift: S001 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
+Mapping/reason: Static row-count mirror proved by the pure-model contract: Swift S001 asserts the same observable — model.rowCount equals chunk.events.count + 1 across the empty, EOT-coincident, and multi-event shapes — under cppID swiftcore/EventList::eventListRowsAndEditContract. The rendered EventListPage stays unmounted.
 Source context since previous assertion:
 ;
     const SmfTrack &track = opened.fixture->document().smf().tracks[chunk];
@@ -181,8 +182,9 @@ Original expression:
 QCOMPARE(widgets.model->rowCount(), int(track.events.size()) + projectedTempoRows + 1)
 
 A009 | EventViewsChromeTest::rowMirrorPlusEot | src/checks/eventviews/chrome.cpp:95
-Disposition: GAP
-Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Disposition: MATCHED
+Swift: S002 | src/checks/eventviews/EventListPlayheadChecks.swift :: eventListRowsAndEditContract
+Mapping/reason: Static EOT-tick mirror proved by the pure-model contract: Swift S002 asserts the same observable — the trailing EOT row tick mirrors the chunk endTick — under cppID swiftcore/EventList::eventListRowsAndEditContract. The rendered EventListPage stays unmounted.
 Source context since previous assertion:
 ;
 
@@ -194,7 +196,7 @@ QCOMPARE(
 
 A010 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:104
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -208,7 +210,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A011 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:106
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -218,7 +220,7 @@ QVERIFY(widgets)
 
 A012 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:116
 Disposition: GAP
-Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -236,7 +238,7 @@ QCOMPARE(QFontInfo(cell).family(), expectedInfo.family())
 
 A013 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:117
 Disposition: GAP
-Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -245,7 +247,7 @@ QCOMPARE(cell.letterSpacingType(), QFont::AbsoluteSpacing)
 
 A014 | EventViewsChromeTest::monoTypography | src/checks/eventviews/chrome.cpp:118
 Disposition: GAP
-Mapping/reason: Static event-table model mirror (row count, tick role, or font role) with no Swift predicate; swiftcore/editcheck observe the document, never the model rows.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -297,7 +299,7 @@ QCOMPARE(editorFont.letterSpacing(), -0.5)
 
 A019 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:138
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     checks::eventviews::closeCellEditor(widgets);
@@ -314,7 +316,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A020 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:140
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -335,7 +337,7 @@ QVERIFY(handle)
 
 A022 | EventViewsChromeTest::columnResizeDrag | src/checks/eventviews/chrome.cpp:145
 Disposition: GAP
-Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const QList<double> initial = widgets.controller->columnWidths();
@@ -377,7 +379,7 @@ QCOMPARE(widgets.controller->columnWidths().size(), initial.size())
 
 A025 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:170
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -394,7 +396,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A026 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:172
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -415,7 +417,7 @@ QVERIFY(drawer)
 
 A028 | EventViewsChromeTest::drawerFocusKeepsNavigation | src/checks/eventviews/chrome.cpp:178
 Disposition: GAP
-Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     widgets.controller->selectRow(0, Qt::NoModifier);
@@ -476,7 +478,7 @@ QVERIFY(drawer->hasActiveFocus())
 
 A034 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:196
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -492,7 +494,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A035 | EventViewsChromeTest::scrollbarWheelClamps | src/checks/eventviews/chrome.cpp:198
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -559,7 +561,7 @@ QTRY_COMPARE(table->property("contentY").toReal(), 0.0)
 
 A041 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:244
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -596,7 +598,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A042 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:246
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -606,7 +608,7 @@ QVERIFY(widgets)
 
 A043 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:268
 Disposition: GAP
-Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -636,7 +638,7 @@ QCOMPARE(widgets.controller->filterMask(), wantedMask)
 
 A044 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:269
 Disposition: GAP
-Mapping/reason: Programmatic controller read with no Swift event-list predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -645,7 +647,7 @@ QCOMPARE(widgets.model->rowCount(), expectedEvents + 1)
 
 A045 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:275
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -659,7 +661,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A046 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:277
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -669,7 +671,7 @@ QVERIFY(widgets)
 
 A047 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:280
 Disposition: GAP
-Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -680,7 +682,7 @@ QVERIFY(state.eventList)
 
 A048 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:283
 Disposition: GAP
-Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     state.eventList = false;
@@ -691,7 +693,7 @@ QVERIFY(!opened.fixture->view().eventListVisible())
 
 A049 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:286
 Disposition: GAP
-Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -702,7 +704,7 @@ QVERIFY(!state.eventList)
 
 A050 | EventViewsChromeTest::viewStateRoundTrip | src/checks/eventviews/chrome.cpp:289
 Disposition: GAP
-Mapping/reason: SongView state predicate with no Swift counterpart; no Swift suite observes event-list visibility or view state.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     state.eventList = true;
@@ -713,7 +715,7 @@ QVERIFY(opened.fixture->view().eventListVisible())
 
 A051 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:299
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -731,7 +733,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A052 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:301
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -788,7 +790,7 @@ QVERIFY(model)
 
 A057 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:318
 Disposition: GAP
-Mapping/reason: Fixed fixture-ledger count with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const int rows = model->rowCount();
@@ -1004,7 +1006,7 @@ QTRY_VERIFY(controller.menuOpen())
 
 A075 | EventViewsChromeTest::filterMenuSession | src/checks/eventviews/chrome.cpp:391
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const QPointF tablePoint =
@@ -1061,7 +1063,7 @@ QCOMPARE(controller.filterMask(), maskBeforeCancel)
 
 A081 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:405
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -1077,7 +1079,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A082 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:407
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -1087,7 +1089,7 @@ QVERIFY(widgets)
 
 A083 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:414
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -1102,7 +1104,7 @@ QVERIFY(row >= 0)
 
 A084 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:417
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const QPointF cell =
@@ -1144,7 +1146,7 @@ QVERIFY(panel)
 
 A088 | EventViewsChromeTest::rowMenuActivationCloses | src/checks/eventviews/chrome.cpp:427
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 
@@ -1402,7 +1404,7 @@ QTRY_VERIFY(!controller.menuOpen())
 
 A113 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:492
 Disposition: GAP
-Mapping/reason: Fixture-open guard; no Swift predicate opens the native event-view rig.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
 }
@@ -1420,7 +1422,7 @@ QVERIFY2(opened, qPrintable(opened.error))
 
 A114 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:494
 Disposition: GAP
-Mapping/reason: EventWidgets conversion guard; the Swift suite has no event-list controller.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const EventWidgets widgets = opened.fixture->openEventList();
@@ -1430,7 +1432,7 @@ QVERIFY(widgets)
 
 A115 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:500
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     QQuickWindow &window = *widgets.quickWindow;
@@ -1444,7 +1446,7 @@ QVERIFY(sourceRow >= 0)
 
 A116 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:503
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     const QPointF source = checks::eventviews::cellSceneCenter(widgets, sourceRow,
@@ -1475,7 +1477,7 @@ QTRY_COMPARE(controller.currentRow(), sourceRow)
 
 A119 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:509
 Disposition: GAP
-Mapping/reason: Test-spy plumbing guard; not a behavioral observation.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     QSignalSpy retargeted(widgets.popupSession, &songview::QuickPopupSession::outsideRightPressed);
@@ -1516,7 +1518,7 @@ QVERIFY(frame)
 
 A123 | EventViewsChromeTest::outsideRightCancelsAndSwallowsRelease | src/checks/eventviews/chrome.cpp:530
 Disposition: GAP
-Mapping/reason: Lookup/geometry guard with no Swift predicate.
+Mapping/reason: feature not yet ported: SwiftRoll event-list renderer (EventListPage unmounted; presenter wired but unconsumed)
 Source context since previous assertion:
 ;
     QPointF target;
@@ -1648,4 +1650,12 @@ int runEventViewsChromeCheck(const QStringList &qtArguments)
 
 Swift assertion predicates
 
-None - no Swift counterpart identified.
+S001 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift:444
+        report.expectEqual(chunk.events.count + 1, model.rowCount,
+                           cppID: rowsAndEditContractID,
+                           what: "shape \(index) has one EOT row after its events")
+
+S002 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChecks.swift:447
+        report.expectEqual(chunk.endTick, model.rowTick(row: chunk.events.count),
+                           cppID: rowsAndEditContractID,
+                           what: "shape \(index) EOT tick mirrors the chunk end")

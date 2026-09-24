@@ -20,7 +20,10 @@ GAP identifies an original predicate without a replacement assertion.
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
-Converted-window command: deno task verify:qml --verbose
+Converted-window command: deno task verify:qml-roll --verbose
+Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_mountedBandGeometryAndRows (:109-132) exercises A001-A003, A005-A008 and A010-A017, test_scrollThumbAtBothLimits (:136-154) exercises A088-A089. This proof-only pass cites the exercised lines without re-running the suite.
+Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 90f4b3bbdcb88534a16c157d15f36dee7a7497ef86911ca40a93e2adcf9e0c9b
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
@@ -34,8 +37,8 @@ Their helper expectations execute on every call and are inventoried below.
 Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:80
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows contains the mounted band in the live surface: origin at non-negative surface coordinates [S077] with origin plus size inside the surface size [S078, S079], the converted equivalent of viewport containment.
 Source context since previous assertion:
   #include "checks/trackheaders/tst_trackheaders.h"
 
@@ -120,8 +123,8 @@ Original expression:
   QVERIFY(viewport.contains(fx.isolatedBandRect()))
 
 A002 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:84
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows verifies the published band is visible [S076].
 Source context since previous assertion:
   ;
       // Band rects are published canonical viewport-local, so the QML-published
@@ -131,8 +134,8 @@ Original expression:
   QVERIFY(fx.root().property("trackHeadersBandVisible").toBool())
 
 A003 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:85
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves the published rect: band x/y equal the parent bandRect [S080, S081] and width/height equal the model metrics [S082, S083], with surface containment [S078, S079].
 Source context since previous assertion:
   ;
 Original expression:
@@ -147,32 +150,32 @@ Original expression:
   QVERIFY(fx.band().isVisible())
 
 A005 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:87
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band x equals the parent bandRect x [S080].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(fx.band().x(), localRect.x()))
 
 A006 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:88
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band y equals the parent bandRect y [S081].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(fx.band().y(), localRect.y()))
 
 A007 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:89
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band width equals the model trackHeaderWidth [S082].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(fx.band().width(), localRect.width()))
 
 A008 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:90
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves band height equals the model viewportHeight [S083].
 Source context since previous assertion:
   ;
 Original expression:
@@ -187,8 +190,8 @@ Original expression:
   QVERIFY(fx.input().isVisible())
 
 A010 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:92
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves input width equals band width minus scrollbarWidth [S085].
 Source context since previous assertion:
   ;
 Original expression:
@@ -196,56 +199,56 @@ Original expression:
           near(fx.input().width(), fx.isolatedBandRect().width() - fx.headers().scrollbarWidth()))
 
 A011 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:94
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves input height equals band height [S086].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(fx.input().height(), fx.isolatedBandRect().height()))
 
 A012 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:95
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves scrollbar x equals input width [S087].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(fx.scrollbar().x(), fx.input().width()))
 
 A013 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:96
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves scrollbar width equals the model scrollbarWidth [S088].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(near(fx.scrollbar().width(), fx.headers().scrollbarWidth()))
 
 A014 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:97
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows compares model viewportHeight against band height [S089].
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.headers().viewportHeight(), qreal(fx.isolatedBandRect().height()))
 
 A015 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:98
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows compares model contentHeight against rows.count times rowHeight [S091]; the rows.count-to-model-count link stays PARTIAL at A017.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(fx.headers().contentHeight(), fx.headers().rowCount() * fx.rowHeight())
 
 A016 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:99
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_mountedBandGeometryAndRows proves the appearance map is non-empty [S092].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(!fx.headers().appearance().isEmpty())
 
 A017 | TrackHeadersTest::quickSurfacePublishesAndRendersHeaders | src/checks/trackheaders/trackheaderinput.cpp:100
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Disposition: PARTIAL
+Mapping/reason: Related QML predicates S090-S091 in src/checks/rollqml/tst_SwiftRollTrackHeaders.qml prove Repeater-vs-geometry consistency (rows.count is positive; rows.count feeds the contentHeight comparison); unproved: direct presenter rows-count comparator, model count not directly exposed in QML.
 Source context since previous assertion:
   ;
 Original expression:
@@ -804,8 +807,8 @@ Original expression:
                "the mute toggle churned records beyond the muted row")
 
 A073 | TrackHeadersTest::muteAndSoloHonorCancellationAndButtons | src/checks/trackheaders/trackheaderinput.cpp:268
-Disposition: PARTIAL
-Mapping/reason: Related predicates S039-S062 in src/checks/trackheaders/trackheaderinput.swift; bounded-row coverage is proven by the retained-row identity check S060, but the Qt dataChanged role-set emission has no presenter role registry and remains unproved.
+Disposition: RETIRED-ROLE-PROTOCOL
+Mapping/reason: The old Qt checked-role publication (MuteCheckedRole in the dataChanged role set) is retired from the Swift QListModel replacement protocol, which publishes registered properties instead. Mute/solo row scope stays proven by the retained-row identity check S060; precedent: proof.trackheaderraster.txt role retirements. No old role-set equivalence is claimed.
 Source context since previous assertion:
   ;
 Original expression:
@@ -958,16 +961,16 @@ Original expression:
   QVERIFY(fx.scrollbar().isVisible() && fx.thumb().isVisible())
 
 A088 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:317
-Disposition: PARTIAL
-Mapping/reason: Related predicates S063-S071 in src/checks/trackheaders/trackheaderinput.swift; the scrollY clamp is proven but the native scrollbar thumb geometry has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_scrollThumbAtBothLimits proves thumb height is positive and thumb y is non-negative at scrollY zero [S094, S095].
 Source context since previous assertion:
   ;
 Original expression:
   QVERIFY(fx.thumb().height() > 0.0 && fx.thumb().y() >= 0.0)
 
 A089 | TrackHeadersTest::scrollClampsAndRoutesKeyboardAndWheelInput | src/checks/trackheaders/trackheaderinput.cpp:318
-Disposition: PARTIAL
-Mapping/reason: Related predicates S063-S071 in src/checks/trackheaders/trackheaderinput.swift; the scrollY clamp is proven but the native scrollbar thumb bounds have no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_scrollThumbAtBothLimits proves thumb y plus height stays inside the bar at both scroll limits [S096, S099].
 Source context since previous assertion:
   ;
 Original expression:
@@ -1024,7 +1027,7 @@ Original expression:
 
 A095 | TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip | src/checks/trackheaders/trackheaderinput.cpp:339
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: track-header tooltips have no Swift/QML counterpart, so the hover row lookup stays an open obligation.
 Source context since previous assertion:
   ;
   }
@@ -1038,7 +1041,7 @@ Original expression:
 
 A096 | TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip | src/checks/trackheaders/trackheaderinput.cpp:341
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: track-header tooltips have no Swift/QML counterpart, so the hover title point stays an open obligation.
 Source context since previous assertion:
   ;
       const std::optional<QPointF> point = fx.titlePoint(*sourceRow);
@@ -1047,7 +1050,7 @@ Original expression:
 
 A097 | TrackHeadersTest::hoveringHeadersDoesNotCreateTooltip | src/checks/trackheaders/trackheaderinput.cpp:342
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: Feature not yet ported: track-header tooltips have no Swift/QML counterpart, so the hover-no-tooltip contract stays an open obligation.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1080,8 +1083,8 @@ Original expression:
   QVERIFY(checks::support::showQuickViewport(emptyView, QSize(320, 180)))
 
 A100 | TrackHeadersTest::emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/trackheaderinput.cpp:362
-Disposition: PARTIAL
-Mapping/reason: Original native fixture/widget discovery is test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
+Disposition: NATIVE-SETUP
+Mapping/reason: Native fixture and window discovery is retained test setup. Swift uses the suite-opened ProjectService bank and a nonoptional typed TrackHeadersFixture session/presenter; no dynamic QObject lookup exists. This disposition does not claim equivalent native-window behavior.
 Source context since previous assertion:
   ;
       auto *const quick = emptyView.quickView();
@@ -1397,8 +1400,82 @@ S075 | emptyTrackHeadersRejectInputWithoutMutation | src/checks/trackheaders/tra
   report.expect(!fx.headers.endPointer(x: 1, y: 1, button: 1, modifiers: 0),
                     cppID: id, message: "empty header rejects release")
 
+S076-S099 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_mountedBandGeometryAndRows and test_scrollThumbAtBothLimits, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
+
+S076 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:117
+  verify(band.visible)
+
+S077 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:118
+  verify(origin.x >= 0 && origin.y >= 0)
+
+S078 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:119
+  verify(origin.x + band.width <= s.width + testCase.tolerance)
+
+S079 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:120
+  verify(origin.y + band.height <= s.height + testCase.tolerance)
+
+S080 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:121
+  verify(near(band.x, band.parent.bandRect.x))
+
+S081 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:122
+  verify(near(band.y, band.parent.bandRect.y))
+
+S082 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:123
+  verify(near(band.width, h.trackHeaderWidth))
+
+S083 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:124
+  verify(near(band.height, h.viewportHeight))
+
+S084 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:125
+  verify(input.visible)
+
+S085 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:126
+  verify(near(input.width, band.width - h.scrollbarWidth))
+
+S086 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:127
+  verify(near(input.height, band.height))
+
+S087 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:128
+  verify(near(bar.x, input.width))
+
+S088 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:129
+  verify(near(bar.width, h.scrollbarWidth))
+
+S089 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:130
+  compare(h.viewportHeight, band.height)
+
+S090 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:131
+  verify(rows.count > 0)
+
+S091 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:132
+  compare(h.contentHeight, rows.count * h.rowHeight)
+
+S092 | test_mountedBandGeometryAndRows | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:133
+  verify(Object.keys(h.appearance).length > 0)
+
+S093 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:147
+  tryVerify(function() { return near(thumb.y, 0) })
+
+S094 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:148
+  verify(thumb.height > 0)
+
+S095 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:149
+  verify(thumb.y >= 0)
+
+S096 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:150
+  verify(thumb.y + thumb.height <= bar.height + testCase.tolerance)
+
+S097 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:152
+  tryVerify(function() { return near(thumb.y + thumb.height, bar.height) })
+
+S098 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:153
+  verify(thumb.y >= 0)
+
+S099 | test_scrollThumbAtBothLimits | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:154
+  verify(thumb.y + thumb.height <= bar.height + testCase.tolerance)
+
 Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 src/checks/trackheaders/headerfixture.swift:64
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts press")

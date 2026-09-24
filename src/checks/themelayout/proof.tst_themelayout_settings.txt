@@ -21,10 +21,11 @@ setup, loops, and guards between assertions verbatim.
 MATCHED means a corresponding Swift predicate executes the same user-observable
 behavior; PARTIAL means a related Swift predicate exists with a stated unproved
 condition; GAP means the behavior has no Swift owner yet and needs an owner
-decision (theme dialog, wizard, header-border rule, polyphony panel);
-NATIVE means the site observes QWidget grab, geometry, visibility, event or
-lifetime instruments with no Swift counterpart. Disposition tally: 56 sites:
-11 MATCHED, 7 PARTIAL, 21 GAP, 17 NATIVE. There is no QWidget layer in the
+decision, so its reason names the unported surface as "feature not yet ported"
+(theme dialog, wizard, header-border rule, polyphony panel); NATIVE means the
+site observes QWidget grab, geometry, visibility, event or lifetime instruments
+with no Swift counterpart. Disposition tally: 56 sites: 17 MATCHED, 1 PARTIAL,
+21 GAP, 17 NATIVE. There is no QWidget layer in the
 Swift app, now or later, so dialog, wizard and panel surfaces are GAP with a
 named missing owner rather than new widgets.
 
@@ -219,7 +220,7 @@ Original expression:
 
 A004 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:144
 Disposition: GAP
-Mapping/reason: The QHeaderView section-border stylesheet rule has no Swift owner: EventListPage headers are custom TableView delegates with no section-border rule. Needs owner decision.
+Mapping/reason: feature not yet ported: QHeaderView section-border stylesheet rule (QHeaderView::section{border:0;}); EventListPage headers are custom TableView delegates with no section-border rule to carry it. Needs owner decision.
 Source context since previous assertion:
   ;
       }
@@ -233,7 +234,7 @@ Original expression:
 
 A005 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:148
 Disposition: GAP
-Mapping/reason: No wizard surface exists in the Swift app (ShellWindow uses platform MessageDialogs); wizard-style behavior has no owner. Needs owner decision.
+Mapping/reason: feature not yet ported: QWizard wizard surface (ClassicStyle pinned by the lane); the Swift shell uses platform MessageDialogs and has no wizard surface. Needs owner decision.
 Source context since previous assertion:
   ;
       QWizard wizard;
@@ -254,7 +255,7 @@ Original expression:
 
 A007 | DeferredThemeLayoutTest::startupChromePins | src/checks/themelayout/tst_themelayout_settings.cpp:155
 Disposition: GAP
-Mapping/reason: Same missing owner as A004: the header-border rule has no Swift counterpart to preserve across restore. Needs owner decision.
+Mapping/reason: feature not yet ported: QHeaderView section-border stylesheet rule; no Swift counterpart preserves it across the controller restore. Needs owner decision.
 Source context since previous assertion:
   ;
       QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
@@ -280,7 +281,7 @@ Original expression:
 
 A009 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:168
 Disposition: GAP
-Mapping/reason: No theme dialog exists in the Swift app; the six-control dialog structure has no owner. The committed/preview values it produced are covered by S004/S005. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (six-control dialog structure); the Swift shell has no theme dialog, so the committed/preview values it produced are covered by S004/S005 instead. Needs owner decision.
 Source context since previous assertion:
   ;
       QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
@@ -293,7 +294,7 @@ Original expression:
 
 A010 | DeferredThemeLayoutTest::dialogCommitAndRevert | src/checks/themelayout/tst_themelayout_settings.cpp:170
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: dialog visibility has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (dialog visibility); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
       dialog.show();
@@ -389,8 +390,8 @@ Original expression:
   QTRY_VERIFY(table.isVisible());
 
 A018 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:215
-Disposition: PARTIAL
-Mapping/reason: S003 of proof.tst_themelayout_color.txt pins the item value via menuBackground == item literal, observed on the production menu surface. Unproved: table-cell rendering -- no item-view row rendering is asserted in the Swift app.
+Disposition: MATCHED
+Mapping/reason: S006 pins the item surface per theme row (ThemeColorChecks.swift:280, palette.menuBackground == row.item, the #D2D0CA/#424242/#393C43 literals) and S007 observes the same value on the live production context-menu delegate (tst_Theme.qml:208-210). The QWidget table-cell grab has no Swift layer; the item-surface value and its live delegate binding are the portable observables.
 Source context since previous assertion:
   ;
 
@@ -404,7 +405,7 @@ Original expression:
 
 A019 | DeferredThemeLayoutTest::itemViewBrushes | src/checks/themelayout/tst_themelayout_settings.cpp:216
 Disposition: PARTIAL
-Mapping/reason: The alternate value is pinned through the same S003 item-surface chain. Unproved: second-row cell rendering in the Swift app.
+Mapping/reason: No Swift itemAlternate owner: GridPalette exposes no alternate item surface and no Swift/QML surface renders one. The legacy seam is EventListPage.qml tableAlternateBackground (EventListPage.qml:46) fed by eventlistcontroller.cpp:147-148 (themes::Role::item_alternate_background); EventListPage.qml is mounted only by the unmounted TimelineCanvas.qml event-list host. Unproved: the item-alternate value and the second-row cell rendering.
 Source context since previous assertion:
   ;
 Original expression:
@@ -467,7 +468,7 @@ Original expression:
 
 A024 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:244
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: dialog visibility has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (dialog visibility); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
       QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
@@ -481,7 +482,7 @@ Original expression:
 
 A025 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:247
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: the three mode radio buttons have no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (three mode radio buttons); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
 
@@ -491,7 +492,7 @@ Original expression:
 
 A026 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:256
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: the dark-neutral-high mode button has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (darkNeutralHighModeButton); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
       const QSize initialSize = dialog.size();
@@ -507,7 +508,7 @@ Original expression:
 
 A027 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:258
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: dialog-size stability has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (dialog-size stability across a mode click); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
       darkNeutralHigh->click();
@@ -516,7 +517,7 @@ Original expression:
 
 A028 | DeferredThemeLayoutTest::themeDialogGeometry | src/checks/themelayout/tst_themelayout_settings.cpp:260
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: per-button geometry stability has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (per-button geometry stability across a mode click); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
       for (qsizetype index = 0; index < modeButtons.size(); ++index)
@@ -541,7 +542,7 @@ Original expression:
 
 A030 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:275
 Disposition: GAP
-Mapping/reason: The contrast slider lives in the missing theme dialog (A009); it has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (gridLineContrastSlider); the Swift shell exposes contrast as ShellPresenter.gridLineContrast with no slider surface. Needs owner decision.
 Source context since previous assertion:
   ;
       QSettings settings(directory.filePath(QStringLiteral("settings.ini")), QSettings::IniFormat);
@@ -555,7 +556,7 @@ Original expression:
 
 A031 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:277
 Disposition: GAP
-Mapping/reason: Same missing owner as A009: dialog visibility has no Swift counterpart. Needs owner decision.
+Mapping/reason: feature not yet ported: theme dialog (dialog visibility); the Swift shell has no theme dialog surface. Needs owner decision.
 Source context since previous assertion:
   ;
       dialog.show();
@@ -605,8 +606,8 @@ Original expression:
   QVERIFY(!tabBefore.isNull());
 
 A035 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:303
-Disposition: PARTIAL
-Mapping/reason: S006 observes the strengthened grid through the production restore path and the color-proof S005 asserts the same value rule. Unproved: ThemeChange delivery counting -- no QWidget event layer exists in the Swift app; refresh is observed via the applied-palette change.
+Disposition: MATCHED
+Mapping/reason: S002 asserts the contrast-100 grid rule (ThemeColorChecks.swift:361-370: strengthened grid contrast and alpha gain over the roll) and S003 observes the strengthened grid through the production restore path (tst_Theme.qml:177-185). The QWidget ThemeChange delivery count has no Swift event layer; the applied strengthened grid value is the portable observable.
 Source context since previous assertion:
   ;
       const QPalette paletteBefore = m_application->palette();
@@ -620,16 +621,16 @@ Original expression:
   QCOMPARE(gridPaintTarget.themeChangeCount, 1);
 
 A036 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:304
-Disposition: PARTIAL
-Mapping/reason: Same split as A035 for the softened grid sample.
+Disposition: MATCHED
+Mapping/reason: The strengthened grid sample is pinned by S002 (ThemeColorChecks.swift:359-366) and read back from the production shell by S003 (tst_Theme.qml:177-185). The QWidget probe field has no Swift counterpart; the applied strengthened grid value is the portable observable.
 Source context since previous assertion:
   ;
 Original expression:
   QCOMPARE(gridPaintTarget.gridColor, strengthened);
 
 A037 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:307
-Disposition: PARTIAL
-Mapping/reason: Same split as A035 for the second ThemeChange delivery.
+Disposition: MATCHED
+Mapping/reason: S002 asserts the contrast-0 grid rule (ThemeColorChecks.swift:361-370: softened grid contrast and alpha loss against the roll) and S003 observes the second applied grid through the production restore path (tst_Theme.qml:167-175). The QWidget ThemeChange delivery count has no Swift event layer; the applied softened grid value is the portable observable.
 Source context since previous assertion:
   ;
       gridLineContrast->setValue(0);
@@ -638,8 +639,8 @@ Original expression:
   QCOMPARE(gridPaintTarget.themeChangeCount, 2);
 
 A038 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:308
-Disposition: PARTIAL
-Mapping/reason: Same split as A035 for the second grid sample.
+Disposition: MATCHED
+Mapping/reason: The second grid sample is pinned by S002 (ThemeColorChecks.swift:359-366) and read back from the production shell by S003 (tst_Theme.qml:167-175). The QWidget probe field has no Swift counterpart; the applied softened grid value is the portable observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -647,7 +648,7 @@ Original expression:
 
 A039 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:309
 Disposition: MATCHED
-Mapping/reason: The color-proof S005 asserts the strengthened contrast gain and S006 observes it on the production shell (tst_Theme.qml:157).
+Mapping/reason: S002 asserts the strengthened contrast gain against the roll (ThemeColorChecks.swift:364-366) and S003 observes it on the production shell (tst_Theme.qml:177-185).
 Source context since previous assertion:
   ;
 Original expression:
@@ -656,7 +657,7 @@ Original expression:
 
 A040 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:311
 Disposition: MATCHED
-Mapping/reason: The color-proof S005 asserts the softened contrast loss and S006 observes it on the production shell.
+Mapping/reason: S002 asserts the softened contrast loss against the roll (ThemeColorChecks.swift:361-363) and S003 observes it on the production shell (tst_Theme.qml:167-175).
 Source context since previous assertion:
   ;
 Original expression:
@@ -702,8 +703,8 @@ Original expression:
   QVERIFY(tabStyleChanges.count == 0);
 
 A044 | DeferredThemeLayoutTest::gridRefreshTargets | src/checks/themelayout/tst_themelayout_settings.cpp:325
-Disposition: PARTIAL
-Mapping/reason: S006 asserts the default-contrast reset restores the pinned grid value on the production shell. Unproved: grab pixel identity and palette/stylesheet object identity -- no QPalette/stylesheet layer exists in the Swift app.
+Disposition: MATCHED
+Mapping/reason: S003 asserts the default-contrast reset restores the pinned grid value on the production shell (tst_Theme.qml:187-190) and S002 pins the default-contrast identity row (ThemeColorChecks.swift:352-353). The QWidget tab-bar grab and QPalette/stylesheet object identity have no Swift layer; the restored grid value is the portable observable.
 Source context since previous assertion:
   ;
 Original expression:
@@ -739,7 +740,7 @@ Original expression:
 
 A048 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:343
 Disposition: GAP
-Mapping/reason: No polyphony panel exists in the Swift app (only the view.polyphony_debugger keybinding is reserved); narrow-geometry layout behavior has no owner. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (PolyphonyPanel narrow/wide/small layout scaling; only the view.polyphony_debugger keybinding is reserved); no Swift surface owns this layout. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
   }
@@ -761,7 +762,7 @@ Original expression:
 
 A049 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:344
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: section stacking order has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (narrow-layout section stacking order); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 Original expression:
@@ -769,7 +770,7 @@ Original expression:
 
 A050 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:345
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: grid visibility has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (narrow-layout grid visibility); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 Original expression:
@@ -777,7 +778,7 @@ Original expression:
 
 A051 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:348
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: wide-layout switching has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (wide-layout activation); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 
@@ -787,7 +788,7 @@ Original expression:
 
 A052 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:349
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: wide-layout section order has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (wide-layout section order); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 Original expression:
@@ -795,7 +796,7 @@ Original expression:
 
 A053 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:350
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: wide grid visibility has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (wide-layout grid visibility); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 Original expression:
@@ -803,7 +804,7 @@ Original expression:
 
 A054 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:353
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: small-geometry fallback has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (small-geometry fallback to the narrow layout); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 
@@ -813,7 +814,7 @@ Original expression:
 
 A055 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:354
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: small grid visibility has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (small-geometry grid visibility); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 Original expression:
@@ -821,7 +822,7 @@ Original expression:
 
 A056 | DeferredThemeLayoutTest::polyphonyLayoutScales | src/checks/themelayout/tst_themelayout_settings.cpp:355
 Disposition: GAP
-Mapping/reason: Same missing owner as A048: vertical overflow range has no Swift counterpart. Needs owner decision (architectural).
+Mapping/reason: feature not yet ported: polyphony panel (vertical overflow scroll range); no Swift counterpart. Needs owner decision (architectural).
 Source context since previous assertion:
   ;
 Original expression:
@@ -835,7 +836,8 @@ Remaining original source (closing sequence and helper bodies):
 Swift assertion predicates
 Value predicates live in src/checks/themecolor/ThemeColorChecks.swift and the
 shell-theme entry; grid-contrast value rules are shared with the color proof
-(proof.tst_themelayout_color.txt S005/S009).
+(proof.tst_themelayout_color.txt S005/S009) and the item-surface rule with that
+proof's S003.
 
 S001 | themeTrackIdentityChecks | src/checks/themecolor/ThemeColorChecks.swift:394
 Counterpart expression:
@@ -845,12 +847,15 @@ Counterpart expression:
 S002 | themeGridContrastChecks | src/checks/themecolor/ThemeColorChecks.swift:348
 Counterpart expression:
   report.expect(strengthened grid contrast > base grid contrast, ...)
-  shared with the color proof for the refresh contrast rules (A039-A040).
+  shared with the color proof; also pins the default-contrast identity row
+  (:352-353) and the softened and strengthened alpha/contrast rules (:361-370)
+  for the refresh targets (A035-A040, A044).
 
 S003 | test_gridContrastDirection | src/checks/editorqml/tst_Theme.qml:157
 Counterpart expression:
   verify(strengthened contrast > baseline contrast, ...)
-  observing the refresh contrast rules on the production shell (A039-A040).
+  contrasting, reading back and restoring the applied grid on the production
+  shell (:167-190) for the refresh targets (A035-A040, A044).
 
 S004 | themeCommitPreviewRevertChecks | src/checks/themecolor/ThemeColorChecks.swift:419
 Counterpart expression:
@@ -861,6 +866,19 @@ S005 | test_themePersistence | src/checks/editorqml/tst_Theme.qml:119
 Counterpart expression:
   tryCompare(shell.shellPresenter, "themeMode", data.mode)
   observing the dark/80 commit row on the production shell (A011-A012).
+
+S006 | themePresetValueChecks | src/checks/themecolor/ThemeColorChecks.swift:241
+Counterpart expression:
+  report.expectEqual(row.item, palette.menuBackground, ...)   (:280)
+  pinning the item surface per preset row (#D2D0CA/#424242/#393C43), the
+  value A018 compares against.
+
+S007 | test_menuChromeFollowsTheme | src/checks/editorqml/tst_Theme.qml:208
+Counterpart expression:
+  verify(copyItem, ...) then
+  compare(copyItem.background.color.toString().toUpperCase(), "#D2D0CA", ...)
+  observing the item surface of the live production context-menu delegate
+  (:208-217) and after a theme switch (:221-225) for A018.
 
 Shared helper
 None: predicates carry their own fixtures.

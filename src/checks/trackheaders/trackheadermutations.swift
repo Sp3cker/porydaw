@@ -3,6 +3,58 @@ import PorydawApp
 import PorydawCore
 
 @MainActor
+func renameTargetRowAndScrolledTitleResolve(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let id = "swiftcore/TrackHeaders::renameTargetRowAndScrolledTitleResolve"
+    let fx = TrackHeadersFixture(suite: suite, service: service)
+    let h = fx.headers
+    let target = 1
+    h.configureViewport(width: 228, height: Double(h.rowHeight), fontPx: 13, dpr: 1)
+    let baseline = HeaderDocumentBaseline(fx.document)
+    guard let row = fx.rowForTrack(target) else {
+        report.fail(id, "rename target has no header row")
+        return
+    }
+    report.expect(row != 0 && h.rows[row].track == target, cppID: id,
+                  message: "rename target row resolves from track identity")
+    guard let title = fx.visibleTitlePoint(forTrack: target) else {
+        report.fail(id, "scrolled rename target has no visible title point")
+        return
+    }
+    report.expect(h.scrollY > 0 && title.y >= 0 && title.y < h.viewportHeight,
+                  cppID: id, message: "target title stays visible after scrolling")
+    report.expect(h.doublePointer(x: title.x, y: title.y, button: 1, modifiers: 0),
+                  cppID: id, message: "scrolled target title accepts rename double click")
+    report.expectEqual(target, h.renamingTrack, cppID: id,
+                       what: "scrolled rename opens for the identity-resolved track")
+    h.finishRename(commit: false, restoreRollFocus: false)
+    baseline.expectUnchanged(report, fx.document, cppID: id, phase: "scrolled rename cancelled")
+}
+
+@MainActor
+func renameMenuTargetsAndBegins(
+    _ report: CheckReport, suite: DocumentSession, service: ProjectService
+) {
+    let id = "swiftcore/TrackHeaders::renameMenuTargetsAndBegins"
+    let fx = TrackHeadersFixture(suite: suite, service: service)
+    let h = fx.headers
+    let target = 1
+    let baseline = HeaderDocumentBaseline(fx.document)
+    fx.openMenu(report, track: target, cppID: id)
+    report.expect((0..<h.menuItems.count).contains {
+        h.menuItems[$0].actionId == 3 && h.menuItems[$0].text == "Rename track..."
+            && h.menuItems[$0].enabled
+    }, cppID: id, message: "menu exposes enabled Rename track action")
+    h.activateHeaderMenuAction(actionId: 3)
+    report.expect(!h.menuOpen, cppID: id, message: "selecting Rename closes the header menu")
+    report.expectEqual(target, h.renamingTrack, cppID: id,
+                       what: "selecting Rename begins editing menu target")
+    h.finishRename(commit: false, restoreRollFocus: false)
+    baseline.expectUnchanged(report, fx.document, cppID: id, phase: "menu rename cancelled")
+}
+
+@MainActor
 func renameCommitsAndRebuildsHeader(
     _ report: CheckReport, suite: DocumentSession, service: ProjectService
 ) {

@@ -50,7 +50,7 @@ Original assertion inventory and source sequence
 
 A001 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:88
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
   #include "checks/scrollbar/tst_scrollbar.h"
 
@@ -144,7 +144,7 @@ Original expression:
 
 A002 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:90
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
       setValue(songView, axis, minimumValue + span / 2.0);
 Original expression:
@@ -152,7 +152,7 @@ Original expression:
 
 A003 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:95
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
       const QPointF dragPosition = beginDrag(axis);
       const QPointF pastMaximum = dragPosition + offset(axis, 2.0 * trackLength(track, axis));
@@ -162,7 +162,7 @@ Original expression:
 
 A004 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:96
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
   ;
 Original expression:
@@ -170,7 +170,7 @@ Original expression:
 
 A005 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:100
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
       const QPointF reverse = track.mapToScene(track.boundingRect().center());
       move(reverse);
@@ -180,7 +180,7 @@ Original expression:
 
 A006 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:102
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
   ;
 Original expression:
@@ -188,7 +188,7 @@ Original expression:
 
 A007 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:106
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
       const QPointF pastMinimum = reverse - offset(axis, 2.0 * trackLength(track, axis));
       move(pastMinimum);
@@ -197,7 +197,7 @@ Original expression:
 
 A008 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:107
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
   ;
 Original expression:
@@ -205,7 +205,7 @@ Original expression:
 
 A009 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:110
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
       move(pastMinimum - offset(axis, 1.0));
 Original expression:
@@ -213,7 +213,7 @@ Original expression:
 
 A010 | ScrollbarTest::dragClampsAndReverses | src/checks/scrollbar/drag.cpp:111
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); drag clamping and reversal are only reachable through those unmounted EditorSurface.qml TimelineScrollbar tracks, which no mounted shell surface instantiates.
 Source context since previous assertion:
   ;
 Original expression:
@@ -221,7 +221,7 @@ Original expression:
 
 A011 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:123
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
       release();
   }
@@ -239,7 +239,7 @@ Original expression:
 
 A012 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:125
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
       songView.setHScroll(initialMinimum + initialSpan / 2.0);
 Original expression:
@@ -247,7 +247,7 @@ Original expression:
 
 A013 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:129
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
       const QPointF dragPosition = beginDrag(Qt::Horizontal);
       songView.setEditorTimeZoom(songView.pxPerBeat() * 2.0);
@@ -257,7 +257,7 @@ Original expression:
 
 A014 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:131
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
   ;
 Original expression:
@@ -265,7 +265,7 @@ Original expression:
 
 A015 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:136
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
       const qreal freshSpan = songView.camera().maxHScroll() - songView.camera().minHScroll();
       const qreal freshValue = songView.camera().scrollX();
@@ -275,7 +275,7 @@ Original expression:
 
 A016 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:138
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
       const qreal expected = freshValue + kOnePixel * freshSpan / freshTravel;
 Original expression:
@@ -283,7 +283,7 @@ Original expression:
 
 A017 | ScrollbarTest::dragRebasesAfterZoom | src/checks/scrollbar/drag.cpp:141
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a zoom change is only exercised by the unmounted EditorSurface.qml horizontal TimelineScrollbar track.
 Source context since previous assertion:
       move(dragPosition + offset(Qt::Horizontal, kOnePixel));
 Original expression:
@@ -291,7 +291,7 @@ Original expression:
 
 A018 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:151
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
       release();
   }
@@ -307,7 +307,7 @@ Original expression:
 
 A019 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:153
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
       songView.setVScroll(initialSpan / 2.0);
 Original expression:
@@ -315,7 +315,7 @@ Original expression:
 
 A020 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:158
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
       const QPointF dragPosition = beginDrag(Qt::Vertical);
       const QSize beforeResize = window().size();
@@ -325,7 +325,7 @@ Original expression:
 
 A021 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:159
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
   ;
 Original expression:
@@ -333,7 +333,7 @@ Original expression:
 
 A022 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:164
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
       const qreal freshSpan = songView.camera().maxRollScroll();
       const qreal freshValue = songView.camera().scrollY();
@@ -343,7 +343,7 @@ Original expression:
 
 A023 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:166
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
       const qreal expected = freshValue + kDragDistance * freshSpan / freshTravel;
 Original expression:
@@ -351,7 +351,7 @@ Original expression:
 
 A024 | ScrollbarTest::dragRebasesAfterResize | src/checks/scrollbar/drag.cpp:169
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); mid-drag rebase after a window resize is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track.
 Source context since previous assertion:
       move(dragPosition + offset(Qt::Vertical, kDragDistance));
 Original expression:
@@ -359,7 +359,7 @@ Original expression:
 
 A025 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:180
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       release();
   }
@@ -376,7 +376,7 @@ Original expression:
 
 A026 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:182
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       songView.setVScroll(initialSpan / 2.0);
 Original expression:
@@ -384,7 +384,7 @@ Original expression:
 
 A027 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:185
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       songView.setScaleFold(true);
 Original expression:
@@ -392,7 +392,7 @@ Original expression:
 
 A028 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:186
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -400,7 +400,7 @@ Original expression:
 
 A029 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:187
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -408,7 +408,7 @@ Original expression:
 
 A030 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:188
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -416,7 +416,7 @@ Original expression:
 
 A031 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:192
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const QPointF foldedDrag = beginDrag(Qt::Vertical);
       move(foldedDrag - offset(Qt::Vertical, 2.0 * track.height()));
@@ -425,7 +425,7 @@ Original expression:
 
 A032 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:193
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -433,7 +433,7 @@ Original expression:
 
 A033 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:194
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -441,7 +441,7 @@ Original expression:
 
 A034 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:198
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       release();
 
@@ -451,7 +451,7 @@ Original expression:
 
 A035 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:199
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -459,7 +459,7 @@ Original expression:
 
 A036 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:200
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
   ;
 Original expression:
@@ -467,7 +467,7 @@ Original expression:
 
 A037 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:204
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const qreal restoredSpan = songView.camera().maxRollScroll();
       songView.setVScroll(restoredSpan / 2.0);
@@ -476,7 +476,7 @@ Original expression:
 
 A038 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:208
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const QPointF restoredDrag = beginDrag(Qt::Vertical);
       const qreal restoredValue = songView.camera().scrollY();
@@ -486,7 +486,7 @@ Original expression:
 
 A039 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:210
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       const qreal expected = restoredValue + kDragDistance * restoredSpan / restoredTravel;
 Original expression:
@@ -494,7 +494,7 @@ Original expression:
 
 A040 | ScrollbarTest::foldingDisablesAndRestoresRollDrag | src/checks/scrollbar/drag.cpp:213
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); roll scale-fold thumb and span behavior is only exercised by the unmounted EditorSurface.qml roll TimelineScrollbar track, while the mounted TrackHeaderBand inline scrollbar is separate vertical header-band chrome.
 Source context since previous assertion:
       move(restoredDrag + offset(Qt::Vertical, kDragDistance));
 Original expression:
@@ -502,7 +502,7 @@ Original expression:
 
 A041 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:235
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); external-camera thumb repositioning is only observable on the unmounted EditorSurface.qml TimelineScrollbar thumbs.
 Source context since previous assertion:
       release();
   }
@@ -530,7 +530,7 @@ Original expression:
 
 A042 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:237
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); external-camera thumb repositioning is only observable on the unmounted EditorSurface.qml TimelineScrollbar thumbs.
 Source context since previous assertion:
       setValue(songView, axis, minimumValue + span / 2.0);
 Original expression:
@@ -547,7 +547,7 @@ Original expression:
 
 A044 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:245
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); external-camera thumb repositioning is only observable on the unmounted EditorSurface.qml TimelineScrollbar thumbs.
 Source context since previous assertion:
       const qreal externalValue = minimumValue + span / 4.0;
       setValue(songView, axis, externalValue);
@@ -556,7 +556,7 @@ Original expression:
 
 A045 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:247
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); external-camera thumb repositioning is only observable on the unmounted EditorSurface.qml TimelineScrollbar thumbs.
 Source context since previous assertion:
       const qreal freshTravel = travel(track);
 Original expression:
@@ -564,7 +564,7 @@ Original expression:
 
 A046 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:249
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); external-camera thumb repositioning is only observable on the unmounted EditorSurface.qml TimelineScrollbar thumbs.
 Source context since previous assertion:
       const qreal expectedPosition = (externalValue - minimumValue) / span * freshTravel;
 Original expression:
@@ -572,7 +572,7 @@ Original expression:
 
 A047 | ScrollbarTest::externalCameraMovesReleasedThumb | src/checks/scrollbar/drag.cpp:250
 Disposition: GAP
-Mapping/reason: No equivalent predicate in the existing paired Swift case has been established; original predicate and setup below remain an open obligation.
+Mapping/reason: feature not yet ported: timeline roll/horizontal scrollbars (timelineRollScrollBar/timelineHorizontalScrollBar unmounted in EditorSurface.qml); external-camera thumb repositioning is only observable on the unmounted EditorSurface.qml TimelineScrollbar thumbs.
 Source context since previous assertion:
   ;
 Original expression:

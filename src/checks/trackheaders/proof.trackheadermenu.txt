@@ -4,7 +4,7 @@ Reference revision: f3069ef693542bdb63564b80a29773e2f5b2a360
 Original: src/checks/trackheaders/trackheadermenu.cpp
 Original SHA-256: 86a016fc4acd1e2ec381c579b815d9883d6e6a6167fd97079564a71f68077c0b
 Swift counterpart: src/checks/trackheaders/trackheadermenu.swift
-Swift SHA-256: 903a0e21c0585cc53b8fe921a9a07cf23421a062382a85654dfbff78f3dd3057
+Swift SHA-256: ebe356d8c74ca537123e4f07f1f5a085c0cb6c60a2cbc69db30e998fb0ed6230
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -18,9 +18,12 @@ it does not establish coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
-Converted-window command: deno task verify:qml --verbose
+Command: deno task verify --filter swiftcore --verbose --qt projectSession -maxwarnings 100000
+Result: PASS (3 passed, 0 failed; PASS IDs renameTargetRowAndScrolledTitleResolve, renameMenuTargetsAndBegins, headerMenuTargetRowResolvesByTrack). Full-suite PASS not claimed (concurrent-slice noise during the run).
+Converted-window command: deno task verify:qml-roll --verbose
+Converted-window result: PASS (lane frozen diagnostic run, 1/1 SwiftRollTrackHeaders); test_headerMenuFrameHasOutsideInputPoint (:213-251) exercises A142-A143. This proof-only pass cites the exercised lines without re-running the suite.
+Verified QML SHA-256: 43eb0128d4e291db0844ec3b9412204bc85411ebfa7e47a259c260edd58e916d
+Production surface: src/ui/songview/quick/swiftroll/EditorSurface.qml SHA-256 90f4b3bbdcb88534a16c157d15f36dee7a7497ef86911ca40a93e2adcf9e0c9b (header menu loader :363-405; mount wiring :27/:33-44/:88-94)
 The legacy header/camera/playhead harnesses are not registered in this checkout.
 Their C++ sources are reference inventories only, never current execution evidence.
 
@@ -29,13 +32,13 @@ TrackHeadersChecks and TrackHeadersInputChecks call the paired functions in the
 original Swift suite order. headerfixture.swift constructs a real two-track
 DocumentSession (Lead C0/key60/v100/24 ticks and Bass C1/key48/v80/48 ticks);
 headerinputfixture.swift owns pointer probes and document/history baselines.
-Their helper expectations execute on every call and are inventoried below.
+Their helper expectations execute on every call and are inventoried below. Caller pin: src/checks/trackheaders/TrackHeadersInputChecks.swift SHA-256 0e30a3e3f6929ae540cf35157403c95f1bf2e25f2d3d908e3a37011a5742abb5 calls headerMenuTargetRowResolvesByTrack at line 20.
 
 Original assertion inventory and source sequence
 
 A001 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:109
-Disposition: GAP
-Mapping/reason: No Swift predicate resolves the original optional rowForTrack(sourceTrack) lookup. S001 checks selectedTrack after openMenu clicks fixed row 0; it does not establish the identity-based source-row lookup. Retain the original row-resolution assertion as GAP.
+Disposition: MATCHED
+Mapping/reason: headerMenuTargetRowResolvesByTrack resolves the non-leading row from track identity [S045]; the identity-resolved right press selects the target [S046] and the menu action reveals it [S047]; dismiss closes the menu with the document unchanged [S048, S049].
 Source context since previous assertion:
   // Track-header context menu over the shared Quick canvas session. These
   // checks drive the real header right-press, click typed rows addressed by
@@ -265,7 +268,7 @@ Original expression:
 
 A013 | TrackHeadersTest::headerMenuOpensWithTypedRowsAndDismissesWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:148
 Disposition: PARTIAL
-Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermenu.swift; menu dismissal is proven but native Quick focus restoration has no presenter counterpart.
+Mapping/reason: Related predicates S001-S011 in src/checks/trackheaders/trackheadermenu.swift prove menu dismissal; native Quick focus restoration stays unproved against the frozen QML surface: headerInput is a component-private id (TrackHeaderBand.qml:420, reached only by objectName) with no focus-restoration seam, and no predicate in tst_SwiftRollTrackHeaders.qml observes active focus.
 Source context since previous assertion:
   ;
 Original expression:
@@ -464,7 +467,7 @@ Original expression:
 
 A033 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:210
 Disposition: PARTIAL
-Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift; the onChangeTrackVoiceRequested callback is proven but the native voice-picker window has no presenter counterpart.
+Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift prove the onChangeTrackVoiceRequested callback; the voice-picker window stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml, drawer/VoiceChangeMenu.qml), not the header band (TrackHeaderBand.qml has no picker), and no header-band QML predicate opens it.
 Source context since previous assertion:
   ;
 
@@ -475,7 +478,7 @@ Original expression:
 
 A034 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:212
 Disposition: PARTIAL
-Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift; the picker request is proven but native picker search-field focus has no presenter counterpart.
+Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift prove the picker request; picker search-field focus stays unproved: picker UI is owned by the editor/drawer surface (drawer/VoicePicker.qml), not the header band, and the frozen header-band QML suite asserts no focus state.
 Source context since previous assertion:
   ;
       const checks::voicepicker::Picker picker = checks::voicepicker::active(fx.view());
@@ -503,7 +506,7 @@ Original expression:
 
 A037 | TrackHeadersTest::headerMenuChangeVoiceOpensPickerAfterMenuCloses | src/checks/trackheaders/trackheadermenu.cpp:218
 Disposition: PARTIAL
-Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift; completeVoiceRequest(-1) covers cancellation but native outside-press picker dismissal has no presenter counterpart.
+Mapping/reason: Related predicates S012-S018 in src/checks/trackheaders/trackheadermenu.swift with completeVoiceRequest(-1) cover cancellation; outside-press picker dismissal stays unproved: the picker surface is owned by the editor/drawer surface, not the header band, and no header-band QML predicate dismisses it.
 Source context since previous assertion:
   ;
 Original expression:
@@ -786,7 +789,7 @@ Original expression:
 
 A067 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:291
 Disposition: PARTIAL
-Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift; the reveal dispatch is proven but native header band focus has no presenter counterpart.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the reveal dispatch; header band focus retention stays unproved: headerInput is a component-private id (TrackHeaderBand.qml:420) and the frozen QML suite asserts geometry and dismissal only, never focus state.
 Source context since previous assertion:
   ;
 Original expression:
@@ -848,7 +851,7 @@ Original expression:
 
 A073 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:311
 Disposition: PARTIAL
-Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift; the duplicate dispatch is proven but native header band focus has no presenter counterpart.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the duplicate dispatch; header band focus retention stays unproved: headerInput is a component-private id (TrackHeaderBand.qml:420) and the frozen QML suite asserts geometry and dismissal only, never focus state.
 Source context since previous assertion:
   ;
 Original expression:
@@ -992,7 +995,7 @@ Original expression:
 
 A089 | TrackHeadersTest::headerMenuRowsDispatchRevealDuplicateDelete | src/checks/trackheaders/trackheadermenu.cpp:343
 Disposition: PARTIAL
-Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift; the delete dispatch is proven but native header band focus has no presenter counterpart.
+Mapping/reason: Related predicates S022-S035 in src/checks/trackheaders/trackheadermenu.swift prove the delete dispatch; header band focus retention stays unproved: headerInput is a component-private id (TrackHeaderBand.qml:420) and the frozen QML suite asserts geometry and dismissal only, never focus state.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1108,7 +1111,7 @@ Original expression:
 
 A101 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:377
 Disposition: PARTIAL
-Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift; menu cancellation is proven but native active-focus-item inspection has no presenter counterpart.
+Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift prove menu cancellation; which item holds active focus stays unproved: the frozen QML suite never observes activeFocusItem, and the dismissed panel versus band focus identity has no converted predicate (headerInput id is private to TrackHeaderBand.qml:420).
 Source context since previous assertion:
   ;
       checks::support::pumpQuick();
@@ -1118,7 +1121,7 @@ Original expression:
 
 A102 | TrackHeadersTest::headerMenuStaleStructuralChangeCancelsWithoutWrite | src/checks/trackheaders/trackheadermenu.cpp:379
 Disposition: PARTIAL
-Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift; menu cancellation is proven but native focus-item identity has no presenter counterpart.
+Mapping/reason: Related predicates S036-S039 in src/checks/trackheaders/trackheadermenu.swift prove menu cancellation; focus-item identity stays unproved: no frozen QML predicate observes activeFocusItem or distinguishes quickMenuPanelRoot/quickMenuFrame from the band input, whose headerInput id is private to TrackHeaderBand.qml:420.
 Source context since previous assertion:
   ;
       const QString focusName = focus->objectName();
@@ -1539,8 +1542,8 @@ Original expression:
   QVERIFY2(opened.session, qUtf8Printable(opened.diagnostic))
 
 A142 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:521
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift; outside dismissal is proven but the native menu frame item has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_headerMenuFrameHasOutsideInputPoint renders the typed panel through the mounted header menu loader and resolves its outside boundary frame: rowObjectNamePrefix is headerMenuRow_ [S050], the quickMenuFrame child resolves [S051] and is verified non-null, visible and sized [S052, S053].
 Source context since previous assertion:
   ;
       QQuickItem *const frame = quick_popup::menuFrame(*opened.session);
@@ -1548,8 +1551,8 @@ Original expression:
   QVERIFY2(frame, "the header menu rendered no outside boundary frame")
 
 A143 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:524
-Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift; outside dismissal is proven but native menu frame scene geometry has no presenter counterpart.
+Disposition: MATCHED
+Mapping/reason: Converted-window test_headerMenuFrameHasOutsideInputPoint replays the outside-point scan (rows times 0.08/0.5/0.92 fractions with input-bounds and frame-scene exclusion, the converted headerPointOutsideMenuFrame) [S054] and verifies an outside point inside the live input exists [S055].
 Source context since previous assertion:
   ;
       const QRectF frameScene = frame->mapRectToScene(frame->boundingRect());
@@ -1607,7 +1610,7 @@ Original expression:
 
 A149 | TrackHeadersTest::headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.cpp:538
 Disposition: PARTIAL
-Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift; outside dismissal is proven but native header band focus restoration has no presenter counterpart.
+Mapping/reason: Related predicates S042-S044 in src/checks/trackheaders/trackheadermenu.swift plus converted-window outside dismissal S054-S055 prove the outside press dismisses; header band focus restoration stays unproved: headerInput is a component-private id (TrackHeaderBand.qml:420) with no focus-restoration seam in the frozen QML surface.
 Source context since previous assertion:
   ;
 Original expression:
@@ -1829,8 +1832,64 @@ S043 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackhead
 S044 | headerMenuOutsidePressDismissesWithoutClickThrough | src/checks/trackheaders/trackheadermenu.swift:209
   report.expectEqual(0, reveals, cppID: id, what: "outside button \(button) never reveals a voice")
 
+S045 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift:57
+  report.expect(row != 0 && h.rows[row].track == target, cppID: id,
+                  message: "non-leading header row resolves from track identity")
+
+S046 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift:68
+  report.expectEqual(target, fx.session.selectedTrack, cppID: id,
+                       what: "right press selects identity-resolved target")
+
+S047 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift:71
+  report.expectEqual([target], revealed, cppID: id,
+                       what: "menu target resolves to identity-resolved track")
+
+S048 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift:77
+  report.expect(!h.menuOpen, cppID: id, message: "dismiss closes target menu")
+
+S049 | headerMenuTargetRowResolvesByTrack | src/checks/trackheaders/trackheadermenu.swift:78
+  baseline.expectUnchanged(report, fx.document, cppID: id, phase: "identity menu open and dismiss")
+
+S050-S055 index the converted-window predicates of src/checks/rollqml/tst_SwiftRollTrackHeaders.qml :: test_headerMenuFrameHasOutsideInputPoint, exercised by the frozen converted-window run pinned below. QML expressions quoted verbatim.
+
+S050 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:226
+  compare(panel.rowObjectNamePrefix, "headerMenuRow_")
+
+S051 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:227
+  var frame = findChild(panel, "quickMenuFrame")
+
+S052 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:228
+  verify(frame !== null)
+
+S053 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:229
+  tryVerify(function() { return frame.visible && frame.width > 0 && frame.height > 0 },
+                    5000, "visible=" + frame.visible + " width=" + frame.width
+                          + " height=" + frame.height + " count=" + panel.rowCount
+                          + " menuOpen=" + h.menuOpen)
+
+S054 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:233
+  var outside = null
+  for (var row = 0; row < item("timelineTrackHeaderRows").count && !outside; ++row) {
+      for (var fraction of [0.08, 0.5, 0.92]) {
+          var px = input.width * fraction
+          var py = row * h.rowHeight + h.rowHeight / 2 - h.scrollY
+          if (px < 0 || px >= input.width || py < 0 || py >= input.height)
+              continue
+          var scene = input.mapToItem(null, px, py)
+          var corner = frame.mapToItem(null, 0, 0)
+          if (scene.x < corner.x || scene.x >= corner.x + frame.width
+                  || scene.y < corner.y || scene.y >= corner.y + frame.height) {
+              outside = { x: px, y: py }
+              break
+          }
+      }
+  }
+
+S055 | test_headerMenuFrameHasOutsideInputPoint | src/checks/rollqml/tst_SwiftRollTrackHeaders.qml:249
+  verify(outside !== null)
+
 Shared helper: src/checks/trackheaders/headerfixture.swift
-SHA-256: 97168dc6c4c652f8497a6b3f1cf1750fa010c067def9b5f39955c3dab56d48aa
+SHA-256: 1d65a6a2db64757829d2635c69dcd83dae2a29ebaaad129db1ed325fe66ab491
 src/checks/trackheaders/headerfixture.swift:64
   report.expect(headers.beginPointer(x: x, y: startY, button: 1, modifiers: 0),
                         cppID: trackHeadersReorderID, message: "\(label): header accepts press")
