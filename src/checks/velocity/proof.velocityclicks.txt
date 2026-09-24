@@ -8,7 +8,9 @@ Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
 Additional Swift counterpart: src/checks/velocity/velocitydetentdragging.swift
 Additional Swift SHA-256: e411048c4631faad6dc3fa9cb27ea7f471fd6ba266776ba248fb5ad4a2fac12b
 Additional Swift counterpart: src/checks/velocity/VelocityPageChecks.swift
-Additional Swift SHA-256: 2600bfa468ac1bc6c628468de33d1ccdf81c3ac7826b7b9211e5d8b8c7538648
+Additional Swift SHA-256: 04386e845a0fc186c7ec5336906c1f2e96e0dffcad6af8e6deeba39f5f829ccf
+Additional Swift counterpart: src/checks/velocity/VelocityClickSelectionChecks.swift
+Additional Swift SHA-256: 9559522bab026f298f201dbaa9db58af6f2b9a148d26879f219592ba95c93235
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -20,19 +22,27 @@ a specific related scenario differs; GAP means exact assertion correspondence is
 established; NATIVE-SETUP identifies a retained C++ loader/window/input precondition.
 A method name or related Swift case alone never establishes an assertion match.
 This inventory does not authorize removing native checks. Unresolved entries remain work.
+Tally: MATCHED 32 / PARTIAL 17 / GAP 0 / NATIVE-SETUP 4.
 
 Execution and ownership
 drawerVelocityGestureTransactions (velocity/tst_velocityediting.swift),
-drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift), and
-drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift) execute the
-paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
+drawerVelocityFrozenGesturePolicy (velocity/velocitydetentdragging.swift),
+drawerVelocityCommandAvailability (swiftcore/VelocityPageChecks.swift),
+drawerVelocityBlankClickDeselects, drawerVelocityGraduationClickEdits and
+drawerVelocityClickBelowNodeCommits (velocity/VelocityClickSelectionChecks.swift,
+called from runVelocityPageChecks) execute the paired checks. Shared setup lives in swiftcore/VelocityPageChecks.swift
 (drawerVelocityVelocityPageFixture, drawerVelocityVelocityFixture); per-case document
 and gesture state live in the paired Swift sources. Their helper expectations execute
 on every call and are inventoried below.
 
 Verification
-Command: deno task verify --filter swiftcore --verbose
-Result: pending integrated run; source hashes pin the tree inspected here.
+Command: deno task verify --filter swiftcore; deno task verify:qml
+Result: swiftcore harness PASS (1/14 ok, 13 sibling harnesses skipped by the filter),
+re-run after the clicks strengthening and again after an unrelated paint-file edit, so
+it is current for the cited predicates with VelocityClickSelectionChecks.swift frozen at
+9559522bab026f29; editorqml-drawer PASS (1/1 ok). Controller-provided integrated
+evidence, reused as final; no harness was rerun for this ledger. The SHA-256 values
+above pin the sources these predicates were read from.
 
 Fixture, sequence and row constraints
 No QTest data rows; each method runs once.
@@ -48,6 +58,19 @@ label; clickBelowSelectedNodeChangesOnlySelection presses below a selected node.
 No data rows; each method is one press/release sequence guarded by grabber,
 selection, revision, undo-depth, and document/timeline velocity sites.
 Methods in file order: blankClickDeselectsOnRelease, graduationClickEditsSelectedNotes, clickBelowSelectedNodeChangesOnlySelection.
+Swift fixture and sequence differences (ported click cases):
+The three ported cases execute drawerVelocityBlankClickDeselects,
+drawerVelocityGraduationClickEdits and drawerVelocityClickBelowNodeCommits, called from
+runVelocityPageChecks in swiftcore/VelocityPageChecks.swift, over the synthetic fixture
+defined in that file: three notes at ticks 0, 24 and 96 with velocities 100, 64 and 32.
+The predicates compare each note against the value it carried before the click or against
+the value the page published for its handle, rather than against the original literals
+20/70/70. Positions map as follows: notes[0] is the quiet sibling the original edited
+before the click, notes[1] is the untouched later note, and notes[2] is the pressed note
+that plays the loud stacked role inside drawerVelocityClickBelowNodeCommits. The original
+focusVelocityBand() anchors (velocityclicks.cpp:46, 98 and 133) are QWidget focus
+mechanics with no Swift ingress and no user-observable effect: they are
+RETIRED-REPRESENTATION candidates and carry no A site in this inventory.
 Exact original source anchors:
 src/checks/velocity/velocityclicks.cpp:34 | m_tab->view().selectionModel().setNoteSelection({m_quietStacked.noteId, m_later.noteId});
 src/checks/velocity/velocityclicks.cpp:46 | focusVelocityBand();
@@ -66,8 +89,8 @@ src/checks/velocity/velocityclicks.cpp:141 | mouseRelease(Qt::LeftButton, window
 Original assertion inventory
 
 A001 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:35
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S080: the case latches the same ordered pair through setSelectedNotes([notes[0].id, notes[2].id]) and refreshFromDocument, then the guard reports failure unless selectedNoteOrder equals that pair, so the rest of the case executes only while the latch held; the original QVERIFY asserted the same membership and order.
 Source context since previous assertion:
 #include "checks/velocity/tst_velocityediting.h"
 
@@ -108,8 +131,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A002 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:40
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S081: the Swift case presses the rightmost plot pixel (plotWidth - 1, surface 1) and asserts the plot consumed the press, the ingress that corresponds to the original containment; unproved: the original plotBounds.contains(blankLocal) rect containment is not re-asserted, because the Swift case declares the surface instead of testing the point against the published plot rect.
 Source context since previous assertion:
 ;
 
@@ -121,8 +144,8 @@ Original expression:
   QVERIFY(plotBounds.contains(blankLocal))
 
 A003 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:41
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S084: the blank press is asserted to leave frozenPreview empty, the off-node property the original x separation guaranteed; unproved: the literal separation of blankLocal.x() beyond the later note end x is not re-asserted.
 Source context since previous assertion:
 ;
 
@@ -130,8 +153,8 @@ Original expression:
   QVERIFY(blankLocal.x() > nodePoint(kLoudVelocity, m_later.tick + m_later.duration).x())
 
 A004 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:48
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S081 and S082: the Qt mouseGrabberItem identity is the press-ownership observable; the Swift page reports ownership through the consumed press return and the live gesture it holds for that press, both asserted at the same press-before-release position.
 Source context since previous assertion:
 ;
 
@@ -146,8 +169,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A005 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:50
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S083: selectedNoteOrder still equals the latched pair after the press and before the release, the same mid-gesture selection the original QVERIFY required.
 Source context since previous assertion:
 ;
 
@@ -155,8 +178,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A006 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:53
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S085: selectedNoteOrder is empty after the release, the original noteSelection().empty() observable.
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPoint(blankLocal));
@@ -166,8 +189,8 @@ Original expression:
   QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
 
 A007 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:54
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S087: the full document snapshot equality carries document.revision, the original revisionBefore comparison.
 Source context since previous assertion:
 ;
 
@@ -175,8 +198,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A008 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:55
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S087: the snapshot also pins history identity, undoability and redoability; unproved: the undo stack depth delta of the original undoDepthBefore comparison, because the Swift owner publishes no public depth counter, so a stray entry with an unchanged tip identity would not be distinguished.
 Source context since previous assertion:
 ;
 
@@ -184,8 +207,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A009 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:56
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088: the loop asserts every note keeps the velocity captured before the click, the no-mutation observable of the original literal comparison for the quiet stacked note; the literal 20 belongs to the original fixture and the Swift predicate pins the value that note carried before the click.
 Source context since previous assertion:
 ;
 
@@ -193,8 +216,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), 20)
 
 A010 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:57
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088: the same all-notes loop instance for the second note, the loud stacked duplicate; the original literal 70 against its own fixture and the Swift predicate against the value that note carried before the click.
 Source context since previous assertion:
 ;
 
@@ -202,8 +225,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A011 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:58
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S088: the same loop instance for the later note; the original literal 70 against its own fixture and the Swift predicate against the pre-click value of the third note.
 Source context since previous assertion:
 ;
 
@@ -211,8 +234,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A012 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:59
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089: the loop asserts the published handle value of every note still equals its document velocity, the published-side no-op observable of the original timelineVelocity read; the original literal 20 is the original fixture value and the Swift page publishes its own fixture value.
 Source context since previous assertion:
 ;
 
@@ -220,8 +243,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), 20)
 
 A013 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:60
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089: the same published-value loop instance for the second note, the loud stacked duplicate; the original literal 70 against its own fixture.
 Source context since previous assertion:
 ;
 
@@ -229,8 +252,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A014 | VelocityEditingTest::blankClickDeselectsOnRelease | src/checks/velocity/velocityclicks.cpp:61
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S089: the same published-value loop instance for the later note; the original literal 70 against its own fixture.
 Source context since previous assertion:
 ;
 
@@ -238,8 +261,8 @@ Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A015 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:67
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S091: the case latches the pair [notes[0].id, notes[1].id] through setSelectedNotes and refreshFromDocument and the guard fails unless selectedNoteOrder equals it, the original QVERIFY membership and order condition.
 Source context since previous assertion:
 ;
 }
@@ -252,8 +275,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A016 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:72
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained harness loader precondition: the original resolved the timelineQuickCanvas TimelineQuickView by object name inside the native QML harness. The Swift fixture constructs the production VelocityPage directly and resolves no scene graph, so no Swift predicate asserts this lookup; native velocityclicks.cpp still executes it.
 Source context since previous assertion:
 ;
 
@@ -265,8 +288,8 @@ Original expression:
   QVERIFY(quickView)
 
 A017 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:74
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained harness loader precondition: the original required the quick view root object before it could reach the gutter input. No Swift counterpart resolves a root object; the Swift fixture drives the page owner directly.
 Source context since previous assertion:
 ;
     QObject *const quickRoot = quickView->rootObject();
@@ -275,8 +298,8 @@ Original expression:
   QVERIFY(quickRoot)
 
 A018 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:78
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained harness input precondition: the original resolved the timelineVelocityGutterInput item by object name. The Swift case reaches the same ruler through page.pointerPress with surface 0; the object-name lookup itself stays native only.
 Source context since previous assertion:
 ;
     songview::TimelineInputItem *const gutterInput =
@@ -287,8 +310,8 @@ Original expression:
   QVERIFY(gutterInput)
 
 A019 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:79
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Mapping/reason: Retained harness window precondition: the original required the gutter input to belong to the suite Quick window. The Swift fixture owns no Quick window and never asserts item window ownership.
 Source context since previous assertion:
 ;
 
@@ -296,8 +319,8 @@ Original expression:
   QCOMPARE(gutterInput->window(), m_quickWindow.data())
 
 A020 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:89
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S092: the Swift guard selects the published 127 label from page.axisModel.labels and reports failure when it is absent, the same label-existence condition the original loop and QVERIFY established.
 Source context since previous assertion:
 ;
 
@@ -314,8 +337,8 @@ Original expression:
   QVERIFY(maximumLabel)
 
 A021 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:92
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S093 and S094: the case resolves the label row to a velocity and the ruler consumes the press on that row; unproved: the original gutterInput bounds containment of gutterLocal is not re-asserted, because the Swift case declares surface 0 instead of testing the point against the published gutter rect.
 Source context since previous assertion:
 ;
 
@@ -325,8 +348,8 @@ Original expression:
   QVERIFY(gutterInput->bounds().contains(gutterLocal))
 
 A022 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:100
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S094: grabber identity replaced by press ownership; the consumed return is asserted after the press and before the release, the same routing claim.
 Source context since previous assertion:
 ;
     const QPoint gutterWindow = gutterInput->mapToScene(gutterLocal).toPoint();
@@ -341,8 +364,8 @@ Original expression:
   QTRY_COMPARE(m_quickWindow->mouseGrabberItem(), static_cast<QQuickItem *>(gutterInput))
 
 A023 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:101
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100: selectedNoteOrder still equals the latched pair after the commit press, the same selection retention.
 Source context since previous assertion:
 ;
 
@@ -350,8 +373,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A024 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:102
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095: the first selected note holds the value the ruler row resolved through rulerVelocityAt at the 127 label row, the original literal 127 being that row own graduation.
 Source context since previous assertion:
 ;
 
@@ -359,8 +382,8 @@ Original expression:
   QTRY_COMPARE(documentVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
 
 A025 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:103
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096: the second selected note holds the same row-resolved graduation value.
 Source context since previous assertion:
 ;
 
@@ -368,8 +391,8 @@ Original expression:
   QTRY_COMPARE(documentVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
 
 A026 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:106
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S098: the revision advanced by exactly one, the original revisionBefore + 1 comparison.
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, gutterWindow);
@@ -379,8 +402,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A027 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:107
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S099: the history identity changed, corroborating one new tip entry; unproved: the exact undo depth delta of the original undoDepthBefore + 1 comparison, because the Swift owner publishes no public depth counter.
 Source context since previous assertion:
 ;
 
@@ -388,8 +411,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A028 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:108
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S095: observed at commit time; the case asserts the release is inert (S101), so the post-release document fact is the same one the original re-asserted.
 Source context since previous assertion:
 ;
 
@@ -397,8 +420,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
 
 A029 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:109
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S096: the same second-note document predicate, with the inert release asserted at S101.
 Source context since previous assertion:
 ;
 
@@ -406,8 +429,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
 
 A030 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:110
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S097: the unselected note keeps the value it carried before the press, the original literal-70 no-mutation observable.
 Source context since previous assertion:
 ;
 
@@ -415,8 +438,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A031 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:111
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S102: the published handle of the first selected note republishes the clicked graduation, the published-side value the original timelineVelocity read.
 Source context since previous assertion:
 ;
 
@@ -424,8 +447,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kGraduationVelocity))
 
 A032 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:112
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S103: the published handle of the second selected note republishes the clicked graduation.
 Source context since previous assertion:
 ;
 
@@ -433,8 +456,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kGraduationVelocity))
 
 A033 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:113
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S097: the unselected note document value is asserted unchanged; unproved: its published handle value after the graduation click, because the case asserts published handles only for the two selected notes.
 Source context since previous assertion:
 ;
 
@@ -442,8 +465,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A034 | VelocityEditingTest::graduationClickEditsSelectedNotes | src/checks/velocity/velocityclicks.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S100: selection retention after the release, with the inert release asserted at S101.
 Source context since previous assertion:
 ;
 
@@ -451,8 +474,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_loudStacked.noteId}))
 
 A035 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:120
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105: the case latches [later.id] and the guard fails unless selectedNoteOrder equals it, the original single-note selection condition.
 Source context since previous assertion:
 ;
 }
@@ -465,8 +488,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A036 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:123
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S113: the Swift case asserts the first note keeps the value it carried at fixture construction; unproved: the original pre-click setNotesVelocity write to velocity 1 and its document result, because the Swift case performs no setup edit and compares against the constructed value.
 Source context since previous assertion:
 ;
 
@@ -476,8 +499,8 @@ Original expression:
   QTRY_COMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A037 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:124
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S113: document side of the first note; unproved: the pre-click setup write and its published value, because the case publishes no predicate for the untouched note handle.
 Source context since previous assertion:
 ;
 
@@ -485,8 +508,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A038 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S107: the pressed note value is the loop comparison baseline, whose painted preview must differ from it; unproved: an explicit pre-click document reading of the pressed note, which plays the loud stacked role of the original.
 Source context since previous assertion:
 ;
 
@@ -494,8 +517,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kLoudVelocity))
 
 A039 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:126
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S114: the third note is asserted unchanged across the click; unproved: an explicit pre-click document reading of the note that plays the untouched later role.
 Source context since previous assertion:
 ;
 
@@ -503,8 +526,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A040 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:127
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S105: the same latched single-note selection before the press.
 Source context since previous assertion:
 ;
 
@@ -512,8 +535,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A041 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:135
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S108: press ownership asserted as a live gesture; the case discards the consumed return, so the held gesture is the ownership observable, the routing the grabber check made.
 Source context since previous assertion:
 ;
 
@@ -529,8 +552,8 @@ Original expression:
                static_cast<QQuickItem *>(m_velocityInput.data()))
 
 A042 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:138
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S107: the guard fails unless an off-node press painted a preview for the pressed note, the original has_value check.
 Source context since previous assertion:
 ;
     const std::optional<uint8_t> loudPreview = m_tab->view().previewVelocity(m_loudStacked.noteId);
@@ -539,8 +562,8 @@ Original expression:
   QVERIFY(loudPreview.has_value())
 
 A043 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S107: the guard requires the painted preview to differ from the captured value and to keep the selection; unproved: the preview equals the pressed column velocity, because the case accepts the first off-node candidate and then compares the release against that same preview rather than against the pressed y value.
 Source context since previous assertion:
 ;
 
@@ -548,8 +571,8 @@ Original expression:
   QCOMPARE(int(*loudPreview), int(kClickVelocity))
 
 A044 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:140
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S109: selectedNoteOrder still equals the pressed note after the press, the same selection retention.
 Source context since previous assertion:
 ;
 
@@ -557,8 +580,8 @@ Original expression:
   QVERIFY(noteSelectionIs({m_loudStacked.noteId}))
 
 A045 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S110: the revision advanced by exactly one, the original revisionBefore + 1 comparison.
 Source context since previous assertion:
 ;
     mouseRelease(Qt::LeftButton, windowPos);
@@ -568,8 +591,8 @@ Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A046 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:144
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S111: the history identity changed, corroborating one new entry; unproved: the exact undo depth delta of the original undoDepthBefore + 1 comparison.
 Source context since previous assertion:
 ;
 
@@ -577,8 +600,8 @@ Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A047 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:145
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S113: the untouched first note keeps its constructed value across the click; unproved: the original pre-click setup write to velocity 1 surviving the click, because the Swift case never edits that note.
 Source context since previous assertion:
 ;
 
@@ -586,8 +609,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A048 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S112: the release commits the pressed preview onto the pressed note; unproved: that the committed value equals the pressed column literal velocity, the pin recorded at A043, because the Swift comparison uses the value the page itself previewed.
 Source context since previous assertion:
 ;
 
@@ -595,8 +618,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), int(kClickVelocity))
 
 A049 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:147
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S114: the untouched second note is asserted to keep its fixture velocity across the click, the no-cross-note-mutation observable of the original literal comparison.
 Source context since previous assertion:
 ;
 
@@ -604,8 +627,8 @@ Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), int(kLoudVelocity))
 
 A050 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:148
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S113: document side of the untouched first note; unproved: its published handle value and the original pre-click setup write to velocity 1.
 Source context since previous assertion:
 ;
 
@@ -613,8 +636,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_quietStacked.noteId), int(kQuietVelocityAfterSetup))
 
 A051 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S112: document side of the pressed note; unproved: its published handle value after the commit and the pressed column value pin recorded at A043.
 Source context since previous assertion:
 ;
 
@@ -622,8 +645,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_loudStacked.noteId), int(kClickVelocity))
 
 A052 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:150
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Mapping/reason: S114: document side of the untouched second note; unproved: its published handle value.
 Source context since previous assertion:
 ;
 
@@ -631,8 +654,8 @@ Original expression:
   QTRY_COMPARE(timelineVelocity(m_later.noteId), int(kLoudVelocity))
 
 A053 | VelocityEditingTest::clickBelowSelectedNodeChangesOnlySelection | src/checks/velocity/velocityclicks.cpp:151
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Mapping/reason: S115: selectedNoteOrder still equals the pressed note after the release.
 Source context since previous assertion:
 ;
 
@@ -972,3 +995,119 @@ S078 | drawerVelocityCommandAvailability | src/checks/velocity/VelocityPageCheck
   report.expectEqual(EditKeyRoute.alwaysConsume.rawValue, row?.keyRoute.rawValue ?? -1,
                      cppID: drawerVelocityCommandID,
                      what: "the command table keeps Set Velocity's consume route")
+
+VelocityClickSelectionChecks.swift predicates (blank click, graduation click and off-node click cases)
+
+S079 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:13
+  report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
+
+S080 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:21
+  report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
+
+S081 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:29
+  report.expect(consumed, cppID: drawerVelocityClickSelectionID, message: "a blank plot press is consumed")
+
+S082 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:30
+  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a blank press holds a live gesture")
+
+S083 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:31
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[2].id], cppID: drawerVelocityClickSelectionID, message: "a blank press keeps the selection until release")
+
+S084 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:32
+  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityClickSelectionID, message: "a blank press previews nothing")
+
+S085 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:34
+  report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityClickSelectionID, message: "a blank release clears the selection")
+
+S086 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:35
+  report.expect(!page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "a blank release ends the gesture")
+
+S087 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:36
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityTransactionID, message: "deselecting on release writes nothing")
+
+S088 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:38
+  report.expectEqual(captured[index], document.note(note.id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a blank click leaves every velocity captured")
+
+S089 | drawerVelocityBlankClickDeselects | src/checks/velocity/VelocityClickSelectionChecks.swift:41
+  report.expectEqual(Int(document.note(note.id)?.velocity ?? 0), fixture.handle(note)?.value ?? -1, cppID: drawerVelocityClickSelectionID, what: "a blank click republishes every captured value")
+
+S090 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:50
+  report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
+
+S091 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:58
+  report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
+
+S092 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:62
+  report.fail(drawerVelocityClickSelectionID, "the ruler published no 127 label")
+
+S093 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:67
+  report.fail(drawerVelocityClickSelectionID, "the 127 label row resolved no velocity")
+
+S094 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:73
+  report.expect(consumed, cppID: drawerVelocityClickSelectionID, message: "a graduation press is consumed")
+
+S095 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:74
+  report.expectEqual(expected, Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "a graduation click sets the first selected note")
+
+S096 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:75
+  report.expectEqual(expected, Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "a graduation click sets the second selected note")
+
+S097 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:76
+  report.expectEqual(untouched, document.note(notes[2].id)?.velocity, cppID: drawerVelocityClickSelectionID, what: "a graduation click leaves the unselected note alone")
+
+S098 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:77
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID, what: "one graduation click makes one revision")
+
+S099 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:78
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityTransactionID, message: "one graduation click makes one history entry")
+
+S100 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:79
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityClickSelectionID, message: "a graduation click keeps the selection")
+
+S101 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:81
+  report.expect(!released, cppID: drawerVelocityClickSelectionID, message: "the release after a graduation commit is inert")
+
+S102 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:82
+  report.expectEqual(expected, fixture.handle(notes[0])?.value ?? -1, cppID: drawerVelocityClickSelectionID, what: "the first handle republishes the clicked graduation")
+
+S103 | drawerVelocityGraduationClickEdits | src/checks/velocity/VelocityClickSelectionChecks.swift:83
+  report.expectEqual(expected, fixture.handle(notes[1])?.value ?? -1, cppID: drawerVelocityClickSelectionID, what: "the second handle republishes the clicked graduation")
+
+S104 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:91
+  report.fail(drawerVelocityClickSelectionID, "the synthetic fixture published fewer than three notes")
+
+S105 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:100
+  report.fail(drawerVelocityClickSelectionID, "the press-time selection did not latch")
+
+S106 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:104
+  report.fail(drawerVelocityClickSelectionID, "the fixture's later note has no published handle")
+
+S107 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:135
+  report.fail(drawerVelocityClickSelectionID, "no off-node press previewed without moving")
+
+S108 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:138
+  report.expect(page.hasGesture, cppID: drawerVelocityClickSelectionID, message: "an off-node press holds a live gesture")
+
+S109 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:139
+  report.expect(fixture.session.selectedNoteOrder == [later.id], cppID: drawerVelocityClickSelectionID, message: "an off-node press previews without changing the selection")
+
+S110 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:141
+  report.expectEqual(baseline.revision + 1, document.revision, cppID: drawerVelocityTransactionID, what: "one off-node click makes one revision")
+
+S111 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:142
+  report.expect(document.history.currentIdentity != baseline.identity, cppID: drawerVelocityTransactionID, message: "one off-node click makes one history entry")
+
+S112 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:143
+  report.expectEqual(pressPreview, Int(document.note(later.id)?.velocity ?? 0), cppID: drawerVelocityClickSelectionID, what: "the release commits the pressed preview")
+
+S113 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:144
+  report.expectEqual(document.note(notes[0].id)?.velocity, notes[0].velocity, cppID: drawerVelocityClickSelectionID, what: "an off-node click leaves the first note alone")
+
+S114 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:145
+  report.expectEqual(document.note(notes[1].id)?.velocity, notes[1].velocity, cppID: drawerVelocityClickSelectionID, what: "an off-node click leaves the second note alone")
+
+S115 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:146
+  report.expect(fixture.session.selectedNoteOrder == [later.id], cppID: drawerVelocityClickSelectionID, message: "an off-node click keeps its own selection")
+
+S116 | drawerVelocityClickBelowNodeCommits | src/checks/velocity/VelocityClickSelectionChecks.swift:147
+  report.expect(!page.hasGesture && page.frozenPreview.isEmpty, cppID: drawerVelocityClickSelectionID, message: "an off-node release ends the gesture")

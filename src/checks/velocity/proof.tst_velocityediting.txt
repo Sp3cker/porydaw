@@ -5,6 +5,10 @@ Original: src/checks/velocity/tst_velocityediting.cpp
 Original SHA-256: 3e4a4992d28bc5e1443b055ea741e59fff79643504e57a2f0889ea60c84bc08b
 Swift counterpart: src/checks/velocity/tst_velocityediting.swift
 Swift SHA-256: 322d230eb82710575393d0bd85634f224390f7eb353154e88e2caae7cb6261b0
+Additional Swift counterpart: src/checks/velocity/VelocityRollCoreChecks.swift
+Additional Swift SHA-256: 32986d8646ef96c6c49749f5d0eedeea025ac18a89ff2027900f96ae396267e2
+Additional Swift counterpart: src/checks/velocity/VelocityPaintDetentChecks.swift
+Additional Swift SHA-256: c7b49bf857f61eb48beec3f9f9d5f5eccaa36c5f9cb87ffa837b547697cb5ab3
 
 Purpose and status
 Each A entry is one original assertion or failure site, including helper and setup sites.
@@ -23,7 +27,16 @@ VelocityPageChecks.swift, VoiceChangesPageChecks.swift and EditorDrawerChecks.sw
 Core domain scenarios retain their original EventChecks/TimeChecks entrypoint positions.
 
 Verification evidence
-Pending: root will record the exact final tree and selected Deno verification run.
+Verification: controller-provided final run reused by this ledger pass, not re-executed here.
+`deno task verify --filter swiftcore` -> swiftcore harness PASS (1/14 ok; the other 13
+harnesses are skipped by the filter); `deno task verify:qml` -> editorqml-drawer PASS (1/1 ok).
+The cited predicates live inside runner-called functions (VelocityPageChecks.swift ::
+runVelocityPageChecks calls drawerVelocityGestureTransactions and every
+drawerVelocityRollCore* function below), so the passing swiftcore harness exercised them.
+No differential comparison against the native C++ original is claimed; the legacy velocity
+cpp is absent from every CMake target and unregistered in checkcatalog.cpp. A later pass must
+record the final tree if it changes.
+Tally: MATCHED 66, PARTIAL 43, GAP 0, NATIVE 0, NATIVE-SETUP 5, RETIRED-REPRESENTATION 14 (128 sites).
 
 Fixture, sequence, data-row and loop inventory
 Each line below is an exact original source anchor. Multiline declarations, helper
@@ -54,44 +67,51 @@ src/checks/velocity/tst_velocityediting.cpp:444 | for (const TimelineEvent &even
 Original assertion inventory
 
 A001 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:90
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Swift: no Swift predicate (fixture identity precondition)
+Mapping/reason: Native setup precondition unchanged by the port: the C++ SongName::create optional identity is asserted before the tab exists, while the Swift fixture builds SongDocument(file:) non-optionally from a synthetic MidiFile and has no name factory or predicate. A setup-stanza label, not a coverage claim.
 Original expression:
   QVERIFY(name.has_value())
 
 A002 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:99
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Swift: no Swift predicate (fixture identity precondition)
+Mapping/reason: Native setup precondition unchanged by the port: the C++ VoicegroupId::create optional identity gates the applied bank view, while the Swift fixture passes its suite bank lease and slots into DocumentSession with no identity predicate. A setup-stanza label, not a coverage claim.
 Original expression:
   QVERIFY(identity.has_value())
 
 A003 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:105
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Swift: no Swift predicate (loader precondition)
+Mapping/reason: Native setup precondition unchanged by the port: presentationError empty proves applyMidiStage accepted the in-memory SMF, while the Swift fixture decodes in memory through non-throwing SongDocument(file:) with no presentation-error predicate. A setup-stanza label, not a coverage claim.
 Original expression:
   QVERIFY(m_tab->presentationError().isEmpty())
 
 A004 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:114
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Swift: no Swift predicate (loader precondition)
+Mapping/reason: Native setup precondition unchanged by the port: QTRY_VERIFY(isReady) waits for the tab to finish loading, while the Swift fixture is usable at construction and asserts no readiness flag. A setup-stanza label, not a coverage claim.
 Original expression:
   QTRY_VERIFY(m_tab->isReady())
 
 A005 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:115
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: NATIVE-SETUP
+Swift: no Swift predicate (loader precondition)
+Mapping/reason: Native setup precondition unchanged by the port: the voicegroup lease must be the borrowed bank, while the Swift fixture hands its suite lease and slots to DocumentSession with no lease-identity predicate. A setup-stanza label, not a coverage claim.
 Original expression:
   QVERIFY(m_tab->voicegroupLease().get() == &m_bank)
 
 A006 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:119
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S042 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreFixtureFacts
+Mapping/reason: S042 asserts the fixture track carries exactly three notes under drawerVelocityRollCoreFixtureID. The Swift synthetic fixture replaces the original stacked-pair MIDI with three distinct notes, so only the three-note cardinality is the shared observable.
 Original expression:
   QVERIFY2(notes.size() == 3, "the fixture track must carry exactly three notes")
 
 A007 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:125
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S043 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreFixtureFacts
+Mapping/reason: S043/S044/S045/S046 assert the notes resolve in SMF event order (ticks 0/24/96) with their staged literal velocities, keys and distinct identities. The duplicate-tick stacked-pair clause has no Swift analogue: the Swift fixture holds no two events at one tick and key.
 Original expression:
   QVERIFY2(m_quietStacked.noteId != m_loudStacked.noteId &&
                    m_quietStacked.velocity == kQuietStackedVelocity &&
@@ -100,730 +120,851 @@ Original expression:
                "fixture notes must resolve in SMF event order with their literal velocities")
 
 A008 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:137
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no EditorDrawer velocity-area widget)
+Mapping/reason: No Swift ingress: the native EditorDrawer velocity area widget has no Swift counterpart because the suite constructs VelocityPage directly; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp, and runVelocityEditingCheck has no callers (spec section 7).
 Original expression:
   QVERIFY(m_area)
 
 A009 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:139
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no TimelineQuickView)
+Mapping/reason: No Swift ingress: the native TimelineQuickView has no Swift counterpart because the suite drives VelocityPage by pointer coordinates; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(quick)
 
 A010 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:141
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no QQuickWindow)
+Mapping/reason: No Swift ingress: no Qt Quick window is created or asserted in the Swift suite, which drives VelocityPage directly; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(m_quickWindow)
 
 A011 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:143
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no quick root object)
+Mapping/reason: No Swift ingress: the native quick root object exists only to host named input items that the Swift suite does not create; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(quickRoot)
 
 A012 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:146
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no named timelineVelocityInput item)
+Mapping/reason: No Swift ingress: the named timelineVelocityInput Quick item has no Swift counterpart because pointer coordinates are passed straight to VelocityPage; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(m_velocityInput)
 
 A013 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:149
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no named timelineRollInput item)
+Mapping/reason: No Swift ingress: the named timelineRollInput Quick item has no Swift counterpart because roll input is driven through PianoGrid; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(m_rollInput)
 
 A014 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:152
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (window visibility and exposure)
+Mapping/reason: No Swift ingress: no window is shown or exposed in the Swift suite, which never opens a Qt Quick window; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QTRY_VERIFY(m_quickWindow->isVisible() && m_quickWindow->isExposed())
 
 A015 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:153
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S048 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreFixtureFacts
+Mapping/reason: S048 asserts the configured page body publishes a positive plotWidth and plotHeight, which is the analogue of the delivered input item having non-empty bounds.
 Original expression:
   QTRY_VERIFY(!m_velocityInput->bounds().isEmpty())
 
 A016 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:154
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no input-item window binding)
+Mapping/reason: No Swift ingress: Quick input items and their window binding do not exist in the Swift domain, which passes window-local coordinates to VelocityPage; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QTRY_COMPARE(m_velocityInput->window(), m_quickWindow.data())
 
 A017 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:155
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S047 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreFixtureFacts
+Mapping/reason: S047 asserts the page axis model resolves a positive drawable span on the same synthetic fixture.
 Original expression:
   QTRY_VERIFY(m_area->axis().drawableSpan() > 0.0)
 
 A018 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:158
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S100 | src/checks/velocity/VelocityPaintDetentChecks.swift :: drawerVelocityPaintCommitsOnce
+Mapping/reason: S100 asserts page.axisMode equals the continuous mode on the same synthetic fixture, but only for the mixed DirectSound/noise paint selection; the original init condition, the untouched DirectSound program-0 context with no selection, is not asserted and remains unproved.
 Original expression:
   QCOMPARE(m_area->axis().mode(), VelocityAxis::Mode::Continuous)
 
 A019 | VelocityEditingTest::init | src/checks/velocity/tst_velocityediting.cpp:161
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S049 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreFixtureFacts
+Mapping/reason: S049 asserts every fixture note resolves to a published handle on the live extent, so the located node points cannot be mis-mapped outside the input extent.
 Original expression:
   QVERIFY(m_velocityInput->bounds().contains(nodePoint(kQuietStackedVelocity, kDuplicateTick)) &&
               m_velocityInput->bounds().contains(nodePoint(kLaterVelocity, kLaterTick)))
 
 A020 | VelocityEditingTest::cleanup | src/checks/velocity/tst_velocityediting.cpp:188
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no mouse grabber)
+Mapping/reason: No Swift ingress for the mouse grabber: the Swift suite drives VelocityPage by coordinates and asserts the gesture ended (empty frozenPreview and no live gesture) instead; no QQuickWindow mouseGrabberItem exists, and the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp.
 Original expression:
   QVERIFY(mouseGrabCleared)
 
 A021 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:199
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no QSignalSpy validity)
+Mapping/reason: No Swift ingress for QSignalSpy validity: Swift has no signal spies and publication is observed through document snapshots instead; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(documentChanged.isValid())
 
 A022 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:200
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no QSignalSpy validity)
+Mapping/reason: No Swift ingress for QSignalSpy validity over SongTab::edited: Swift has no tab-level signal spies and an edit is observed through the document history; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(edited.isValid())
 
 A023 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:207
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S053 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S053 asserts the document snapshot (revision, history identity, undo and redo reachability) still equals the baseline after the first held move, the same frozen-document observation.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A024 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:208
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S054 asserts document.history.undoCount is unchanged and the encoded song bytes stay frozen after the first held move; that public undoCount is the history-depth analogue of QUndoStack::count(), never revision alone.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A025 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:209
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S053 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S053 asserts the document snapshot is unchanged after the first held move, but no predicate counts SongDocument::documentChanged emissions, so the zero-publication observation is unproved.
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A026 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:210
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S053 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S053 asserts the document snapshot is unchanged after the first held move, but no predicate counts SongTab::edited emissions, so the zero-publication observation is unproved.
 Original expression:
   QCOMPARE(edited.count(), 0)
 
 A027 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:211
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S055 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S055 asserts the first selected note still holds its fixture literal during the staged move.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A028 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:212
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S056 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S056 asserts the second selected note still holds its fixture literal during the staged move.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A029 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:213
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S057 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S057 asserts the unselected third note still holds its fixture literal during the staged move, which is the surviving observable of the loud stacked note.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A030 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:214
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A031 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:215
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A032 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:216
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S054 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A033 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:220
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S050 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S050 asserts both selected notes stage a preview after the first held move.
 Original expression:
   QVERIFY(firstQuietPreview.has_value())
 
 A034 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:221
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S050 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S050 asserts both selected notes stage a preview after the first held move, covering the second selected note.
 Original expression:
   QVERIFY(firstLaterPreview.has_value())
 
 A035 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:222
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S052 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S052 asserts both staged previews share one relative delta and S067 pins the commit to the staged value, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved.
 Original expression:
   QCOMPARE(int(*firstQuietPreview), kQuietStackedVelocity + kDragUpSteps)
 
 A036 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:223
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S052 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S052 asserts both staged previews share one relative delta and S068 pins the commit to the staged value, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved.
 Original expression:
   QCOMPARE(int(*firstLaterPreview), kLaterVelocity + kDragUpSteps)
 
 A037 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:224
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S051 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S051 asserts the unselected note stages no preview.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A038 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:225
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S058 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S058 asserts the session selection order still equals the drag pair after staging.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A039 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:230
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S062 asserts the document snapshot and encoded song bytes still equal the baseline after the second held move.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A040 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:231
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S062 asserts the document snapshot, whose history identity and undo reachability are the public depth analogue, and the encoded song bytes equal the baseline after the second held move; S054 asserts the explicit undoCount freeze at the same gesture.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A041 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:232
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S062 asserts the snapshot and bytes are frozen on the second held move, but no predicate counts SongDocument::documentChanged emissions, so the zero-publication observation is unproved.
 Original expression:
   QCOMPARE(documentChanged.count(), 0)
 
 A042 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:233
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S062 asserts the encoded song bytes and document snapshot still equal the baseline after the second held move, covering the untouched document velocity; S055 to S057 assert the per-note values earlier in the same gesture.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A043 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:234
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S062 asserts the encoded song bytes and document snapshot still equal the baseline after the second held move, covering the untouched document velocity of the second selected note.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A044 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:235
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S062 asserts the encoded song bytes and document snapshot still equal the baseline after the second held move, covering the untouched document velocity of the unselected note.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A045 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:236
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A046 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:237
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A047 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:238
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S062 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: the Swift predicates assert the document value and the frozen song bytes, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A048 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:242
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S059 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S059 asserts both selected notes keep a preview after the second held move.
 Original expression:
   QVERIFY(secondQuietPreview.has_value())
 
 A049 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:243
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S059 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S059 asserts both selected notes keep a preview after the second held move, covering the second selected note.
 Original expression:
   QVERIFY(secondLaterPreview.has_value())
 
 A050 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:244
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S061 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S060 and S061 assert the updated previews changed and still share one delta, and S067 pins the commit to the staged value, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved.
 Original expression:
   QCOMPARE(int(*secondQuietPreview), kQuietStackedVelocity - kDragDownSteps)
 
 A051 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:245
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S061 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S060 and S061 assert the updated previews changed and still share one delta, and S068 pins the commit to the staged value, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved.
 Original expression:
   QCOMPARE(int(*secondLaterPreview), kLaterVelocity - kDragDownSteps)
 
 A052 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:252
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S063 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S063 and S064 assert one revision advance and one undoable history entry after release, but no predicate counts SongDocument::documentChanged emissions, so the single-publication observation is unproved.
 Original expression:
   QCOMPARE(documentChanged.count(), 1)
 
 A053 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:253
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S064 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S064 asserts the released gesture made exactly one undoable history entry, but no predicate counts SongTab::edited emissions, so the single-emission observation is unproved.
 Original expression:
   QCOMPARE(edited.count(), 1)
 
 A054 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:254
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S063 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S063 asserts one release advances the document revision exactly once.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore + 1)
 
 A055 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:255
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S065 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S065 asserts document.history.undoCount advanced by exactly one on release; that public undoCount is the history-depth analogue of QUndoStack::count().
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore + 1)
 
 A056 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:256
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S066 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S066 asserts the released gesture left an empty preview and no live gesture, so no preview survives for the first selected note.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A057 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:257
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S066 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S066 asserts the released gesture left an empty preview and no live gesture, so no preview survives for the second selected note.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A058 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:258
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S066 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S066 asserts the released gesture left an empty preview, so no preview survives for the unselected note either.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_loudStacked.noteId).has_value())
 
 A059 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:259
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S067 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S067 pins the committed value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact committed value is unproved.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A060 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:260
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S068 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S068 pins the committed value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact committed value is unproved.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A061 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:261
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S069 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S069 asserts the unselected note keeps its fixture literal after the commit.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A062 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:262
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S070 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S070 asserts the session selection order survives the commit.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A063 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:263
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S067 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S067 asserts the committed document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A064 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:264
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S068 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S068 asserts the committed document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A065 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:265
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S069 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S069 asserts the untouched document value of the unselected note, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A066 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:269
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S064 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S064 asserts the committed document snapshot has an undoable history entry that the baseline lacked.
 Original expression:
   QVERIFY(m_tab->history().canUndo())
 
 A067 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:270
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S071 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S071 asserts undo restored the pre-drag literal and S073 the exact pre-drag song bytes; the Swift call discards its return value, and that restoration is the consumer-visible meaning of the applied-undo variant.
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestUndo()))
 
 A068 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:271
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S071 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S071 asserts undo restored the first selected literal after the drag committed.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A069 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:272
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S072 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S072 asserts undo restored the second selected literal after the drag committed.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A070 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:273
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S073 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S073 asserts undo restored the exact pre-drag song bytes, which covers the unselected note value; S089 asserts the same literal in the cancel path.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A071 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:274
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S074 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S074 asserts undo kept the drag-pair selection identities.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A072 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:275
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S071 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S071 asserts the restored document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A073 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:276
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S072 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S072 asserts the restored document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A074 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:277
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S073 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S073 asserts the restored song bytes covering every document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A075 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:279
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S075 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S075 and S077 assert redo reapplied the staged value and the committed bytes, but document.history.canRedo itself is never asserted, so the availability readout is unproved.
 Original expression:
   QVERIFY(m_tab->history().canRedo())
 
 A076 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:280
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S075 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S075 and S077 assert the redo effect restored the staged value and the committed bytes; the Swift call discards its return value, and that effect is the consumer-visible meaning of the applied-redo variant.
 Original expression:
   QVERIFY(std::holds_alternative<DocumentHistoryApplied>(m_tab->history().requestRedo()))
 
 A077 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:281
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S075 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S075 pins the redone value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact redone value is unproved.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A078 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:282
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S076 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S076 pins the redone value to the staged preview exactly, but the staged preview is pixel-derived and is never pinned to the fixture literal minus kDragDownSteps (4), so that exact redone value is unproved.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A079 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:283
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S077 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S077 asserts redo restored the exact committed song bytes, which covers the unselected note keeping its literal.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A080 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:284
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S075 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S075 asserts the redone document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity - kDragDownSteps)
 
 A081 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:285
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S076 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S076 asserts the redone document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity - kDragDownSteps)
 
 A082 | VelocityEditingTest::dragCommitsOnce | src/checks/velocity/tst_velocityediting.cpp:286
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S077 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S077 asserts the redone committed bytes covering every document value, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A083 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:302
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S078 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S078 asserts both selected notes staged a preview before Escape owned the gesture.
 Original expression:
   QVERIFY(firstQuietPreview.has_value())
 
 A084 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:303
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S078 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S078 asserts both selected notes staged a preview before Escape owned the gesture, covering the second selected note.
 Original expression:
   QVERIFY(firstLaterPreview.has_value())
 
 A085 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:304
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S079 asserts both staged previews share one relative delta, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved.
 Original expression:
   QCOMPARE(int(*firstQuietPreview), kQuietStackedVelocity + kDragUpSteps)
 
 A086 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:305
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S079 asserts both staged previews share one relative delta, but the pixel-based Swift drag never pins the staged value to the fixture literal plus kDragUpSteps (28), so that exact value is unproved for the second selected note.
 Original expression:
   QCOMPARE(int(*firstLaterPreview), kLaterVelocity + kDragUpSteps)
 
 A087 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:312
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S080 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S080 asserts both selected notes were restaged by the second held move before Escape.
 Original expression:
   QVERIFY(secondQuietPreview.has_value())
 
 A088 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:313
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S080 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S080 asserts both selected notes were restaged by the second held move before Escape, covering the second selected note.
 Original expression:
   QVERIFY(secondLaterPreview.has_value())
 
 A089 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:314
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S079 asserts the staged previews share one relative delta and S081 that the restage changed it, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved.
 Original expression:
   QCOMPARE(int(*secondQuietPreview), kQuietStackedVelocity - kDragDownSteps)
 
 A090 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:315
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S079 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S079 asserts the staged previews share one relative delta and S081 that the restage changed it, but the pixel-derived staged value is never pinned to the fixture literal minus kDragDownSteps (4), so that exact value is unproved for the second selected note.
 Original expression:
   QCOMPARE(int(*secondLaterPreview), kLaterVelocity - kDragDownSteps)
 
 A091 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:318
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S083 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S083 asserts Escape left an empty frozen preview and no live gesture, so no preview survives for the first selected note.
 Original expression:
   QTRY_VERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A092 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:319
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S083 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S083 asserts Escape left an empty frozen preview and no live gesture, covering the second selected note.
 Original expression:
   QTRY_VERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A093 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:320
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S084 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S084 asserts the document snapshot equals the pre-gesture baseline after Escape.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A094 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:321
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S085 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S085 asserts history depth (public undoCount) and the encoded song bytes are frozen after Escape.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A095 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:322
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S086 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S086 asserts Escape restored the selection membership and insertion order of the drag pair.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A096 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:323
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S087 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S087 asserts Escape left the first selected literal alone.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A097 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:324
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S088 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S088 asserts Escape left the second selected literal alone.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A098 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:325
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S089 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S089 asserts Escape left the unselected third literal alone.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A099 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:326
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S087 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S087 asserts the untouched document value after Escape, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A100 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:327
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S088 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S088 asserts the untouched document value after Escape, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A101 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:328
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S089 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S089 asserts the untouched document value of the unselected note after Escape, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A102 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:334
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S090 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S090 asserts the move and release after the cancel staged nothing and left no live gesture, so no preview returns for the first selected note.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A103 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:335
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S090 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S090 asserts the move and release after the cancel staged nothing, covering the second selected note.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A104 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:336
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the document snapshot equals the baseline after the post-cancel move and release.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A105 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:337
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the snapshot and encoded song bytes are frozen after the post-cancel move and release; S085 asserts the explicit undoCount freeze at the Escape itself.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A106 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:338
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the exact baseline bytes after the post-cancel release, covering the document value; S087 asserts the same literal before the cancel.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A107 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:339
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the exact baseline bytes after the post-cancel release, covering the second document value; S088 asserts the same literal before the cancel.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A108 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:340
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the exact baseline bytes after the post-cancel release, covering the unselected document value; S089 asserts the same literal before the cancel.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A109 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:341
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the frozen document state after the post-cancel release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A110 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:342
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the frozen document state after the post-cancel release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A111 | VelocityEditingTest::escapeCancelsDrag | src/checks/velocity/tst_velocityediting.cpp:343
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S091 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreEscapeCancels
+Mapping/reason: S091 asserts the frozen document state after the post-cancel release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A112 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:348
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S092 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S092 asserts the session selection is empty before the stationary press; the Swift session is shared across checks, so the same readout is taken after its explicit clear and still gates the press.
 Original expression:
   QVERIFY(m_tab->view().selectionModel().noteSelection().empty())
 
 A113 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:357
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S093 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S093 asserts the press staged an empty preview before any move, strictly stronger than the C++ value_or(literal) reading that the press proposes no change.
 Original expression:
   QCOMPARE(int(pressPreview.value_or(kQuietStackedVelocity)), int(kQuietStackedVelocity))
 
 A114 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:362
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S094 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S094 asserts the document snapshot equals the baseline after the stationary press and release.
 Original expression:
   QCOMPARE(m_tab->document().revision(), revisionBefore)
 
 A115 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:363
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S095 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S095 asserts history depth (public undoCount) and the encoded song bytes are frozen after the stationary press.
 Original expression:
   QCOMPARE(m_tab->document().undoStack()->count(), undoDepthBefore)
 
 A116 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:364
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S096 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S096 asserts no preview survives the stationary release, covering the pressed note.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_quietStacked.noteId).has_value())
 
 A117 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:365
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S096 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S096 asserts no preview survives the stationary release, covering the later unselected note.
 Original expression:
   QVERIFY(!m_tab->view().previewVelocity(m_later.noteId).has_value())
 
 A118 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:366
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S098 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S098 asserts the pressed note still holds its fixture literal after the stationary release.
 Original expression:
   QCOMPARE(documentVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A119 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:367
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S099 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S099 asserts the companion note still holds its fixture literal after the stationary release, which is the surviving observable of the loud stacked note.
 Original expression:
   QCOMPARE(documentVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A120 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:368
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S095 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S095 asserts the encoded song bytes and history depth are frozen after the stationary release, which covers the later unselected note value.
 Original expression:
   QCOMPARE(documentVelocity(m_later.noteId), kLaterVelocity)
 
 A121 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:369
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S098 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S098 asserts the pressed document literal after the stationary release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_quietStacked.noteId), kQuietStackedVelocity)
 
 A122 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:370
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S099 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S099 asserts the companion document literal after the stationary release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_loudStacked.noteId), kLoudStackedVelocity)
 
 A123 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:371
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: PARTIAL
+Swift: S095 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S095 asserts the frozen song bytes covering every document value after the stationary release, but no predicate rebuilds the playback timeline and reads its event velocity, so the timelineVelocity observation is unproved even though the document value and the frozen bytes are asserted.
 Original expression:
   QCOMPARE(timelineVelocity(m_later.noteId), kLaterVelocity)
 
 A124 | VelocityEditingTest::releaseWithoutMoveIsNoop | src/checks/velocity/tst_velocityediting.cpp:372
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S097 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreStationaryPressNoop
+Mapping/reason: S097 asserts the stationary click selected exactly its own note.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId}))
 
 A125 | VelocityEditingTest::selectDragPair | src/checks/velocity/tst_velocityediting.cpp:378
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: MATCHED
+Swift: S058 | src/checks/velocity/VelocityRollCoreChecks.swift :: drawerVelocityRollCoreDragDefersAndCommits
+Mapping/reason: S058 asserts the session selection order equals the drag pair after the fixture selects it, the same selection-model readout the C++ helper asserts.
 Original expression:
   QVERIFY(noteSelectionIs({m_quietStacked.noteId, m_later.noteId}))
 
 A126 | VelocityEditingTest::focusVelocityBand | src/checks/velocity/tst_velocityediting.cpp:421
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no focusBand helper)
+Mapping/reason: No Swift ingress for the focus band: the native focusBand(Velocity) helper acts on Qt Quick focus plumbing that the Swift suite never creates, because it drives VelocityPage by coordinates; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QVERIFY(m_tab->view().quickView()->focusBand(songview::TimelineBand::Velocity,
                                                    Qt::OtherFocusReason))
 
 A127 | VelocityEditingTest::focusVelocityBand | src/checks/velocity/tst_velocityediting.cpp:425
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no focusedBand readout)
+Mapping/reason: No Swift ingress for the focused-band readout: the Swift suite has no band focus model to query, because it drives VelocityPage by coordinates; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QTRY_VERIFY(m_tab->view().quickView()->focusedBand() == songview::TimelineBand::Velocity)
 
 A128 | VelocityEditingTest::focusVelocityBand | src/checks/velocity/tst_velocityediting.cpp:426
-Disposition: GAP
-Mapping/reason: Exact Swift predicate and original sequence equivalence have not yet been established; candidate executable predicates are indexed below. This is an open assertion obligation, not a coverage claim.
+Disposition: RETIRED-REPRESENTATION
+Swift: no Swift ingress (no activeFocusItem)
+Mapping/reason: No Swift ingress for the quick window active focus item: no Qt Quick window or focus item exists in the Swift suite, because it drives VelocityPage by coordinates; the legacy velocity cpp is absent from every CMake target and unregistered in checkcatalog.cpp (spec section 7).
 Original expression:
   QTRY_COMPARE(m_quickWindow->activeFocusItem(),
                    static_cast<QQuickItem *>(m_velocityInput.data()))
@@ -1038,3 +1179,239 @@ S041 | drawerVelocityGestureTransactions | src/checks/velocity/tst_velocityediti
 Swift expression:
   report.expectEqual(3, fixture.session.selectedNotes.count, cppID: drawerVelocityTransactionID,
                          what: "the band selected every note it covered")
+
+S042 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:39
+Swift expression:
+  report.expectEqual(3, notes.count, cppID: drawerVelocityRollCoreFixtureID, what: "the fixture track carries exactly three notes")
+
+S043 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:41
+Swift expression:
+  report.expectEqual([0, 24, 96], notes.map { Int($0.tick) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes resolve in SMF event order")
+
+S044 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:42
+Swift expression:
+  report.expectEqual([60, 67, 72], notes.map { Int($0.pitch) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry the staged keys")
+
+S045 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:43
+Swift expression:
+  report.expectEqual([100, 64, 32], notes.map { Int($0.velocity) }, cppID: drawerVelocityRollCoreFixtureID, what: "fixture notes carry their literal velocities")
+
+S046 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:44
+Swift expression:
+  report.expect(notes[0].id != notes[1].id && notes[0].id != notes[2].id && notes[1].id != notes[2].id, cppID: drawerVelocityRollCoreFixtureID, message: "the three fixture notes hold distinct identities")
+
+S047 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:45
+Swift expression:
+  report.expect(fixture.page.axisModel.drawableSpan > 0, cppID: drawerVelocityRollCoreFixtureID, message: "the axis resolves a positive drawable span")
+
+S048 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:46
+Swift expression:
+  report.expect(fixture.page.plotWidth > 0 && fixture.page.plotHeight > 0, cppID: drawerVelocityRollCoreFixtureID, message: "the configured body publishes a non-empty plot extent")
+
+S049 | drawerVelocityRollCoreFixtureFacts | src/checks/velocity/VelocityRollCoreChecks.swift:47
+Swift expression:
+  report.expect(notes.allSatisfy { fixture.handle($0) != nil }, cppID: drawerVelocityRollCoreFixtureID, message: "every fixture note resolves to a published handle on the live extent")
+
+S050 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:70
+Swift expression:
+  report.expect(firstQuiet != nil && firstLater != nil, cppID: drawerVelocityRollCoreDragID, message: "the first held move stages a preview for both selected notes")
+
+S051 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:71
+Swift expression:
+  report.expect(page.frozenPreview[notes[2].id] == nil, cppID: drawerVelocityRollCoreDragID, message: "the unselected note stages no preview")
+
+S052 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:74
+Swift expression:
+  report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "one relative delta covers every frozen note at once")
+
+S053 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:76
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreDragID, message: "the first held move writes no document state")
+
+S054 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:77
+Swift expression:
+  report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "the first held move leaves history depth and song bytes frozen")
+
+S055 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:78
+Swift expression:
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the first document value alone")
+
+S056 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:79
+Swift expression:
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the second document value alone")
+
+S057 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:80
+Swift expression:
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the staged drag leaves the unselected document value alone")
+
+S058 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:81
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "staging preserves the drag pair selection")
+
+S059 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:85
+Swift expression:
+  report.expect(secondQuiet != nil && secondLater != nil, cppID: drawerVelocityRollCoreDragID, message: "the second held move keeps a preview for both selected notes")
+
+S060 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:87
+Swift expression:
+  report.expect(before != after, cppID: drawerVelocityRollCoreDragID, message: "the preview is live, not stuck: the second move changed it")
+
+S061 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:90
+Swift expression:
+  report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreDragID, what: "the updated previews still share one relative delta")
+
+S062 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:92
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "the second held move still defers everything")
+
+S063 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:96
+Swift expression:
+  report.expectEqual(baseline.revision + 1, committed.revision, cppID: drawerVelocityRollCoreDragID, what: "one release advances the revision once")
+
+S064 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:97
+Swift expression:
+  report.expect(committed.identity != baseline.identity && committed.canUndo && !baseline.canUndo, cppID: drawerVelocityRollCoreDragID, message: "one release makes exactly one undoable history entry")
+
+S065 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:98
+Swift expression:
+  report.expect(document.history.undoCount == baselineCount + 1, cppID: drawerVelocityRollCoreDragID, message: "one release records one history entry")
+
+S066 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:99
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreDragID, message: "the released gesture clears its preview")
+
+S067 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:101
+Swift expression:
+  report.expectEqual(Int(quiet), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged first value")
+
+S068 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:102
+Swift expression:
+  report.expectEqual(Int(later), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the commit wrote the staged second value")
+
+S069 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:104
+Swift expression:
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "the unselected note keeps its literal velocity")
+
+S070 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:105
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "the selection survives the commit")
+
+S071 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:107
+Swift expression:
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the first literal")
+
+S072 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:108
+Swift expression:
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "undo restores the second literal")
+
+S073 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:109
+Swift expression:
+  report.expect(coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreDragID, message: "undo restores the exact pre-drag song bytes")
+
+S074 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:110
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id, notes[1].id], cppID: drawerVelocityRollCoreDragID, message: "undo keeps the selection identities")
+
+S075 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:113
+Swift expression:
+  report.expectEqual(Int(quiet), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged first value")
+
+S076 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:114
+Swift expression:
+  report.expectEqual(Int(later), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreDragID, what: "redo reapplies the staged second value")
+
+S077 | drawerVelocityRollCoreDragDefersAndCommits | src/checks/velocity/VelocityRollCoreChecks.swift:116
+Swift expression:
+  report.expect(coreTimeBytes(document) == committedBytes, cppID: drawerVelocityRollCoreDragID, message: "redo restores the exact committed song bytes")
+
+S078 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:139
+Swift expression:
+  report.expect(stagedQuiet != nil && stagedLater != nil, cppID: drawerVelocityRollCoreCancelID, message: "the drag staged before Escape")
+
+S079 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:141
+Swift expression:
+  report.expectEqual(Int(quiet) - Int(notes[0].velocity), Int(later) - Int(notes[1].velocity), cppID: drawerVelocityRollCoreCancelID, what: "the staged previews share one relative delta")
+
+S080 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:146
+Swift expression:
+  report.expect(restagedQuiet != nil && restagedLater != nil, cppID: drawerVelocityRollCoreCancelID, message: "the second move restaged before Escape")
+
+S081 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:148
+Swift expression:
+  report.expect(before != after, cppID: drawerVelocityRollCoreCancelID, message: "the restage moved the preview before Escape owned it")
+
+S082 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:150
+Swift expression:
+  report.expect(page.handleEscape(), cppID: drawerVelocityRollCoreCancelID, message: "Escape is claimed while the gesture is live")
+
+S083 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:151
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreCancelID, message: "Escape clears the frozen preview")
+
+S084 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:152
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreCancelID, message: "Escape writes nothing at all")
+
+S085 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:153
+Swift expression:
+  report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreCancelID, message: "Escape leaves history depth and song bytes frozen")
+
+S086 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:154
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[1].id, notes[0].id], cppID: drawerVelocityRollCoreCancelID, message: "Escape restores selection membership and insertion order")
+
+S087 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:155
+Swift expression:
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the first literal alone")
+
+S088 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:156
+Swift expression:
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the second literal alone")
+
+S089 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:157
+Swift expression:
+  report.expectEqual(Int(notes[2].velocity), Int(document.note(notes[2].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreCancelID, what: "Escape leaves the unselected literal alone")
+
+S090 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:160
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreCancelID, message: "a move and release after the cancel stages nothing")
+
+S091 | drawerVelocityRollCoreEscapeCancels | src/checks/velocity/VelocityRollCoreChecks.swift:161
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreCancelID, message: "a move and release after the cancel commits nothing")
+
+S092 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:177
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder.isEmpty, cppID: drawerVelocityRollCoreStillID, message: "the noop case starts with no selection")
+
+S093 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:182
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty, cppID: drawerVelocityRollCoreStillID, message: "the press proposes no change before any move")
+
+S094 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:184
+Swift expression:
+  report.expect(drawerVelocityDocumentSnapshot(document) == baseline, cppID: drawerVelocityRollCoreStillID, message: "a stationary press records no history")
+
+S095 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:185
+Swift expression:
+  report.expect(document.history.undoCount == baselineCount && coreTimeBytes(document) == baselineBytes, cppID: drawerVelocityRollCoreStillID, message: "a stationary press leaves undo depth and song bytes alone")
+
+S096 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:186
+Swift expression:
+  report.expect(page.frozenPreview.isEmpty && !page.hasGesture, cppID: drawerVelocityRollCoreStillID, message: "no preview survives the stationary release")
+
+S097 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:187
+Swift expression:
+  report.expect(fixture.session.selectedNoteOrder == [notes[0].id], cppID: drawerVelocityRollCoreStillID, message: "the click still selects its own note")
+
+S098 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:188
+Swift expression:
+  report.expectEqual(Int(notes[0].velocity), Int(document.note(notes[0].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the pressed literal is untouched")
+
+S099 | drawerVelocityRollCoreStationaryPressNoop | src/checks/velocity/VelocityRollCoreChecks.swift:189
+Swift expression:
+  report.expectEqual(Int(notes[1].velocity), Int(document.note(notes[1].id)?.velocity ?? 0), cppID: drawerVelocityRollCoreStillID, what: "the companion literal is untouched")
+
+S100 | drawerVelocityPaintCommitsOnce | src/checks/velocity/VelocityPaintDetentChecks.swift:49
+Swift expression:
+  report.expectEqual(VelocityAxisModel.Mode.continuous.rawValue, page.axisMode, cppID: drawerVelocityPaintID, what: "the mixed square and noise selection presents the continuous ruler")

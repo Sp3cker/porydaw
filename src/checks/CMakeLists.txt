@@ -194,6 +194,9 @@ if(APPLE)
         drawerpresentation/drawer_state.swift
         velocity/velocitydetentdragging.swift
         velocity/tst_velocityediting.swift
+        velocity/VelocityClickSelectionChecks.swift
+        velocity/VelocityPaintDetentChecks.swift
+        velocity/VelocityRollCoreChecks.swift
         rollcheck/velocity_prompt.swift
         rollcheck/EditorGridCameraChecks.swift
         drawerpresentation/EditorDrawerChecks.swift
