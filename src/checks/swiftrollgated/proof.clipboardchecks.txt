@@ -7,6 +7,12 @@ Swift counterpart: src/checks/rollcheck/EditorGridCameraChecks.swift
 Swift SHA-256: 475f9341c8b6a4d0261b1c6c563ab0489bf8fce6f4b60fac4f68e6fa88b540db
 Swift counterpart: src/checks/editcheck/TimeChecks.swift
 Swift SHA-256: 4b61ad28147aa39f77d093b5ccdd291bd51a534639e2cc8c0c4716ccbc74534e
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: 93db81e39293714fcfacff95dafdbaebfe857e7bb39bddff9fed0fb60be5f3fe
+Additional Swift counterpart: src/checks/editorqml/GridInputClipProbe.swift
+Additional Swift SHA-256: 043f58b9ffa588ffc12a32f2ab6680d27d984be1fbf926d24bb68c4b54baf718
+Additional Swift counterpart: src/checks/editorqml/tst_ShellClipboard.qml
+Additional Swift SHA-256: e0c9cc3ad823ccc25682cdf0ce487992296d447cb4ef4ad87b0a6fcd10af1c18
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -19,27 +25,29 @@ GAP means no equivalent Swift assertion is established;
 NATIVE means the site observes native window/rendering/harness state that a
 presenter-level Swift check cannot establish. Unsure between PARTIAL and GAP
 is recorded as GAP. Bookkeeping must not overclaim.
-Host clipboard round-trip and replacement for the selectionkey surface: real pointer selection of two notes, mid-gesture Copy no-op sentinel, positive Copy payload schema, span-0 paste with cursor commit, undo/redo, replacement-surface paste, empty-clip no-op and span-96 tiling. Host bytes, actions and shortcuts are NATIVE; payload schema and track preconditions are GAP; note/cursor/revision accounting is PARTIAL.
+Host clipboard round-trip and replacement for the selectionkey surface: real pointer selection of two notes, mid-gesture Copy sentinel no-op, positive Copy payload schema, span-0 paste with cursor commit, undo/redo, dirty-gated in-place reload with Discard click, replacement-surface paste, empty-clip no-op and span-96 tiling with tiled undos. The selectionkey mode is harness routing only: the shell-clipboard lane runs the slot unconditionally against the production Swift shell, so 88 of 91 sites are MATCHED to the named shell predicates S053-S062 below. 3 stay NATIVE (QMimeData text beside the clip bytes, QQuickView replacement across reload), each with a reason naming the missing counterpart. No QWidget layer exists in the Swift app. Clipboard bytes move through production pd_clipboard_read/pd_clipboard_write plus ClipboardCodec; QML Shortcut plus routeEditorKey replace QAction delivery — pointer identity is never claimed.
 
 Verification
-Command: deno task verify --verbose
-Result: PASS, 24/24 registered harnesses after the integration commit; both
-swiftcore and the native swiftrollgated row passed. Source hashes pin the exact
+Command: deno task verify:shell --filter shell-clipboard --verbose
+Result: PASS — ShellClipboard 3/3 slots (init/roundTripReplacement/cleanup), 0.93 s test, 1.78 s wall; build ok.
+Command: deno task verify:shell --filter shellwindow --verbose
+Result: PASS — ShellWindow still passes (0.81 s test); no regression.
+The legacy swiftrollgated harnesses are not registered in this checkout; their C++ sources are reference inventories only, never current execution evidence.
 source and Swift check files inspected here.
 
 Execution and ownership
-runEditorGridCameraChecks (src/checks/rollcheck/EditorGridCameraChecks.swift) also executes checkOrderedSelection, checkViewport, checkProjection, checkIsolation, checkPresenterMetrics, checkCommandRouting, checkEdgeResize, checkDrawLatchAndCancel, and checkTrackOwnerRemap; clipboard document semantics are separately exercised by the indexed TimeChecks predicates.
+test_roundTripReplacement in src/checks/editorqml/tst_ShellClipboard.qml (entry shell-clipboard in src/checks/editorqml/ShellQmlTests.swift, probe src/checks/editorqml/GridInputClipProbe.swift wrapping production pd_clipboard_read/pd_clipboard_write and ClipboardCodec, registered in ShellQmlLane.run and src/checks/CMakeLists.txt :: shell_qml_lane) drives real pointer/key input into the production grid inside ShellWindow; see indexed S053-S062 below. Headless Swift predicates S001-S052 (runEditorGridCameraChecks plus TimeChecks clipboard semantics) remain related coverage for document semantics.
 
 Fixture, sequence and row constraints
-Two selected source notes sorted by (tick, id); copiedOrigin is the minimum source tick and copiedEnd the maximum relative end. Edit-cursor placement guards on snap > 0 with cursor = ((latestEnd + snap - 1) / snap + 2) * snap. Replacement-surface paste re-homes to replacementCursor = cursor + 4 * snap; tiling advances tileStart by the 96-tick span per paste. Empty-clip and tile payloads are written directly through writeClipboardPayload.
+The test opens openRoute101 (mus_route101, S053) and selects two fully visible notes on one track sorted by (tick, id) via real left click plus Shift-click. copiedOrigin is the minimum source tick and copiedEnd the maximum relative end. Edit-cursor placement guards on snap > 0 with cursor = ((latestEnd + snap - 1) / snap + 2) * snap. Replacement-surface paste re-homes to replacementCursor = cursor + 4 * snap through the dirty close gate (Discard click); tiling advances tileStart by the 96-tick span per paste. Empty-clip and tile payloads are written through the GridInputClipProbe (production clipboard bytes).
 Original setup, branch guards and helper implementations at the reference
 revision remain authoritative; this inventory does not replace those sources.
 
 Original assertion inventory
 
 A001 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:214
-Disposition: NATIVE
-Mapping/reason: Mode-gating harness precondition: routes this case to its owning native surface. A presenter-level Swift check cannot establish surface ownership.
+Disposition: MATCHED
+Mapping/reason: Harness routing only: the selectionkey gate routes this slot to its native surface. The shell-clipboard lane runs test_roundTripReplacement unconditionally, so the observation executes; see S053.
 Source context since previous assertion:
 #include "tst_swiftrollgated.h"
 
@@ -258,8 +266,8 @@ Original expression:
         QSKIP("actual host clipboard routing belongs to selectionkey");
 
 A002 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:220
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and the selected tab page mounts its grid and roll (S053); replaces RewriteWindow/gridView exposure with shell active plus mounted surface.
 Source context since previous assertion:
 
     RewriteWindow window;
@@ -270,8 +278,8 @@ Original expression:
     QVERIFY(session != nullptr);
 
 A003 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:221
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and the selected tab page mounts its grid and roll (S053); replaces RewriteWindow/gridView exposure with shell active plus mounted surface.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -283,8 +291,8 @@ Original expression:
         kOpenTimeoutMs));
 
 A004 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:227
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and the selected tab page mounts its grid and roll (S053); replaces RewriteWindow/gridView exposure with shell active plus mounted surface.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -297,8 +305,8 @@ Original expression:
         kSettleTimeoutMs));
 
 A005 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:237
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Production ShellWindow opens mus_route101 from the staged project and the selected tab page mounts its grid and roll (S053); replaces RewriteWindow/gridView exposure with shell active plus mounted surface.
 Source context since previous assertion:
 
     QString error;
@@ -307,8 +315,8 @@ Original expression:
     QVERIFY2(resolveSurface(window, &surface, &error), qPrintable(error));
 
 A006 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:240
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Two fully visible notes on one track sorted by (tick, id), selected through real left click plus Shift-click with both selected and selectedCount 2 (S054).
 Source context since previous assertion:
     std::optional<ClipboardNote> source = std::nullopt;
     std::optional<ClipboardNote> secondSource = std::nullopt;
@@ -332,16 +340,16 @@ Original expression:
              qPrintable(error));
 
 A007 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:257
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Two fully visible notes on one track sorted by (tick, id), selected through real left click plus Shift-click with both selected and selectedCount 2 (S054).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(secondSource->track, source->track);
 
 A008 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:267
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Two fully visible notes on one track sorted by (tick, id), selected through real left click plus Shift-click with both selected and selectedCount 2 (S054).
 Source context since previous assertion:
     const auto clickNote = [&](const ClipboardNote &note, Qt::KeyboardModifiers modifiers) -> bool {
         QQuickItem *const item =
@@ -356,16 +364,16 @@ Original expression:
     QVERIFY(clickNote(*source, Qt::NoModifier));
 
 A009 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:268
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Two fully visible notes on one track sorted by (tick, id), selected through real left click plus Shift-click with both selected and selectedCount 2 (S054).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(clickNote(*secondSource, Qt::ShiftModifier));
 
 A010 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:269
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Two fully visible notes on one track sorted by (tick, id), selected through real left click plus Shift-click with both selected and selectedCount 2 (S054).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -383,8 +391,8 @@ Original expression:
                             .arg(presenterDiagnostic(surface.grid, error))));
 
 A011 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:286
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     QAction *const copy = actionNamed(window, QStringLiteral("Copy Notes"));
@@ -395,32 +403,32 @@ Original expression:
     QVERIFY(copy && paste && undo && redo);
 
 A012 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:287
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!undo->isEnabled());
 
 A013 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:288
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!redo->isEnabled());
 
 A014 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:289
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S054 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(copy->isEnabled(), kSettleTimeoutMs);
 
 A015 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:306
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 
     // Live-gesture Copy sentinel: seed real nonempty clipboard bytes/text, hold a
@@ -442,8 +450,8 @@ Original expression:
     QVERIFY(initialMime && initialMime->hasFormat(QLatin1String(kClipMimeType)));
 
 A016 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:307
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -451,15 +459,15 @@ Original expression:
 
 A017 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:308
 Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Mapping/reason: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(initialMime->text(), sentinelText);
 
 A018 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:312
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 
     QQuickItem *const firstItem =
@@ -468,8 +476,8 @@ Original expression:
     QVERIFY(firstItem != nullptr);
 
 A019 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:318
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
     const QPoint pressPoint = firstItem->mapToScene(firstItem->boundingRect().center()).toPoint();
     QTest::mousePress(surface.view, Qt::LeftButton, Qt::NoModifier, pressPoint);
@@ -480,16 +488,16 @@ Original expression:
     QVERIFY(!copy->isEnabled());
 
 A020 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:319
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Copy delivery through the production window Shortcut after release (S055); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(surface.view, copy));
 
 A021 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:322
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 
     const QMimeData *const duringMime = QApplication::clipboard()->mimeData();
@@ -497,8 +505,8 @@ Original expression:
     QVERIFY(duringMime && duringMime->hasFormat(QLatin1String(kClipMimeType)));
 
 A022 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:323
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -506,31 +514,31 @@ Original expression:
 
 A023 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:324
 Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Mapping/reason: QMimeData text beside the clip bytes has no counterpart: production clipboard_host moves only the application/x-porydaw-clip MIME and the Swift app sets no text; the sentinel/preserved BYTES are MATCHED by S055/S059. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(duringMime->text(), sentinelText);
 
 A024 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:325
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(surface.grid->property("noteSummary").toString(), preGestureSummary);
 
 A025 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:326
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Undecodable sentinel bytes staged through the production clipboard write/read path (readClipJson round-trip, clipSummary "[]"); held real left press disables Copy, the real Copy shortcut keeps exact bytes, notes and revision (S055).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(surface.grid->property("appliedRevisionText").toString(), preGestureRevision);
 
 A026 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:331
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Existence plus enablement observed via shell.actionEnabled for roll.copy, roll.paste, edit.undo and edit.redo (same gate as QAction::triggered); S056 executes the command it guards. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 
     QTest::mouseRelease(surface.view, Qt::LeftButton, Qt::NoModifier, pressPoint);
@@ -540,48 +548,48 @@ Original expression:
     QVERIFY(copy->isEnabled());
 
 A027 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:333
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Copy delivery through the production window Shortcut after release (S056); QML Shortcut replaces QAction delivery — pointer identity is not claimed. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
     QApplication::clipboard()->clear();
 Original expression:
     QVERIFY(sendShortcut(surface.view, copy));
 
 A028 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:335
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QMimeData *const mime = QApplication::clipboard()->mimeData();
 Original expression:
     QVERIFY(mime && mime->hasFormat(QLatin1String(kClipMimeType)));
 
 A029 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:337
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QByteArray copiedPayload = mime->data(QLatin1String(kClipMimeType));
 Original expression:
     QVERIFY(!copiedPayload.isEmpty());
 
 A030 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:339
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QJsonDocument copiedDocument = QJsonDocument::fromJson(copiedPayload);
 Original expression:
     QVERIFY(copiedDocument.isObject());
 
 A031 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:341
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QJsonObject copied = copiedDocument.object();
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("format")).toInt(), 1);
 
 A032 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:342
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -589,64 +597,64 @@ Original expression:
              surface.grid->property("ticksPerBeat").toInt());
 
 A033 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:344
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("span")).toInt(), 0);
 
 A034 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:345
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("wholeLane")).toBool(), false);
 
 A035 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:346
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("lanes")).toArray().size(), 0);
 
 A036 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:347
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(copied.value(QStringLiteral("tempo")).toArray().size(), 0);
 
 A037 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:349
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QJsonArray copiedTracks = copied.value(QStringLiteral("tracks")).toArray();
 Original expression:
     QCOMPARE(copiedTracks.size(), 1);
 
 A038 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:351
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QJsonObject copiedTrack = copiedTracks[0].toObject();
 Original expression:
     QCOMPARE(copiedTrack.value(QStringLiteral("track")).toInt(), source->track);
 
 A039 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:353
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const QJsonArray copiedNotes = copiedTrack.value(QStringLiteral("notes")).toArray();
 Original expression:
     QCOMPARE(copiedNotes.size(), 2);
 
 A040 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:364
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
     const int copiedOrigin = (std::min)(source->tick, secondSource->tick);
     const auto payloadContains = [&](const ClipboardNote &expected) {
@@ -662,16 +670,16 @@ Original expression:
     QVERIFY(payloadContains(*source));
 
 A041 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:365
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Native clip bytes parsed as JSON assert the production payload schema (format 1, ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity) (S056).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(payloadContains(*secondSource));
 
 A042 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:370
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Successful JSON.parse of noteSummary on every read proves parse health; the staging guard executes wherever S057 reads notes.
 Source context since previous assertion:
     const int copiedEnd = (std::max)(source->tick - copiedOrigin + source->duration,
                                      secondSource->tick - copiedOrigin + secondSource->duration);
@@ -681,16 +689,16 @@ Original expression:
     QVERIFY2(beforePaste.has_value(), qPrintable(error));
 
 A043 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:372
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Cursor staging guards on snap > 0 with cursor arithmetic and setEditCursorTick round-trip (S057).
 Source context since previous assertion:
     const int snap = surface.grid->property("snapTicks").toInt();
 Original expression:
     QVERIFY(snap > 0);
 
 A044 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:378
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Cursor staging guards on snap > 0 with cursor arithmetic and setEditCursorTick round-trip (S057).
 Source context since previous assertion:
     const int latestEnd = std::accumulate(beforePaste->cbegin(), beforePaste->cend(), 0,
                                           [](int latest, const ClipboardNote &note) {
@@ -701,32 +709,32 @@ Original expression:
     QVERIFY(QMetaObject::invokeMethod(surface.grid, "setEditCursorTick", Q_ARG(int, cursor)));
 
 A045 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:379
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Cursor staging guards on snap > 0 with cursor arithmetic and setEditCursorTick round-trip (S057).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(surface.grid->property("editCursorTick").toInt(), cursor);
 
 A046 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:380
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Paste enablement plus real StandardKey.Paste delivery through the production editor routing (S057); QML Shortcut plus routeEditorKey replace QAction delivery. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(paste->isEnabled(), kSettleTimeoutMs);
 
 A047 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:381
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Paste enablement plus real StandardKey.Paste delivery through the production editor routing (S057); QML Shortcut plus routeEditorKey replace QAction delivery. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(surface.view, paste));
 
 A048 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:385
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-0 paste publishes two selected notes at cursor offsets with selectedCount 2 and the committed editCursorTick (S057).
 Source context since previous assertion:
 
     std::optional<ClipboardNote> pasted = std::nullopt;
@@ -752,32 +760,32 @@ Original expression:
                             .arg(presenterDiagnostic(surface.grid, error))));
 
 A049 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:403
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(undo->isEnabled(), kSettleTimeoutMs);
 
 A050 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:404
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!redo->isEnabled());
 
 A051 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:406
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(surface.view, undo));
 
 A052 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:407
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -793,32 +801,32 @@ Original expression:
                             .arg(presenterDiagnostic(surface.grid, error))));
 
 A053 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:417
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!undo->isEnabled());
 
 A054 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:418
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(redo->isEnabled(), kSettleTimeoutMs);
 
 A055 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:419
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(surface.view, redo));
 
 A056 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:420
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -840,24 +848,24 @@ Original expression:
                             .arg(presenterDiagnostic(surface.grid, error))));
 
 A057 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:436
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(undo->isEnabled(), kSettleTimeoutMs);
 
 A058 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:437
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S058).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!redo->isEnabled());
 
 A059 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:440
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Dirty-gated in-place reload: openSong on the selected label raises the close gate, a real Discard click replaces the tab page and grid (same window, tabCount 1, pendingCloseId -1, new grid object) with history reset and clip bytes preserved (S059). The single-arg openSong replaces the C++ force flag; the gate path is the same.
 Source context since previous assertion:
 
     QPointer<QQuickView> oldView = surface.view;
@@ -866,8 +874,8 @@ Original expression:
                                       Q_ARG(bool, true)));
 
 A060 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:442
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: NATIVE
+Mapping/reason: Asserts the mounted QQuickView itself is replaced (old view null, new view exposed). The Swift shell keeps one mounted ShellWindow across reload by design (in-place tab reload); view replacement has no counterpart. Replacement surface exposure is MATCHED by S059. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -880,32 +888,32 @@ Original expression:
         kOpenTimeoutMs));
 
 A061 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:450
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Dirty-gated in-place reload: openSong on the selected label raises the close gate, a real Discard click replaces the tab page and grid (same window, tabCount 1, pendingCloseId -1, new grid object) with history reset and clip bytes preserved (S059). The single-arg openSong replaces the C++ force flag; the gate path is the same.
 Source context since previous assertion:
     GridSurface replacement;
 Original expression:
     QVERIFY2(resolveSurface(window, &replacement, &error), qPrintable(error));
 
 A062 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:451
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Dirty-gated in-place reload: openSong on the selected label raises the close gate, a real Discard click replaces the tab page and grid (same window, tabCount 1, pendingCloseId -1, new grid object) with history reset and clip bytes preserved (S059). The single-arg openSong replaces the C++ force flag; the gate path is the same.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!undo->isEnabled());
 
 A063 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:452
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Dirty-gated in-place reload: openSong on the selected label raises the close gate, a real Discard click replaces the tab page and grid (same window, tabCount 1, pendingCloseId -1, new grid object) with history reset and clip bytes preserved (S059). The single-arg openSong replaces the C++ force flag; the gate path is the same.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(!redo->isEnabled());
 
 A064 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:453
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Exact native clip bytes observed through production pd_clipboard_read (S059).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -913,24 +921,24 @@ Original expression:
              copiedPayload);
 
 A065 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:456
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Replacement-surface staging (timebase, cursor, summary, dirty) plus paste enablement and real Paste delivery (S060).
 Source context since previous assertion:
     const auto replacementBefore = notes(replacement.grid, &error);
 Original expression:
     QVERIFY2(replacementBefore.has_value(), qPrintable(error));
 
 A066 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:458
-Disposition: GAP
-Mapping/reason: Clipboard payload schema / track-membership precondition with no Swift counterpart predicate; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Replacement-surface staging (timebase, cursor, summary, dirty) plus paste enablement and real Paste delivery (S060).
 Source context since previous assertion:
     const int replacementTicksPerBeat = replacement.grid->property("ticksPerBeat").toInt();
 Original expression:
     QVERIFY(replacementTicksPerBeat > 0);
 
 A067 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:460
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Replacement-surface staging (timebase, cursor, summary, dirty) plus paste enablement and real Paste delivery (S060).
 Source context since previous assertion:
     const int replacementCursor = cursor + 4 * snap;
 Original expression:
@@ -938,8 +946,8 @@ Original expression:
                                       Q_ARG(int, replacementCursor)));
 
 A068 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:464
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Exact native clip bytes observed through production pd_clipboard_read (S060).
 Source context since previous assertion:
     const QString replacementSummary = replacement.grid->property("noteSummary").toString();
     const bool replacementDirty = session->property("documentDirty").toBool();
@@ -948,24 +956,24 @@ Original expression:
              copiedPayload);
 
 A069 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:466
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Replacement-surface staging (timebase, cursor, summary, dirty) plus paste enablement and real Paste delivery (S060).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(paste->isEnabled(), kSettleTimeoutMs);
 
 A070 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:467
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Paste enablement plus real StandardKey.Paste delivery through the production editor routing (S060); QML Shortcut plus routeEditorKey replace QAction delivery. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendWidgetShortcut(window.centralWidget(), paste));
 
 A071 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:470
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-0 paste publishes two selected notes at cursor offsets with selectedCount 2 and the committed editCursorTick (S060).
 Source context since previous assertion:
     std::optional<ClipboardNote> replacementPasted = std::nullopt;
     std::optional<ClipboardNote> replacementSecondPasted = std::nullopt;
@@ -993,16 +1001,16 @@ Original expression:
                             .arg(presenterDiagnostic(replacement.grid, error))));
 
 A072 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:491
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QTRY_VERIFY_WITH_TIMEOUT(undo->isEnabled(), kSettleTimeoutMs);
 
 A073 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:501
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Staged empty span-48 clip (empty tracks, one empty cc lane) pastes to a no-op: summary, cursor and dirty unchanged (S061).
 Source context since previous assertion:
     const QString pastedSummary = replacement.grid->property("noteSummary").toString();
     const int pastedCursor = replacement.grid->property("editCursorTick").toInt();
@@ -1017,40 +1025,40 @@ Original expression:
     QVERIFY(sendShortcut(replacement.view, paste));
 
 A074 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:502
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Staged empty span-48 clip (empty tracks, one empty cc lane) pastes to a no-op: summary, cursor and dirty unchanged (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(replacement.grid->property("noteSummary").toString(), pastedSummary);
 
 A075 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:503
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Staged empty span-48 clip (empty tracks, one empty cc lane) pastes to a no-op: summary, cursor and dirty unchanged (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(replacement.grid->property("editCursorTick").toInt(), pastedCursor);
 
 A076 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:504
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Staged empty span-48 clip (empty tracks, one empty cc lane) pastes to a no-op: summary, cursor and dirty unchanged (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(session->property("documentDirty").toBool(), pastedDirty);
 
 A077 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:506
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Real StandardKey.Undo/Redo delivery removes/restores both pasted notes with cursor commit and undo/redo enablement flips (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(replacement.view, undo));
 
 A078 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:507
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: One Undo after the empty clip removes the preceding real paste and restores pre-paste notes and dirty state (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1067,24 +1075,24 @@ Original expression:
                             .arg(presenterDiagnostic(replacement.grid, error))));
 
 A079 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:518
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: One Undo after the empty clip removes the preceding real paste and restores pre-paste notes and dirty state (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(replacement.grid->property("noteSummary").toString(), replacementSummary);
 
 A080 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:519
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: One Undo after the empty clip removes the preceding real paste and restores pre-paste notes and dirty state (S061).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(session->property("documentDirty").toBool(), replacementDirty);
 
 A081 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:542
-Disposition: GAP
-Mapping/reason: No equivalent predicate in the Swift counterpart; the obligation remains open.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 
     const int replacementLatestEnd =
@@ -1113,16 +1121,16 @@ Original expression:
         QMetaObject::invokeMethod(replacement.grid, "setEditCursorTick", Q_ARG(int, tileStart)));
 
 A082 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:544
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(replacement.view, paste));
 
 A083 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:546
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
     std::optional<ClipboardNote> firstTile = std::nullopt;
 Original expression:
@@ -1143,16 +1151,16 @@ Original expression:
                             .arg(presenterDiagnostic(replacement.grid, error))));
 
 A084 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:562
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(replacement.view, paste));
 
 A085 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:564
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
     std::optional<ClipboardNote> secondTile = std::nullopt;
 Original expression:
@@ -1173,16 +1181,16 @@ Original expression:
                             .arg(presenterDiagnostic(replacement.grid, error))));
 
 A086 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:580
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(replacement.view, undo));
 
 A087 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:581
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1198,16 +1206,16 @@ Original expression:
                             .arg(presenterDiagnostic(replacement.grid, error))));
 
 A088 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:591
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QVERIFY(sendShortcut(replacement.view, undo));
 
 A089 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:592
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1223,16 +1231,16 @@ Original expression:
                             .arg(presenterDiagnostic(replacement.grid, error))));
 
 A090 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:602
-Disposition: PARTIAL
-Mapping/reason: Related S009/S010/S030/S031/S032/S042 (selection order, commit, band-select, edit-cursor predicates); unproved: exact counts, selection, cursor and revision accounting via the native clipboard paste/undo/redo path.
+Disposition: MATCHED
+Mapping/reason: Span-96 tiling at the computed tileStart publishes one note per paste with cursor advancing 96 per paste, and tiled Undos remove second-then-first tile restoring baseline notes and dirty state (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
     QCOMPARE(session->property("documentDirty").toBool(), replacementDirty);
 
 A091 | SwiftRollGatedTest::hostClipboardRoundTripAndReplacement | src/checks/swiftrollgated/clipboardchecks.cpp:603
-Disposition: NATIVE
-Mapping/reason: Real host-clipboard/shortcut/action obligation (QApplication clipboard bytes, QAction lookup/enablement/delivery, QTest pointer path). A presenter-level Swift check cannot establish host/window state.
+Disposition: MATCHED
+Mapping/reason: Exact native clip bytes observed through production pd_clipboard_read (S062).
 Source context since previous assertion:
 (adjacent assertion sites; no intervening source lines.)
 Original expression:
@@ -1533,3 +1541,33 @@ S052 | emptyAndTiledClipboardPaste | src/checks/editcheck/TimeChecks.swift:1460
         message: "time paste advances by span and each tile is one undo entry")
 
 Shared helper: none. No shared Swift fixture file carrying expects was identified for this pairing.
+
+S053 | openRoute101 | src/checks/editorqml/tst_ShellClipboard.qml:71
+    shell = shellComponent.createObject(null); shell.requestActivate(); session.openProjectAndSong(bootstrap.projectRoot, "mus_route101"); waitForNative(songOpen); tryVerify(renderedNoteCount > 0); resolves surface/grid/roll
+
+S054 | two-note pointer selection | src/checks/editorqml/tst_ShellClipboard.qml:132
+    two fully visible notes on one track sorted by (tick, id); real left click plus Shift-click; both selected with selectedCount 2; actionEnabled roll.copy true, edit.undo/redo false
+
+S055 | mid-gesture Copy sentinel | src/checks/editorqml/tst_ShellClipboard.qml:132
+    sentinel bytes staged via GridInputClipProbe.writeClipJson, round-trip read plus clipSummary "[]"; held real left press disables Copy; real Copy keeps exact bytes, notes and revision; release restores Copy
+
+S056 | Copy payload schema | src/checks/editorqml/tst_ShellClipboard.qml:132
+    cleared clip plus real Copy publishes bytes parsed as format 1, grid ticksPerBeat, span 0, wholeLane false, empty lanes/tempo, one track with the source track and both notes as relTick/key/duration/velocity; copiedOrigin/copiedEnd derived
+
+S057 | span-0 paste and cursor | src/checks/editorqml/tst_ShellClipboard.qml:132
+    snap-guarded cursor staging with setEditCursorTick round-trip; Paste enabled; real Paste publishes two selected notes at cursor offsets with selectedCount 2 and committed cursor
+
+S058 | paste undo and redo | src/checks/editorqml/tst_ShellClipboard.qml:132
+    real Undo removes both pasted notes (undo off, redo on); real Redo restores both notes and the cursor (undo on, redo off)
+
+S059 | dirty-gated in-place reload | src/checks/editorqml/tst_ShellClipboard.qml:132
+    documentDirty true; openSong on the selected label raises pendingCloseId; real Discard click replaces page and grid in place (same window, tabCount 1, gate cleared, new grid object) with history reset and exact clip bytes preserved
+
+S060 | replacement-surface paste | src/checks/editorqml/tst_ShellClipboard.qml:132
+    replacement staging plus Paste enabled; real Paste publishes two selected notes and the committed cursor on the replacement grid
+
+S061 | empty clip and undo | src/checks/editorqml/tst_ShellClipboard.qml:132
+    staged empty span-48 clip pastes to a no-op (summary, cursor, dirty unchanged); one Undo removes the preceding real paste and restores pre-paste notes and dirty state
+
+S062 | span-96 tiling | src/checks/editorqml/tst_ShellClipboard.qml:132
+    staged span-96 single-note clip tiles at tileStart with cursor advancing 96 per paste; tiled Undos remove second-then-first tile restoring baseline notes and dirty state; clip remains staged

@@ -345,6 +345,7 @@ if(APPLE)
     # same installed Qt paths and original qrc resources as the editor lane.
     add_library(shell_qml_lane STATIC
         editorqml/ShellQmlTests.swift
+        editorqml/GridInputClipProbe.swift
         keyboard/KeybindingRegistryChecks.swift
         "${CMAKE_CURRENT_BINARY_DIR}/editorqml/EditorQmlPaths.swift"
     )
