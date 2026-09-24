@@ -192,15 +192,16 @@ extension AutomationPage {
             return true
         }
         if isPencilMode {
-            let continuous = Double(projection.value(atY: y, metadata: facts.metadata))
+            let continuous = projection.value(atY: y, metadata: facts.metadata)
+            let rawTick = projection.rawTick(atX: x)
+            let firstCell = projection.cell(atRawTick: rawTick)
             let first = AutomationPencilTransaction.Sample(
-                rawTick: projection.rawTick(atX: x), logicalX: x, logicalY: y,
-                point: mappedPoint(x: x, y: y, facts: facts, modifiers: .init(),
-                                   projection: projection),
-                continuousValue: continuous)
+                rawTick: rawTick, logicalX: x, logicalY: y,
+                point: AutomationLanePoint(tick: firstCell.tickBegin, value: continuous),
+                continuousValue: Double(continuous))
             guard let stroke = AutomationPencilTransaction(
                 facts: facts, firstSample: first,
-                firstCell: projection.cell(atRawTick: projection.rawTick(atX: x)),
+                firstCell: firstCell,
                 clockTicks: projection.snapPolicy.clockTicks) else { return false }
             gesture = .pencil(stroke)
         } else {
@@ -647,11 +648,26 @@ extension AutomationPage {
 
     func dispatchPointerDoubleClick(x: Double, y: Double) -> Bool {
         guard session != nil else { return false }
-        _ = x
-        _ = y
         cancelGesture()
         applyPreviewDraft(.empty)
         publishPreview()
+        if let facts = frozenFacts(modifiers: .init()) {
+            let projection = makeProjection(facts: facts, camera: liveCamera())
+            if let lane = laneProjection(facts: facts, projection: projection),
+               (!isPencilMode || projection.markersVisible()),
+               let hit = lane.hitTest(x: x, y: y, radius: geometry.pointHitRadius),
+               (!isPencilMode || projection.cell(atRawTick: projection.rawTick(atX: x))
+                   .contains(Double(hit.tick))),
+               let source = source(of: hit.identity, facts: facts),
+               commit(AutomationNodeResolver.deletions(
+                   revision: facts.revision,
+                   [AutomationNodeResolver.LaneDeletes(parameter: facts.parameter,
+                                                       snapshot: facts.snapshot,
+                                                       ticks: [source.tick])])) {
+                refreshFromDocument()
+                return true
+            }
+        }
         publishInteractionState()
         return true
     }
@@ -667,6 +683,10 @@ extension AutomationPage {
         if prompt != nil || laneDelete != nil || menu != nil || gesture != nil || band != nil
             || panActive || tapGuard != nil {
             cancelSectionInteraction()
+            return true
+        }
+        if selection != nil {
+            applyTimeSelection(nil)
             return true
         }
         guard hover != nil else { return false }
