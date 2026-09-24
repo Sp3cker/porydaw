@@ -54,5 +54,7 @@ internal func runVelocityMapOracleChecks(_ report: CheckReport) {
             }
         }
     }
+    runVelocityAxisParityChecks(report)
+    runVelocityGestureParityChecks(report)
 
 }

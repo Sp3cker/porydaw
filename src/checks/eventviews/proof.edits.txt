@@ -9,16 +9,18 @@ Additional Swift counterpart: src/checks/editcheck/EventChecks.swift
 Additional Swift SHA-256: ad3c324c370a00ff90483b575b5bdaacb9b4a691d7a60e21f677ec261906d092
 Additional Swift counterpart: src/checks/eventviews/EventListPlayheadChecks.swift
 Additional Swift SHA-256: 8844e59119c3710fa155d7050f9bbfaac73f8f5838f2acd6994b833fe4c91dba
+Additional Swift counterpart: src/checks/editcheck/EventViewsEditsParity.swift
+Additional Swift SHA-256: 64c21acde14f1116723b7c78967032ab5e1521003d567ef385930c936bb81cb3
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every original macro/failure site appears below in file order, including the file-local typeDigits helper guard. PARTIAL identifies document-state predicates (ticks, counts, order, undo index/count, tempo points, blob bytes) with related Swift document-level predicates and an explicit unproved condition (the EventTableModel/controller commit path, the gesture translation path, or the kMaxTick boundary value). The tick validation-boundary sites (A023, A026-A027, A029, A041, A043) additionally cite the pure-model validatesEdit boundary contract (S098 in eventListRowsAndEditContract); unproved: the EventTableModel/controller commit path — Swift has no commitCellEdit and finishEditing closes without mutation. Assertions whose stimulus is a direct document call and whose observable is portable are MATCHED when a registered Swift predicate exercises the same contract (A071: the raw-insert undo-step count, proved by S092). NATIVE identifies predicates that observe the rendered in-cell editor, typed key delivery, pointer-drag gestures, the live row-menu session, or Quick focus arbitration. GAP identifies fixture guards, commit-result predicates, model lookups, Qt signal counts, tick-boundary refusals, the EOT-row refusal, keymap lookups, and drawer-focus Delete routing with no Swift equivalent; unsure between PARTIAL and GAP resolves to GAP. The Swift counterpart search covered src/checks/swiftcore (EventChecks rawTempoAndSignatureEditing) and src/checks/editcheck (runRawEventOriginalChecks, coreRawEventEditing, coreRawEventDocumentSeams); MidiChecks tick-arithmetic oracles do not cover raw-event boundary commits. None of these labels authorizes deletion or claims whole-case equivalence.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
-Result: PASS (1/6 ok, 5 skipped, 10.51s) with `deno task proof check` PASS (suite-level); source hashes pin the tree inspected here.
+Result: PASS (1/6 ok, 10.33s), zero failures with `deno task proof check` PASS (suite-level); source hashes pin the tree inspected here.
 
 Execution and ownership
-Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift), which calls rawTempoAndSignatureEditing for tempo/raw cross-conversion atomicity and runRawEventOriginalChecks plus coreRawEventEditing for raw insert, modify, delete, reorder, move-bounds, opaque-byte, and full-history rewind/replay predicates (src/checks/editcheck/tst_songdocument_songraw.swift). eventListRowsAndEditContract (src/checks/eventviews/EventListPlayheadChecks.swift:417) proves the pure-model validatesEdit boundary contract cited by S098; runRawEventOriginalChecks also calls coreRawEventDocumentSeams, which proves the document-stimulus seams: a raw insert pushes exactly one undoable step (A071) and a channel event on a free channel promotes a metadata-only chunk to an engine track with undo/redo demotion and repromotion (remap.cpp metadataChunkTransition). Corpus rows load via coreEditCorpusSongs and history-tip counting via coreEditHistoryCountAtTip (src/checks/editcheck/tst_songdocument_runner.swift, inventoried as a shared helper below). Controller/model/native-delivery observations have no Swift owner. Native ownership of the full cases: runEventViewsEditsCheck in this file drives EventViewsEditsTest (tickEditQueued, tick64BitExact, tickHighBitExact, tickHighBitThroughEditor, channelAndDataConversions, rawTempoAtomic, insertCopy, sameTickReorder, deleteMatrix, drawerClickAfterEditOwnsDelete).
+Paired document-level checks execute in runEventEditsSuite (src/checks/editcheck/EventChecks.swift), which calls rawTempoAndSignatureEditing for tempo/raw cross-conversion atomicity and runRawEventOriginalChecks plus coreRawEventEditing for raw insert, modify, delete, reorder, move-bounds, opaque-byte, and full-history rewind/replay predicates (src/checks/editcheck/tst_songdocument_songraw.swift). eventListRowsAndEditContract (src/checks/eventviews/EventListPlayheadChecks.swift:417) proves the pure-model validatesEdit boundary contract cited by S098; runRawEventOriginalChecks also calls coreRawEventDocumentSeams, which proves the document-stimulus seams: a raw insert pushes exactly one undoable step (A071) and a channel event on a free channel promotes a metadata-only chunk to an engine track with undo/redo demotion and repromotion (remap.cpp metadataChunkTransition). Corpus rows load via coreEditCorpusSongs and history-tip counting via coreEditHistoryCountAtTip (src/checks/editcheck/tst_songdocument_runner.swift, inventoried as a shared helper below). Controller/model/native-delivery observations have no Swift owner. Native ownership of the full cases: runEventViewsEditsCheck in this file drives EventViewsEditsTest (tickEditQueued, tick64BitExact, tickHighBitExact, tickHighBitThroughEditor, channelAndDataConversions, rawTempoAtomic, insertCopy, sameTickReorder, deleteMatrix, drawerClickAfterEditOwnsDelete). Suite-6 wiring: runEventEditsSuite (src/checks/editcheck/EventChecks.swift:31) calls runEventViewsEditsParityChecks, which runs eventViewsChannelAndDataConversions, eventViewsRawTempoAtomic, and eventViewsSameTickReorder (src/checks/editcheck/EventViewsEditsParity.swift).
 
 Fixture, sequence and row constraints
 No _data rows exist in this file; sequencing is phasal instead. rawTempoAtomic expands its conversion sites over six phases (meta-to-tempo convert, undo, redo, tempo-to-meta convert, undo, redo), each asserting undo index/count arithmetic, tempo-row projection, row lookup, and tick-zero meta preservation. sameTickReorder expands over five gesture phases (legal drag swap, illegal pre-run drop, illegal cross-tick drop, pinned note-end no-op, menu MoveEventDown, key move_down, boundary move_up no-op). deleteMatrix runs a two-selection delete phase and a single-selection delete phase; drawerClickAfterEditOwnsDelete sequences an edit, a drawer-focus commit, and a drawer-focus Delete. tick64BitExact and tickHighBitExact pin single boundary values (3e9, kNoTick refusal, kMaxTick commit) rather than row suites.
@@ -703,8 +705,9 @@ QVERIFY(
         widgets.controller->commitCellEdit(row, EventTableModel::ColChannel, QStringLiteral("5")))
 
 A052 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:265
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S099 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S099 asserts the same observable — the channel edit pushes exactly one undo step (beforeIndex + 1) — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions. The 1-based string parsing lives at the neighboring GAP site A051.
 Source context since previous assertion:
 ;
 
@@ -729,8 +732,9 @@ Original expression:
 QVERIFY(eventIndex >= 0)
 
 A054 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:275
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S100 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S100 asserts the same observable — the 1-based channel value 5 converts to the status nibble 0x04 — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions. The commit-result boolean lives at the neighboring GAP site A051.
 Source context since previous assertion:
 ;
 
@@ -760,8 +764,9 @@ QVERIFY(
         widgets.controller->commitCellEdit(row, EventTableModel::ColData2, QStringLiteral("33")))
 
 A057 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:282
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S103 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S103 asserts the same observable — the two data-byte edits push one undo step each (beforeIndex + 3) — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions. The commit-result booleans live at the neighboring GAP sites A055-A056.
 Source context since previous assertion:
 ;
 
@@ -769,8 +774,9 @@ Original expression:
 QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 3)
 
 A058 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:283
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S104 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S104 asserts the same observable — the first data byte stores the edited value 100 — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions.
 Source context since previous assertion:
 ;
 
@@ -778,8 +784,9 @@ Original expression:
 QCOMPARE(document.smf().tracks[chunk].events[eventIndex].data0, 100)
 
 A059 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:284
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S105 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S105 asserts the same observable — the second data byte stores the edited value 33 — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions.
 Source context since previous assertion:
 ;
 
@@ -820,8 +827,9 @@ QVERIFY(widgets.controller->commitCellEdit(blobRow, EventTableModel::ColData,
                                                QStringLiteral("\"room\"")))
 
 A063 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:294
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S107 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S107 asserts the same observable — the blob edit pushes one undo step (beforeIndex + 4) — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions. The quoted-blob string parsing lives at the neighboring GAP site A062.
 Source context since previous assertion:
 ;
 
@@ -829,8 +837,9 @@ Original expression:
 QTRY_COMPARE(document.undoStack()->index(), beforeIndex + 4)
 
 A064 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:295
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S108 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.modifyRawEvent call, not the commitCellEdit string path; Swift S108 asserts the same observable — the blob edit stores the quoted payload bytes (room) — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions.
 Source context since previous assertion:
 ;
 
@@ -851,8 +860,9 @@ QTRY_VERIFY(checks::eventviews::rowForTickAndType(*widgets.model, 12, eventlist:
                 0)
 
 A066 | EventViewsEditsTest::channelAndDataConversions | src/checks/eventviews/edits.cpp:301
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-mutation predicates S002–S019, S043–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the EventTableModel/controller commit path (commitCellEdit/setData) translating the edit.
+Disposition: MATCHED
+Swift: S109 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsChannelAndDataConversions
+Mapping/reason: The stimulus is a direct document.history.undoDocument rewind, not the model row projection; Swift S109 asserts the same observable — undo restores the original channel nibble 0x00 — under cppID eventviews/EventViewsEditsTest::channelAndDataConversions. The row-lookup projection lives at the neighboring GAP site A065.
 Source context since previous assertion:
 ;
 
@@ -963,8 +973,9 @@ QVERIFY(widgets.model->setData(widgets.model->index(rawRow, EventTableModel::Col
                                    eventlist::TypeTempo, Qt::EditRole))
 
 A074 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:348
-Disposition: GAP
-Mapping/reason: Qt signal-emission count; Swift observes document state, never emission counts.
+Disposition: MATCHED
+Swift: S117 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.editRawAndTempo call, not the model setData path; Swift S117 asserts the same observable — the meta-to-tempo conversion publishes exactly once via the onChange hook — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic. The setData commit-result path lives at the neighboring GAP site A073.
 Source context since previous assertion:
 ;
 
@@ -972,8 +983,9 @@ Original expression:
 QTRY_COMPARE(changed.count(), 1)
 
 A075 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:349
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S118 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.editRawAndTempo call, not the model setData path; Swift S118 asserts the same observable — the conversion pushes one undo step (initialIndex + 1) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -981,8 +993,9 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), initialIndex + 1)
 
 A076 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:350
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S119 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.editRawAndTempo call, not the model setData path; Swift S119 asserts the same observable — the conversion records one entry (initialCount + 1) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1027,8 +1040,9 @@ Original expression:
 QVERIFY(widgets.model->tempoRowForExactTick(0) >= 0)
 
 A081 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:359
-Disposition: GAP
-Mapping/reason: Qt signal-emission count; Swift observes document state, never emission counts.
+Disposition: MATCHED
+Swift: S125 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S125 asserts the same observable — the conversion undo publishes exactly once via the onChange hook — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1039,8 +1053,9 @@ Original expression:
 QTRY_COMPARE(changed.count(), 1)
 
 A082 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:360
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S126 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S126 asserts the same observable — the undo restores the index (initialIndex) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1048,8 +1063,9 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), initialIndex)
 
 A083 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:361
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S127 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S127 asserts the same observable — the undo retains the entry (initialCount + 1) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1076,8 +1092,9 @@ Original expression:
 QCOMPARE(widgets.model->tempoRowForExactTick(conversionTick), -1)
 
 A086 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:368
-Disposition: GAP
-Mapping/reason: Qt signal-emission count; Swift observes document state, never emission counts.
+Disposition: MATCHED
+Swift: S131 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.redoDocument call; Swift S131 asserts the same observable — the conversion redo publishes exactly once via the onChange hook — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1088,8 +1105,9 @@ Original expression:
 QTRY_COMPARE(changed.count(), 1)
 
 A087 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:369
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S132 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.redoDocument call; Swift S132 asserts the same observable — the redo restores the index (initialIndex + 1) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1097,8 +1115,9 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), initialIndex + 1)
 
 A088 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:370
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S133 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.redoDocument call; Swift S133 asserts the same observable — the redo retains the entry (initialCount + 1) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1147,8 +1166,9 @@ QVERIFY(widgets.model->setData(widgets.model->index(tempoRow, EventTableModel::C
                                    eventlist::TypeMeta, Qt::EditRole))
 
 A093 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:380
-Disposition: GAP
-Mapping/reason: Qt signal-emission count; Swift observes document state, never emission counts.
+Disposition: MATCHED
+Swift: S136 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.editRawAndTempo call, not the model setData path; Swift S136 asserts the same observable — the tempo-to-meta conversion publishes exactly once via the onChange hook — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic. The setData commit-result path lives at the neighboring GAP site A092.
 Source context since previous assertion:
 ;
 
@@ -1156,8 +1176,9 @@ Original expression:
 QTRY_COMPARE(changed.count(), 1)
 
 A094 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:381
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S137 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.editRawAndTempo call, not the model setData path; Swift S137 asserts the same observable — the reverse conversion pushes a second undo step (initialIndex + 2) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1165,8 +1186,9 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), initialIndex + 2)
 
 A095 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:382
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S138 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.editRawAndTempo call, not the model setData path; Swift S138 asserts the same observable — the reverse conversion records a second entry (initialCount + 2) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1212,8 +1234,9 @@ Original expression:
 QVERIFY(widgets.model->tempoRowForExactTick(0) >= 0)
 
 A100 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:392
-Disposition: GAP
-Mapping/reason: Qt signal-emission count; Swift observes document state, never emission counts.
+Disposition: MATCHED
+Swift: S144 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S144 asserts the same observable — the reverse-conversion undo publishes exactly once via the onChange hook — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1224,8 +1247,9 @@ Original expression:
 QTRY_COMPARE(changed.count(), 1)
 
 A101 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:393
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S145 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S145 asserts the same observable — the undo restores the index (initialIndex + 1) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1233,8 +1257,9 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), initialIndex + 1)
 
 A102 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:394
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S146 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S146 asserts the same observable — the undo retains both entries (initialCount + 2) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1261,8 +1286,9 @@ QVERIFY(checks::eventviews::rowForTickAndType(*widgets.model, conversionTick,
                                                   eventlist::TypeMeta) < 0)
 
 A105 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:401
-Disposition: GAP
-Mapping/reason: Qt signal-emission count; Swift observes document state, never emission counts.
+Disposition: MATCHED
+Swift: S150 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.redoDocument call; Swift S150 asserts the same observable — the reverse-conversion redo publishes exactly once via the onChange hook — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1273,8 +1299,9 @@ Original expression:
 QTRY_COMPARE(changed.count(), 1)
 
 A106 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:402
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S151 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.redoDocument call; Swift S151 asserts the same observable — the redo restores the index (initialIndex + 2) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1282,8 +1309,9 @@ Original expression:
 QCOMPARE(document.undoStack()->index(), initialIndex + 2)
 
 A107 | EventViewsEditsTest::rawTempoAtomic | src/checks/eventviews/edits.cpp:403
-Disposition: PARTIAL
-Mapping/reason: Related Swift tempo/raw predicates S071–S078 in src/checks/editcheck/EventChecks.swift; unproved: QUndoStack index/count arithmetic (Swift observes entry counts and encoded bytes, not stack indices) and the model setData path.
+Disposition: MATCHED
+Swift: S152 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsRawTempoAtomic
+Mapping/reason: The stimulus is a direct document.history.redoDocument call; Swift S152 asserts the same observable — the redo retains both entries (initialCount + 2) — under cppID eventviews/EventViewsEditsTest::rawTempoAtomic.
 Source context since previous assertion:
 ;
 
@@ -1474,8 +1502,9 @@ Original expression:
 QVERIFY(first >= 0)
 
 A123 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:467
-Disposition: GAP
-Mapping/reason: Setup adjacency/ordering read; local computation guard with no Swift predicate.
+Disposition: MATCHED
+Swift: S158 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.insertRawEvent sequence, not the fixture rig; Swift S158 asserts the same observable — the second controller immediately follows the first (first + 1) — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1483,8 +1512,9 @@ Original expression:
 QCOMPARE(second, first + 1)
 
 A124 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:468
-Disposition: GAP
-Mapping/reason: Setup adjacency/ordering read; local computation guard with no Swift predicate.
+Disposition: MATCHED
+Swift: S159 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.insertRawEvent sequence, not the fixture rig; Swift S159 asserts the same observable — the note follows the controllers (first + 2) — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1504,8 +1534,9 @@ Original expression:
 QVERIFY(dragRow(widgets, first, note))
 
 A126 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:473
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S160 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer-drag gesture; Swift S160 asserts the same observable — the legal in-run swap moves the second controller first — under cppID eventviews/EventViewsEditsTest::sameTickReorder. The gesture delivery lives at the neighboring NATIVE site A125.
 Source context since previous assertion:
 ;
 
@@ -1513,8 +1544,9 @@ Original expression:
 QTRY_COMPARE(indexOf(document.smf().tracks[chunk], ccB), first)
 
 A127 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:474
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S161 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer-drag gesture; Swift S161 asserts the same observable — the legal in-run swap moves the first controller second — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1545,8 +1577,9 @@ Original expression:
 QVERIFY(dragRow(widgets, second, 0))
 
 A130 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:483
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S163 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer-drag gesture; Swift S163 asserts the same observable — the past-run destination cannot displace the event — under cppID eventviews/EventViewsEditsTest::sameTickReorder. The illegal-drop gesture delivery lives at the neighboring NATIVE site A129.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -1555,8 +1588,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), second)
 
 A131 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:484
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S164 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer-drag gesture; Swift S164 asserts the same observable — the past-run destination pushes no undo step — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1596,8 +1630,9 @@ Original expression:
 QVERIFY(dragRow(widgets, note, crossTarget))
 
 A135 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:494
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S165 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer-drag gesture; Swift S165 asserts the same observable — the cross-run destination cannot displace the note — under cppID eventviews/EventViewsEditsTest::sameTickReorder. The cross-tick gesture delivery lives at the neighboring NATIVE site A134.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -1606,8 +1641,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], noteOn), note)
 
 A136 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:495
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S166 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer-drag gesture; Swift S166 asserts the same observable — the cross-run destination pushes no undo step — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1653,8 +1689,9 @@ Original expression:
 QVERIFY(offRow >= 0)
 
 A139 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:518
-Disposition: GAP
-Mapping/reason: Setup adjacency/ordering read; local computation guard with no Swift predicate.
+Disposition: MATCHED
+Swift: S167 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.insertRawEvent sequence, not the fixture rig; Swift S167 asserts the same observable — the note-end pins immediately ahead of its note-on (offIndex + 1) — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1672,8 +1709,9 @@ Original expression:
 QVERIFY(dragRow(widgets, offRow, onRow))
 
 A141 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:522
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S168 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer drag; Swift S168 asserts the same observable — the pinned note-end stays ahead of its note-on — under cppID eventviews/EventViewsEditsTest::sameTickReorder. The pin-gesture delivery lives at the neighboring NATIVE site A140.
 Source context since previous assertion:
 ;
     QCoreApplication::processEvents();
@@ -1682,8 +1720,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], pinnedOff), offRow)
 
 A142 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:523
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S169 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer drag; Swift S169 asserts the same observable — the pinned note-on stays after its note-end — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1691,8 +1730,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], pinnedOn), onRow)
 
 A143 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:524
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S170 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the pointer drag; Swift S170 asserts the same observable — the pinned reorder pushes no undo step — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1829,8 +1869,9 @@ Original expression:
 QCOMPARE(triggered.count(), 1)
 
 A156 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:558
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S171 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the row-menu activation; Swift S171 asserts the same observable — the row move down restores the first controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder. The menu session lives at the neighboring NATIVE sites A147-A148 and A151-A155.
 Source context since previous assertion:
 ;
 
@@ -1838,8 +1879,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), first)
 
 A157 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:559
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S172 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the row-menu activation; Swift S172 asserts the same observable — the row move down advances the second controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1847,8 +1889,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccB), second)
 
 A158 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:560
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S173 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the row-menu activation; Swift S173 asserts the same observable — the row move down keeps the note in place — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1856,8 +1899,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], noteOn), note)
 
 A159 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:561
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S174 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the row-menu activation; Swift S174 asserts the same observable — the row move down pushes one undo step — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1865,8 +1909,9 @@ Original expression:
 QCOMPARE(undoCount(document), undoBeforeMenuMove + 1)
 
 A160 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:563
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S175 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S175 asserts the same observable — undo restores the swapped first controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
     document.undoStack()->undo();
@@ -1875,8 +1920,9 @@ Original expression:
 QTRY_COMPARE(indexOf(document.smf().tracks[chunk], ccA), second)
 
 A161 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:564
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S176 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S176 asserts the same observable — undo restores the swapped second controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1932,8 +1978,9 @@ Original expression:
 QVERIFY2(moveDown.has_value(), "eventlist.move_down has no single binding")
 
 A166 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:584
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S177 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the key binding; Swift S177 asserts the same observable — the key move down restores the first controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder. Focus arbitration and the binding lookup live at the neighboring NATIVE/GAP sites A162-A165.
 Source context since previous assertion:
 ;
     const int undoBeforeKeyMove = undoCount(document);
@@ -1944,8 +1991,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), first)
 
 A167 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:585
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S178 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the key binding; Swift S178 asserts the same observable — the key move down advances the second controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1953,8 +2001,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccB), second)
 
 A168 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:586
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S179 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the key binding; Swift S179 asserts the same observable — the key move down pushes one undo step — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -1962,8 +2011,9 @@ Original expression:
 QCOMPARE(undoCount(document), undoBeforeKeyMove + 1)
 
 A169 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:588
-Disposition: PARTIAL
-Mapping/reason: Related Swift raw-reorder predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the pointer-drag/menu/key translation into moveRawEvent.
+Disposition: MATCHED
+Swift: S180 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.history.undoDocument call; Swift S180 asserts the same observable — undo restores the key-moved first controller — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
     document.undoStack()->undo();
@@ -1983,8 +2033,9 @@ Original expression:
 QVERIFY(opened.fixture->view().quickView() != nullptr)
 
 A171 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:600
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S181 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the boundary key press; Swift S181 asserts the same observable — the boundary move cannot displace into the earlier run — under cppID eventviews/EventViewsEditsTest::sameTickReorder. The key-guard lookup lives at the neighboring GAP site A170.
 Source context since previous assertion:
 ;
     quick->focusEventListInput(Qt::OtherFocusReason);
@@ -2000,8 +2051,9 @@ Original expression:
 QCOMPARE(indexOf(document.smf().tracks[chunk], ccA), second)
 
 A172 | EventViewsEditsTest::sameTickReorder | src/checks/eventviews/edits.cpp:601
-Disposition: PARTIAL
-Mapping/reason: Related Swift history/no-op predicates S020–S050 in src/checks/editcheck/tst_songdocument_songraw.swift; unproved: the gesture path that must remain a no-op (no undo push, order retained).
+Disposition: MATCHED
+Swift: S182 | src/checks/editcheck/EventViewsEditsParity.swift :: eventViewsSameTickReorder
+Mapping/reason: The stimulus is a direct document.moveRawEvent call, not the boundary key press; Swift S182 asserts the same observable — the boundary move pushes no undo step — under cppID eventviews/EventViewsEditsTest::sameTickReorder.
 Source context since previous assertion:
 ;
 
@@ -2771,6 +2823,350 @@ S098 | eventListRowsAndEditContract | src/checks/eventviews/EventListPlayheadChe
         && !model.validatesEdit(row: eot, column: 0, text: String(TimeDefaults.maxTick + 1))
         && !model.validatesEdit(row: eot, column: 0, text: "-1"),
         cppID: rowsAndEditContractID, message: "tick editing honors maxTick")
+
+S099 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:40
+  report.expectEqual(before + 1, document.history.undoIndex, cppID: id,
+                     what: "channel edit pushes one undo step")
+
+S100 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:42
+  report.expectEqual(UInt8(0x04), document.rawChunks[0].events[noteIndex].status & 0x0F,
+                     cppID: id, what: "one-based channel value converts to the status nibble")
+
+S101 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:44
+  report.expectEqual(Optional(noteID), document.rawChunks[0].events[noteIndex].noteID,
+                     cppID: id, what: "channel edit preserves the note identity")
+
+S102 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:46
+  report.expect(document.note(noteID) != nil, cppID: id,
+                message: "channel-edited note still resolves by identity")
+
+S103 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:52
+  report.expectEqual(before + 3, document.history.undoIndex, cppID: id,
+                     what: "data-byte edits push one undo step each")
+
+S104 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:59
+  report.expectEqual(UInt8(100), data0, cppID: id,
+                     what: "first data byte stores the edited value")
+
+S105 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:61
+  report.expectEqual(UInt8(33), data1, cppID: id,
+                     what: "second data byte stores the edited value")
+
+S106 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:63
+  report.expectEqual(Optional(noteID), document.rawChunks[0].events[noteIndex].noteID,
+                     cppID: id, what: "data-byte edits preserve the note identity")
+
+S107 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:67
+  report.expectEqual(before + 4, document.history.undoIndex, cppID: id,
+                     what: "blob edit pushes one undo step")
+
+S108 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:69
+  report.expectEqual(Optional(Array("room".utf8)), document.rawChunks[0].events[blobIndex].blob,
+                     cppID: id, what: "blob edit stores the quoted payload bytes")
+
+S109 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:74
+  report.expectEqual(UInt8(0x00), document.rawChunks[0].events[noteIndex].status & 0x0F,
+                     cppID: id, what: "undo restores the original channel nibble")
+
+S110 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:81
+  report.expectEqual(UInt8(60), restored0, cppID: id,
+                     what: "undo restores the original first data byte")
+
+S111 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:83
+  report.expectEqual(UInt8(90), restored1, cppID: id,
+                     what: "undo restores the original second data byte")
+
+S112 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:85
+  report.expectEqual(Optional(noteID), document.rawChunks[0].events[noteIndex].noteID,
+                     cppID: id, what: "undo restores the note identity")
+
+S113 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:87
+  report.expectEqual(Optional(Array("marker".utf8)),
+                     document.rawChunks[0].events[blobIndex].blob,
+                     cppID: id, what: "undo restores the original blob bytes")
+
+S114 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:92
+  report.expect(document.rawChunks[0].events[noteIndex].noteID == nil, cppID: id,
+                message: "note-on to controller conversion clears the identity")
+
+S115 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:100
+  report.expect(convertedID != noteID, cppID: id,
+                message: "converted note-on mints a fresh identity")
+
+S116 | eventViewsChannelAndDataConversions | src/checks/editcheck/EventViewsEditsParity.swift:102
+  report.expect(document.note(convertedID) != nil, cppID: id,
+                message: "converted note-on resolves by its minted identity")
+
+S117 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:150
+  report.expectEqual(1, publications, cppID: id,
+                     what: "meta-to-tempo conversion publishes once")
+
+S118 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:152
+  report.expectEqual(initialIndex + 1, document.history.undoIndex, cppID: id,
+                     what: "meta-to-tempo conversion pushes one undo step")
+
+S119 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:154
+  report.expectEqual(initialCount + 1, document.history.undoCount, cppID: id,
+                     what: "meta-to-tempo conversion records one entry")
+
+S120 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:156
+  report.expect(document.state.tempo.contains(where: { $0.tick == conversionTick }), cppID: id,
+                message: "converted tick carries a tempo point")
+
+S121 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:158
+  report.expect(!document.rawChunks[0].events.contains(where: {
+      $0.tick == conversionTick && $0.isMeta
+  }), cppID: id, message: "converted tick carries no raw meta")
+
+S122 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:161
+  report.expectEqual(tickZeroMeta,
+                     document.rawChunks[0].events.filter { $0.tick == 0 && $0.isMeta },
+                     cppID: id, what: "meta-to-tempo conversion preserves tick-zero metas")
+
+S123 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:164
+  report.expect(document.state.tempo.contains(where: { $0.tick == 0 }), cppID: id,
+                message: "tick-zero tempo survives conversion")
+
+S124 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:167
+  report.expect(document.history.undoDocument(), cppID: id,
+                message: "conversion undo succeeds")
+
+S125 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:169
+  report.expectEqual(1, publications, cppID: id, what: "conversion undo publishes once")
+
+S126 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:170
+  report.expectEqual(initialIndex, document.history.undoIndex, cppID: id,
+                     what: "conversion undo restores the index")
+
+S127 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:172
+  report.expectEqual(initialCount + 1, document.history.undoCount, cppID: id,
+                     what: "conversion undo retains the entry")
+
+S128 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:174
+  report.expectEqual(Optional(Array("eventviews conversion".utf8)),
+                     document.rawChunks[0].events.first(where: {
+                         $0.tick == conversionTick && $0.isMeta
+                     }).flatMap(\.blob),
+                     cppID: id, what: "conversion undo restores the marker bytes")
+
+S129 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:179
+  report.expect(!document.state.tempo.contains(where: { $0.tick == conversionTick }),
+                cppID: id, message: "conversion undo removes the tempo point")
+
+S130 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:182
+  report.expect(document.history.redoDocument(), cppID: id,
+                message: "conversion redo succeeds")
+
+S131 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:184
+  report.expectEqual(1, publications, cppID: id, what: "conversion redo publishes once")
+
+S132 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:185
+  report.expectEqual(initialIndex + 1, document.history.undoIndex, cppID: id,
+                     what: "conversion redo restores the index")
+
+S133 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:187
+  report.expectEqual(initialCount + 1, document.history.undoCount, cppID: id,
+                     what: "conversion redo retains the entry")
+
+S134 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:189
+  report.expect(document.state.tempo.contains(where: { $0.tick == conversionTick }), cppID: id,
+                message: "conversion redo restores the tempo point")
+
+S135 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:191
+  report.expect(!document.rawChunks[0].events.contains(where: {
+      $0.tick == conversionTick && $0.isMeta
+  }), cppID: id, message: "conversion redo removes the raw meta")
+
+S136 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:199
+  report.expectEqual(1, publications, cppID: id,
+                     what: "tempo-to-meta conversion publishes once")
+
+S137 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:201
+  report.expectEqual(initialIndex + 2, document.history.undoIndex, cppID: id,
+                     what: "tempo-to-meta conversion pushes a second undo step")
+
+S138 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:203
+  report.expectEqual(initialCount + 2, document.history.undoCount, cppID: id,
+                     what: "tempo-to-meta conversion records a second entry")
+
+S139 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:205
+  report.expect(document.rawChunks[0].events.contains(where: {
+      $0.tick == conversionTick && $0.isMeta
+  }), cppID: id, message: "converted tempo returns as a raw meta")
+
+S140 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:208
+  report.expect(!document.state.tempo.contains(where: { $0.tick == conversionTick }),
+                cppID: id, message: "tempo point is gone after conversion to meta")
+
+S141 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:210
+  report.expectEqual(tickZeroMeta,
+                     document.rawChunks[0].events.filter { $0.tick == 0 && $0.isMeta },
+                     cppID: id, what: "tempo-to-meta conversion preserves tick-zero metas")
+
+S142 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:213
+  report.expect(document.state.tempo.contains(where: { $0.tick == 0 }), cppID: id,
+                message: "tick-zero tempo survives the reverse conversion")
+
+S143 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:216
+  report.expect(document.history.undoDocument(), cppID: id,
+                message: "reverse-conversion undo succeeds")
+
+S144 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:218
+  report.expectEqual(1, publications, cppID: id, what: "reverse-conversion undo publishes once")
+
+S145 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:219
+  report.expectEqual(initialIndex + 1, document.history.undoIndex, cppID: id,
+                     what: "reverse-conversion undo restores the index")
+
+S146 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:221
+  report.expectEqual(initialCount + 2, document.history.undoCount, cppID: id,
+                     what: "reverse-conversion undo retains both entries")
+
+S147 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:223
+  report.expect(document.state.tempo.contains(where: { $0.tick == conversionTick }), cppID: id,
+                message: "reverse-conversion undo restores the tempo point")
+
+S148 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:225
+  report.expect(!document.rawChunks[0].events.contains(where: {
+      $0.tick == conversionTick && $0.isMeta
+  }), cppID: id, message: "reverse-conversion undo removes the raw meta")
+
+S149 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:229
+  report.expect(document.history.redoDocument(), cppID: id,
+                message: "reverse-conversion redo succeeds")
+
+S150 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:231
+  report.expectEqual(1, publications, cppID: id, what: "reverse-conversion redo publishes once")
+
+S151 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:232
+  report.expectEqual(initialIndex + 2, document.history.undoIndex, cppID: id,
+                     what: "reverse-conversion redo restores the index")
+
+S152 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:234
+  report.expectEqual(initialCount + 2, document.history.undoCount, cppID: id,
+                     what: "reverse-conversion redo retains both entries")
+
+S153 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:236
+  report.expect(document.rawChunks[0].events.contains(where: {
+      $0.tick == conversionTick && $0.isMeta
+  }), cppID: id, message: "reverse-conversion redo restores the raw meta")
+
+S154 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:239
+  report.expect(!document.state.tempo.contains(where: { $0.tick == conversionTick }),
+                cppID: id, message: "reverse-conversion redo removes the tempo point")
+
+S155 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:241
+  report.expectEqual(tickZeroMeta,
+                     document.rawChunks[0].events.filter { $0.tick == 0 && $0.isMeta },
+                     cppID: id, what: "settled conversion preserves tick-zero metas")
+
+S156 | eventViewsRawTempoAtomic | src/checks/editcheck/EventViewsEditsParity.swift:244
+  report.expect(document.state.tempo.contains(where: { $0.tick == 0 }), cppID: id,
+                message: "tick-zero tempo survives the settled conversion")
+
+S157 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:277
+  report.expect(document.note(mintedID) != nil, cppID: id,
+                message: "inserted note-on resolves by its minted identity")
+
+S158 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:283
+  report.expectEqual(first + 1, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
+                     what: "second controller follows first")
+
+S159 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:285
+  report.expectEqual(first + 2, document.rawChunks[0].events.firstIndex(of: noteOn),
+                     cppID: id, what: "note follows controllers")
+
+S160 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:291
+  report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
+                     what: "legal in-run swap moves the second controller first")
+
+S161 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:293
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "legal in-run swap moves the first controller second")
+
+S162 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:295
+  report.expectEqual(swapBase + 1, document.history.undoIndex, cppID: id,
+                     what: "legal in-run swap pushes one undo step")
+
+S163 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:299
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "past-run destination cannot displace the event")
+
+S164 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:301
+  report.expectEqual(orderAfterDrop, document.history.undoIndex, cppID: id,
+                     what: "past-run destination pushes no undo step")
+
+S165 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:304
+  report.expectEqual(note, document.rawChunks[0].events.firstIndex(of: noteOn), cppID: id,
+                     what: "cross-run destination cannot displace the note")
+
+S166 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:306
+  report.expectEqual(orderAfterDrop, document.history.undoIndex, cppID: id,
+                     what: "cross-run destination pushes no undo step")
+
+S167 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:321
+  report.expectEqual(offIndex + 1, document.rawChunks[0].events.firstIndex(of: pinnedOn),
+                     cppID: id, what: "note-end pins ahead of its note-on")
+
+S168 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:329
+  report.expectEqual(offIndex, document.rawChunks[0].events.firstIndex(of: pinnedOff),
+                     cppID: id, what: "pinned note-end stays ahead of its note-on")
+
+S169 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:331
+  report.expectEqual(onIndex, document.rawChunks[0].events.firstIndex(of: pinnedOn), cppID: id,
+                     what: "pinned note-on stays after its note-end")
+
+S170 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:333
+  report.expectEqual(orderBeforePin, document.history.undoIndex, cppID: id,
+                     what: "pinned reorder pushes no undo step")
+
+S171 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:337
+  report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "row move down restores the first controller")
+
+S172 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:339
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
+                     what: "row move down advances the second controller")
+
+S173 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:341
+  report.expectEqual(note, document.rawChunks[0].events.firstIndex(of: noteOn), cppID: id,
+                     what: "row move down keeps the note in place")
+
+S174 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:343
+  report.expectEqual(undoBeforeMenuMove + 1, document.history.undoIndex, cppID: id,
+                     what: "row move down pushes one undo step")
+
+S175 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:346
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "undo restores the swapped first controller")
+
+S176 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:348
+  report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
+                     what: "undo restores the swapped second controller")
+
+S177 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:352
+  report.expectEqual(first, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "key move down restores the first controller")
+
+S178 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:354
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccB), cppID: id,
+                     what: "key move down advances the second controller")
+
+S179 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:356
+  report.expectEqual(undoBeforeKeyMove + 1, document.history.undoIndex, cppID: id,
+                     what: "key move down pushes one undo step")
+
+S180 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:359
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "undo restores the key-moved first controller")
+
+S181 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:363
+  report.expectEqual(second, document.rawChunks[0].events.firstIndex(of: ccA), cppID: id,
+                     what: "boundary move cannot displace into the earlier run")
+
+S182 | eventViewsSameTickReorder | src/checks/editcheck/EventViewsEditsParity.swift:365
+  report.expectEqual(orderBeforeBoundaryMove, document.history.undoIndex, cppID: id,
+                     what: "boundary move pushes no undo step")
 
 Shared helper: src/checks/editcheck/tst_songdocument_runner.swift
 SHA-256: af2974a624d13d4caf148c5e0b108f9bcb6e602ccc74411f57430011ca81e187

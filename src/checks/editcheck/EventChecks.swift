@@ -28,6 +28,8 @@ func runEventEditsSuite(_ report: CheckReport) {
     duplicateCanonicalizationContract(report)
     duplicateReplacementsAndNoOpsContract(report)
     xcmdSaveSnapshotContract(report)
+    runEventViewsEditsParityChecks(report)
+    runEventViewsRemapBucketsParityChecks(report)
 }
 
 @MainActor

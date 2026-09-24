@@ -22,4 +22,20 @@ public enum TimelineSnapPolicy {
         let upperDistance = upper - position
         return Tick(lowerDistance < upperDistance ? lower : upper)
     }
+    public static func snapDown(_ tick: Double, clockTicks: Tick) -> Tick {
+        let stride = Double(Swift.max(1, Int(clockTicks)))
+        let position = Swift.min(Swift.max(0.0, tick), Double(TimeDefaults.maxTick))
+        return Tick((position / stride).rounded(.down) * stride)
+    }
+    public static func snapUp(_ tick: Double, clockTicks: Tick) -> Tick {
+        let stride = Double(Swift.max(1, Int(clockTicks)))
+        let position = Swift.min(Swift.max(0.0, tick), Double(TimeDefaults.maxTick))
+        return Tick(Swift.min((position / stride).rounded(.up) * stride, Double(TimeDefaults.maxTick)))
+    }
+    public static func nextAfter(_ tick: Tick, clockTicks: Tick) -> Tick {
+        let stride = UInt64(Swift.max(1, Int(clockTicks)))
+        let limit = UInt64(TimeDefaults.maxTick)
+        guard UInt64(tick) < limit else { return TimeDefaults.maxTick }
+        return Tick(Swift.min(UInt64(tick) / stride * stride + stride, limit))
+    }
 }

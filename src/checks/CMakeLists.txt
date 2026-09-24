@@ -73,6 +73,8 @@ if(APPLE)
         polyphony/polyphonyengine.swift
         playback/tst_xcmd.swift
         keyboard/tst_velocitymodel.swift
+        keyboard/tst_velocityaxis.swift
+        keyboard/tst_velocitygesture.swift
         keyboard/KeybindingRegistryChecks.swift
         themecolor/ThemeColorChecks.swift
         editcheck/tst_songdocument_songraw.swift
@@ -103,6 +105,8 @@ if(APPLE)
         editcheck/DocumentTrackChecks.swift
         editcheck/ScaleChecks.swift
         editcheck/EventChecks.swift
+        editcheck/EventViewsEditsParity.swift
+        editcheck/EventViewsRemapBucketsParity.swift
         editcheck/TrackCorpusChecks.swift
         editcheck/TimeChecks.swift
         editcheck/TimeCorpusChecks.swift

@@ -204,6 +204,95 @@ public enum VelocityGesturePolicy {
     }
 }
 
+public struct VelocityGestureModel: Sendable {
+    public struct Completion: Equatable, Sendable {
+        public var expectedRevision: UInt64
+        public var targets: [NoteVelocity]
+        public init(expectedRevision: UInt64, targets: [NoteVelocity]) {
+            self.expectedRevision = expectedRevision
+            self.targets = targets
+        }
+    }
+    private var expectedRevision: UInt64 = 0
+    private var targets: [NoteVelocity] = []
+    private var originalVelocities: [Int] = []
+    private var sessionActive: Bool = false
+    public init() {}
+    public var active: Bool { sessionActive }
+    public mutating func begin(_ revision: UInt64, _ values: [NoteVelocity]) -> Bool {
+        guard !sessionActive else { return false }
+        guard !values.isEmpty else { return false }
+        for value in values {
+            guard value.noteID.isAssigned else { return false }
+            guard (1...127).contains(value.velocity) else { return false }
+        }
+        let ordered = values.sorted { $0.noteID.rawValue < $1.noteID.rawValue }
+        for index in ordered.indices.dropFirst() {
+            guard ordered[index - 1].noteID != ordered[index].noteID else { return false }
+        }
+        expectedRevision = revision
+        targets = ordered
+        originalVelocities = ordered.map { $0.velocity }
+        sessionActive = true
+        return true
+    }
+    public mutating func update(_ values: [NoteVelocity]) -> Bool {
+        guard sessionActive else { return false }
+        guard !values.isEmpty else { return false }
+        var seen: Set<NoteID> = []
+        for value in values {
+            guard value.noteID.isAssigned else { return false }
+            guard targets.firstIndex(where: { $0.noteID == value.noteID }) != nil else { return false }
+            guard seen.insert(value.noteID).inserted else { return false }
+        }
+        var changed = false
+        for value in values {
+            guard let at = targets.firstIndex(where: { $0.noteID == value.noteID }) else { return false }
+            let clamped = min(max(value.velocity, 1), 127)
+            if targets[at].velocity != clamped {
+                targets[at].velocity = clamped
+                changed = true
+            }
+        }
+        return changed
+    }
+    public mutating func updateByDelta(_ delta: Int) -> Bool {
+        guard sessionActive else { return false }
+        var changed = false
+        for index in targets.indices {
+            let clamped = min(max(originalVelocities[index] + delta, 1), 127)
+            if targets[index].velocity != clamped {
+                targets[index].velocity = clamped
+                changed = true
+            }
+        }
+        return changed
+    }
+    public func previewVelocity(_ noteID: NoteID) -> UInt8? {
+        guard sessionActive else { return nil }
+        guard noteID.isAssigned else { return nil }
+        guard let at = targets.firstIndex(where: { $0.noteID == noteID }) else { return nil }
+        return UInt8(targets[at].velocity)
+    }
+    public mutating func takeCompletion() -> Completion? {
+        guard sessionActive else { return nil }
+        let completion = Completion(expectedRevision: expectedRevision, targets: targets)
+        expectedRevision = 0
+        targets = []
+        originalVelocities = []
+        sessionActive = false
+        return completion
+    }
+    public mutating func cancel() -> Bool {
+        guard sessionActive else { return false }
+        expectedRevision = 0
+        targets = []
+        originalVelocities = []
+        sessionActive = false
+        return true
+    }
+}
+
 // MARK: - Prompt transaction
 
 /// The Set Velocity prompt's frozen transaction: the captured targets, their

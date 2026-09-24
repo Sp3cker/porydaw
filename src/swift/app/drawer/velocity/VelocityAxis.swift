@@ -114,6 +114,9 @@ public struct VelocityAxisGraduation: Equatable, Sendable {
     public var active: Bool = false
     public var labelVisible: Bool = true
     public var emphasized: Bool = false
+    public var column: Int = 0
+    public var x: Double = 0
+    public var width: Double = 0
     public var text: String = ""
 
     public init() {}
@@ -144,11 +147,14 @@ public struct VelocityAxisModel: Sendable {
     public static let maximumMarkers = 2
     public static let minimumVelocity = 1
     public static let maximumVelocity = 127
+    public static var nodesFocusable: Bool { false }
+    public static var graduationLabelsFocusable: Bool { false }
 
     public private(set) var map = VelocityMap(voiceKind: .unresolved)
     public var geometry = VelocityAxisGeometry()
     public private(set) var top: Double = 0
     public private(set) var bottom: Double = 0
+    public private(set) var intrinsicColumnWidth: Double = 0
     public private(set) var ticks: [VelocityAxisTick] = []
     public private(set) var labels: [VelocityAxisLabel] = []
     public private(set) var graduations: [VelocityAxisGraduation] = []
