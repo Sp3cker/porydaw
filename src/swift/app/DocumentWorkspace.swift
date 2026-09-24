@@ -37,6 +37,7 @@ public final class DocumentWorkspace {
 
     public let session: DocumentSession
     public let grid: PianoGrid
+    public let pitchBend: PitchBendPresenter
     public let trackHeaders: TrackHeadersPresenter
     public let velocityPage: VelocityPage
     public let voiceChangesPage: VoiceChangesPage
@@ -73,6 +74,11 @@ public final class DocumentWorkspace {
         // same object.
         let grid = PianoGrid(session: session, palette: palette)
         self.grid = grid
+        let pitchBend = PitchBendPresenter(session: session, grid: grid, palette: grid.palette)
+        self.pitchBend = pitchBend
+        grid.onPitchBendRequested = { [weak pitchBend] in
+            pitchBend?.openSelected() ?? false
+        }
         let headers = TrackHeadersPresenter(baseFontPx: grid.baseFontPx)
         headers.attach(session: session, palette: grid.palette)
         self.trackHeaders = headers
@@ -212,6 +218,7 @@ public final class DocumentWorkspace {
         isActive = false
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
+        pitchBend.cancelAndClose()
         cancel(reason: GridCancelReason.hidden.rawValue)
         playhead.detach()
         lastPlayheadPresentation = nil
@@ -235,6 +242,7 @@ public final class DocumentWorkspace {
         isTornDown = true
         rulerMenu.close()
         rulerMenu.cancelInsertTimePrompt()
+        pitchBend.cancelAndClose()
         deactivate()
         session.onChange = nil
         session.onPlayback = nil
@@ -246,6 +254,7 @@ public final class DocumentWorkspace {
         velocityPage.detach()
         velocityPage.onVelocityAccepted = nil
         trackHeaders.detach()
+        grid.onPitchBendRequested = nil
         grid.detach()
     }
 
@@ -289,6 +298,7 @@ public final class DocumentWorkspace {
         let fullPageDomains: SessionChangeDomains = [.document, .selection, .bank]
         if documentChanged {
             callbacks.timeSignaturePromptInvalidated(session, change.revision)
+            pitchBend.documentDidChange()
         }
         let headerDomains: SessionChangeDomains = [.selection, .bank, .cursor, .mixState]
         let applicationStateDomains: SessionChangeDomains = [.document, .dirty, .history, .bank]
@@ -303,6 +313,7 @@ public final class DocumentWorkspace {
         }
 
         if documentChanged || change.domains.contains(.selection) {
+            if change.domains.contains(.selection) { pitchBend.cancelAndClose() }
             grid.refreshFromSession()
         } else if change.domains.contains(.cursor) {
             grid.refreshCursorPresentation()

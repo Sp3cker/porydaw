@@ -61,6 +61,7 @@ public final class PianoGrid {
     /// prompt transaction. `true` means the request was accepted. Swift-only,
     /// like the shared playhead's policy entries: no QML surface sees it.
     @QtIgnored public var onSetVelocityRequested: (() -> Bool)?
+    @QtIgnored public var onPitchBendRequested: (() -> Bool)?
     @QtIgnored private var lastCommandAvailability: [Bool] = []
     @QtIgnored private var lastCommandGestureActive = false
     @QtIgnored private var keyboardAuditionKey: Int?
@@ -162,6 +163,9 @@ public final class PianoGrid {
         // application session installs after this presenter exists.
         commands.requestSetVelocity = { [weak self] in
             self?.onSetVelocityRequested?() ?? false
+        }
+        commands.requestPitchBend = { [weak self] in
+            self?.onPitchBendRequested?() ?? false
         }
         let count = session.document.engineTracks.usedTrackCount
         let initialTrack = min(max(0, session.selectedTrack ?? 0), max(0, count - 1))

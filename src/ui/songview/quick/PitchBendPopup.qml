@@ -1,10 +1,9 @@
-// Opaque note-automation popup shell. QuickPopupSession injects the
-// PitchBendEditor bridge as a direct shared-overlay surface; the editor owns
-// its anchored geometry and cached chrome. The two PitchBendGraph lanes own
-// their canvases and all C++ input algorithms. This file only hosts the
-// chrome: labels aligned to each canvasRect, the reset buttons, and the BENDR
-// / LFO speed scrub fields. QtQuick only.
+// Opaque note-automation popup chrome; Swift owns both graph lanes and their
+// document transactions. The graph uses the existing scene-model/Quick Shape
+// projection instead of the retired C++ QQuickItem.
 import QtQuick
+import QtQuick.Shapes
+import "swiftroll" as SwiftRoll
 
 Rectangle {
     id: root
@@ -43,9 +42,9 @@ Rectangle {
     readonly property color secondaryTextColor: appearance ? appearance.secondaryText
                                                            : "transparent"
     readonly property color outlineColor: appearance ? appearance.outline : "transparent"
-    readonly property font titleFont: appearance ? appearance.titleFont : fallbackFont
-    readonly property font captionFont: appearance ? appearance.captionFont : fallbackFont
-    readonly property font monospaceFont: appearance ? appearance.monospaceFont : fallbackFont
+    readonly property font titleFont: appearance ? Qt.font(appearance.titleFont) : fallbackFont
+    readonly property font captionFont: appearance ? Qt.font(appearance.captionFont) : fallbackFont
+    readonly property font monospaceFont: appearance ? Qt.font(appearance.monospaceFont) : fallbackFont
 
     implicitWidth: metrics ? metrics.popupWidth : 0
     implicitHeight: metrics ? metrics.popupHeight : 0
@@ -63,10 +62,9 @@ Rectangle {
         onWheel: (wheel) => wheel.accepted = true
     }
 
-    // The focused graph or numeric field claims its own keys first; this
-    // terminal sink arbitrates what escapes — Escape dismisses, the single
-    // routed Solo command applies — and absorbs the rest so timeline
-    // commands never leak out of the shared popup session.
+    // The focused graph or numeric field claims its own keys first. The
+    // popup handles Escape and vertex deletion; no timeline command may leak
+    // through this shared overlay.
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Escape)
             bridge.cancelAndClose()
@@ -89,6 +87,7 @@ Rectangle {
             bridge.resetModCurve()
         graph.forceActiveFocus(Qt.OtherFocusReason)
     }
+    function focusInitialGraph() { pitchGraph.forceActiveFocus(Qt.PopupFocusReason) }
 
     component GraphLaneLabels: Item {
         id: labels
@@ -273,10 +272,122 @@ Rectangle {
         Accessible.onPressAction: root.resetLane(resetButton.graph)
     }
 
+    component GraphCanvas: Item {
+        id: graphCanvas
+        property var lane
+        function inCanvas(x, y) {
+            return x >= canvasRect.x && x < canvasRect.x + canvasRect.width
+                && y >= canvasRect.y && y < canvasRect.y + canvasRect.height
+        }
+        readonly property rect canvasRect: lane
+            ? Qt.rect(lane.canvasRect.x, lane.canvasRect.y,
+                      lane.canvasRect.width, lane.canvasRect.height)
+            : Qt.rect(0, 0, 0, 0)
+        readonly property string laneTitle: lane ? lane.laneTitle : ""
+        readonly property string liveValueText: lane ? lane.liveValueText : ""
+        readonly property string upperValueText: lane ? lane.upperValueText : ""
+        readonly property string lowerValueText: lane ? lane.lowerValueText : ""
+        readonly property string endLabel: lane ? lane.endLabel : ""
+        readonly property bool bipolar: lane ? lane.bipolar : false
+        readonly property int curveSegmentCount: renderedCurveSegments.count
 
-    PitchBendGraph {
+        Rectangle {
+            x: graphCanvas.canvasRect.x
+            y: graphCanvas.canvasRect.y
+            width: graphCanvas.canvasRect.width
+            height: graphCanvas.canvasRect.height
+            color: graphCanvas.lane ? graphCanvas.lane.plotBackground : "transparent"
+            clip: true
+        }
+        SwiftRoll.TimelineQuickItem {
+            anchors.fill: parent
+            rects: graphCanvas.lane ? graphCanvas.lane.gridLines : []
+        }
+        Repeater {
+            id: renderedCurveSegments
+            model: graphCanvas.lane ? graphCanvas.lane.curveLines : []
+            delegate: Shape {
+                id: curveShape
+                required property var model
+                required property string strokeColor
+                required property real strokeWidth
+                anchors.fill: graphCanvas
+                ShapePath {
+                    strokeColor: curveShape.strokeColor
+                    strokeWidth: curveShape.strokeWidth
+                    fillColor: "transparent"
+                    capStyle: ShapePath.RoundCap
+                    startX: curveShape.model.x0
+                    startY: curveShape.model.y0
+                    PathLine {
+                        x: curveShape.model.x1
+                        y: curveShape.model.y1
+                    }
+                }
+            }
+        }
+        Repeater {
+            model: graphCanvas.lane ? graphCanvas.lane.vertices : []
+            delegate: Rectangle {
+                required property var model
+                required property string fillColor
+                required property string ringColor
+                required property real ringWidth
+                x: model.x
+                y: model.y
+                width: model.radius * 2
+                height: model.radius * 2
+                radius: width / 2
+                color: fillColor
+                border.width: ringWidth
+                border.color: ringColor
+            }
+        }
+        Rectangle {
+            x: graphCanvas.canvasRect.x + root.hairline
+            y: graphCanvas.canvasRect.y + root.hairline
+            width: graphCanvas.canvasRect.width - 2 * root.hairline
+            height: graphCanvas.canvasRect.height - 2 * root.hairline
+            color: "transparent"
+            border.width: graphCanvas.activeFocus ? root.hairline : 0
+            border.color: graphCanvas.lane ? graphCanvas.lane.focusColor : "transparent"
+        }
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.LeftButton
+            hoverEnabled: true
+            cursorShape: Qt.CrossCursor
+            preventStealing: true
+            onPressed: (mouse) => {
+                if (!graphCanvas.lane || !graphCanvas.inCanvas(mouse.x, mouse.y))
+                    return
+                graphCanvas.forceActiveFocus(Qt.MouseFocusReason)
+                graphCanvas.lane.press(mouse.x, mouse.y, mouse.modifiers)
+            }
+            onPositionChanged: (mouse) => {
+                if (graphCanvas.lane && (mouse.buttons & Qt.LeftButton))
+                    graphCanvas.lane.drag(mouse.x, mouse.y, mouse.modifiers)
+            }
+            onReleased: (mouse) => {
+                if (graphCanvas.lane)
+                    graphCanvas.lane.release(mouse.x, mouse.y, mouse.modifiers)
+            }
+            onCanceled: {
+                if (graphCanvas.lane)
+                    graphCanvas.lane.cancelGesture()
+            }
+            onWheel: (wheel) => {
+                if (graphCanvas.lane && graphCanvas.inCanvas(wheel.x, wheel.y))
+                    graphCanvas.lane.wheel(wheel.angleDelta.y, wheel.pixelDelta.y,
+                                           wheel.phase === Qt.ScrollMomentum)
+                wheel.accepted = true
+            }
+        }
+    }
+
+    GraphCanvas {
         id: pitchGraph
-
+        lane: bridge ? bridge.pitchGraph() : null
         objectName: "pitchBendGraph"
         x: 0
         y: root.headerHeight
@@ -285,9 +396,9 @@ Rectangle {
         activeFocusOnTab: true
     }
 
-    PitchBendGraph {
+    GraphCanvas {
         id: modGraph
-
+        lane: bridge ? bridge.modGraph() : null
         objectName: "modWheelGraph"
         x: 0
         y: root.headerHeight + root.graphHeight

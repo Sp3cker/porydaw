@@ -124,6 +124,7 @@ if(APPLE)
         rollcheck/remap.swift
         rollcheck/presentation.swift
         rollcheck/time_signature_prompt.swift
+        rollcheck/pitch_bend.swift
         rollcheck/timemenu.swift
         rollcheck/ruler_loop_menu.swift
         nativegraphics/tst_playhead_quick.swift

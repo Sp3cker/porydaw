@@ -28,6 +28,10 @@ add_library(PorydawApp STATIC
     roll/GridGesture.swift
     roll/GridScene.swift
     roll/NoteCommands.swift
+    pitchbend/PitchBendGeometry.swift
+    pitchbend/PitchBendKernel.swift
+    pitchbend/PitchBendScene.swift
+    pitchbend/PitchBendPresenter.swift
     timeline/EditorCamera.swift
     timeline/TimelineScrollbar.swift
     timeline/DocumentProjectionCache.swift

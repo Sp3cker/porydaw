@@ -11,6 +11,7 @@ final class NoteCommands {
     /// `true` means the request was accepted; the document is untouched either
     /// way until the prompt's own acceptance runs.
     var requestSetVelocity: (() -> Bool)?
+    var requestPitchBend: (() -> Bool)?
 
     init(session: DocumentSession) {
         self.session = session
@@ -20,7 +21,7 @@ final class NoteCommands {
         switch command {
         case .copy, .cut, .duplicate, .delete, .transposeUp, .transposeDown,
              .transposeUpOctave, .transposeDownOctave, .nudgeLeft, .nudgeRight,
-             .split, .join, .lengthenNote, .shortenNote, .setVelocity:
+             .split, .join, .lengthenNote, .shortenNote, .setVelocity, .pitchBend:
             return !selectedNotes().isEmpty
         case .selectAll, .muteTracks, .soloTracks,
              .pencilMode, .gridNarrow, .gridWiden, .gridTriplet:
@@ -38,6 +39,9 @@ final class NoteCommands {
         // never touches the document here.
         if command == .setVelocity {
             return requestSetVelocity?() ?? false
+        }
+        if command == .pitchBend {
+            return requestPitchBend?() ?? false
         }
         return session.withStateChanges {
             let before = session.document.revision
