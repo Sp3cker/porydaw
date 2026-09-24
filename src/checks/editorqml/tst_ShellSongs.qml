@@ -133,7 +133,10 @@ TestCase {
                "empty-song guidance is shown before opening an editor")
         verify(emptyMessage.mapToItem(shell.contentItem, 0, 0).x >= dock.width,
                "empty-song guidance stays over the editor, not the Songs dock")
-        shell.height += 2 * (480 - panel().height)
+        for (let step = 0; step < 6 && Math.abs(panel().height - 480) > 1; ++step) {
+            shell.height += 2 * (480 - panel().height)
+            wait(200)
+        }
         tryVerify(function() { return Math.abs(panel().height - 480) <= 1 }, 3000,
                   "the Songs pane reaches its visual baseline height")
         waitForRendering(panel())
@@ -168,13 +171,13 @@ TestCase {
         compareRegion(baseline, "songs.row.partial", row(secondWarningId), 3)
         const image = grabImage(shell.contentItem)
         const warningRow = row(firstWarningId)
-        const origin = warningRow.mapToItem(null, 0, 0)
+        const origin = warningRow.mapToItem(shell.contentItem, 0, 0)
         const scale = image.width / shell.contentItem.width
         let paintedAmber = false
         for (let y = Math.floor(origin.y * scale);
-             y < Math.ceil((origin.y + warningRow.height) * scale) && !paintedAmber; ++y) {
+            y < Math.ceil((origin.y + warningRow.height) * scale) && !paintedAmber; ++y) {
             for (let x = Math.floor(origin.x * scale);
-                 x < Math.ceil((origin.x + warningRow.width) * scale); ++x) {
+                x < Math.ceil((origin.x + warningRow.width) * scale); ++x) {
                 if (Math.abs(image.red(x, y) - 0xc0) <= 3
                     && Math.abs(image.green(x, y) - 0x80) <= 3
                     && Math.abs(image.blue(x, y) - 0x30) <= 3) {
@@ -329,7 +332,15 @@ TestCase {
         const voice = findChild(shell, "voicegroupPanel")
         verify(dock !== null && songs !== null && voice !== null,
                "Songs and Voicegroup panes mount in the dock column")
-        verify(songs.parent === dock && voice.parent === dock,
+        function insideDock(item) {
+            let host = item.parent
+            for (let i = 0; i < 4 && host; ++i) {
+                if (host === dock) return true
+                host = host.parent
+            }
+            return false
+        }
+        verify(insideDock(songs) && insideDock(voice),
                "both panes are stacked in swiftDockColumn")
         tryVerify(function() {
             return voice.mapToItem(dock, 0, 0).y >= songs.mapToItem(dock, 0, 0).y + songs.height

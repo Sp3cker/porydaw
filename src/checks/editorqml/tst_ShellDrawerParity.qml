@@ -282,7 +282,7 @@ TestCase {
         mouseMove(input, insertion.x, insertion.y)
         verify(waitForNative(function() { return model.hoverVisible }, 3000),
                parameter + " publishes its insertion hover")
-        var hovered = grabUntilDifferent(tabsRoot(), idle, idleRegion)
+        var hovered = grabRegionStable(tabsRoot(), idleRegion)
         var inputRegion = regionOf(hovered, tabsRoot(), input)
         verify(changedPixels(idle, hovered, inputRegion, 0) > 0,
                parameter + ": the insertion hover paints")

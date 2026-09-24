@@ -378,6 +378,7 @@ ApplicationWindow {
 
         Docks.SongsDockColumn {
             id: dockColumn
+            SplitView.fillHeight: true
             SplitView.minimumWidth: 200
             SplitView.maximumWidth: 480
             SplitView.preferredWidth: Math.max(200, Math.min(480, dockSettings.columnWidth))
