@@ -17,7 +17,7 @@ Additional Swift SHA-256: 86670017de3e8b42610fb203a36e7e06a6b653e002ac054b51c80b
 Additional Swift counterpart: src/checks/automation/domain/tst_automationdomain.swift
 Additional Swift SHA-256: c7314347f30a129f9ba667ef57a9b569b475c2dd4d6f520f51552f51329c32b7
 Additional Swift counterpart: src/checks/editorqml/tst_EditorDrawer.qml
-Additional Swift SHA-256: e02e279fb863cbb3e1a1c9f71deb7683c10a0836b956b22618e0bafd5b3a57e7
+Additional Swift SHA-256: 9696aaba9b50648c21736c116e5fcc7ac1d9dfd333298983916e34fcd0224980
 Additional Swift counterpart: src/checks/editorqml/tst_ShellDrawerParity.qml
 Additional Swift SHA-256: 4e8a64ed35f57faa8ff7578ec1e4c4e325f19f74bcb4b481f47dbd8e77ca32e2
 Additional Swift counterpart: src/checks/editorqml/EditorQmlTests.swift
@@ -50,7 +50,7 @@ obligation has no counterpart in the converted window; it does not establish
 coverage of the converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
 Unsure between PARTIAL and GAP resolves to GAP: bookkeeping must not overclaim.
-Tally: MATCHED 83, PARTIAL 15, NATIVE 55. The MATCHED sites cite exact S
+Tally: MATCHED 81, PARTIAL 17, NATIVE 55. The MATCHED sites cite exact S
 identifiers: the page hover model, context and cancellation predicates in
 src/checks/automation/automationcanvasediting.swift (S001-S033, S076-S078), the menu
 hint-muting predicates in automationcanvasediting.swift (S079-S084), the shared-body
@@ -874,7 +874,7 @@ Original expression:
 
 A063 | AutomationHoverTest::tempoAndCcTopologyMatch | src/checks/automation/hover/tst_automationhover.cpp:282
 Disposition: MATCHED
-Mapping/reason: MATCHED: the Tempo hover anchors exactly on its drawn node (S078) with the Tempo node publication asserted (S028); Tempo shares the active lane's plot origin and shared camera (S085, S086) with its width, height and grid centers (S087).
+Mapping/reason: MATCHED: the Tempo hover anchors exactly on its drawn node (S078) with the Tempo node publication asserted (S028); Tempo shares the active lane's plot origin and shared camera (S085, S086) with its width, height and grid centers (S087); the shared-projection equalities S085-S087 are the Swift topology match.
 Source context since previous assertion:
 
 
@@ -1496,8 +1496,8 @@ Original expression:
   QVERIFY2(menu.session && menu.model, qPrintable(menu.diagnostic));
 
 A121 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:440
-Disposition: MATCHED
-Mapping/reason: MATCHED: the open menu owns the hint scope (S081: menuOpen and interactionActive) with the right-click opening the node menu (S056) and the open menu realising its published actions and separators (S059).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: the open menu keeps the page hint profile empty (S081) and the status and hint-service text muted (S092); ownership by the menu HoverHint is unproved because MouseHints exposes no current owner/source.
 Source context since previous assertion:
 
 
@@ -1514,8 +1514,8 @@ Original expression:
   QVERIFY(hints.currentText().isEmpty());
 
 A123 | AutomationHoverTest::popupDismissalRecoversHover | src/checks/automation/hover/tst_automationhover.cpp:447
-Disposition: MATCHED
-Mapping/reason: MATCHED: motion between underlying targets keeps the menu scope (S082: menuOpen) and the underlay hint stays muted through that motion (S082, S093).
+Disposition: PARTIAL
+Mapping/reason: PARTIAL: motion between underlying targets keeps the page hint profile empty (S082) and the status and hint-service text muted (S093); continued ownership by the menu HoverHint is unproved because MouseHints exposes no current owner/source.
 Source context since previous assertion:
 
 
@@ -2229,52 +2229,52 @@ QML expression:
   mouseMove(input, point.x, outside.y, -1, Qt.MiddleButton)
   compare(text.text, instructions, "the originating instructions survive outside motion")
 
-S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1845
+S050 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1846
 QML expression:
   tryVerify(function() { return label.text === model.hoverText && label.text.length > 0 },
             2000, "the drawn label shows the published hover text")
 
-S051 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1851
+S051 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1852
 QML expression:
   compare(bootstrap.automationDocumentRevision(), revision,
           "hovering a node writes nothing")
 
-S052 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1859
+S052 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1860
 QML expression:
   compare(ringed, 1, "exactly the hovered node carries the ring")
 
-S053 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1877
+S053 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1878
 QML expression:
   mouseMove(input, point.x, point.y)
   wait(100)
   compare(bootstrap.automationHoverBuilds(), builds,
           "a repeated hover at the same point publishes nothing new")
 
-S054 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1932
+S054 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1933
 QML expression:
   mouseMove(gutter, gutter.width / 2, gutter.height / 2)
   tryVerify(function() { return model.hoverVisible === false }, 2000,
             "leaving the plot clears the hover")
 
-S055 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1945
+S055 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1946
 QML expression:
   mouseMove(input, point.x, point.y)
   tryVerify(function() { return model.hoverVisible === true }, 2000,
             "a move after a leave revives the hover")
 
-S056 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1964
+S056 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1965
 QML expression:
   mouseClick(input, point.x, point.y, Qt.RightButton)
   tryVerify(function() { return bootstrap.automationMenuOpen() === true }, 2000,
             "the right click opened the node menu")
 
-S057 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1975
+S057 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1978
 QML expression:
   keyClick(Qt.Key_Escape)
   tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
             "dismissing the menu closes it")
 
-S058 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1978
+S058 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1981
 QML expression:
   mouseMove(input, gapX, free.y)
   tryVerify(function() { return model.hoverVisible === true }, 2000,
@@ -2487,45 +2487,47 @@ Swift expression:
                      cppID: drawerAutomationPaintingModelID,
                      what: "Tempo shares the active lane's grid centers")
 
-S088 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1866
+S088 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1867
 QML expression:
   var hoverRing = findChild(hoveredNode, "automationNodeHover")
   verify(hoverRing, "the hovered node draws its hover ring")
   compare(hoverRing.visible, true, "the hover ring shows on the hovered node")
 
-S089 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1869
+S089 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1870
 QML expression:
   fuzzyCompare(hoverRing.x + hoverRing.width / 2, hoveredNode.model.x, 0.01,
                "the hover ring centers on its node")
   fuzzyCompare(hoverRing.y + hoverRing.height / 2, hoveredNode.model.y, 0.01,
                "the hover ring centers on its node vertically")
 
-S090 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1873
+S090 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1874
 QML expression:
   compare(hoverRing.width, 2 * hoveredNode.model.ringRadius,
           "the hover ring spans twice its ring radius")
 
-S091 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1911
+S091 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1918
 QML expression:
   compare(ringed, 0, "a background hover rings no node")
   ...
   compare(shownRings, 0, "a background hover draws no ring")
 
-S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1967
+S092 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1968
 QML expression:
   var status = findChild(testCase.surface, "mouseHintStatus")
   var hintStatusText = status ? findChild(status, "mouseHintStatusText") : null
   verify(hintStatusText, "the production status strip is drawn")
   tryVerify(function() { return hintStatusText.text === "" }, 2000,
             "the open menu mutes the underlay hint")
+  tryCompare(testCase.surface.hintService, "text", "")
 
-S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1972
+S093 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1974
 QML expression:
   mouseMove(input, gapX, free.y)
   tryVerify(function() { return hintStatusText.text === "" }, 2000,
             "motion between underlying targets stays muted")
+  tryCompare(testCase.surface.hintService, "text", "")
 
-S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1981
+S094 | test_productionAutomationHoverThroughInput | src/checks/editorqml/tst_EditorDrawer.qml:1984
 QML expression:
   tryVerify(function() { return hintStatusText.text.length > 0 }, 2000,
             "pointer motion after a dismissal restores the underlay hint")

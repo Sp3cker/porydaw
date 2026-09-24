@@ -1825,6 +1825,7 @@ TestCase {
 
     function test_productionAutomationHoverThroughInput() {
         if (testCase.containerPhase) skip("the production cases run in the lane's own process")
+        failOnWarning(/ReferenceError|TypeError|Binding loop|Unable to assign|[Rr]equired property/)
         testCase.mountProductionAutomation(bootstrap.preferencesUrl("production-automation-hover"))
         verify(testCase.writeVolumeLanePoints(bootstrap.automationVolumeIndex()))
         var model = testCase.automationModel()
@@ -1969,9 +1970,11 @@ TestCase {
         verify(hintStatusText, "the production status strip is drawn")
         tryVerify(function() { return hintStatusText.text === "" }, 2000,
                   "the open menu mutes the underlay hint")
+        tryCompare(testCase.surface.hintService, "text", "")
         mouseMove(input, gapX, free.y)
         tryVerify(function() { return hintStatusText.text === "" }, 2000,
                   "motion between underlying targets stays muted")
+        tryCompare(testCase.surface.hintService, "text", "")
         keyClick(Qt.Key_Escape)
         tryVerify(function() { return bootstrap.automationMenuOpen() === false }, 2000,
                   "dismissing the menu closes it")

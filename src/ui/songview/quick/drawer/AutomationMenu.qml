@@ -70,6 +70,7 @@ FocusScope {
     }
     function dismiss() { model.dismissMenu() }
     MouseArea {
+        id: underlay
         objectName: "automationMenuUnderlay"
         anchors.fill: parent
         onPressed: mouse => {
