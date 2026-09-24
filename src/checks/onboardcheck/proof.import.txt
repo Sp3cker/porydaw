@@ -4,7 +4,7 @@ Reference revision: f7a01dba0d8595d9fc4070f1767d69d8d9ed76a8
 Original: src/checks/onboardcheck/import.cpp
 Original SHA-256: b0831014eeca2f2069d1bbf87af241322c7c51b605133d45381b76c72800ac48
 Swift counterpart: src/checks/editcheck/EventChecks.swift (importAnalysis/importTransforms, the onboardcheck import predicates executed by runMidiImportSuite)
-Swift SHA-256: 6d77e5a9e9ba7e05dfadf3cba4f2ec298f3883fd5185a371e0c062643b267d04
+Swift SHA-256: c03861d87d2573623c795dfb0f589b1f4bc3a1d1b8c840eedc92091d794fb492
 
 Status and evidence
 This is an assertion-site inventory, not a count-based equivalence claim. Every
@@ -33,7 +33,7 @@ The swiftcore lane executes runMidiImportSuite, the only Swift entry point for t
 
 Swift sources inspected (SHA-256)
 No same-dir import.swift exists. Related predicates live in
-src/checks/editcheck/EventChecks.swift: 6d77e5a9e9ba7e05dfadf3cba4f2ec298f3883fd5185a371e0c062643b267d04
+src/checks/editcheck/EventChecks.swift: c03861d87d2573623c795dfb0f589b1f4bc3a1d1b8c840eedc92091d794fb492
 Only that file references onboardcheck/ cppIDs in Swift; the S
 entries below are its report.expect*/report.fail calls carrying
 onboardcheck cppIDs. Predicates in the same Swift functions with
@@ -279,7 +279,7 @@ Original expression:
 
 A021 | OnboardingTest::importDedup | src/checks/onboardcheck/import.cpp:87
 Disposition: MATCHED
-Mapping/reason: Matched by S048 (do/catch at EventChecks.swift:497-499 fails the suite when duplicate_setters.mid read/decode fails) and S035 (missing fixture root).
+Mapping/reason: Matched by S048 (do/catch at EventChecks.swift:498-500 fails the suite when duplicate_setters.mid read/decode fails) and S035 (missing fixture root).
 Source context since previous assertion:
 
               previous = event.tick;
@@ -513,7 +513,7 @@ Original expression:
 
 A042 | OnboardingTest::importRescaleOverflow | src/checks/onboardcheck/import.cpp:164
 Disposition: MATCHED
-Mapping/reason: Matched by S050 (do/catch rejection of rescaleDivision(to: 48) on the division-24 kMaxTick boundary fixture built at EventChecks.swift:504-509). Supersedes the earlier PARTIAL, which cited only the division-1/.max predicate S008.
+Mapping/reason: Matched by S050 (do/catch rejection of rescaleDivision(to: 48) on the division-24 kMaxTick boundary fixture built at EventChecks.swift:505-510). Supersedes the earlier PARTIAL, which cited only the division-1/.max predicate S008.
 Source context since previous assertion:
 
   }
@@ -1455,54 +1455,54 @@ Verbatim call:
             report.expectEqual(2, conductor.filter { $0.metaType == 0x01 }.count,
                                cppID: dedupID, what: "text event count")
 
-S043 | importTransforms | src/checks/editcheck/EventChecks.swift:482
+S043 | importTransforms | src/checks/editcheck/EventChecks.swift:483
 Verbatim call:
                     report.expect(data1 > previousLabel, cppID: dedupID,
                                   message: "tick-zero label \(labelCount) increases")
 
-S044 | importTransforms | src/checks/editcheck/EventChecks.swift:489
+S044 | importTransforms | src/checks/editcheck/EventChecks.swift:490
 Verbatim call:
             report.expect(programIndex != nil && hasCC7 && hasBend, cppID: dedupID,
                           message: "tick-zero program, volume and bend survive")
 
-S045 | importTransforms | src/checks/editcheck/EventChecks.swift:491
+S045 | importTransforms | src/checks/editcheck/EventChecks.swift:492
 Verbatim call:
             report.expectEqual(2, labelCount, cppID: dedupID, what: "tick-zero label count")
 
-S046 | importTransforms | src/checks/editcheck/EventChecks.swift:492
+S046 | importTransforms | src/checks/editcheck/EventChecks.swift:493
 Verbatim call:
             report.expectEqual(UInt8(3), previousLabel, cppID: dedupID,
                                what: "last tick-zero label value")
 
-S047 | importTransforms | src/checks/editcheck/EventChecks.swift:494
+S047 | importTransforms | src/checks/editcheck/EventChecks.swift:495
 Verbatim call:
             report.expect(programIndex.flatMap { program in
                 firstNote.map { program < $0 }
             } == true, cppID: dedupID, message: "tick-zero program precedes first note")
 
-S048 | importTransforms | src/checks/editcheck/EventChecks.swift:498
+S048 | importTransforms | src/checks/editcheck/EventChecks.swift:499
 Verbatim call:
             report.fail(dedupID, "duplicate_setters.mid read/decode failed: \(error)")
 
-S049 | importTransforms | src/checks/editcheck/EventChecks.swift:501
+S049 | importTransforms | src/checks/editcheck/EventChecks.swift:502
 Verbatim call:
         report.fail(dedupID, "missing --swiftcore fixture root")
 
-S050 | importTransforms | src/checks/editcheck/EventChecks.swift:512
+S050 | importTransforms | src/checks/editcheck/EventChecks.swift:513
 Verbatim call:
             report.fail(overflowID, "boundary rescale unexpectedly succeeded")
 
-S051 | importTransforms | src/checks/editcheck/EventChecks.swift:514
+S051 | importTransforms | src/checks/editcheck/EventChecks.swift:515
 Verbatim call:
         report.expectEqual(UInt16(24), boundary.division, cppID: overflowID,
                            what: "overflow keeps original division")
 
-S052 | importTransforms | src/checks/editcheck/EventChecks.swift:516
+S052 | importTransforms | src/checks/editcheck/EventChecks.swift:517
 Verbatim call:
         report.expectEqual(TimeDefaults.maxTick, boundary.chunks[0].events[0].tick,
                            cppID: overflowID, what: "overflow keeps boundary event tick")
 
-S053 | importTransforms | src/checks/editcheck/EventChecks.swift:518
+S053 | importTransforms | src/checks/editcheck/EventChecks.swift:519
 Verbatim call:
         report.expectEqual("Tick rescale to division 48 exceeds 32-bit tick range",
                            String(describing: error), cppID: overflowID,

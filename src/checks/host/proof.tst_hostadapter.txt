@@ -24,7 +24,7 @@ Fixture, sequence and row constraints
 Every case opens with the host.prepare guard; band-geometry cases expand one QCOMPARE site per published band row (rect, plot, visibility entries). The four physicalInputsMatchCanonical calls expand input-parity obligations across pointer surfaces. Velocity/roll plot assertions expand over the track-headers, keyboard, and drawer-body geometry rows.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 0, GAP 43, NATIVE 0, RETIRED-REPRESENTATION 152.
+Tally: MATCHED 0, PARTIAL 0, GAP 91, NATIVE 0, RETIRED-REPRESENTATION 104.
 
 Original assertion inventory and source sequence
 
@@ -347,8 +347,8 @@ Original expression:
   QVERIFY2(!publishedFrame.isNull(), qPrintable(captureError))
 
 A025 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:130
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers band geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/TrackHeadersGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers band geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const songview::TimelineBandLayout &layout = view.timelineBandLayout();
@@ -358,8 +358,8 @@ Original expression:
   QVERIFY(trackHeaders.has_value())
 
 A026 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:131
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers plot-rect emptiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/TrackHeadersGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers plot-rect emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -367,8 +367,8 @@ Original expression:
   QVERIFY(trackHeaders->plotRect.isEmpty())
 
 A027 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:136
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band layout geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band layout geometry presence across the ruler/roll/other-events/velocity rows; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           for (songview::TimelineBand band :
@@ -380,8 +380,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A028 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:137
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band layout rect non-emptiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band layout rect non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -389,8 +389,8 @@ Original expression:
   QVERIFY(!geometry->rect.isEmpty())
 
 A029 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:138
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band layout plot-rect non-emptiness; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band layout plot-rect non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -398,8 +398,8 @@ Original expression:
   QVERIFY(!geometry->plotRect.isEmpty())
 
 A030 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:139
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -407,8 +407,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.x(), view.timelineSplitX())
 
 A031 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:140
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band plot right edge aligned to the band rect; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift GridGeometry/EditorDrawerPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the band plot right edge aligned to the band rect; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -416,8 +416,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.right(), geometry->rect.right())
 
 A032 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:141
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers/band plot non-intersection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter/GridGeometry owns the track-headers/band plot non-intersection; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -425,8 +425,8 @@ Original expression:
   QVERIFY(!trackHeaders->rect.intersects(geometry->plotRect))
 
 A033 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:169
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band rect published to a QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band rect published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           }
@@ -461,8 +461,8 @@ Original expression:
   QCOMPARE(root->property(entry.rect).toRectF(), expectedRect)
 
 A034 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:170
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band plot published to a QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band plot published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -470,8 +470,8 @@ Original expression:
   QCOMPARE(root->property(entry.plot).toRectF(), expectedPlot)
 
 A035 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:171
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band visibility published to a QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band visibility published to the QML root property per band entry; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -546,8 +546,8 @@ Original expression:
   QVERIFY(roll.has_value())
 
 A042 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:191
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity band left edge aligned to the track-headers width; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band left edge aligned to the track-headers width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -555,8 +555,8 @@ Original expression:
   QCOMPARE(velocity->rect.x(), trackHeaders->rect.width())
 
 A043 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:192
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -564,8 +564,8 @@ Original expression:
   QCOMPARE(velocity->plotRect.x(), view.timelineSplitX())
 
 A044 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:193
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the roll plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -573,8 +573,8 @@ Original expression:
   QCOMPARE(roll->plotRect.x(), view.timelineSplitX())
 
 A045 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:194
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity plot offset equal to the host piano-keyboard width; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity plot offset equal to the piano-keyboard width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -582,8 +582,8 @@ Original expression:
   QCOMPARE(velocity->plotRect.x() - velocity->rect.x(), view.pianoKeyboardWidth())
 
 A046 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:195
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll plot offset equal to the host piano-keyboard width; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the roll plot offset equal to the piano-keyboard width; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -591,8 +591,8 @@ Original expression:
   QCOMPARE(roll->plotRect.x() - roll->rect.x(), view.pianoKeyboardWidth())
 
 A047 | canonicalGeometryProjectsToQuick | src/checks/host/tst_hostadapter.cpp:196
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer body rect matched to the velocity band rect; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer body rect matched to the velocity band rect; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -847,8 +847,8 @@ Original expression:
   QVERIFY(body.has_value())
 
 A071 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:260
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome velocity handle visibility; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome velocity handle visibility; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -856,8 +856,8 @@ Original expression:
   QVERIFY(chrome.velocityHandleVisible())
 
 A072 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:261
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome automation handle hidden state; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome automation handle hidden state; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -865,8 +865,8 @@ Original expression:
   QVERIFY(!chrome.automationHandleVisible())
 
 A073 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:262
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome voice-changes handle hidden state; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome voice-changes handle hidden state; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -874,8 +874,8 @@ Original expression:
   QVERIFY(!chrome.voiceChangesHandleVisible())
 
 A074 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:263
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer overlay rect above the other-events band; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer overlay rect above the other-events band (vertical non-intersection); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -883,8 +883,8 @@ Original expression:
   QVERIFY(drawer->overlayRect().bottom() < other->rect.top())
 
 A075 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:264
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome handle rect aligned to the drawer body; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome handle rect aligned to the drawer body; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -892,8 +892,8 @@ Original expression:
   QCOMPARE(chrome.velocityHandleRect().bottom(), body->top())
 
 A076 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:265
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer body bottom aligned to the chrome bar top; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer body bottom aligned to the chrome bar top; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -901,8 +901,8 @@ Original expression:
   QCOMPARE(body->bottom() + 1, qRound(chrome.barRect().top()))
 
 A077 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:266
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome automation/voice-changes toggle spacing; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome automation/voice-changes toggle spacing; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -912,8 +912,8 @@ Original expression:
                                                           layout::space(layout::Space::One))
 
 A078 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:269
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome velocity/automation toggle spacing; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome velocity/automation toggle spacing; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -923,8 +923,8 @@ Original expression:
                                                         layout::space(layout::Space::One))
 
 A079 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:276
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome toggles centred on the piano keyboard; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome toggles centred on the piano keyboard; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const QRectF toggles = chrome.voiceChangesToggleRect()
@@ -956,8 +956,8 @@ Original expression:
   QVERIFY(headers && headerBand && headerInput && headerRows && headerScroll && headerThumb)
 
 A081 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:291
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers band geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter/TrackHeadersGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter/TrackHeadersGeometry owns the track-headers band geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto headersGeometry =
@@ -985,8 +985,8 @@ Original expression:
   QCOMPARE(headerRows->property("count").toInt(), headers->rowCount())
 
 A084 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:294
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers scrollbar width projection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter owns the track-headers scrollbar width projection; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -994,8 +994,8 @@ Original expression:
   QCOMPARE(headerScroll->width(), headers->scrollbarWidth())
 
 A085 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:295
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers scrollbar visibility projection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter owns the track-headers scrollbar visibility projection; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1003,8 +1003,8 @@ Original expression:
   QCOMPARE(headerScroll->isVisible(), headers->maximumScrollY() > 0.0)
 
 A086 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:296
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old track-headers scrollbar thumb visibility projection; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift TrackHeadersPresenter owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift TrackHeadersPresenter owns the track-headers scrollbar thumb visibility projection; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1012,8 +1012,8 @@ Original expression:
   QCOMPARE(headerThumb->isVisible(), headers->maximumScrollY() > 0.0)
 
 A087 | drawerChromeAndQuickHeadersFollowCanonicalGeometry | src/checks/host/tst_hostadapter.cpp:297
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old quick ruler plot origin aligned to the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift GridGeometry/EditorDrawerPresenter owns the quick ruler plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1100,8 +1100,8 @@ Original expression:
   QVERIFY(after.has_value())
 
 A095 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:321
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old band geometry re-publication to QML root properties; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the band geometry rect change re-published to the QML root properties; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1109,8 +1109,8 @@ Original expression:
   QVERIFY(after->rect != before->rect)
 
 A096 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:327
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity band rect re-published to the QML root property; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band rect re-published to the QML root property; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           // No event-loop pump: the drawer chrome snapshot publishes through
@@ -1123,8 +1123,8 @@ Original expression:
   QCOMPARE(root->property("velocityBandRect").toRectF(), QRectF(after->rect))
 
 A097 | bandGeometryPublishesWithTheChoreography | src/checks/host/tst_hostadapter.cpp:328
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old drawer chrome handle rect following the published band rect; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the drawer chrome handle rect following the published band rect; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1190,8 +1190,8 @@ Original expression:
   QVERIFY(root)
 
 A101 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:365
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old hidden band cleared from the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band cleared from the band layout (geometry presence); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, false);
@@ -1201,8 +1201,8 @@ Original expression:
   QVERIFY(!view.timelineBandLayout().geometry(band).has_value())
 
 A102 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:366
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old hidden band visible property cleared on the QML root; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band visible property cleared on the QML root; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1210,8 +1210,8 @@ Original expression:
   QVERIFY(!root->property(qPrintable(visibleProperty)).toBool())
 
 A103 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:367
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old hidden band rect property cleared on the QML root; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band rect property cleared on the QML root; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1242,8 +1242,8 @@ Original expression:
   QVERIFY(plot && gutter)
 
 A105 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:383
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old hidden band plot item visibility; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band plot item visibility; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1251,8 +1251,8 @@ Original expression:
   QVERIFY(!plot->isVisible())
 
 A106 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:384
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old hidden band gutter item visibility; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the hidden band gutter item visibility; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1260,8 +1260,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A107 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:387
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old restored band present in the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the restored band present in the band layout; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setDrawerSectionVisible(page, true);
@@ -1271,8 +1271,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(band).has_value())
 
 A108 | hiddenBandsClearEveryProjection | src/checks/host/tst_hostadapter.cpp:388
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old restored band visible property on the QML root; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EditorDrawerLayout owns the restored band visible property on the QML root; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1326,8 +1326,8 @@ Original expression:
   QVERIFY(root)
 
 A113 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:405
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll band cleared from the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll band cleared from the band layout under the event-list toggle; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setEventListVisible(true);
@@ -1350,8 +1350,8 @@ Original expression:
   QVERIFY(roll && gutter)
 
 A115 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:411
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll plot item visibility under the event-list toggle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll plot item visibility under the event-list toggle; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1359,8 +1359,8 @@ Original expression:
   QVERIFY(!roll->isVisible())
 
 A116 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:412
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll gutter item visibility under the event-list toggle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll gutter item visibility under the event-list toggle; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1368,8 +1368,8 @@ Original expression:
   QVERIFY(!gutter->isVisible())
 
 A117 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:413
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old velocity band presence in the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the velocity band presence while roll is hidden; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -1377,8 +1377,8 @@ Original expression:
   QVERIFY(view.timelineBandLayout().geometry(songview::TimelineBand::Velocity).has_value())
 
 A118 | eventListHidesOnlyRollProjection | src/checks/host/tst_hostadapter.cpp:416
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old roll band restored in the host band layout; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/EventListPresenter owns the roll band restored in the band layout; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setEventListVisible(false);
@@ -1424,8 +1424,8 @@ Original expression:
   QVERIFY(root)
 
 A122 | otherEventsTooltipUsesTheQuickInputAndClearsOnLeave | src/checks/host/tst_hostadapter.cpp:433
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old other-events input item and band geometry discovery; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift ApplicationSession/EditorSurface.qml shell owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the other-events band geometry presence (with input discovery); no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           auto *input = root->findChild<songview::TimelineInputItem *>(
@@ -1588,8 +1588,8 @@ Original expression:
   QVERIFY2(host.prepare(&error), qPrintable(error))
 
 A135 | loopMarkersReachTimelineButNotTheOtherEventsRaster | src/checks/host/tst_hostadapter.cpp:492
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old other-events band geometry discovery for the raster probe; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the other-events band geometry presence for the raster probe; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           SongView &view = host.view();

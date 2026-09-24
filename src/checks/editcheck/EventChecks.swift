@@ -473,7 +473,8 @@ private func importTransforms(_ report: CheckReport) {
             var firstNote: Int?
             var hasCC7 = false
             var hasBend = false
-            for (index, event) in lead.events.enumerated() where event.tick == 0 {
+            for (index, event) in lead.events.enumerated() {
+                if event.tick != 0 { break }
                 guard case let .channel(status, value, data1) = event.payload else { continue }
                 if status >> 4 == 0xC && value == 12 { programIndex = index }
                 if status >> 4 == 0xB && value == 7 && data1 == 80 { hasCC7 = true }

@@ -24,7 +24,7 @@ Fixture, sequence and row constraints
 A two-note track fixture anchors the velocity-gesture cases: begin, update, preview, commit, and undo stages expand one site per gesture phase, with framebuffer captures (baseline, committed, undone, deselected, zoomed) guarding each rendering stage. Focus-band and pan-delivery cases iterate timeline bands, expanding mouse-grabber and isPanning sites per band.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 0, GAP 86, NATIVE 0, RETIRED-REPRESENTATION 99.
+Tally: MATCHED 0, PARTIAL 0, GAP 88, NATIVE 0, RETIRED-REPRESENTATION 97.
 
 Original assertion inventory and source sequence
 
@@ -262,8 +262,8 @@ Original expression:
   QVERIFY2(found, "required route101 fixture has no steady 120-tick voice context")
 
 A008 | steadyPlaybackIsPresentationOnly | src/checks/host/tst_hostintegration.cpp:184
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation band layout geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           view.setFollowPlayhead(false);
@@ -1759,8 +1759,8 @@ Original expression:
   QVERIFY(automation)
 
 A142 | appearanceNotificationPreservesAutomationRaster | src/checks/host/tst_hostintegration.cpp:606
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation band layout geometry handle; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift EditorDrawerPresenter/GridGeometry owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift EditorDrawerPresenter/GridGeometry owns the automation band layout geometry presence; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           const auto geometry =

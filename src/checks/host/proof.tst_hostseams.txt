@@ -24,7 +24,7 @@ Fixture, sequence and row constraints
 drawerContextTick boundary rows (-1.0, 0.49, 0.5, 0.51 ticks) expand one conversion site into four edge cases. The embedded-window case runs a two-phase sequence (take for embedding, then detach) with detach-count and identity sites per phase; the unhosted-detach case asserts the same obligations after synchronous window destruction.
 Original setup, branch guards and helper implementations at the reference revision remain authoritative; this inventory does not replace those sources.
 
-Tally: MATCHED 0, PARTIAL 0, GAP 16, NATIVE 0, RETIRED-REPRESENTATION 42.
+Tally: MATCHED 0, PARTIAL 0, GAP 21, NATIVE 0, RETIRED-REPRESENTATION 37.
 
 Original assertion inventory and source sequence
 
@@ -121,8 +121,8 @@ Original expression:
   QVERIFY(tempoIndex >= 0)
 
 A006 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:58
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation band geometry coupled to the host widget viewport; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationLaneProjection owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the automation band geometry presence coupled to the viewport; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
           canvas->activateParameter(tempoIndex);
@@ -134,8 +134,8 @@ Original expression:
   QVERIFY(geometry.has_value())
 
 A007 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:59
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation plot origin read from the host timeline split; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/EditorDrawerLayout owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the automation plot origin x aligned to the timeline split; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -143,8 +143,8 @@ Original expression:
   QCOMPARE(geometry->plotRect.x(), host.view().timelineSplitX())
 
 A008 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:60
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation viewport size published to the page widget; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationScene owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the automation viewport size matched to the plot size; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -152,8 +152,8 @@ Original expression:
   QCOMPARE(page->automationViewportSize(), geometry->plotRect.size())
 
 A009 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:61
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation viewport emptiness on the host widget; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationScene owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the automation viewport non-emptiness; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
@@ -161,8 +161,8 @@ Original expression:
   QVERIFY(!page->automationViewportSize().isEmpty())
 
 A010 | automationPlotFillsHostViewport | src/checks/host/tst_hostseams.cpp:62
-Disposition: RETIRED-REPRESENTATION
-Mapping/reason: Retired host representation: old automation canvas lane body sized from the widget viewport; uncompiled in all CMake targets and unregistered in checkcatalog; no Swift ingress (Swift AutomationPage/AutomationScene owns the behavior).
+Disposition: GAP
+Mapping/reason: Swift AutomationPage/AutomationLaneProjection owns the automation lane body sized from the viewport; no equivalent Swift/QML geometry predicate established for this deleted host suite, so the original predicate remains an open obligation.
 Source context since previous assertion:
   ;
 
