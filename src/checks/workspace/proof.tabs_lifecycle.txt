@@ -4,7 +4,7 @@ Reference revision: 02dce75dd21f84e3b59b399d84afb9f123775e39
 Original: src/checks/workspace/tabs_lifecycle.cpp
 Original SHA-256: efa27b88b9b18028b26285dec0f805661fe0c642b34959c7777f010b9e93a74c
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
+Swift SHA-256: 8783f082390c2394febe9205babef51ca6ac5b211a9453cffdc171e4f699c520
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift SHA-256: 421e737799b9ec913dd08667f0867a96dbc089dc64157a21927105f9601ed2eb
 Swift counterpart: src/checks/workspace/session_io.swift
@@ -42,7 +42,7 @@ here. NATIVE marks sites whose expression names native-harness objects or
 values produced through them; GAP marks portable value/codec/model
 comparisons a presenter-level check could in principle establish.
 WorkspaceTabsTest lifecycle, editUndo, reload, and dirtyClose flows: two-tab open/select/close with audio-engine retargeting, per-tab dirty/undo isolation, reload that retains camera while resetting history, and the production Save/Discard/Cancel dirty-close gate over three data rows.
-tabs_lifecycle.cpp contributes 131 sites: 0 MATCHED, 0 PARTIAL, 1 GAP, 130 NATIVE. The paired
+tabs_lifecycle.cpp contributes 131 sites: 0 MATCHED, 0 PARTIAL, 74 GAP, 0 NATIVE, 57 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.

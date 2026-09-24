@@ -4,7 +4,7 @@ Reference revision: 4ae6619dda9405bf0a3352e4171d9da54ef04f1f
 Original: src/checks/workspace/tabs_persistence.cpp
 Original SHA-256: b5162c110e96c701355475ccbcef23e2f2f44defb1594fc61b6f1e4270b0b130
 Swift counterpart: src/checks/workspace/SessionChecks.swift
-Swift SHA-256: 699365d4e7c02d253c0ba487c22cabb17dd44f1809c8b09c1579ee76e7179e3a
+Swift SHA-256: 8783f082390c2394febe9205babef51ca6ac5b211a9453cffdc171e4f699c520
 Swift counterpart: src/checks/workspace/session_editor_semantics.swift
 Swift SHA-256: 421e737799b9ec913dd08667f0867a96dbc089dc64157a21927105f9601ed2eb
 Swift counterpart: src/checks/workspace/session_io.swift
@@ -42,7 +42,7 @@ here. NATIVE marks sites whose expression names native-harness objects or
 values produced through them; GAP marks portable value/codec/model
 comparisons a presenter-level check could in principle establish.
 WorkspaceTabsTest persistenceRestoresTabs (two-tab display order, per-tab editor state, output-volume dial across relaunch) and voicegroupRefresh (shared-bank edit propagation, save, unchanged/touched reload identity, modal watchdog).
-tabs_persistence.cpp contributes 71 sites: 0 MATCHED, 0 PARTIAL, 0 GAP, 71 NATIVE. The paired
+tabs_persistence.cpp contributes 71 sites: 0 MATCHED, 0 PARTIAL, 36 GAP, 0 NATIVE, 35 RETIRED-REPRESENTATION. The paired
 counterpart drives the disjoint DocumentSession/ProjectService/bank-history
 suite; it never opens a MainWindow, workspace tab, transport, scale control,
 or editor-codec flow, so no workspace-flow predicate is matched here.
