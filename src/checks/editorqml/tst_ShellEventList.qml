@@ -79,8 +79,8 @@ TestCase {
         verify(session.songOpen, session.lastSaveError)
         const tab = findChild(shell.sceneLoader.item, "songTab_" + session.songTabs.selectedId)
         verify(tab !== null, "selected song page is present")
-        const toggle = findChild(tab, "songTabEventListToggle")
-        verify(toggle !== null)
+        const toggle = findChild(shell.sceneLoader.item, "songTabEventListToggle")
+        verify(toggle !== null, "the strip page toggle is present")
         const presenter = session.eventListPresenter()
         compare(presenter.visible, false, "event list is hidden until requested")
         mouseClick(toggle)
@@ -90,7 +90,8 @@ TestCase {
         const table = findChild(page, "eventListTable")
         verify(table !== null, "existing seven-column table is rendered")
         compare(table.columns, 7)
-        compare(table.rows, presenter.rowCount)
+        tryVerify(function() { return table.rows === presenter.rowCount }, 3000,
+                  "the seven-column table syncs to the published rows")
         verify(presenter.rowCount > 1, "fixture contains editable events")
         compare(presenter.rowKind(presenter.rowCount - 1), 2,
                 "end-of-track remains the last row")

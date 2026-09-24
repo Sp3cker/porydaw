@@ -1290,7 +1290,7 @@ FocusScope {
     Connections {
         target: page.controller
 
-        function onColumnWidthsChanged() {
+        function onColumnWidthsRevisionChanged() {
             page.requestTableLayout()
         }
 

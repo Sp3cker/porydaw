@@ -93,8 +93,8 @@ Original expression:
 QVERIFY2(opened, qPrintable(opened.error))
 
 A002 | EventViewsChromeTest::visibilityAndTrackSelection | src/checks/eventviews/chrome.cpp:63
-Disposition: PARTIAL
-Mapping/reason: tst_ShellEventList.qml asserts the Swift page is hidden before the tab toggle; this check awaits orchestrator execution.
+Disposition: MATCHED
+Mapping/reason: tst_ShellEventList.qml compares presenter.visible false before the strip toggle (shell-event-list, executed).
 Source context since previous assertion:
 ;
 
@@ -608,7 +608,7 @@ QVERIFY(widgets)
 
 A043 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:268
 Disposition: PARTIAL
-Mapping/reason: tst_ShellEventList.qml asserts the Notes mask toggles through the mounted Swift page; the seven-category matrix remains unproved and this check awaits execution.
+Mapping/reason: tst_ShellEventList.qml toggles the Notes mask through the mounted Swift page (shell-event-list, executed); the remaining six categories of the matrix stay unproved.
 Source context since previous assertion:
 ;
 
@@ -638,7 +638,7 @@ QCOMPARE(widgets.controller->filterMask(), wantedMask)
 
 A044 | EventViewsChromeTest::filterMatrix | src/checks/eventviews/chrome.cpp:269
 Disposition: PARTIAL
-Mapping/reason: tst_ShellEventList.qml asserts the visible table shrinks when Notes are hidden and retains EOT; the complete category matrix and check execution remain outstanding.
+Mapping/reason: tst_ShellEventList.qml verifies the visible table shrinks when Notes are hidden and retains EOT (shell-event-list, executed); the remaining matrix rows stay unproved.
 Source context since previous assertion:
 ;
 
