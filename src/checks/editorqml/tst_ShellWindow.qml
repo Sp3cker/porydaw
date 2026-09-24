@@ -335,6 +335,7 @@ TestCase {
         keyClick(Qt.Key_1)
         keyClick(Qt.Key_2)
         compare(field.text, "12", "digits stay in the focused numeric editor")
+        var windowCopyBeforePrompt = copyActivatedSpy.count
         field.selectAll()
         keySequence(StandardKey.Copy)
         field.selectAll()
@@ -342,16 +343,26 @@ TestCase {
         field.selectAll()
         keySequence(StandardKey.Paste)
         compare(field.text, "12", "native Copy and Paste stay with the text editor")
+        compare(copyActivatedSpy.count, windowCopyBeforePrompt,
+                "prompt Copy/Paste never fire the window Copy action")
         compare(field.activeFocus, true, "local Copy/Paste retains numeric focus")
         keyClick(Qt.Key_S)
         compare(firstTrack.soloChecked, false, "S in a numeric editor never fires Solo")
         compare(session.velocityPage().promptOpen, true)
+        keyClick(Qt.Key_Up)
+        keyClick(Qt.Key_Down)
+        compare(field.activeFocus, true, "prompt arrows keep focus in the numeric editor")
+        compare(session.velocityPage().promptOpen, true)
+        tryCompare(session.velocityPage(), "selectedCount", 1, 3000,
+                   "prompt arrows keep the musical selection")
+        compare(session.documentDirty, false, "prompt arrows never edit the song")
+        var promptTextAfterArrows = field.text
         var playhead = session.playheadPresenter()
         compare(playhead.playing, false)
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", true, 3000,
                    "window Space owns transport even with numeric text focus")
-        compare(field.text, "12", "transport Space never modifies numeric text")
+        compare(field.text, promptTextAfterArrows, "transport Space never modifies numeric text")
         compare(field.activeFocus, true)
         keyClick(Qt.Key_Space)
         tryCompare(playhead, "playing", false, 3000,
@@ -359,6 +370,25 @@ TestCase {
         compare(session.velocityPage().promptOpen, true)
         keyClick(Qt.Key_Escape)
         tryCompare(session.velocityPage(), "promptOpen", false, 3000)
+        var drawer = findChild(surface, "editorDrawer")
+        verify(drawer, "the production drawer is mounted")
+        var velocityToggle = findChild(drawer, "drawerToggle_velocity")
+        verify(velocityToggle && velocityToggle.visible, "the velocity toggle is drawn")
+        velocityToggle.forceActiveFocus(Qt.OtherFocusReason)
+        tryCompare(velocityToggle, "activeFocus", true, 3000,
+                   "drawer chrome takes keyboard focus")
+        var toggleSectionVisible = surface.drawerPresenter.section(
+                    bootstrap.velocitySectionKind()).visible
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", true, 3000,
+                   "bare Space on focused drawer chrome owns transport")
+        compare(surface.drawerPresenter.section(
+                    bootstrap.velocitySectionKind()).visible, toggleSectionVisible,
+                "chrome Space never toggles the focused section")
+        compare(session.documentDirty, false, "chrome Space never edits the song")
+        keyClick(Qt.Key_Space)
+        tryCompare(playhead, "playing", false, 3000,
+                   "the second chrome Space stops transport")
     }
 
 }

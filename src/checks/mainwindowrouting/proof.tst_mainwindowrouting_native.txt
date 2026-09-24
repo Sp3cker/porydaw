@@ -21,6 +21,10 @@ Additional Swift counterpart: src/checks/workspace/session_playback.swift
 Additional Swift SHA-256: 23b41aefbc67fb91060aa78dd98773b410e84ab029c1949c194713ebbf7108ed
 Additional Swift counterpart: src/checks/workspace/session_save.swift
 Additional Swift SHA-256: 895442c33cdc8c026a2d391f810bca48c3c8196b42316720546d9f886ff36eec
+Additional Swift counterpart: src/checks/editorqml/ShellQmlTests.swift
+Additional Swift SHA-256: e6d919d7052150913adb2b7aea97b9f5a5c3697e259177def2c011224ba09a3f
+Additional Swift counterpart: src/checks/editorqml/tst_ShellWindow.qml
+Additional Swift SHA-256: 8bfc62d0ee7a984bcf7b8c03831d2922ce1587f37a2a88ea1cb8a970ce13ae26
 
 Status and evidence
 Four test methods, every one gated on the Cocoa WindowSystem backend (QSKIP otherwise): native menu/window shortcut routing, foreign-window key isolation with Insert Time popup protection, bound-view teardown unbinding, and the failed-project modal dialog preserving the live tab.
@@ -34,20 +38,31 @@ PARTIAL identifies related Swift predicates with an explicit unproved condition.
 NATIVE identifies retained native-window/rendering or native harness obligations;
 it does not establish coverage of a converted Swift window.
 GAP identifies an original predicate without a replacement assertion.
-Tally: MATCHED 0 / PARTIAL 7 / GAP 16 / NATIVE 57. No MATCHED site is claimed:
-no same-dir Swift counterpart exists for this suite, and none of the
-paired SessionChecks-suite predicates asserts the same Qt-routing observation.
+Tally: MATCHED 28 / PARTIAL 2 / GAP 14 / NATIVE 36. A002 and A004-A030 are
+MATCHED to the Qt Quick Test shellwindow lane
+(src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership
+with openTwoSongShell, plus the ShellQmlBootstrap clipboard helpers in
+src/checks/editorqml/ShellQmlTests.swift), cited inline without new S
+identifiers because that lane is not the paired SessionChecks counterpart.
+The remaining MATCHED/PARTIAL sites keep the paired SessionChecks predicates
+named in their mappings.
 The Swift SHA-256 values pin the worktree content inspected here, which is currently
 modified relative to its HEAD revision.
 
 Verification
 Command: deno task verify --filter swiftcore --verbose
 Result: pending integrated run; source hashes pin the tree inspected here.
-The swiftcore lane executes the Swift counterpart only. The Qt Widget/Quick
-delivery, Cocoa-gated, and harness-timing observations inventoried here execute
-only in the native Qt check harness, never in that lane.
+The swiftcore lane executes the paired Swift counterpart only. A002 and
+A004-A030 execute in the Qt Quick Test shellwindow lane instead
+(deno task verify:shell --filter shellwindow); this bookkeeping pass restates
+no result for that lane. The Cocoa-gated, native-window, and harness-timing
+observations inventoried here execute only in the native Qt check harness.
 
 Execution and ownership
+A002 and A004-A030 execute in the Qt Quick Test shellwindow lane
+(src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership,
+entry shellwindow in src/checks/editorqml/ShellQmlTests.swift). The rest of this
+section describes the paired Swift checks.
 The paired Swift checks execute under runProjectSessionSuite and
 runBankHistorySuite in src/checks/workspace/SessionChecks.swift; the
 predicates those suites own are split across the session_*.swift and
@@ -117,8 +132,8 @@ Original expression:
             QSKIP("requires the Cocoa WindowSystem backend")
 
 A002 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:31
-Disposition: GAP
-Mapping/reason: Fixture-open precondition for the two-song MainWindow session (and the two tabs being distinct); no SessionChecks predicate observes this Qt session open.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml openTwoSongShell opens mus_route101 then mus_littleroot_test from the same staged two-song fixture, observing tabCount 1 then 2 and Littleroot as the selected second tab; that open is the two-song session precondition. No QWidget layer exists in the Swift app.
 Source context since previous assertion:
         const std::optional<Session> session = openSession(m_projectRoot, m_songA, m_songB);
 Original expression:
@@ -141,8 +156,8 @@ Original expression:
                  "Cocoa did not make MainWindow active after show()")
 
 A004 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:44
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership verifies findChild(shell.menuBar, "shellEditMenu") with the message the production Edit menu exists. QML Menu replaces QMenu; menu identity is not claimed.
 Source context since previous assertion:
 
         QMenu *menu = editMenu(window);
@@ -150,8 +165,8 @@ Original expression:
         QVERIFY(menu)
 
 A005 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:47
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership verifies findChild(editMenu, "shellAction_roll.copy") is present, the real Edit-menu Copy action (Copy and Solo are real Edit-menu actions). QML Menu items replace QAction objects; pointer identity is not claimed.
 Source context since previous assertion:
         QAction *copy = window.m_copyAction;
         QAction *solo = window.m_soloAction;
@@ -159,24 +174,24 @@ Original expression:
         QVERIFY(copy)
 
 A006 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:48
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu/widget wiring, identity, or lookup. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership verifies findChild(editMenu, "shellAction_roll.solo_tracks") is present, the real Edit-menu Solo action (Copy and Solo are real Edit-menu actions). QML Menu items replace QAction objects; pointer identity is not claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QVERIFY(solo)
 
 A007 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:50
-Disposition: NATIVE
-Mapping/reason: Original native visibility/rendering obligation (widget shown/hidden, pixel grab). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership opens the production Edit menu (editMenu.open) and tryCompares editMenu visible true. QML Menu visibility replaces the original QMenu popup/isVisible probe; no native menu-bar rendering is claimed.
 Source context since previous assertion:
         menu->popup(window.mapToGlobal(QPoint(12, 12)));
 Original expression:
         QTRY_VERIFY(menu->isVisible())
 
 A008 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:63
-Disposition: GAP
-Mapping/reason: Fixture-seed guard or note-lookup probe with no corresponding SessionChecks predicate; GAP.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership parses surface.gridModel.noteSummary and compares the filtered selected notes to exactly one (copied.length 1, the real node click selected one note), the same selected-note precondition the original loop established.
 Source context since previous assertion:
         menu->hide();
 
@@ -194,8 +209,8 @@ Original expression:
         QVERIFY(note.has_value())
 
 A009 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:68
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership forceActiveFocuses the production roll and tryCompares roll activeFocus true (the Edit menu returned keyboard focus to the roll). QML Item focus replaces QApplication focus-widget identity; widget identity is not claimed.
 Source context since previous assertion:
         window.m_workspace->selectSongTab(session->b);
         view.focusActiveSurface();
@@ -205,16 +220,16 @@ Original expression:
         QVERIFY(target && (target == session->b || session->b->isAncestorOf(target)))
 
 A010 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:70
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership verifies actionSequences("roll.copy").length > 0 (native Copy is registered as a window shortcut), replacing the QAction shortcut projection.
 Source context since previous assertion:
         const QList<QKeySequence> copyBindings = copy->shortcuts();
 Original expression:
         QVERIFY(!copyBindings.isEmpty())
 
 A011 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:73
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership spies copyActivatedSpy on the production window Shortcut shellShortcut_roll.copy and compares count 1 after native StandardKey.Copy (native Copy activates the window shortcut once). QML Shortcut activated replaces QAction triggered; pointer identity is not claimed.
 Source context since previous assertion:
         QSignalSpy copyTriggered(copy, &QAction::triggered);
         sendShortcut(*target, copyBindings.front());
@@ -222,40 +237,40 @@ Original expression:
         QCOMPARE(copyTriggered.count(), 1)
 
 A012 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:75
-Disposition: NATIVE
-Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership parses bootstrap.copiedClipSummary (ShellQmlTests.swift decodes the same native clip MIME through production pd_clipboard_read and ClipboardCodec.decode) and compares clip.length 3: a decodable song clip is present.
 Source context since previous assertion:
         const auto copied = clipcheck_support::checkClipboardClip();
 Original expression:
         QVERIFY(copied.has_value())
 
 A013 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:76
-Disposition: NATIVE
-Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares clip[0] 1 from bootstrap.copiedClipSummary (native clip MIME decoded through production pd_clipboard_read and ClipboardCodec.decode): the copied clip contains one track.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(copied->clip.tracks.size(), size_t{1})
 
 A014 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:77
-Disposition: NATIVE
-Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares clip[1] 1 from bootstrap.copiedClipSummary (native clip MIME decoded through production pd_clipboard_read and ClipboardCodec.decode): the copied track contains one selected note.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(copied->clip.tracks.front().notes.size(), size_t{1})
 
 A015 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:78
-Disposition: NATIVE
-Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares clip[2] to the selected copied[0].pitch from bootstrap.copiedClipSummary (native clip MIME decoded through production pd_clipboard_read and ClipboardCodec.decode): the copied note retains its original key.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(copied->clip.tracks.front().notes.front().key, note->key)
 
 A016 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:89
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership forceActiveFocuses the child TextField textProbe and tryCompares textProbe activeFocus true before the focused-text Copy. QML Item focus replaces QApplication focus-widget identity; widget identity is not claimed.
 Source context since previous assertion:
 
         // Native QWidget text copy stays available with no musical selection:
@@ -271,8 +286,8 @@ Original expression:
         QCOMPARE(QApplication::focusWidget(), &text)
 
 A017 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:92
-Disposition: NATIVE
-Mapping/reason: Observes native clipboard/harness serialization bytes (clipboard clip content or field text). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership clears the previous song clip via bootstrap.clearClipboardProbe, delivers native StandardKey.Copy to the focused field, then pastes and compares textProbe.text to native copy text probe: the focused text Copy owns the clipboard.
 Source context since previous assertion:
         QApplication::clipboard()->clear();
         sendShortcut(text, QKeySequence(QKeySequence::Copy));
@@ -280,8 +295,8 @@ Original expression:
         QCOMPARE(QApplication::clipboard()->text(), QStringLiteral("native copy text probe"))
 
 A018 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:95
-Disposition: NATIVE
-Mapping/reason: Native Qt action/menu wiring, shortcut projection, enablement, or retarget identity. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares actionSequences("roll.solo_tracks")[0] to S: native Solo is registered as the S window shortcut.
 Source context since previous assertion:
 
         const QList<QKeySequence> soloBindings = solo->shortcuts();
@@ -289,8 +304,8 @@ Original expression:
         QVERIFY(!soloBindings.isEmpty())
 
 A019 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:106
-Disposition: NATIVE
-Mapping/reason: Original native window/focus obligation: observes QApplication active/focus widget state. A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership creates the non-text child Item shortcutTarget, forceActiveFocuses it and tryCompares activeFocus true before the S deliveries. QML Item focus replaces QApplication focus-widget identity; widget identity is not claimed.
 Source context since previous assertion:
         const int selectedTrack = view.selectionModel().primaryTrack();
         view.setTrackSolo(selectedTrack, false);
@@ -306,40 +321,40 @@ Original expression:
         QCOMPARE(QApplication::focusWidget(), &shortcutTarget)
 
 A020 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:108
-Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Disposition: MATCHED
+Mapping/reason: S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing) plus src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership: the first non-text S tryCompares firstTrack.soloChecked true with soloActivatedSpy count 1, observing the window Solo delivery for the selected track.
 Source context since previous assertion:
         sendShortcut(shortcutTarget, soloBindings.front());
 Original expression:
         QVERIFY(view.trackSoloed(selectedTrack))
 
 A021 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:109
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares soloActivatedSpy count 1 (first non-text S activates Solo once) on the production Solo window Shortcut; QML Shortcut activated replaces QAction triggered; pointer identity is not claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(soloTriggered.count(), 1)
 
 A022 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:111
-Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Disposition: MATCHED
+Mapping/reason: S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing) plus src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership: the second non-text S tryCompares firstTrack.soloChecked false with soloActivatedSpy count 2, observing the toggled window Solo delivery.
 Source context since previous assertion:
         sendShortcut(shortcutTarget, soloBindings.front());
 Original expression:
         QVERIFY(!view.trackSoloed(selectedTrack))
 
 A023 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:112
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares soloActivatedSpy count 2 (second non-text S activates Solo twice total) on the production Solo window Shortcut; QML Shortcut activated replaces QAction triggered; pointer identity is not claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(soloTriggered.count(), 2)
 
 A024 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:115
-Disposition: NATIVE
-Mapping/reason: Original native keyboard/mouse focus routing obligation (focus widget identity, ancestor chain, focus establishment). A presenter-level Swift check cannot establish this observation.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership forceActiveFocuses the roll after the non-text child phase and tryCompares roll activeFocus true before the next S. QML Item focus replaces QApplication focus-widget identity; widget identity is not claimed.
 Source context since previous assertion:
         view.focusActiveSurface();
         target = QApplication::focusWidget();
@@ -347,40 +362,40 @@ Original expression:
         QVERIFY(target && (target == session->b || session->b->isAncestorOf(target)))
 
 A025 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:117
-Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Disposition: MATCHED
+Mapping/reason: S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing) plus src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership: the first roll S tryCompares firstTrack.soloChecked true with soloActivatedSpy count 3, observing the window Solo delivery from the refocused roll.
 Source context since previous assertion:
         sendShortcut(*target, soloBindings.front());
 Original expression:
         QVERIFY(view.trackSoloed(selectedTrack))
 
 A026 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:118
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares soloActivatedSpy count 3 (first roll S activates Solo three times total) on the production Solo window Shortcut; QML Shortcut activated replaces QAction triggered; pointer identity is not claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(soloTriggered.count(), 3)
 
 A027 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:120
-Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Disposition: MATCHED
+Mapping/reason: S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing) plus src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership: the second roll S tryCompares firstTrack.soloChecked false with soloActivatedSpy count 4.
 Source context since previous assertion:
         sendShortcut(*target, soloBindings.front());
 Original expression:
         QVERIFY(!view.trackSoloed(selectedTrack))
 
 A028 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:121
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares soloActivatedSpy count 4 (second roll S activates Solo four times total) on the production Solo window Shortcut; QML Shortcut activated replaces QAction triggered; pointer identity is not claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
         QCOMPARE(soloTriggered.count(), 4)
 
 A029 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:124
-Disposition: PARTIAL
-Mapping/reason: Related predicates S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing); unproved: Qt shortcut-to-QAction delivery, the single-window action owner, and text-focus routing in this test.
+Disposition: MATCHED
+Mapping/reason: S050, S051 in src/checks/workspace/session_playback.swift (solo mutation publishes exactly the mix-state domain; equal assignments publish nothing) plus src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership: the focused text-field S compares firstTrack.soloChecked false and soloActivatedSpy count 4 (text-field S never changes Solo), so the text field never delivers the window Solo shortcut.
 Source context since previous assertion:
         text.setFocus();
         sendShortcut(text, soloBindings.front());
@@ -388,8 +403,8 @@ Original expression:
         QVERIFY(!view.trackSoloed(selectedTrack))
 
 A030 | MainWindowRoutingNativeTest::nativeMenuAndWindowShortcutRouting | src/checks/mainwindowrouting/tst_mainwindowrouting_native.cpp:125
-Disposition: NATIVE
-Mapping/reason: Qt signal-delivery count on a QAction (shortcut/key-injection result). A presenter-level Swift check cannot establish Qt action delivery.
+Disposition: MATCHED
+Mapping/reason: src/checks/editorqml/tst_ShellWindow.qml test_cWindowShortcutsAndNumericOwnership compares soloActivatedSpy count 4 (text-field S never activates Solo) on the production Solo window Shortcut; QML Shortcut activated replaces QAction triggered; pointer identity is not claimed.
 Source context since previous assertion:
 (none — assertion sites adjacent)
 Original expression:
