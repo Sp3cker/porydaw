@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import QtQuick.Layouts
 
 Rectangle {
@@ -6,6 +7,8 @@ Rectangle {
     required property QtObject colors
     required property string label
     required property string symbol
+    // A tinted SVG replaces the text symbol when set.
+    property url iconSource: ""
     required property int baseFontPx
     property bool checked: false
     property bool actionable: true
@@ -29,13 +32,32 @@ Rectangle {
     Text {
         id: glyph
         anchors.centerIn: parent
+        visible: control.iconSource.toString().length === 0
         text: control.symbol
         font.pixelSize: Math.min(Math.round(control.baseFontPx * 1.4),
                                  Math.round(control.width / (Math.max(1, control.symbol.length) * 0.65)))
-        color: control.actionable ? (control.checked ? control.colors.buttonPressedText
-                                                      : control.colors.buttonText)
-                                  : control.colors.disabledText
+        color: control.foreground
         renderType: Text.NativeRendering
+    }
+    readonly property color foreground: actionable ? (checked ? colors.buttonPressedText
+                                                              : colors.buttonText)
+                                                   : colors.disabledText
+    Image {
+        id: icon
+        anchors.centerIn: parent
+        height: glyph.font.pixelSize
+        width: height
+        sourceSize: Qt.size(width, height)
+        fillMode: Image.PreserveAspectFit
+        source: control.iconSource
+        visible: false
+    }
+    MultiEffect {
+        anchors.fill: icon
+        source: icon
+        visible: !glyph.visible
+        colorization: 1
+        colorizationColor: control.foreground
     }
     HoverHandler { id: hover }
     TapHandler {

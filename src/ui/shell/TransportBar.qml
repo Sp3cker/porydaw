@@ -83,7 +83,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.play"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Play"); symbol: "▶"
+            label: qsTr("Play"); symbol: "▶"; iconSource: "qrc:/icons/transport-play.svg"
             actionable: bar.presenter.state > 0 && bar.presenter.state !== 3
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent
@@ -92,7 +92,7 @@ Rectangle {
         TransportButton {
             objectName: "transport.pause"
             colors: bar.colors; baseFontPx: bar.baseFontPx
-            label: qsTr("Pause"); symbol: "Ⅱ"
+            label: qsTr("Pause"); symbol: "Ⅱ"; iconSource: "qrc:/icons/transport-pause.svg"
             actionable: bar.presenter.state === 3
             Layout.preferredWidth: bar.toolExtent
             Layout.preferredHeight: bar.toolExtent

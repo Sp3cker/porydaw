@@ -294,6 +294,14 @@ qt_add_resources(porydaw_app "drawer_icons"
         resources/flat-music.svg
 )
 
+qt_add_resources(porydaw_app "transport_icons"
+    PREFIX "/icons"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
+    FILES
+        resources/transport-play.svg
+        resources/transport-pause.svg
+)
+
 qt_add_resources(porydaw_app "drawer_cursors"
     PREFIX "/cursors"
     BASE "${CMAKE_CURRENT_SOURCE_DIR}/resources"
